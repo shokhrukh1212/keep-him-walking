@@ -1,6 +1,8 @@
 # Phase 1.5 Visual-Motion Results
 
-Status: **Automated implementation, coherent-scene visual review, real-time soak and recorded video review complete. Physical-device, external-comprehension and product-owner gates remain open. Phase 2 is blocked.**
+Status: **Automated implementation, coherent-scene visual review, real-time soak and recorded video review are complete and approved for promotion to `main`. Physical-device, external-comprehension and product-owner gates remain open, so Phase 2 feature work is blocked.**
+
+Preview deployment: `https://keep-him-walking-49iiwola2-shokhrukh-karimovs-projects.vercel.app` (Vercel deployment `dpl_D5ALsmPChNvj9Cs8EwFQjxBRVdX7`, Preview scope). Promotion does not seed a production launch date and does not convert this preview seed into production data.
 
 ## Automated results
 
@@ -11,7 +13,7 @@ Status: **Automated implementation, coherent-scene visual review, real-time soak
 | Remote database | Supabase schema lint passed; Phase 1 (10) and Phase 1.5 (4) pgTAP assertions passed on 2026-09-01 |
 | Browser matrix | Eight active cases pass with eight intentional duplicate-project/opt-in skips: desktop and 320px layout/accessibility, shared presence, no-WebGL fallback, full/reduced-motion scene checks, stop/rest/resume and the NPC encounter |
 | Asset budgets | 4.38 MiB total v3 route transfer; 24.1 MiB complete decoded manifest per zone; low-tier renderer reports 15.8 MiB active textures, below its 96 MiB cap |
-| Ten-minute soak | Pass: 11.1-minute test body / 13.5-minute command; ≥590 authoritative route seconds, five-zone cycle, <5 s rendered divergence, ≤80 live objects, no rolling-12 signature repeat and ≤25 MiB post-warm-up heap growth |
+| Ten-minute soak | Pass: final promotion run had an 11.4-minute Playwright test body; ≥590 authoritative route seconds, five-zone cycle, <5 s rendered divergence, ≤80 live objects, no repeat inside the actual 12-segment window and ≤25 MiB post-warm-up heap growth |
 | Desktop/mobile video | Two 68-second accelerated proof recordings passed; actual WebM frames were extracted and visually inspected at seven checkpoints per device |
 | Reduced motion | Desktop and 320px captures retain the complete current Chorsu scene, correct route label, grounded static travel pose and semantic HUD/dialogue |
 
@@ -36,7 +38,7 @@ The inspected frames show the walk rig sharing the environment's painterly style
 
 | Device/browser | Tier | Duration | Frame evidence | Objects | Texture/heap | Zones and events | Result |
 |---|---|---:|---:|---:|---:|---|---|
-| Headless Chromium (CI diagnostic only) | low | 11.1 min | Software-renderer liveness guard passed; not a physical-device FPS claim | ≤80 asserted | 15.8 MiB active / ≤25 MiB heap growth asserted | Full five-zone route cycle, rolling ground/prop signature guard | Pass; not a physical-device substitute |
+| Headless Chromium (CI diagnostic only) | low | 11.4 min | Software-renderer liveness guard passed; not a physical-device FPS claim | ≤80 asserted | 15.8 MiB active / ≤25 MiB heap growth asserted | Full five-zone route cycle, rolling ground/prop signature guard | Pass; not a physical-device substitute |
 | Playwright Desktop Chrome video | high | 68 s | Seven extracted WebM checkpoints visually reviewed | Bounded pool shown in diagnostics | 15.8 MiB active in recording | Mahalla, Chorsu and Plov; stop/rest/resume; chef encounter | Pass as visual proof; human approval pending |
 | Chromium emulating iPhone 13 video | low | 68 s | Seven extracted WebM checkpoints visually reviewed | Bounded pool shown in diagnostics | 15.8 MiB active in recording | Mahalla, Chorsu and Plov; stop/rest/resume; chef encounter | Pass as emulation proof; physical device pending |
 | Low-range physical phone | low | Pending | Pending | Pending | Pending | Pending | Pending |

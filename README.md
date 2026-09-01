@@ -2,7 +2,7 @@
 
 A synchronized premium 2D internet journey: one traveler, one shared country-day, and walking that advances only while at least one visitor is actively watching.
 
-The Phase 1 truthful shared-state slice and Phase 1.5 Tashkent continuous-world proof are implemented. Phase 2 remains gated by the external-test, physical-device and product-owner criteria in `implementation-plan.md`.
+The Phase 1 truthful shared-state slice and Phase 1.5 Tashkent continuous-world proof are the completed technical baseline. Phase 2 is planned but remains gated by the external-test, physical-device and product-owner criteria in `implementation-plan.md`; no Phase 2 feature code has started.
 
 ## Local setup
 

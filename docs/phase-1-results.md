@@ -1,8 +1,10 @@
 # Phase 1 External Test Results
 
-Status: **Database verification complete; external human/device gate not run — Phase 2 remains blocked.**
+Status: **Technical implementation is complete and approved for promotion to `main`; the external human/device gate has not run, so Phase 2 feature work remains blocked.**
 
 The configured Supabase project was confirmed empty, received the three Phase 1/1.5 migrations, passed remote schema lint and passed all 14 rollback-protected pgTAP assertions on 2026-08-31. Docker is not required: `pnpm db:lint:remote` and `pnpm db:test:remote` use the configured `SUPABASE_DB_URL`. External comprehension and physical-device evidence are still required.
+
+Promotion records only the completed technical baseline. It is not a substitute for the unchecked evidence below and does not authorize Phase 2 implementation.
 
 ## Summary
 

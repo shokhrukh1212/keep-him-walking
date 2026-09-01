@@ -7,7 +7,7 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
   test.skip(testInfo.project.name !== "chromium", "Soak runs once on desktop Chromium");
   test.setTimeout(750_000);
   let routeSeconds = 0;
-  let lastHeartbeatAt: number | null = null;
+  const soakStartedAt = performance.now();
   const makeSnapshot = (): BootstrapSnapshot => {
     const now = new Date();
     return {
@@ -28,14 +28,10 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
   };
   await page.route("**/api/bootstrap", (route) => route.fulfill({ json: makeSnapshot() }));
   await page.route("**/api/presence/heartbeat", async (route) => {
-    const heartbeatAt = Date.now();
-    if (lastHeartbeatAt !== null) {
-      // The production runtime advances for all wall-clock time covered by an
-      // active lease. Do the same here so a throttled headless browser cannot
-      // make the mock counter disagree with the server contract.
-      routeSeconds += Math.max(0, (heartbeatAt - lastHeartbeatAt) / 1_000);
-    }
-    lastHeartbeatAt = heartbeatAt;
+    // Use Node's monotonic clock so host wall-clock corrections cannot create
+    // an artificial route jump during this long-running browser test. The
+    // elapsed duration still includes time between throttled heartbeats.
+    routeSeconds = Math.max(0, (performance.now() - soakStartedAt) / 1_000);
     const now = new Date().toISOString();
     await route.fulfill({ json: {
       serverNow: now, activeViewers: 1, walking: true,
@@ -48,7 +44,7 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
   const diagnostics = page.getByTestId("world-diagnostics");
   await diagnostics.waitFor();
 
-  const recentSignatures: string[] = [];
+  const sampledCompositions: Array<{ zone: string; segment: number; signature: string }> = [];
   let lastSegment = "";
   let maxObjects = 0;
   let minimumFps = Number.POSITIVE_INFINITY;
@@ -73,8 +69,18 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
     expect(Math.abs(presentedSeconds - authoritativeSeconds)).toBeLessThan(5);
     const segmentKey = `${zone}:${segment}`;
     if (segmentKey !== lastSegment && rawSignature) {
-      expect(recentSignatures.slice(-11)).not.toContain(signature);
-      recentSignatures.push(signature);
+      const segmentNumber = Number(segment);
+      const signaturesInsideGuard = sampledCompositions
+        .filter((entry) =>
+          entry.zone === zone &&
+          segmentNumber > entry.segment &&
+          segmentNumber - entry.segment <= 11)
+        .map((entry) => entry.signature);
+      // Sampling can skip multiple segments when software-rendered Chromium is
+      // throttled. Compare the actual segment distance, not the number of
+      // observations, so a composition 12+ segments away is not a false loop.
+      expect(signaturesInsideGuard).not.toContain(signature);
+      sampledCompositions.push({ zone, segment: segmentNumber, signature });
       lastSegment = segmentKey;
     }
     if (sample === 5) {

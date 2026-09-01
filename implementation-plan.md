@@ -778,7 +778,7 @@ Implemented shape as of 2026-09-01: `tashkent-v3` is the live five-zone country 
 
 - [x] Add seven unit tests beside `src/lib/world/*.test.ts` for canonical clock reconciliation, deterministic segment order/repeat guard, route zones, stop/resume phases, encounter phases and quality selection; object/pool bounds are asserted by browser diagnostics.
 - [x] Add `tests/e2e/phase15-motion.spec.ts` for visible streamed progress, renderer/object diagnostics, final-watcher stop/rest/resume, intro collapse and the full NPC focus/dialogue/resume sequence. Existing `tests/e2e/phase1.spec.ts` retains two-context synchronization, 320px/accessibility and no-WebGL fallback coverage.
-- [x] Add `tests/e2e/phase15-soak.spec.ts` as a real ten-minute run with periodic diagnostics samples. The final 2026-09-01 v3 run passed after an 11.1-minute test body / 13.5-minute command: full five-zone route clock, rolling ground/prop signatures, ≤80 live objects, coarse headless liveness, <5-second route divergence and ≤25 MiB heap growth.
+- [x] Add `tests/e2e/phase15-soak.spec.ts` as a real ten-minute run with periodic diagnostics samples. The final 2026-09-01 promotion run passed with an 11.4-minute Playwright test body: full five-zone route clock, rolling ground/prop signatures, ≤80 live objects, coarse headless liveness, <5-second route divergence and ≤25 MiB heap growth. Its mock authoritative clock uses monotonic elapsed time, and its repeat guard compares actual same-zone segment distance so host clock correction or renderer throttling cannot fabricate failures.
 - [x] Add `content:validate`, `assets:report`, `test:motion`, `test:motion:soak`, `motion:record`, `verify:phase15` and `verify:phase1.5` scripts. Runtime dependencies are unchanged; only Docker-free database test tooling was added as a development dependency.
 - [x] Record and inspect 68-second desktop/mobile WebM proofs plus extracted real-video checkpoints in `docs/phase-1.5-results.md` using `docs/phase-1.5-test-script.md`. The evidence fixture compresses zones to 20 seconds without changing the 120-second production pack. Low- and mid-range physical-phone measurements and product-owner review remain pending; a still screenshot is not gate evidence.
 - [ ] Gate decision: Phase 1 live database/external criteria pass, every Phase 1.5 criterion passes, no critical defect remains and the product owner approves the recorded motion proof.
@@ -786,8 +786,73 @@ Implemented shape as of 2026-09-01: `tashkent-v3` is the live five-zone country 
 ### Deferred phases — mapped but not started
 
 - [x] Phase 2 gate enforced: reserved paths `src/app/{archive,sponsor}/`, `src/app/api/{postcards,sponsor,webhooks}/`, `src/components/{postcard,sponsor}/` and later content/commerce migrations remain absent. Do not add Lemon Squeezy, sponsor, postcard, archive or seven-pack implementation before both the Phase 1 and Phase 1.5 exit gates pass.
-- [ ] Phase 2 implemented and seven-day rehearsal completed.
+- [x] Phase 1/1.5 technical implementation is approved for promotion to `main`; promotion does not close the external comprehension, physical-device or product-owner gates and does not authorize Phase 2 feature work.
+- [ ] Phase 2 implemented and seven-day rehearsal completed according to the repository-specific plan below.
 - [ ] Phase 3 hardening tasks prioritized from observed usage under future `scripts/load/`, `src/lib/observability/` and `docs/runbooks/` paths.
+
+### Phase 2 repository-specific implementation plan
+
+This is an execution checklist, not evidence that Phase 2 has started. Create `phase-2-seven-day-mvp` from the promoted `main` only after the unchecked Phase 1 and Phase 1.5 human/device gates are recorded as passed in `docs/phase-1-results.md` and `docs/phase-1.5-results.md`. Preserve the existing boundaries: Pixi owns world rendering, Rive owns character animation, React/HTML owns product UI, PostgreSQL/server UTC owns canonical state, Presence only wakes the shared state, and Vemetric never powers live behavior.
+
+#### 1. Seven-day schedule, schema v3 and country packs
+
+- [ ] Add `supabase/migrations/202609010004_phase2_content_postcards.sql` for the seven UTC `country_days`, expanded story/event cadence, postcard records and opaque public tokens. Keep every migration additive and rollback-safe; do not mutate the guarded Phase 1.5 preview journey.
+- [ ] Extend `src/lib/content/schema.ts` to schema version 3 while retaining read compatibility for v2/v1 rollback packs. Add per-pack preload groups, editorial/cultural-review metadata, postcard rendering metadata, rig requirements and three-to-four major daily-beat validation.
+- [ ] Extend `src/content/countries/registry.ts` as the only resolver and add seven independently illustrated packs in this exact route: day 1 Uzbekistan/Tashkent (`tashkent-v4`), day 2 Tajikistan/Dushanbe (`dushanbe-v1`), day 3 Kyrgyzstan/Bishkek (`bishkek-v1`), day 4 Kazakhstan/Almaty (`almaty-v1`), day 5 Azerbaijan/Baku (`baku-v1`), day 6 Georgia/Tbilisi (`tbilisi-v1`), day 7 Turkey/Istanbul (`istanbul-v1`). No panorama, architecture or prop set may be reused as another country with only text/color changes.
+- [ ] Add each pack under `src/content/countries/<city>.v1.ts`, source masters under `art/phase2/<city>/`, and runtime assets under `public/scenes/<city>/v1/`, `public/audio/<city>/v1/`, `public/npcs/<city>/v1/` and `public/postcards/<city>/v1/`. Require a named cultural reviewer and recorded disposition before a pack can become scheduled.
+- [ ] Extend `scripts/validate-country-packs.ts`, `scripts/report-phase15-assets.ts` or rename the latter to a phase-neutral asset reporter, and add `scripts/process-phase2-art.mjs`. Validate unique ownership, 4–6 connected zones, cadence, references, preload groups, cultural-review state, route duration and the existing low/medium/high texture budgets.
+- [ ] Add `src/lib/story-clock/schedule.ts` and tests for an immutable seven-day sequence of contiguous 24-hour UTC windows derived from the journey start. Country/day rollover must resolve from server time and database state without a deployment or client-local timezone assumption.
+- [ ] Preload current critical assets first, the next zone from the preceding zone, and the next country opportunistically near departure. A failed preload must retain the current semantic/static fallback and may never skip canonical time.
+
+#### 2. Production Rive character delivery gate
+
+- [ ] Obtain and review the external production files `public/rive/traveler/v1/traveler.riv`, `public/rive/npcs/v1/base-a.riv` and `public/rive/npcs/v1/base-b.riv`. Do not relabel the temporary sprite proof as the production rig.
+- [ ] Require artboard `JourneyCharacter`, state machine `JourneyMachine`, inputs `walking`, `walkingSpeed`, `action`, `mood`, `facingRight`, `reducedMotion`, and replaceable image/data-binding input `sponsorPatch`. Record the final runtime/version and license/source in `docs/phase-2-rive-handoff.md`.
+- [ ] Implement and verify the 12-action foundation in this order: `idle`, `start_walk`, `walk`, `slow_walk`, `stop`, `notice`, `approach`, `greet`, `talk`, `listen`, `react`, `goodbye`; `rest` and resume are state-machine transitions around these actions. Preserve dialogue in React/HTML, not inside `.riv` files.
+- [ ] Update `src/components/traveler/RiveTravelerRenderer.tsx`, `src/components/traveler/Traveler.tsx`, `src/lib/traveler/types.ts` and pack rig metadata without leaking Rive objects into the Pixi world or React orchestration layers. Keep `SpriteTravelerRenderer.tsx` only as the explicit reduced-motion/static/load-failure fallback.
+- [ ] Add rig contract tests and record desktop/mobile ground-contact, speed synchronization, secondary motion, sponsor-patch replacement, reduced-motion and Rive-failure evidence before removing the temporary proof from the normal full-motion path.
+
+#### 3. Cadence, rollover and operational tooling
+
+- [ ] Add `supabase/migrations/202609010006_phase2_rollover_metrics_storage.sql` for idempotent rollover/publication claims, daily aggregates, storage policies and narrowly scoped operational RPCs. Server-only mutations must use `SUPABASE_SECRET_KEY`; browser clients retain least-privilege reads.
+- [ ] Add `src/lib/story-clock/cadence.ts`, `src/lib/story-clock/rollover.ts`, `src/app/api/cron/rollover/route.ts` and unit/integration tests. Protect the route with `CRON_SECRET`, make retries idempotent, and configure `vercel.json` to invoke it every five minutes while actual country selection remains based on UTC timestamps.
+- [ ] Prefer auditable scripts over a new admin application in this phase: add `scripts/phase2/schedule-content.ts`, `approve-sponsor.ts`, `upload-sponsor-creative.ts`, `remove-sponsor.ts`, `replay-webhook.ts`, `aggregate-metrics.ts`, `seed-preview.ts`, `reset-preview.ts` and `smoke-rollover.ts`. Every destructive-looking operation must require explicit IDs/environment and support dry-run where practical.
+- [ ] Add `PHASE2_PREVIEW_START_AT` to the guarded preview workflow. Preview seeds must use a distinct slug, refuse mismatched replacement and be removable without touching production rows; never seed a production launch date without separate approval.
+- [ ] Add encounter replay/summary to `src/components/dialogue/` and cadence data to packs so returning visitors can understand missed major beats without rewinding or changing the canonical route.
+
+#### 4. Postcards, sharing and archive
+
+- [ ] Add `src/app/api/postcards/route.ts` with `POST /api/postcards`, Zod validation, origin/rate-limit checks, server-verified contribution eligibility and a default unlock threshold from `POSTCARD_UNLOCK_SECONDS` (60 seconds unless configured). Never accept a client-asserted unlock or expose the visitor hash.
+- [ ] Add postcard services under `src/lib/postcards/` using `sharp` to composite the approved pack background, country/day, contribution and safe copy. Store generated assets in `SUPABASE_POSTCARDS_BUCKET`; persist only an opaque high-entropy public token and use `/p/[token]` as the share route.
+- [ ] Add `src/app/p/[token]/page.tsx`, dynamic metadata/Open Graph output, `src/components/postcard/` generation/download/share UI, Web Share API support and copy-link fallback. Expired/missing tokens must return a safe not-found state without enumerability clues.
+- [ ] Add `src/app/archive/page.tsx` and reusable archive/passport components that show only completed country-days resolved by server UTC. Add current-day links to the existing HUD without displacing the walk or accessibility controls.
+- [ ] Verify generated images and metadata in major share-preview dimensions, download behavior, anonymous-token privacy, duplicate/retry idempotency, mobile layout, reduced motion and analytics-blocked behavior.
+
+#### 5. Sponsor inventory and Lemon Squeezy payments
+
+- [ ] Add `supabase/migrations/202609010005_phase2_sponsorship_payments.sql` with `sponsor_slots`, `sponsorships`, `payment_webhook_events`, `sponsor_metric_events` and `sponsor_daily_metrics`, explicit constraints/indexes/RLS and the state machine `draft → checkout_pending → paid_pending_review → approved → scheduled → live → completed`, plus terminal `rejected`, `refunded` and `cancelled` paths.
+- [ ] Use one fixed-price, one-time USD Lemon Squeezy checkout per country-day; configure a $1 test-mode price for rehearsal. Add `src/lib/payments/` for checkout correlation, allowed transitions, signature verification and provider mapping. Browser success may only show payment received/pending review and must never activate a sponsor.
+- [ ] Add `src/app/sponsor/page.tsx`, `src/components/sponsor/`, `src/app/api/sponsor/checkout/route.ts`, `src/app/api/webhooks/lemonsqueezy/route.ts` and a server redirect route for CTA clicks. Verify the Lemon Squeezy signature against the raw request body before parsing or mutating anything; persist provider event identity/checksum before idempotent processing.
+- [ ] Require Lemon Squeezy custom checkout data to contain only internal sponsorship/slot correlation IDs. Re-fetch/validate expected slot, price, currency and test/live mode server-side; never trust browser-supplied paid state, sponsor identity or amount.
+- [ ] Keep uploaded creative private in `SUPABASE_SPONSOR_PRIVATE_BUCKET`; only an approved operational script may copy a reviewed immutable asset to `SUPABASE_SPONSOR_PUBLIC_BUCKET`. `sponsorPatch`, the disclosed sponsor card and event stage must consume only approved public metadata.
+- [ ] Implement `SPONSOR_RESERVATION_MINUTES` expiry, emergency sponsor removal, refund/cancellation handling, text-only creative fallback and explicit “Today is unsponsored” behavior. Paid status alone cannot reach `scheduled` or `live`.
+- [ ] Deduplicate first-party impression, qualified engaged-view, watch-time, CTA click, postcard creation/share and session metrics under documented keys/windows. Sponsor reports come from database aggregates; Vemetric receives non-blocking mirrors only.
+
+#### 6. Analytics, security and configuration
+
+- [ ] Extend the existing adapters with `postcard_unlocked`, `postcard_created`, `postcard_shared`, `archive_viewed`, `country_day_entered`, `rollover_completed`, `sponsor_page_viewed`, `sponsor_checkout_started`, `sponsor_payment_confirmed`, `sponsor_impression`, `sponsor_engaged_view`, `sponsor_cta_clicked` and `sponsor_creative_approved`. Trusted payment/rollover events originate on the server.
+- [ ] Add body-size limits, schema validation, origin/CSRF checks, URL allowlists and anonymous rate limits to postcard, checkout and click endpoints. Add replay-safe webhook handling and tests for invalid signatures, duplicate delivery, wrong amount/currency/slot and out-of-order refund/cancellation events.
+- [ ] Add only names and safe defaults to `.env.example`: `POSTCARD_UNLOCK_SECONDS`, `SUPABASE_POSTCARDS_BUCKET`, `SUPABASE_SPONSOR_PRIVATE_BUCKET`, `SUPABASE_SPONSOR_PUBLIC_BUCKET`, `LEMON_SQUEEZY_API_KEY`, `LEMON_SQUEEZY_STORE_ID`, `LEMON_SQUEEZY_VARIANT_ID`, `LEMON_SQUEEZY_WEBHOOK_SECRET`, `LEMON_SQUEEZY_TEST_MODE`, `SPONSOR_RESERVATION_MINUTES`, `CRON_SECRET` and `PHASE2_PREVIEW_START_AT`. Configure real values separately per Vercel Preview/Production; never copy or print secrets in repository evidence.
+- [ ] Add privacy, sponsor terms, refund/creative policy and contact routes before rehearsal. Document cookies, anonymous hashes, postcard token retention, payment payload minimization, sponsor metric definitions and data-removal procedures.
+
+#### 7. Phase 2 migrations, tests and seven-day rehearsal
+
+- [ ] Add `supabase/tests/database/phase2.test.sql` covering UTC schedule constraints, postcard opacity/eligibility, slot exclusivity, legal sponsor transitions, webhook idempotency, refund behavior, metric deduplication, RLS and rollover retry. Extend `scripts/test-database.ts` to discover and report all phase files without weakening rollback guards.
+- [ ] Add unit tests beside new domain modules; integration coverage for bootstrap/rollover, postcard creation, checkout/webhook lifecycle and aggregation; and Playwright coverage under `tests/e2e/phase2-*.spec.ts` for the visitor and sponsor journeys, archive/share metadata, reduced-motion/offline/no-WebGL behavior and all seven pack transitions.
+- [ ] Add `pnpm verify:phase2` to run lint, typecheck, unit/coverage, production build, hosted schema lint/pgTAP, content/asset validation, E2E and security/payment tests. Add `pnpm rehearse:phase2` for an isolated accelerated preview rehearsal and a guarded cleanup command.
+- [ ] Keep Core Web Vitals targets at LCP ≤2.5 s, INP ≤200 ms and CLS ≤0.1 on representative mobile fast 4G, plus the current ≤96 MiB low-tier texture cap, bounded object pools, ≤25 MiB post-warm-up heap growth and no sustained motion jank. Capture low- and mid-range physical-device results rather than claiming them from emulation.
+- [ ] Rehearse all seven country-days for at least 10 minutes each (70 minutes total) with accelerated UTC rollover. Record pack load/transition, all major events, vote close/result, postcards, archive, checkout, verified duplicate webhook, approval/scheduling, impression/click aggregation, refund/cancellation, emergency sponsor removal, offline/reconnect, analytics failure and reset.
+- [ ] Phase 2 exit gate: external Phase 1 comprehension passes; low- and mid-range Phase 1.5 device budgets pass; the product owner approves the motion proof; all seven cultural reviews pass; production Rive files pass the contract; `pnpm verify:phase2` and `pnpm rehearse:phase2` pass; no critical truthfulness, payment, privacy, accessibility, synchronization, visual or mobile defect remains. Do not start Phase 3 until this evidence is recorded.
 
 ### Verification commands and recorded results
 
@@ -802,7 +867,7 @@ Implemented shape as of 2026-09-01: `tashkent-v3` is the live five-zone country 
 | `pnpm test:e2e` | Pass | 8 active cases pass with 8 duplicate-project/opt-in soak/video-review cases intentionally skipped. Coverage includes desktop/320px accessibility, coherent full/reduced-motion scenes, two-context shared state, no-WebGL fallback, route/stop/resume and the NPC encounter. |
 | `pnpm build` | Pass | Next.js 16.3.3 webpack production build compiled, type-checked and emitted the static page plus three dynamic API routes. |
 | `pnpm verify` | Pass | Lint, typecheck, all 23 tests and the production build pass on the final code. |
-| `pnpm test:motion:soak` | Pass | Final v3 real-time test passed: 11.1-minute observation / 13.5-minute command with route, loop, divergence, object and heap guards satisfied. |
+| `pnpm test:motion:soak` | Pass | Final v3 promotion run passed with an 11.4-minute Playwright observation; route, actual-segment loop, divergence, object, frame-liveness and heap guards were satisfied. |
 | `pnpm motion:record` | Pass | Desktop and emulated-mobile 68-second WebM proofs recorded with checksums in `docs/phase-1.5-results.md`; actual frames were extracted and visually reviewed. |
 | `pnpm content:validate` | Pass | Registered v2 rollback and live `tashkent-v3` packs validate with 87 owned scene assets. |
 | `pnpm assets:report` | Pass | 4.38 MiB total v3 route transfer; every zone estimates 24.1 MiB decoded in the complete manifest and the low renderer reports 15.8 MiB active textures, below the 96 MiB low-tier cap. |
