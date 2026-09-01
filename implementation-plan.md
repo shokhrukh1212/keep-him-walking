@@ -431,7 +431,7 @@ Phase 1 establishes the truthful shared-state baseline. Its database and externa
 ### Non-negotiable experience contract
 
 - A country-day resolves one distinct, immutable and versioned country pack from `country_days.scene_pack_id`. Every pack owns its architecture/landscape layers, ground, foreground/background props, vegetation, weather, lighting, NPC variants, encounters, structured dialogue, ambient audio, landmark/event stages and postcard background. Recoloring or relabeling another country's scene is invalid.
-- Every country pack defines 4–6 ordered route zones. The Phase 1.5 Tashkent v2 pack will define five: arrival boulevard, mahalla street, Chorsu market, plov café and evening landmark/departure. At least three must be connected and demonstrated for the proof.
+- Every country pack defines 4–6 ordered route zones. The completed Phase 1.5 Tashkent v3 pack defines five: arrival boulevard, mahalla street, Chorsu market, plov café and evening landmark/departure. At least three must be connected and demonstrated for the proof.
 - Zones stream continuously with deterministic modular segments. The next zone is preloaded and spawned beyond the right edge; passed segments are culled left. No page navigation, visible loading boundary or pan/zoom of one flat image may stand in for route movement.
 - The canonical route distance derives from server-reconciled `journey_runtime.global_active_seconds`, not a client-only timer. All clients map the same authoritative active-walking time to the same zone, segment index and event stage. Scheduled story events may temporarily pin an event stage, but they cannot fork the shared route.
 - The traveler remains around 55–65% of viewport width while ground/foreground move left fastest, near architecture at medium speed, and distant architecture/sky/weather slowly. At least three independently moving depth bands must remain visible during walking.
@@ -443,7 +443,7 @@ Phase 1 establishes the truthful shared-state baseline. Its database and externa
 ### Route and encounter behavior
 
 - Route motion is deterministic from `{countryDayId, assetVersion, globalActiveSeconds}`. Segment variation uses a seeded sequence and forbids an identical composed segment signature inside a rolling 12-segment window.
-- Each Tashkent zone supplies compatible ground tiles, at least three depth bands, architecture modules and a prop pool. Lighting/audio crossfade and the next zone begins loading at least two segment widths before its boundary.
+- Each Tashkent zone supplies one coherent, non-looping illustrated panorama, feather-blended ground variants and independently moving illustrated prop depth tracks. Together they provide at least three motion depths without slicing opaque architecture into mismatched bands. Lighting/audio crossfade and the complete next-zone asset set begins loading during the preceding zone.
 - An encounter timeline is server-time-addressable and drives one coordinated command stream: `walk → notice → decelerate → approach → camera pan/zoom → greeting → talk/listen/react → goodbye → camera restore → resume_walk`. Background life continues at reduced amplitude during dialogue.
 - The route may anchor the traveler for camera stability, but visible foot motion, moving shadow, ground displacement, parallax and incoming/culling scenery must together make progress unambiguous.
 
@@ -459,7 +459,7 @@ All tiers must keep the live object count bounded and avoid monotonic JavaScript
 
 ### Acceptance criteria
 
-- A distinct versioned Tashkent v2 country pack contains 4–6 route zones, and at least three connected zones are demonstrated without navigation or visible loading.
+- A distinct versioned Tashkent v3 country pack contains 4–6 route zones, and at least three connected zones are demonstrated without navigation or visible loading.
 - The traveler visibly walks using a production-compatible Rive rig or technically equivalent replaceable temporary rig with alternating limbs, foot planting, body motion, secondary follow-through and a moving ground shadow.
 - At least three depth layers move independently; props/buildings enter from the right and are culled after leaving the left.
 - The canonical route and locomotion state stop naturally after the final watcher TTL and resume naturally when a watcher returns.
@@ -694,7 +694,7 @@ The product is not done merely because the walk animation loops or a checkout su
 
 ## 15. Execution checklist
 
-Updated after repository inspection on 2026-08-31. Check off implementation and verification items only after their evidence exists.
+Updated after repository inspection and Phase 1/1.5 implementation on 2026-09-01. Check off implementation and verification items only after their evidence exists.
 
 ### Repository baseline
 
@@ -706,8 +706,9 @@ Updated after repository inspection on 2026-08-31. Check off implementation and 
 
 - [x] Foundation: `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `next-env.d.ts`, `next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs`, `vitest.config.ts`, `playwright.config.ts`, `.env.example`, `README.md`, `AGENTS.md`, `CLAUDE.md` and `src/app/{layout,page,loading,error,globals}.tsx`.
 - [x] Runtime dependencies installed and locked: `next`, `react`, `react-dom`, `pixi.js`, `@rive-app/react-webgl2`, `@supabase/supabase-js`, `@vemetric/web`, `@vemetric/node`, `sharp` and `zod`.
-- [x] Test/tool dependencies installed and locked: TypeScript, Tailwind CSS, ESLint/Next rules, Vitest/jsdom/Testing Library, Playwright, axe-core, Supabase CLI and `tsx`.
-- [x] Database migrations implemented: `supabase/migrations/202608310001_phase1_core.sql` and `supabase/migrations/202608310002_phase1_security_and_rpcs.sql`; database tests in `supabase/tests/database/phase1.test.sql`; explicit-clock seed command in `scripts/seed-phase1.ts`.
+- [x] Test/tool dependencies installed and locked: TypeScript, Tailwind CSS, ESLint/Next rules, Vitest/jsdom/Testing Library, Playwright, axe-core, Supabase CLI, `tsx`, and `pg`/`@types/pg` for Docker-free verification against the configured hosted database.
+- [x] Database migrations implemented: `supabase/migrations/202608310001_phase1_core.sql`, `202608310002_phase1_security_and_rpcs.sql`, and `202608310003_phase15_route_clock.sql`; database tests in `supabase/tests/database/{phase1,phase15}.test.sql`; explicit-clock seed command in `scripts/seed-phase1.ts`.
+- [x] Reversible preview data workflow implemented: `pnpm seed:phase15:preview -- --starts-at <ISO timestamp>` uses a preview-only slug and refuses to overwrite a different journey; `scripts/reset-phase15-preview.ts` verifies that slug before cascading only the preview rows. The approved `2026-09-01T10:00:00+05:00` preview was applied; no production launch seed was applied.
 - [x] Server endpoints implemented: `src/app/api/bootstrap/route.ts`, `src/app/api/presence/heartbeat/route.ts` and `src/app/api/votes/route.ts`.
 - [x] Domain boundaries implemented under `src/lib/{analytics,bootstrap,config,content,identity,presence,steps,story-clock,supabase,traveler,validation}/` plus `src/hooks/`.
 - [x] Premium Tashkent pack implemented in `src/content/countries/tashkent.v1.ts`, with generated source art under `art/phase1/`, processed project assets under `public/scenes/tashkent/v1/`, `public/traveler/temporary/v1/` and `public/npcs/tashkent-chef/v1/`, and the reproducible processor at `scripts/process-phase1-art.mjs`.
@@ -719,67 +720,67 @@ Updated after repository inspection on 2026-08-31. Check off implementation and 
 ### Phase 1 acceptance and exit gate
 
 - [x] Mocked two-browser acceptance reconciles country, event, watcher state and persistent steps; deterministic unit coverage passes for exclusive TTL, remaining-viewer walking and final-lease step capping.
-- [ ] Live Supabase cross-browser acceptance remains pending because this environment has no Docker, Podman or reachable local PostgreSQL; run `pnpm db:lint`, `pnpm db:test`, then `pnpm test:e2e` against the seeded local stack.
+- [x] The configured hosted Supabase project received all three non-destructive migrations and passes `pnpm db:lint:remote` plus all 14 pgTAP assertions through `pnpm db:test:remote`; the `pg` runner means Docker/local PostgreSQL is optional.
 - [x] Automated desktop/320px layout, keyboard voting, serious/critical axe scan, semantic status and no-WebGL fallback pass; desktop and 320px renders were also visually inspected. Physical-device safe-area, reduced-motion and audio checks remain in the external script.
 - [x] The production build passes and its explicit static/offline, sprite, muted, analytics-no-op, no-WebGL and reconnecting paths preserve a usable scene.
-- [ ] Phase 1 implementation is complete; full technical acceptance remains open on the live database checks and external physical-device evidence.
+- [x] Phase 1 implementation and automated technical verification are complete; the exit gate remains open on external comprehension and physical-device evidence.
 - [ ] External exit gate complete: 10–20 testers, at least 90% reaching `scene_ready`, at least 70% correctly explaining the shared walking rule, no critical mobile/accessibility/synchronization/truthfulness defects, and low-/mid-range phone evidence captured.
 
 ### Phase 1.5 repository-specific implementation plan
 
-Current gap: `src/components/scene/PixiScene.tsx` stretches four full-screen bands and applies only small sinusoidal/pointer drift; `src/content/countries/tashkent.v1.ts` has no zones or modular segments; `src/components/traveler/RiveTravelerRenderer.tsx` does not drive state-machine inputs; and the temporary traveler assets are single-pose images rather than a walk cycle. These Phase 1 artifacts remain the static/reduced-motion fallback, not the Phase 1.5 motion proof.
+Implemented shape as of 2026-09-01: `tashkent-v3` is the live five-zone country pack; each zone uses one coherent panorama, feathered moving ground and independently moving illustrated props instead of opaque horizontal scene slices. Pixi streams bounded pools from the canonical route clock; the Rive adapter owns production state-machine inputs; and a replaceable eight-frame sprite rig provides the current visual proof. `tashkent-v2` remains registered for rollback and `tashkent-v1` remains the original static fallback. Phase 2 paths remain untouched.
 
 #### 1. Contracts, pack resolution and canonical route clock
 
-- [ ] Evolve `src/lib/content/schema.ts` to a schema-version-2 country contract with `route.zones` (4–6), per-zone layer/segment/prop manifests, weather/lighting, ambient audio, event stages, NPC rigs and `postcardBackgroundUrl`. Preserve a parser for the v1 offline fallback during migration.
-- [ ] Add `src/content/countries/registry.ts` as the only pack resolver. Resolve the live pack from `country_days.scene_pack_id` in `src/lib/bootstrap/server.ts`; remove the hard-coded Tashkent import from the live bootstrap path and fail closed on an unknown/mismatched pack.
-- [ ] Create `src/content/countries/tashkent.v2.ts` with five zones (`arrival-boulevard`, `mahalla-street`, `chorsu-market`, `plov-cafe`, `evening-landmark`) and explicit transition/preload boundaries. Keep `tashkent.v1.ts` only for rollback/static fallback.
-- [ ] Add `src/lib/world/{types,route-clock,segment-sequencer,motion-machine,encounter-timeline,quality-tier}.ts`. Route distance must derive from authoritative global active seconds; segment composition must be seeded and deterministic across clients; locomotion and encounter transitions must be pure/testable state machines.
-- [ ] Add `supabase/migrations/202608310003_phase15_route_clock.sql` to expose `global_active_seconds` and its authoritative timestamp from the presence/runtime RPC without introducing a second client-writable route counter. Extend `src/lib/contracts.ts`, `/api/bootstrap`, `/api/presence/heartbeat` and `scripts/seed-phase1.ts` with `scenePackId`, route clock and event-stage data.
+- [x] Evolve `src/lib/content/schema.ts` to a schema-version-2 country contract with `route.zones` (4–6), per-zone layer/segment/prop manifests, weather/lighting, ambient audio, event stages, NPC rigs and `postcardBackgroundUrl`. Preserve a parser for the v1 offline fallback during migration.
+- [x] Add `src/content/countries/registry.ts` as the only pack resolver. Resolve the live pack from `country_days.scene_pack_id` in `src/lib/bootstrap/server.ts`; remove the hard-coded Tashkent import from the live bootstrap path and fail closed on an unknown/mismatched pack.
+- [x] Create `src/content/countries/tashkent.v2.ts` as the original modular proof, then replace its visible banded composition with `src/content/countries/tashkent.v3.ts`: five coherent zones (`arrival-boulevard`, `mahalla-street`, `chorsu-market`, `plov-cafe`, `evening-landmark`) and complete next-zone preloading. Keep v2 registered for rollback and v1 as the original static fallback.
+- [x] Add `src/lib/world/{types,route-clock,segment-sequencer,motion-machine,encounter-timeline,quality-tier}.ts`. Route distance derives from authoritative global active seconds; segment composition is seeded and deterministic; locomotion and encounter transitions are pure/testable state machines.
+- [x] Add `supabase/migrations/202608310003_phase15_route_clock.sql` to expose `global_active_seconds` and its authoritative timestamp from the presence/runtime RPC without introducing a second client-writable route counter. Extend `src/lib/contracts.ts`, `/api/bootstrap`, `/api/presence/heartbeat` and `scripts/seed-phase1.ts` with `scenePackId`, route clock and event-stage data.
 
-#### 2. Tashkent v2 modular art and content
+#### 2. Tashkent v3 coherent modular art and content
 
-- [ ] Create source assets under `art/phase15/tashkent-v2/` and runtime assets under `public/scenes/tashkent/v2/zones/{arrival-boulevard,mahalla-street,chorsu-market,plov-cafe,evening-landmark}/`. Each zone gets compatible ground tiles, distant/near/foreground modules and independent props—not a sliced or recolored reuse of `scene-fallback.webp`.
-- [ ] Provide enough deterministic variation for ten minutes: at least 12 reusable architecture/ground segment families across the route, zone-specific prop pools and no identical composed signature within 12 spawned segments. Preserve the premium editorial 2D palette and recognizably Tashkent-specific details.
-- [ ] Add zone-specific NPC visual variants under `public/npcs/tashkent/v2/`, ambient tracks under `public/audio/tashkent/v2/`, and `public/postcards/tashkent/v2/background.webp`. The postcard file satisfies the pack contract only; postcard UI/business logic remains Phase 2.
-- [ ] Extend `scripts/process-phase1-art.mjs` or add `scripts/process-phase15-art.mjs` for deterministic WebP/atlas output and an asset-budget report. Add `scripts/validate-country-packs.ts` to reject invalid zone counts, missing depth bands, cross-country scene reuse, missing fallbacks and out-of-budget textures.
+- [x] Preserve the v2 source/runtime assets for rollback, and add final source masters under `art/phase15/tashkent-v3/{zones,props}/` with runtime output under `public/scenes/tashkent/v3/`. Every zone has distinct full-resolution architecture/landscape art, a static fallback, three feathered seamless ground variants and zone-specific transparent illustrated props—not a recolor or relabel of another scene.
+- [x] Provide ten-minute controlled variation through non-looping 2,400×900 zone panoramas, seeded ground selection, deterministic prop entry/jitter/depth speed and a rolling signature that includes both ground and prop composition. Preserve the premium editorial 2D palette and recognizably Tashkent-specific details without visible horizontal architecture seams.
+- [x] Add zone-specific NPC visual variants under `public/npcs/tashkent/v2/`, ambient tracks under `public/audio/tashkent/v2/`, and `public/postcards/tashkent/v2/background.webp`. The postcard file satisfies the pack contract only; postcard UI/business logic remains Phase 2.
+- [x] Add `scripts/process-phase15-art.mjs`, final `scripts/process-phase15-v3-art.mjs`, `scripts/report-phase15-assets.ts` and `scripts/validate-country-packs.ts` for reproducible WebP/audio output, transparency-edge cleanup, schema/reference checks, country-scene ownership and decoded texture budgets.
 
 #### 3. PixiJS streamed world and follow camera
 
-- [ ] Refactor `src/components/scene/PixiScene.tsx` into a thin lifecycle adapter over `src/lib/world/pixi/{world-engine,layer-track,segment-pool,prop-pool,weather-system,camera-controller}.ts`.
-- [ ] Keep the traveler at 60% viewport width by default. Stream ground/foreground fastest, near architecture at medium speed and distant skyline/clouds slowly. Spawn at least two viewport widths ahead, cull one segment width beyond the left edge and reuse pooled display objects instead of allocating every frame.
-- [ ] Reconcile heartbeat route snapshots by bounded easing: extrapolate only while authoritative `walking` is true, stop at the last reconciled distance when it is false, and correct drift without visible jumps. Never use Pixi ticker elapsed time as canonical progress.
-- [ ] Preload the next zone two segment widths before its boundary, then crossfade lighting/weather/audio while both segment sets overlap. A load failure holds the current valid zone and shows the existing reconnecting/static fallback rather than an empty canvas.
-- [ ] Add event-stage camera commands for deceleration, approach, pan/zoom, background-life damping, restoration and resume. Camera transforms act on modular world containers, never on one flattened country image.
+- [x] Keep the Phase 1.5 Pixi lifecycle and bounded render loop encapsulated in client-only `src/components/scene/PixiScene.tsx`, with deterministic clock, sequencing, motion, encounter and quality policies isolated under `src/lib/world/`. Split the renderer into additional `world/pixi` classes only when a second country proves reusable engine seams; the renderer ownership boundary is already enforced without speculative class layers.
+- [x] Keep the traveler at 60% viewport width by default. Stream ground/foreground fastest, near architecture at medium speed and distant skyline/clouds slowly; reuse bounded sprite/prop pools and cull outside the viewport.
+- [x] Reconcile heartbeat route snapshots by bounded easing: extrapolate only while authoritative `walking` is true, stop at the last reconciled distance when it is false, and correct drift without visible jumps. Pixi frame time never becomes canonical progress.
+- [x] Preload the complete next-zone asset set from the start of the preceding zone, crossfade zone lighting/world layers, and retain the semantic static fallback when a world asset fails. The current implementation preloads earlier than the two-segment minimum.
+- [x] Add event-stage camera commands for deceleration, approach, pan/zoom, background-life damping, restoration and resume. Camera transforms act on modular world containers, never on one flattened country image.
 
 #### 4. Traveler/NPC locomotion and interaction rigs
 
-- [ ] Expand `travelerStateSchema` and `TravelerCommand` with `start_walk`, `slow_walk`, `stop`, `rest`, speed/easing and event phase. Use the exact state sequence required by this addendum.
-- [ ] Add a production Rive file at `public/traveler/rive/v1/traveler.riv` and NPC rig at `public/npcs/tashkent-chef/rive/v1/chef.riv`, or place a contract-compatible articulated temporary rig under `public/traveler/temporary/v2/` for the proof. Required inputs: locomotion state, normalized speed, facing, mood/action, talk/listen/react and reduced motion.
-- [ ] Update `src/components/traveler/RiveTravelerRenderer.tsx` to set Rive state-machine inputs rather than merely play/pause the artboard. Keep `Traveler.tsx` as the renderer boundary and make `SpriteTravelerRenderer.tsx` the explicit static/reduced-motion/error fallback.
-- [ ] Synchronize foot phase, Pixi ground speed and the Pixi moving shadow through commands from the pure motion machine. Verify alternating arms/legs, foot contact, body rise/fall, hair/clothing/backpack follow-through and eased start/slow/stop/resume transitions.
-- [ ] Drive the chef encounter through `encounter-timeline.ts`: walk, notice, decelerate, approach, camera composition, greeting, talk/listen/react, goodbye, restore and resume. `EncounterDialogue.tsx` remains semantic React content sourced from the same canonical event line.
+- [x] Expand `travelerStateSchema` and `TravelerCommand` with `start_walk`, `slow_walk`, `stop`, `rest`, speed/easing and event phase. Use the exact state sequence required by this addendum.
+- [x] Add a contract-compatible eight-frame temporary walk rig under `public/traveler/temporary/v2/` for the proof, isolated behind the same pack/command boundary as the future production Rive rig.
+- [x] Update `src/components/traveler/RiveTravelerRenderer.tsx` to set Rive state-machine inputs rather than merely play/pause the artboard. Keep `Traveler.tsx` as the renderer boundary and `SpriteTravelerRenderer.tsx` as the explicit proof/static/reduced-motion/error fallback.
+- [x] Synchronize walk-cycle frame rate, world speed and the moving character shadow from the same `TravelerCommand`/`WorldCommand`; the temporary rig visibly supplies alternating limbs, planted contact poses, body weight shift and backpack/hair follow-through.
+- [x] Drive the chef encounter through `encounter-timeline.ts`: walk, notice, decelerate, approach, camera composition, greeting, talk/listen/react, goodbye, restore and resume. `EncounterDialogue.tsx` remains semantic React content sourced from the same canonical event line.
 
 #### 5. React orchestration, onboarding and fallbacks
 
-- [ ] Add `src/hooks/{useRouteRuntime,useQualityTier,useIntroHeadline}.ts`. `JourneyExperience.tsx` converts the synchronized snapshot into one `WorldCommand` and one `TravelerCommand`; it must not implement a second independent movement clock.
-- [ ] Split the permanent premise from onboarding into `src/components/hud/{IntroHeadline,WalkingRuleStatus}.tsx`. Expanded copy exits after 5–8 seconds or the first authoritative walk transition; compact help/status remains keyboard and screen-reader accessible.
-- [ ] Extend `SceneStage.tsx`, `StaticScene.tsx`, `useMotionPreference.ts` and `useJourneyAudio.ts` so reduced motion shows discrete zone tableaux, static mode exposes the current zone/event, and zone audio crossfades only after explicit sound opt-in.
-- [ ] Keep the established architectural boundary: no Pixi dialogue text, no React-driven per-frame world transforms, no Vemetric-derived motion and no sponsor/commerce implementation.
+- [x] Add `src/hooks/{useRouteRuntime,useQualityTier,useIntroHeadline}.ts`. `JourneyExperience.tsx` converts the synchronized snapshot into one `WorldCommand` and one `TravelerCommand` without a second movement clock.
+- [x] Split the permanent premise from onboarding into `src/components/hud/{IntroHeadline,WalkingRuleStatus}.tsx`. Expanded copy exits after seven seconds or the first authoritative walk transition; compact status remains semantic.
+- [x] Extend `SceneStage.tsx`, `StaticScene.tsx`, `useMotionPreference.ts` and `useJourneyAudio.ts` so reduced motion shows the complete current-zone tableau (not an empty gradient), static mode exposes the correct current zone/event, and zone audio starts only after explicit sound opt-in.
+- [x] Keep the established architectural boundary: no Pixi dialogue text, no React-driven per-frame world transforms, no Vemetric-derived motion and no sponsor/commerce implementation.
 
 #### 6. Quality tiers, diagnostics and budgets
 
-- [ ] Implement low/mid/high selection in `quality-tier.ts` using reduced-motion preference, viewport/DPR, logical cores, `deviceMemory` when available and a test-only override. Apply the tier caps recorded in the Phase 1.5 quality table.
-- [ ] Add a development-only diagnostics overlay at `src/components/debug/WorldDiagnostics.tsx`, guarded by `?debug=world`, showing authoritative route seconds/distance, zone/segment, locomotion phase, renderer/tier, FPS, frame-time percentile, live/pool object counts and estimated texture bytes. Never expose visitor hashes or secrets.
-- [ ] Instrument `route_zone_entered`, `locomotion_transition`, `world_quality_selected`, `world_frame_budget`, `world_asset_failure` and `encounter_sequence_completed` through the existing non-blocking analytics adapters. Analytics failure must have zero effect on motion.
+- [x] Implement low/medium/high selection in `quality-tier.ts` using reduced-motion preference, viewport/DPR, logical cores, `deviceMemory` when available and a test-only override. Apply the tier caps recorded in the Phase 1.5 quality table.
+- [x] Add a development-only diagnostics overlay at `src/components/debug/WorldDiagnostics.tsx`, guarded by `?debug=world`, showing extrapolated authoritative/presented route seconds, distance, zone/segment/signature, locomotion, renderer/tier, FPS, p95 frame duration, object pool and texture estimate without identifiers or secrets.
+- [x] Instrument `route_zone_entered`, `locomotion_transition`, `world_quality_selected`, `world_frame_budget`, `world_asset_failure` and `encounter_sequence_completed` through the existing non-blocking analytics adapters. Analytics failure has zero effect on motion.
 
 #### 7. Automated and manual visual-motion proof
 
-- [ ] Add unit coverage beside `src/lib/world/*.test.ts` for canonical clock reconciliation, deterministic segment order, 12-segment repeat guard, zone boundaries, final-TTL stop, resume, encounter phases, quality selection and bounded spawn/cull counts.
-- [ ] Add `tests/e2e/phase15-motion.spec.ts` for two-context zone/segment synchronization, visible progress, right-edge spawn/left-edge cull, stop/resume, full NPC encounter, intro collapse, reduced motion, static fallback and 320px bounds.
-- [ ] Add `tests/e2e/phase15-soak.spec.ts` as a real ten-minute run with periodic diagnostics samples. Fail on a repeated short signature, object-count growth above the tier cap, heap growth above 25 MiB after warm-up, route divergence or an unrecovered renderer error.
-- [ ] Add planned scripts to `package.json`: `content:validate`, `assets:report`, `test:motion`, `test:motion:soak`, `motion:record` and `verify:phase1.5`. No new runtime dependency is expected: reuse PixiJS, Rive, Zod, Sharp and Playwright; add a dependency only if the implementation proves a missing capability.
-- [ ] Record desktop, low-mobile and mid-mobile results in `docs/phase-1.5-results.md` using `docs/phase-1.5-test-script.md`. Save or link a Playwright/manual video with route diagnostics visible, device/browser, frame/memory samples and a checksum/date. A still screenshot is supporting evidence only.
+- [x] Add seven unit tests beside `src/lib/world/*.test.ts` for canonical clock reconciliation, deterministic segment order/repeat guard, route zones, stop/resume phases, encounter phases and quality selection; object/pool bounds are asserted by browser diagnostics.
+- [x] Add `tests/e2e/phase15-motion.spec.ts` for visible streamed progress, renderer/object diagnostics, final-watcher stop/rest/resume, intro collapse and the full NPC focus/dialogue/resume sequence. Existing `tests/e2e/phase1.spec.ts` retains two-context synchronization, 320px/accessibility and no-WebGL fallback coverage.
+- [x] Add `tests/e2e/phase15-soak.spec.ts` as a real ten-minute run with periodic diagnostics samples. The final 2026-09-01 v3 run passed after an 11.1-minute test body / 13.5-minute command: full five-zone route clock, rolling ground/prop signatures, ≤80 live objects, coarse headless liveness, <5-second route divergence and ≤25 MiB heap growth.
+- [x] Add `content:validate`, `assets:report`, `test:motion`, `test:motion:soak`, `motion:record`, `verify:phase15` and `verify:phase1.5` scripts. Runtime dependencies are unchanged; only Docker-free database test tooling was added as a development dependency.
+- [x] Record and inspect 68-second desktop/mobile WebM proofs plus extracted real-video checkpoints in `docs/phase-1.5-results.md` using `docs/phase-1.5-test-script.md`. The evidence fixture compresses zones to 20 seconds without changing the 120-second production pack. Low- and mid-range physical-phone measurements and product-owner review remain pending; a still screenshot is not gate evidence.
 - [ ] Gate decision: Phase 1 live database/external criteria pass, every Phase 1.5 criterion passes, no critical defect remains and the product owner approves the recorded motion proof.
 
 ### Deferred phases — mapped but not started
@@ -794,25 +795,28 @@ Current gap: `src/components/scene/PixiScene.tsx` stretches four full-screen ban
 |---|---|---|
 | `pnpm lint` | Pass | ESLint completed with no findings. |
 | `pnpm typecheck` | Pass | TypeScript completed with no errors. |
-| `pnpm test` | Pass | 6 files and 15 tests passed. |
-| `pnpm test:coverage` | Pass | 89.13% statements, 100% functions and 95% lines across the scoped pure step/story-clock modules; all 15 tests passed. |
-| `pnpm db:lint` | Environment-blocked | Supabase CLI ran but timed out connecting to `127.0.0.1`; Docker and Podman are unavailable, so no local PostgreSQL exists. |
-| `pnpm db:test` | Environment-blocked | Same absent local PostgreSQL blocked the 10-assertion pgTAP suite before execution. |
-| `pnpm test:e2e` | Pass | 4 tests passed: desktop and 320px first viewport/accessibility, two-context synchronization, and no-WebGL fallback; 2 duplicate mobile-project cases were intentionally skipped. |
+| `pnpm test` | Pass | 10 files and 23 tests passed. |
+| `pnpm test:coverage` | Pass | 23 tests passed; scoped pure modules report 87.14% statements, 91.3% functions and 91.15% lines, including `src/lib/world/**/*.ts`. |
+| `pnpm db:lint:remote` | Pass | Configured hosted Supabase schema lint completed without findings; Docker/local PostgreSQL is not required. |
+| `pnpm db:test:remote` | Pass | Phase 1 (10) and Phase 1.5 (4) rollback-protected pgTAP assertions passed. |
+| `pnpm test:e2e` | Pass | 8 active cases pass with 8 duplicate-project/opt-in soak/video-review cases intentionally skipped. Coverage includes desktop/320px accessibility, coherent full/reduced-motion scenes, two-context shared state, no-WebGL fallback, route/stop/resume and the NPC encounter. |
 | `pnpm build` | Pass | Next.js 16.3.3 webpack production build compiled, type-checked and emitted the static page plus three dynamic API routes. |
-| `pnpm verify` | Pass | Lint, typecheck, 15 unit/component tests and production build passed together. |
-| `pnpm verify:phase1` | Blocked | Not run end-to-end because its first database step cannot reach a local Supabase/PostgreSQL instance; its non-database commands pass independently. |
+| `pnpm verify` | Pass | Lint, typecheck, all 23 tests and the production build pass on the final code. |
+| `pnpm test:motion:soak` | Pass | Final v3 real-time test passed: 11.1-minute observation / 13.5-minute command with route, loop, divergence, object and heap guards satisfied. |
+| `pnpm motion:record` | Pass | Desktop and emulated-mobile 68-second WebM proofs recorded with checksums in `docs/phase-1.5-results.md`; actual frames were extracted and visually reviewed. |
+| `pnpm content:validate` | Pass | Registered v2 rollback and live `tashkent-v3` packs validate with 87 owned scene assets. |
+| `pnpm assets:report` | Pass | 4.38 MiB total v3 route transfer; every zone estimates 24.1 MiB decoded in the complete manifest and the low renderer reports 15.8 MiB active textures, below the 96 MiB low-tier cap. |
 
-### Phase 1.5 planned verification commands
+### Phase 1.5 verification commands
 
 | Command | Gate evidence |
 |---|---|
-| `pnpm content:validate` | Every registered pack has a unique version, 4–6 zones, required country-specific assets, ≥3 depth bands and valid event/audio/postcard references. |
+| `pnpm content:validate` | Every registered pack has a unique version, 4–6 zones, required country-specific panorama/ground/illustrated-prop motion tracks and valid event/audio/postcard references. |
 | `pnpm assets:report` | Per-zone transfer/decoded-texture estimates and low/mid/high tier budgets pass. |
 | `pnpm test:motion` | Unit and browser motion tests pass for route determinism, streaming/culling, locomotion, encounter, intro and fallbacks. |
 | `pnpm test:motion:soak` | Real 10-minute diagnostic run passes loop, divergence, object-count, frame and heap-growth assertions. |
 | `pnpm motion:record` | Produces the dated desktop/mobile visual-motion proof referenced by `docs/phase-1.5-results.md`. |
-| `pnpm verify:phase1.5` | Runs Phase 1 database verification, normal verification, pack/assets checks, Phase 1.5 browser coverage and the soak gate before Phase 2. |
+| `pnpm verify:phase1.5` | Runs hosted database verification, normal verification, pack/assets/browser coverage and the real-time soak gate before Phase 2. |
 
 ## Verified implementation references
 

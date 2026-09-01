@@ -2,26 +2,33 @@ import { createClient } from "@supabase/supabase-js";
 import {
   PHASE1_COUNTRY_DAY_ID,
   PHASE1_ENCOUNTER_ID,
-  tashkentCountryPack,
 } from "../src/content/countries/tashkent.v1";
+import { tashkentCountryPackV3 } from "../src/content/countries/tashkent.v3";
 
 const JOURNEY_ID = "00000000-0000-4000-8000-000000000001";
 const VOTE_ID = "30000000-0000-4000-8000-000000000001";
 const OPTION_PLOV_ID = "40000000-0000-4000-8000-000000000001";
 const OPTION_CHORSU_ID = "40000000-0000-4000-8000-000000000002";
 
-function requiredArgument(name: string): string {
+function argument(name: string): string | undefined {
   const index = process.argv.indexOf(name);
-  const value = index >= 0 ? process.argv[index + 1] : undefined;
-  if (!value) throw new Error(`Missing required argument: ${name} <value>`);
-  return value;
+  return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-const startsAt = new Date(requiredArgument("--starts-at"));
+const preview = process.argv.includes("--preview");
+const journeySlug = preview ? "keep-him-walking-phase15-preview" : "keep-him-walking";
+const rawStart = argument("--starts-at") ?? (preview ? process.env.PHASE15_PREVIEW_START_AT : undefined);
+if (!rawStart) {
+  throw new Error(
+    preview
+      ? "Provide --starts-at <value> or PHASE15_PREVIEW_START_AT"
+      : "Missing required argument: --starts-at <value>",
+  );
+}
+const startsAt = new Date(rawStart);
 if (Number.isNaN(startsAt.getTime())) {
   throw new Error("--starts-at must be an ISO-8601 timestamp with an explicit timezone");
 }
-const rawStart = requiredArgument("--starts-at");
 if (!/(Z|[+-]\d{2}:\d{2})$/i.test(rawStart)) {
   throw new Error("--starts-at must include Z or an explicit UTC offset");
 }
@@ -37,8 +44,20 @@ const supabase = createClient(url, key, {
 });
 const endsAt = new Date(startsAt.getTime() + 24 * 60 * 60 * 1_000);
 const encounterStartsAt = new Date(startsAt.getTime() + 15 * 60 * 1_000);
-const encounter = tashkentCountryPack.encounters[0];
+const encounter = tashkentCountryPackV3.encounters[0];
 if (!encounter) throw new Error("Tashkent content pack has no encounter");
+
+const { data: existingJourney, error: existingJourneyError } = await supabase
+  .from("journeys")
+  .select("slug")
+  .eq("id", JOURNEY_ID)
+  .maybeSingle();
+if (existingJourneyError) throw existingJourneyError;
+if (existingJourney && existingJourney.slug !== journeySlug) {
+  throw new Error(
+    `Refusing to replace journey ${existingJourney.slug} with ${journeySlug}. Reset the intended environment first.`,
+  );
+}
 
 const { data: existing, error: existingError } = await supabase
   .from("country_days")
@@ -55,7 +74,7 @@ if (existing && new Date(existing.starts_at).getTime() !== startsAt.getTime()) {
 const writes = [
   supabase.from("journeys").upsert({
     id: JOURNEY_ID,
-    slug: "keep-him-walking",
+    slug: journeySlug,
     title: "Keep Him Walking",
     starts_at: startsAt.toISOString(),
     total_days: 195,
@@ -72,7 +91,7 @@ const writes = [
     time_zone: "Asia/Tashkent",
     starts_at: startsAt.toISOString(),
     ends_at: endsAt.toISOString(),
-    scene_pack_id: tashkentCountryPack.assetVersion,
+    scene_pack_id: tashkentCountryPackV3.assetVersion,
     status: "live",
     story_summary: "A first morning in Tashkent—and a serious invitation to try plov.",
     updated_at: new Date().toISOString(),
@@ -141,5 +160,5 @@ const { error: runtimeError } = await supabase.from("journey_runtime").upsert(
 if (runtimeError) throw runtimeError;
 
 process.stdout.write(
-  `Seeded Tashkent from ${startsAt.toISOString()} to ${endsAt.toISOString()}\n`,
+  `Seeded ${preview ? "reversible Phase 1.5 preview" : "Tashkent"} from ${startsAt.toISOString()} to ${endsAt.toISOString()}\n`,
 );

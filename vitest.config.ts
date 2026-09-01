@@ -19,6 +19,7 @@ export default defineConfig({
         "src/lib/presence/**/*.ts",
         "src/lib/steps/**/*.ts",
         "src/lib/story-clock/**/*.ts",
+        "src/lib/world/**/*.ts",
       ],
       exclude: ["src/**/*.test.{ts,tsx}"],
     },

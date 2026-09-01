@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   }
   const visitor = visitorFromRequest(request);
   const config = serverRuntimeConfig();
-  const { data, error } = await supabase.rpc("record_presence_heartbeat", {
+  const { data, error } = await supabase.rpc("record_presence_heartbeat_v2", {
     p_country_day_id: countryDay.id,
     p_visitor_hash: hashOpaqueValue(visitor.visitorId),
     p_session_hash: hashOpaqueValue(parsed.data.sessionId),
@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
     visitorActiveSeconds: Number(row?.out_visitor_active_seconds ?? 0),
     ttlSeconds: config.presenceTtlSeconds,
     nextHeartbeatInMs: nextHeartbeatDelay(),
+    globalActiveSeconds: Number(row?.out_global_active_seconds ?? 0),
+    routeAuthoritativeAt: String(row?.out_accounted_at ?? now.toISOString()),
   });
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
   return response;

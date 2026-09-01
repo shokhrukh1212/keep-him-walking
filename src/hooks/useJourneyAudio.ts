@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function useJourneyAudio(walking: boolean) {
+export function useJourneyAudio(walking: boolean, ambientUrl?: string) {
   const [enabled, setEnabled] = useState(false);
   const [available, setAvailable] = useState(true);
   const context = useRef<AudioContext | null>(null);
-  const ambience = useRef<GainNode | null>(null);
+  const ambience = useRef<HTMLAudioElement | null>(null);
   const footstepTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -37,11 +37,24 @@ export function useJourneyAudio(walking: boolean) {
   useEffect(() => () => {
     if (footstepTimer.current) window.clearInterval(footstepTimer.current);
     void context.current?.close();
+    ambience.current?.pause();
   }, []);
+
+  useEffect(() => {
+    if (!enabled || !ambientUrl) return;
+    const previous = ambience.current;
+    const audio = new Audio(ambientUrl);
+    audio.loop = true;
+    audio.volume = 0.16;
+    ambience.current = audio;
+    previous?.pause();
+    void audio.play().catch(() => setAvailable(false));
+    return () => audio.pause();
+  }, [ambientUrl, enabled]);
 
   const toggle = async () => {
     if (enabled) {
-      ambience.current?.gain.setTargetAtTime(0, context.current?.currentTime ?? 0, 0.08);
+      ambience.current?.pause();
       setEnabled(false);
       window.localStorage.setItem("khw_sound", "off");
       return;
@@ -50,27 +63,13 @@ export function useJourneyAudio(walking: boolean) {
       const audioContext = context.current ?? new AudioContext();
       context.current = audioContext;
       await audioContext.resume();
-      if (!ambience.current) {
-        const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
-        const data = buffer.getChannelData(0);
-        let last = 0;
-        for (let index = 0; index < data.length; index += 1) {
-          last = last * 0.985 + (Math.random() * 2 - 1) * 0.015;
-          data[index] = last;
-        }
-        const source = audioContext.createBufferSource();
-        const filter = audioContext.createBiquadFilter();
-        const gain = audioContext.createGain();
-        source.buffer = buffer;
-        source.loop = true;
-        filter.type = "lowpass";
-        filter.frequency.value = 560;
-        gain.gain.value = 0.09;
-        source.connect(filter).connect(gain).connect(audioContext.destination);
-        source.start();
-        ambience.current = gain;
-      } else {
-        ambience.current.gain.setTargetAtTime(0.09, audioContext.currentTime, 0.08);
+      if (ambientUrl) {
+        const audio = new Audio(ambientUrl);
+        audio.loop = true;
+        audio.volume = 0.16;
+        await audio.play();
+        ambience.current?.pause();
+        ambience.current = audio;
       }
       setEnabled(true);
       setAvailable(true);

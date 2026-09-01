@@ -1,9 +1,9 @@
-import { countryPackSchema } from "@/lib/content/schema";
+import { countryPackV1Schema } from "@/lib/content/schema";
 
 export const PHASE1_COUNTRY_DAY_ID = "10000000-0000-4000-8000-000000000001";
 export const PHASE1_ENCOUNTER_ID = "20000000-0000-4000-8000-000000000001";
 
-export const tashkentCountryPack = countryPackSchema.parse({
+export const tashkentCountryPackV1 = countryPackV1Schema.parse({
   schemaVersion: 1,
   assetVersion: "tashkent-v1",
   countryDayId: PHASE1_COUNTRY_DAY_ID,
@@ -121,3 +121,6 @@ export const tashkentCountryPack = countryPackSchema.parse({
     "/traveler/temporary/v1/idle.webp",
   ],
 });
+
+/** @deprecated Runtime uses the versioned registry and Tashkent v2. */
+export const tashkentCountryPack = tashkentCountryPackV1;

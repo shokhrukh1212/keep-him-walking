@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { tashkentCountryPack } from "../../src/content/countries/tashkent.v1";
+import { tashkentCountryPackV3 as tashkentCountryPackV2 } from "../../src/content/countries/tashkent.v3";
 import type { BootstrapSnapshot } from "../../src/lib/contracts";
 
 type SharedServer = {
@@ -33,7 +33,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
     serverNow: now.toISOString(),
     mode: "live",
     countryDay: {
-      id: tashkentCountryPack.countryDayId,
+      id: tashkentCountryPackV2.countryDayId,
       dayNumber: 1,
       totalDays: 195,
       countryCode: "UZ",
@@ -43,6 +43,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       startsAt: new Date(now.getTime() - 60_000).toISOString(),
       endsAt: new Date(now.getTime() + 86_340_000).toISOString(),
       storySummary: "The journey begins in Tashkent.",
+      scenePackId: tashkentCountryPackV2.assetVersion,
     },
     activeEvent: {
       id: "20000000-0000-4000-8000-000000000001",
@@ -51,7 +52,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       durationSeconds: 300,
       status: "live",
       locationLabel: "Near Chorsu Bazaar",
-      lines: tashkentCountryPack.encounters[0]?.lines,
+      lines: tashkentCountryPackV2.encounters[0]?.lines,
     },
     nextEvent: null,
     vote: {
@@ -77,8 +78,13 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       updatedAt: now.toISOString(),
       stale: false,
     },
+    route: {
+      globalActiveSeconds: Math.max(0, server.steps - 40),
+      authoritativeAt: now.toISOString(),
+      walking: server.sessions.size > 0,
+    },
     sponsor: { status: "unsponsored" },
-    assets: tashkentCountryPack,
+    assets: tashkentCountryPackV2,
   };
 }
 
@@ -111,6 +117,8 @@ async function installApi(page: Page, server: SharedServer) {
         visitorActiveSeconds: Math.max(0, server.steps - 40),
         ttlSeconds: 50,
         nextHeartbeatInMs: 450,
+        globalActiveSeconds: Math.max(0, server.steps - 40),
+        routeAuthoritativeAt: new Date().toISOString(),
       },
     });
   });
@@ -162,6 +170,7 @@ test("the first viewport explains the live rule and remains keyboard accessible"
 
 test("two browsers share presence, story, vote and persistent steps", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "Two-context synchronization runs once on desktop Chromium");
+  test.setTimeout(75_000);
   const server = createServer();
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();

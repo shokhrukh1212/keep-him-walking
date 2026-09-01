@@ -190,6 +190,11 @@ body {
   width: min(30rem, 42vw);
   color: #fffaf0;
   text-shadow: 0 2px 18px rgb(18 28 27 / 46%);
+  transform-origin: left top;
+  transition:
+    width 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 650ms ease;
 }
 
 .premise-lockup .eyebrow {
@@ -205,6 +210,21 @@ body {
   letter-spacing: -0.045em;
   line-height: 0.92;
   text-wrap: balance;
+}
+
+.premise-lockup[data-collapsed="true"] {
+  width: min(18rem, 48vw);
+  opacity: 0.78;
+  transform: translateY(-0.4rem) scale(0.62);
+}
+
+.premise-lockup[data-collapsed="true"] h1 {
+  max-width: 18ch;
+  font-family: inherit;
+  font-size: clamp(1rem, 1.6vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
 }
 
 .connection-banner {
@@ -230,7 +250,7 @@ body {
   position: absolute;
   z-index: 7;
   left: 61%;
-  bottom: clamp(7.2rem, 13vh, 9.5rem);
+  bottom: clamp(5.8rem, 11vh, 8.2rem);
   width: clamp(11rem, 21vw, 20rem);
   height: clamp(19rem, 59vh, 38rem);
   transform: translateX(-50%);
@@ -258,8 +278,8 @@ body {
   filter: drop-shadow(0 0.8rem 0.9rem rgb(19 23 17 / 22%));
 }
 
-.traveler-sprite[data-walking="true"]:not([data-reduced-motion="true"]) {
-  animation: traveler-weight 1.04s ease-in-out infinite;
+.traveler-sprite[data-walking="true"]:not([data-reduced-motion="true"]) .character-shadow {
+  animation: traveler-shadow calc(0.82s / var(--walk-speed, 1)) ease-in-out infinite;
 }
 
 .traveler-sprite[data-state="wave"],
@@ -290,7 +310,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  transform: translateX(-50%);
+  transform: translateX(-135%);
   border: 1px solid rgb(255 255 255 / 20%);
   border-radius: 999px;
   padding: 0.4rem 0.7rem;
@@ -299,6 +319,53 @@ body {
   font-weight: 750;
   white-space: nowrap;
   backdrop-filter: blur(14px);
+}
+
+.route-status {
+  position: absolute;
+  z-index: 9;
+  right: max(1.25rem, env(safe-area-inset-right));
+  top: calc(6.6rem + env(safe-area-inset-top));
+  display: grid;
+  gap: 0.12rem;
+  min-width: 9rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.9rem;
+  padding: 0.55rem 0.7rem;
+  background: rgb(9 27 35 / 61%);
+  text-align: right;
+  backdrop-filter: blur(12px);
+}
+
+.route-status span {
+  color: rgb(247 240 223 / 62%);
+  font-size: 0.58rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.route-status strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.world-diagnostics {
+  position: absolute;
+  z-index: 60;
+  top: 7rem;
+  left: 1rem;
+  display: grid;
+  gap: 0.16rem;
+  min-width: 15rem;
+  border: 1px solid rgb(151 232 196 / 34%);
+  border-radius: 0.75rem;
+  padding: 0.65rem;
+  background: rgb(4 17 22 / 86%);
+  color: #c6efdb;
+  font: 0.64rem/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
+  pointer-events: none;
 }
 
 .traveler-state span {
@@ -454,6 +521,7 @@ body {
 
 .contribution-meter {
   display: grid;
+  min-width: 0;
   gap: 0.05rem;
   padding-left: 0.25rem;
 }
@@ -578,9 +646,9 @@ body {
   50% { transform: scale(1.12); }
 }
 
-@keyframes traveler-weight {
-  0%, 100% { transform: translateY(0) rotate(-0.35deg); }
-  50% { transform: translateY(-0.42rem) rotate(0.35deg); }
+@keyframes traveler-shadow {
+  0%, 100% { opacity: 0.84; transform: skewX(-18deg) scaleX(1); }
+  50% { opacity: 0.58; transform: skewX(-18deg) scaleX(0.82); }
 }
 
 @keyframes encounter-arrive {
@@ -685,6 +753,37 @@ body {
     line-height: 0.96;
   }
 
+  .premise-lockup[data-collapsed="true"] {
+    top: calc(5.1rem + env(safe-area-inset-top));
+    width: calc(100% - 2rem);
+    transform: scale(0.72);
+  }
+
+  .premise-lockup[data-collapsed="true"] .eyebrow {
+    display: none;
+  }
+
+  .premise-lockup[data-collapsed="true"] h1 {
+    max-width: none;
+    margin: 0;
+    font-size: 0.78rem;
+  }
+
+  .route-status {
+    top: calc(4.7rem + env(safe-area-inset-top));
+    right: 0.7rem;
+    min-width: 0;
+    padding: 0.38rem 0.5rem;
+  }
+
+  .route-status strong {
+    max-width: 8rem;
+    overflow: hidden;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .connection-banner {
     top: calc(4.75rem + env(safe-area-inset-top));
     max-width: calc(100% - 2rem);
@@ -708,6 +807,7 @@ body {
     overflow: hidden;
     font-size: 0.62rem;
     text-overflow: ellipsis;
+    transform: translateX(-50%);
   }
 
   .npc-wrap {
@@ -739,7 +839,10 @@ body {
     right: 0.65rem;
     bottom: max(0.65rem, env(safe-area-inset-bottom));
     left: 0.65rem;
-    grid-template-columns: 1fr auto;
+    width: calc(100% - 1.3rem);
+    min-width: 0;
+    max-width: calc(100% - 1.3rem);
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.55rem;
     border-radius: 1.1rem;
     padding: 0.62rem;

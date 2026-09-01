@@ -19,6 +19,14 @@ import type { TravelerCommand } from "@/lib/traveler/types";
 import { useJourneyAudio } from "@/hooks/useJourneyAudio";
 import { useJourneyPresence } from "@/hooks/useJourneyPresence";
 import { useMotionPreference } from "@/hooks/useMotionPreference";
+import { useQualityTier } from "@/hooks/useQualityTier";
+import { useRouteRuntime } from "@/hooks/useRouteRuntime";
+import { useIntroHeadline } from "@/hooks/useIntroHeadline";
+import { encounterPhaseAt, worldCommandForEncounter } from "@/lib/world/encounter-timeline";
+import { motionPhaseAt, motionSpeedForPhase } from "@/lib/world/motion-machine";
+import { routePositionAt } from "@/lib/world/route-clock";
+import type { MotionTransition } from "@/lib/world/motion-machine";
+import type { WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import { SceneStage } from "@/components/scene/SceneStage";
 import { Traveler } from "@/components/traveler/Traveler";
 import { EncounterDialogue } from "@/components/dialogue/EncounterDialogue";
@@ -26,6 +34,9 @@ import { JourneyHud } from "@/components/hud/JourneyHud";
 import { ContributionMeter } from "@/components/hud/ContributionMeter";
 import { SoundMotionControls } from "@/components/hud/SoundMotionControls";
 import { DailyVote } from "@/components/vote/DailyVote";
+import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
+import { IntroHeadline } from "@/components/hud/IntroHeadline";
+import { WalkingRuleStatus } from "@/components/hud/WalkingRuleStatus";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -49,8 +60,12 @@ function encounterTravelerState(
 ): TravelerState {
   const progress = eventProgress(event, nowMs);
   if (progress < 0.08) return "notice";
-  if (progress < 0.16) return "approach";
-  if (progress > 0.9) return "goodbye";
+  if (progress < 0.15) return "slow_walk";
+  if (progress < 0.28) return "approach";
+  if (progress < 0.36) return "wave";
+  if (progress >= 0.82) return "resume_walk";
+  if (progress >= 0.62) return "goodbye";
+  if (progress >= 0.55) return "react";
   const lineIndex = activeDialogueLineIndex(event, nowMs);
   return event.lines?.[lineIndex]?.speaker === "traveler" ? "talk" : "listen";
 }
@@ -65,14 +80,29 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const [voteOpen, setVoteOpen] = useState(false);
   const [replayOpen, setReplayOpen] = useState(false);
   const [loadingLive, setLoadingLive] = useState(true);
+  const [renderedZone, setRenderedZone] = useState(() => ({
+    id: initialSnapshot.assets.route.zones[0]?.id ?? "arrival",
+    label: initialSnapshot.assets.route.zones[0]?.label ?? initialSnapshot.countryDay.cityName,
+  }));
+  const [motionTransition, setMotionTransition] = useState<MotionTransition>({
+    desiredWalking: false,
+    changedAtMs: new Date(initialSnapshot.serverNow).getTime(),
+  });
+  const [worldDiagnostics, setWorldDiagnostics] = useState<WorldDiagnosticsSnapshot | null>(null);
   const [welcomeOriginMs] = useState(() => new Date(initialSnapshot.serverNow).getTime());
   const readyReported = useRef(false);
   const watchReported = useRef(false);
   const seenMilestones = useRef(new Set<number>());
   const viewedEvents = useRef(new Set<string>());
   const completedDialogues = useRef(new Set<string>());
+  const lastLocomotion = useRef<string | null>(null);
+  const lastZone = useRef<string | null>(null);
+  const qualityReported = useRef(false);
+  const lastBudgetReport = useRef(0);
+  const [hasWalked, setHasWalked] = useState(false);
   const loadStarted = useRef(0);
   const { reducedMotion, toggle: toggleMotion } = useMotionPreference();
+  const qualityTier = useQualityTier(reducedMotion);
 
   useEffect(() => {
     loadStarted.current = performance.now();
@@ -121,6 +151,21 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const handleHeartbeat = useCallback((next: HeartbeatResponse) => {
     setHeartbeat(next);
     setClock(synchronizeClock(next.serverNow));
+    setServerNowMs(new Date(next.serverNow).getTime());
+    setSnapshot((current) => ({
+      ...current,
+      route: {
+        globalActiveSeconds: next.globalActiveSeconds,
+        authoritativeAt: next.routeAuthoritativeAt,
+        walking: next.walking,
+      },
+    }));
+    setMotionTransition((current) => current.desiredWalking === next.walking
+      ? current
+      : {
+          desiredWalking: next.walking,
+          changedAtMs: new Date(next.serverNow).getTime(),
+        });
   }, []);
 
   const experienceReady = sceneRenderer !== null && travelerReady;
@@ -131,8 +176,22 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   });
   const activeViewers = heartbeat?.activeViewers ?? snapshot.presence.activeViewers;
   const walking = snapshot.mode === "live" && connectionStatus === "live" && (activeViewers ?? 0) > 0;
+  const initialRoutePosition = routePositionAt(
+    snapshot.assets,
+    heartbeat?.globalActiveSeconds ?? snapshot.route.globalActiveSeconds,
+  );
+  const zoneAudioId = snapshot.assets.route.zones[initialRoutePosition.zoneIndex]?.audioIds[0];
+  const ambientAudioUrl = snapshot.assets.audio.find((asset) => asset.id === zoneAudioId)?.url;
   const { enabled: soundEnabled, available: soundAvailable, toggle: toggleSound } =
-    useJourneyAudio(walking);
+    useJourneyAudio(walking, ambientAudioUrl);
+
+  useEffect(() => {
+    if (walking || !motionTransition.desiredWalking) return;
+    const update = window.setTimeout(() => {
+      setMotionTransition({ desiredWalking: false, changedAtMs: Date.now() + clock.offsetMs });
+    }, 0);
+    return () => window.clearTimeout(update);
+  }, [clock.offsetMs, motionTransition.desiredWalking, walking]);
 
   useEffect(() => {
     if (walking && !watchReported.current) {
@@ -147,6 +206,64 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const activeEvent = currentlyActiveEvent(snapshot, serverNowMs);
   const lineIndex = activeEvent ? activeDialogueLineIndex(activeEvent, serverNowMs) : -1;
   const activeLine = activeEvent?.lines?.[lineIndex] ?? null;
+  const encounterProgress = activeEvent?.type === "encounter"
+    ? eventProgress(activeEvent, serverNowMs)
+    : -1;
+  const encounterPhase = encounterPhaseAt(encounterProgress);
+  const locomotionPhase = motionPhaseAt(motionTransition, serverNowMs, hasWalked);
+  const locomotionSpeed = motionSpeedForPhase(locomotionPhase);
+  useEffect(() => {
+    let walkedTimer: number | null = null;
+    if (locomotionPhase === "walk" && !hasWalked) {
+      walkedTimer = window.setTimeout(() => setHasWalked(true), 0);
+    }
+    if (lastLocomotion.current === locomotionPhase) return;
+    lastLocomotion.current = locomotionPhase;
+    trackVisitorEvent("locomotion_transition", { phase: locomotionPhase });
+    return () => {
+      if (walkedTimer) window.clearTimeout(walkedTimer);
+    };
+  }, [hasWalked, locomotionPhase]);
+  const { runtime: routeRuntime, seconds: routeSeconds, position: routePosition } =
+    useRouteRuntime(snapshot, heartbeat, serverNowMs);
+  const introHeadline = useIntroHeadline(walking, welcomeOriginMs, serverNowMs);
+  const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
+  const eventStage = snapshot.assets.route.zones[routePosition.zoneIndex]?.eventStage;
+  const worldCommand = {
+    ...baseWorldCommand,
+    speedFactor: baseWorldCommand.speedFactor * locomotionSpeed,
+    cameraZoom: baseWorldCommand.cameraZoom > 1 ? eventStage?.cameraZoom ?? baseWorldCommand.cameraZoom : 1,
+    cameraPan: baseWorldCommand.cameraZoom > 1 ? eventStage?.cameraPan ?? baseWorldCommand.cameraPan : 0,
+    backgroundLife: baseWorldCommand.cameraZoom > 1
+      ? eventStage?.backgroundLife ?? baseWorldCommand.backgroundLife
+      : 1,
+  };
+
+  useEffect(() => {
+    if (lastZone.current === routePosition.zoneId) return;
+    lastZone.current = routePosition.zoneId;
+    trackVisitorEvent("route_zone_entered", {
+      zone: routePosition.zoneId,
+      route_seconds: Math.round(routeSeconds),
+    });
+  }, [routePosition.zoneId, routeSeconds]);
+
+  useEffect(() => {
+    if (qualityReported.current) return;
+    qualityReported.current = true;
+    trackVisitorEvent("world_quality_selected", { tier: qualityTier });
+  }, [qualityTier]);
+
+  useEffect(() => {
+    if (!worldDiagnostics || serverNowMs - lastBudgetReport.current < 30_000) return;
+    lastBudgetReport.current = serverNowMs;
+    trackVisitorEvent("world_frame_budget", {
+      tier: qualityTier,
+      fps: worldDiagnostics.fps,
+      p95_ms: worldDiagnostics.p95FrameMs,
+      objects: worldDiagnostics.liveObjects,
+    });
+  }, [qualityTier, serverNowMs, worldDiagnostics]);
   const lastScheduledEvent = snapshot.activeEvent ?? snapshot.nextEvent;
   const replayAvailable = Boolean(
     lastScheduledEvent &&
@@ -164,6 +281,10 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     ) return;
     completedDialogues.current.add(lastScheduledEvent.id);
     trackVisitorEvent("dialogue_completed", {
+      encounter_id: lastScheduledEvent.id,
+      duration: lastScheduledEvent.durationSeconds,
+    });
+    trackVisitorEvent("encounter_sequence_completed", {
       encounter_id: lastScheduledEvent.id,
       duration: lastScheduledEvent.durationSeconds,
     });
@@ -199,24 +320,36 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     }
   }, [snapshot.countryDay.dayNumber, visitorSeconds]);
 
-  let travelerState: TravelerState = walking ? "walk" : "idle";
+  let travelerState: TravelerState = locomotionPhase;
   if (activeEvent?.type === "encounter") {
     travelerState = encounterTravelerState(activeEvent, serverNowMs);
   } else if (serverNowMs - welcomeOriginMs >= 75_000 && serverNowMs - welcomeOriginMs < 83_000) {
     travelerState = "wave";
-  } else if (walking && ambient) {
+  } else if (
+    locomotionPhase === "walk" &&
+    serverNowMs - motionTransition.changedAtMs > 5_000 &&
+    ambient
+  ) {
     travelerState = ambient.state;
   }
   const command: TravelerCommand = {
     state: travelerState,
     mood: activeLine?.mood ?? "neutral",
     facing: "right",
-    walkingSpeed: walking ? 1 : 0,
+    walkingSpeed: worldCommand.speedFactor,
     reducedMotion,
   };
 
   const sceneDidReady = useCallback((renderer: "pixi" | "static") => {
     setSceneRenderer(renderer);
+  }, []);
+  const worldDidFail = useCallback(() => {
+    trackVisitorEvent("world_asset_failure", {
+      asset_version: snapshot.assets.assetVersion,
+    });
+  }, [snapshot.assets.assetVersion]);
+  const zoneDidChange = useCallback((id: string, label: string) => {
+    setRenderedZone({ id, label });
   }, []);
 
   useEffect(() => {
@@ -253,6 +386,10 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       // Dismissed share sheets and blocked clipboard access are non-fatal.
     }
   };
+  const displayedZoneLabel = reducedMotion ? routePosition.zoneLabel : renderedZone.label;
+  const displayedZoneIndex = reducedMotion
+    ? routePosition.zoneIndex
+    : Math.max(0, snapshot.assets.route.zones.findIndex((zone) => zone.id === renderedZone.id));
 
   const acceptVote = (optionId: string, totalBallots: number) => {
     setSnapshot((current) => ({
@@ -267,14 +404,17 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     <main className="journey-shell" data-motion={reducedMotion ? "reduced" : "full"}>
       <SceneStage
         pack={snapshot.assets}
-        walking={walking}
+        routeSeconds={routeSeconds}
+        routeRuntime={routeRuntime}
+        command={worldCommand}
+        qualityTier={qualityTier}
         reducedMotion={reducedMotion}
+        onZoneChange={zoneDidChange}
+        onDiagnostics={setWorldDiagnostics}
+        onWorldFailure={worldDidFail}
         onReady={sceneDidReady}
       />
-      <div className="premise-lockup">
-        <span className="eyebrow">ONE JOURNEY · LIVE ON THE INTERNET</span>
-        <h1>He only walks while someone is watching.</h1>
-      </div>
+      <IntroHeadline collapsed={introHeadline.collapsed} />
       <JourneyHud
         day={snapshot.countryDay}
         localTime={localTime}
@@ -290,9 +430,15 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       ) : null}
 
       <Traveler pack={snapshot.assets} command={command} onReady={() => setTravelerReady(true)} />
-      <div className="traveler-state" role="status">
-        <span aria-hidden="true">{walking ? "→" : "•"}</span>
-        {activeEvent ? "A shared story moment" : ambient?.label ?? (walking ? "Walking through Tashkent" : "Waiting for the internet")}
+      <WalkingRuleStatus
+        walking={walking}
+        label={activeEvent
+          ? "A shared story moment"
+          : ambient?.label ?? (walking ? `Walking · ${displayedZoneLabel}` : "Waiting for the internet")}
+      />
+      <div className="route-status" aria-label={`Current route zone: ${displayedZoneLabel}`}>
+        <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>
+        <strong>{displayedZoneLabel}</strong>
       </div>
       <EncounterDialogue
         line={activeLine}
@@ -339,6 +485,13 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         open={voteOpen}
         onClose={() => setVoteOpen(false)}
         onAccepted={acceptVote}
+      />
+      <WorldDiagnostics
+        snapshot={worldDiagnostics}
+        locomotionPhase={locomotionPhase}
+        qualityTier={qualityTier}
+        renderer={sceneRenderer}
+        authoritativeRouteSeconds={routeSeconds}
       />
       <p className="sr-only" aria-live="polite">
         {activeLine ? `${activeLine.speaker}: ${activeLine.text}` : ""}

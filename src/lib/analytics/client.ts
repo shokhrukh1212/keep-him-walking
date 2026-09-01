@@ -8,7 +8,13 @@ export type VisitorEvent =
   | "watch_session_started"
   | "contribution_milestone"
   | "story_event_viewed"
-  | "dialogue_completed";
+  | "dialogue_completed"
+  | "route_zone_entered"
+  | "locomotion_transition"
+  | "world_quality_selected"
+  | "world_frame_budget"
+  | "world_asset_failure"
+  | "encounter_sequence_completed";
 
 export function trackVisitorEvent(
   event: VisitorEvent,

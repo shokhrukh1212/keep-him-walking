@@ -12,6 +12,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Next 16's CLI parser can intermittently reject valid `tsc --showConfig`
+    // output in constrained build environments. The compiler API performs the
+    // same build-time type check without the subprocess parsing boundary.
+    useTypeScriptCli: false,
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

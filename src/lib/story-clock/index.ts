@@ -1,5 +1,5 @@
 import type { ScheduledEventView } from "@/lib/contracts";
-import type { CountryPack, TravelerState } from "@/lib/content/schema";
+import type { CountryPack, CountryPackV1, TravelerState } from "@/lib/content/schema";
 
 export type ServerClock = {
   offsetMs: number;
@@ -34,7 +34,7 @@ function stringSeed(value: string): number {
 }
 
 export function deterministicAmbientAction(
-  pack: CountryPack,
+  pack: Pick<CountryPack | CountryPackV1, "countryDayId" | "ambientActions">,
   serverNowMs: number,
 ): { state: TravelerState; label: string } | null {
   const windowSeconds = 40;

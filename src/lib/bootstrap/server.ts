@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { tashkentCountryPack } from "@/content/countries/tashkent.v1";
+import { getCountryPack } from "@/content/countries/registry";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import type {
   BootstrapSnapshot,
@@ -28,6 +28,7 @@ type CountryDayRow = {
   starts_at: string;
   ends_at: string;
   story_summary: string | null;
+  scene_pack_id: string;
   journeys: { total_days: number } | Array<{ total_days: number }>;
 };
 
@@ -47,7 +48,7 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
   const { data, error } = await supabase
     .from("country_days")
     .select(
-      "id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,journeys!inner(total_days,status)",
+      "id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id,journeys!inner(total_days,status)",
     )
     .in("status", ["scheduled", "live"])
     .eq("journeys.status", "active")
@@ -73,6 +74,7 @@ function countryDayView(row: CountryDayRow): CountryDayView {
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     storySummary: row.story_summary,
+    scenePackId: row.scene_pack_id,
   };
 }
 
@@ -174,9 +176,13 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const countryDay = await findCurrentCountryDay(now);
   if (!countryDay) return null;
+  const countryPack = getCountryPack(countryDay.scene_pack_id);
+  if (!countryPack || countryPack.countryDayId !== countryDay.id) {
+    throw new Error(`No matching country pack for ${countryDay.scene_pack_id}`);
+  }
   const config = serverRuntimeConfig();
   const [{ data: runtime, error: runtimeError }, events, vote] = await Promise.all([
-    supabase.rpc("record_presence_heartbeat", {
+    supabase.rpc("record_presence_heartbeat_v2", {
       p_country_day_id: countryDay.id,
       p_visitor_hash: null,
       p_session_hash: null,
@@ -209,7 +215,12 @@ export async function liveBootstrapSnapshot(
       updatedAt: String(row?.out_accounted_at ?? now.toISOString()),
       stale: false,
     },
+    route: {
+      globalActiveSeconds: Number(row?.out_global_active_seconds ?? 0),
+      authoritativeAt: String(row?.out_accounted_at ?? now.toISOString()),
+      walking: Number(row?.out_active_viewers ?? 0) > 0,
+    },
     sponsor: { status: "unsponsored" },
-    assets: tashkentCountryPack,
+    assets: countryPack,
   };
 }

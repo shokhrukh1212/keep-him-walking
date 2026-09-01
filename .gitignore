@@ -3,6 +3,7 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
+artifacts/**/.last-run.json
 .env
 .env.local
 .env.*.local

@@ -1,8 +1,8 @@
 # Phase 1 External Test Results
 
-Status: **Not run — Phase 2 remains blocked.**
+Status: **Database verification complete; external human/device gate not run — Phase 2 remains blocked.**
 
-The repository-level technical pass is complete except for database execution: lint, typecheck, 15 unit/component tests, scoped coverage, production build, desktop/320px browser acceptance, two-context mocked synchronization, axe and no-WebGL fallback all pass. `pnpm db:lint` and `pnpm db:test` could not connect because the current environment has no Docker, Podman or local PostgreSQL. This is not evidence that the migration assertions passed; run them before external testing.
+The configured Supabase project was confirmed empty, received the three Phase 1/1.5 migrations, passed remote schema lint and passed all 14 rollback-protected pgTAP assertions on 2026-08-31. Docker is not required: `pnpm db:lint:remote` and `pnpm db:test:remote` use the configured `SUPABASE_DB_URL`. External comprehension and physical-device evidence are still required.
 
 ## Summary
 

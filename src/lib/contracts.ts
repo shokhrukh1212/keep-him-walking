@@ -3,6 +3,7 @@ import type {
   DialogueLine,
   TravelerState,
 } from "@/lib/content/schema";
+import type { RouteRuntime } from "@/lib/world/types";
 
 export type ConnectionStatus = "live" | "reconnecting" | "offline";
 
@@ -17,6 +18,7 @@ export type CountryDayView = {
   startsAt: string;
   endsAt: string;
   storySummary: string | null;
+  scenePackId: string;
 };
 
 export type ScheduledEventView = {
@@ -63,6 +65,7 @@ export type BootstrapSnapshot = {
     updatedAt: string;
     stale: boolean;
   };
+  route: RouteRuntime;
   sponsor: { status: "unsponsored" };
   assets: CountryPack;
 };
@@ -75,4 +78,6 @@ export type HeartbeatResponse = {
   visitorActiveSeconds: number;
   ttlSeconds: number;
   nextHeartbeatInMs: number;
+  globalActiveSeconds: number;
+  routeAuthoritativeAt: string;
 };

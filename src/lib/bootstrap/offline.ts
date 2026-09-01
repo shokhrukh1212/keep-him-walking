@@ -1,4 +1,4 @@
-import { tashkentCountryPack } from "@/content/countries/tashkent.v1";
+import { tashkentCountryPackV3 } from "@/content/countries/tashkent.v3";
 import type { BootstrapSnapshot } from "@/lib/contracts";
 import { DEFAULT_PRESENCE_TTL_SECONDS } from "@/lib/presence";
 
@@ -11,16 +11,17 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     serverNow: now.toISOString(),
     mode: "offline_preview",
     countryDay: {
-      id: tashkentCountryPack.countryDayId,
+      id: tashkentCountryPackV3.countryDayId,
       dayNumber: 1,
       totalDays: 195,
-      countryCode: tashkentCountryPack.countryCode,
-      countryName: tashkentCountryPack.countryName,
-      cityName: tashkentCountryPack.cityName,
-      timeZone: tashkentCountryPack.timeZone,
+      countryCode: tashkentCountryPackV3.countryCode,
+      countryName: tashkentCountryPackV3.countryName,
+      cityName: tashkentCountryPackV3.cityName,
+      timeZone: tashkentCountryPackV3.timeZone,
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
       storySummary: "The journey begins in Tashkent.",
+      scenePackId: tashkentCountryPackV3.assetVersion,
     },
     activeEvent: null,
     nextEvent: null,
@@ -31,7 +32,8 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
       ttlSeconds: DEFAULT_PRESENCE_TTL_SECONDS,
     },
     steps: { global: 0, updatedAt: now.toISOString(), stale: true },
+    route: { globalActiveSeconds: 0, authoritativeAt: now.toISOString(), walking: false },
     sponsor: { status: "unsponsored" },
-    assets: tashkentCountryPack,
+    assets: tashkentCountryPackV3,
   };
 }
