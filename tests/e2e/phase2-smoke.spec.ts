@@ -71,3 +71,28 @@ test("all seven reduced-motion country packs retain distinct complete environmen
 
   expect(renderedSources.size).toBe(PHASE2_ROUTE.length);
 });
+
+test("a closed daily vote presents deterministic result counts", async ({ page }) => {
+  const closed = snapshot();
+  closed.vote = {
+    id: "20000000-0000-4000-8000-000000000001",
+    question: "Which Tashkent moment should he remember?",
+    opensAt: new Date(Date.now() - 60_000).toISOString(),
+    closesAt: new Date(Date.now() - 1_000).toISOString(),
+    status: "closed",
+    totalBallots: 7,
+    selectedOptionId: null,
+    options: [
+      { id: "20000000-0000-4000-8000-000000000002", label: "Chorsu market", displayOrder: 0, votes: 5 },
+      { id: "20000000-0000-4000-8000-000000000003", label: "Hazrati Imam", displayOrder: 1, votes: 2 },
+    ],
+  };
+  await install(page, () => closed);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Daily vote" }).click();
+  const panel = page.getByRole("region", { name: "Daily vote" });
+  await expect(panel).toContainText("5 votes");
+  await expect(panel).toContainText("2 votes");
+  await expect(panel).toContainText("7 people have voted");
+  await expect(panel.locator(".vote-options button:not([disabled])")).toHaveCount(0);
+});

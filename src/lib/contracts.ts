@@ -51,6 +51,8 @@ export type VoteView = {
 export type BootstrapSnapshot = {
   serverNow: string;
   realServerNow: string;
+  /** Story-clock multiplier. It is greater than one only in an isolated rehearsal. */
+  storyScale?: number;
   mode: "live" | "offline_preview";
   journeyState: "prelaunch" | "live" | "intermission" | "completed";
   refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "none" };
@@ -92,6 +94,8 @@ export type BootstrapSnapshot = {
 export type HeartbeatResponse = {
   serverNow: string;
   realServerNow: string;
+  /** Story-clock multiplier. It is greater than one only in an isolated rehearsal. */
+  storyScale?: number;
   activeViewers: number;
   walking: boolean;
   globalSteps: number;

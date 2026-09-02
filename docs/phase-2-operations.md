@@ -4,16 +4,21 @@ Phase 2 is preview-only until every exit gate passes. `PHASE2_ENABLED` defaults 
 
 ## Reversible preview
 
-1. Set `PHASE2_PREVIEW_START_AT` directly in the deployment environment as an ISO timestamp with offset and retain `PHASE2_REHEARSAL_SCALE=144`.
-2. Inspect: `pnpm seed:phase2:preview`
-3. Complete and record all seven cultural reviews in the pack metadata; the apply path refuses pending packs.
-4. Apply explicitly: `pnpm seed:phase2:preview -- --apply`
-5. Inspect reset: `pnpm reset:phase2:preview`
-6. Apply reset: `pnpm reset:phase2:preview -- --apply`
+1. Verify isolation without printing values: `pnpm phase2:preflight`.
+2. Inspect migration history: `pnpm phase2:db:plan`; apply only after the project reference is confirmed: `pnpm phase2:db:apply`.
+3. Set `PHASE2_PREVIEW_START_AT` in `.env.phase2-preview.local` as an ISO timestamp with offset and retain `PHASE2_REHEARSAL_SCALE=144` for the accelerated run.
+4. Inspect: `pnpm seed:phase2:preview`.
+5. The apply path accepts approved Tashkent plus six explicit `provisional_preview` research reviews, but refuses pending packs.
+6. Apply explicitly: `pnpm seed:phase2:preview -- --apply`.
+7. Inspect reset: `pnpm reset:phase2:preview`; apply reset: `pnpm reset:phase2:preview -- --apply`.
 
 The seed uses only slug `phase2-seven-day-preview`, refuses mismatched replacement, creates seven contiguous story-time days, and gives each day a $1 slot while Lemon test mode is enabled. Ten real minutes equal one story day. Presence TTL and route walking remain real-time.
 
 ## Sponsor workflow
+
+Phase 2 private rehearsal uses `SPONSOR_PAYMENT_PROVIDER=fixture`. The browser checkout says **TEST PAYMENT — NO MONEY**, never contacts Lemon Squeezy, never writes Lemon webhook ledger rows and is rejected when `VERCEL_ENV=production`. Run deterministic approval/presentation/metrics, cancellation, refund and emergency-removal cases with `pnpm phase2:rehearse-sponsors -- --apply`.
+
+The Lemon Squeezy adapter, webhook and tests remain in the repository, but real-provider testing is listed in `DEFERRED_LAUNCH_BLOCKERS` and must not be claimed from fixture evidence.
 
 - Upload private creative: `pnpm phase2:upload-creative -- --id UUID --file /absolute/path/image.webp` then repeat with `--apply`.
 - Approve and copy to immutable public storage: `pnpm phase2:approve-sponsor -- --id UUID --reviewer "Name"` then repeat with `--apply`.

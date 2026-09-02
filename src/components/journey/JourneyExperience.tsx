@@ -77,7 +77,7 @@ function encounterTravelerState(
 export function JourneyExperience({ initialSnapshot }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeat, setHeartbeat] = useState<HeartbeatResponse | null>(null);
-  const [clock, setClock] = useState(() => synchronizeClock(initialSnapshot.serverNow));
+  const [clock, setClock] = useState(() => synchronizeClock(initialSnapshot.serverNow, Date.now(), initialSnapshot.storyScale ?? 1));
   const [realClock, setRealClock] = useState(() => synchronizeClock(initialSnapshot.realServerNow ?? initialSnapshot.serverNow));
   const [serverNowMs, setServerNowMs] = useState(() => new Date(initialSnapshot.serverNow).getTime());
   const [sceneRenderer, setSceneRenderer] = useState<"pixi" | "static" | null>(null);
@@ -124,7 +124,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       if (!response.ok) throw new Error("Bootstrap unavailable");
       const next = (await response.json()) as BootstrapSnapshot;
       setSnapshot(next);
-      setClock(synchronizeClock(next.serverNow));
+      setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
       setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
     } catch {
       setSnapshot((current) => ({
@@ -160,7 +160,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
 
   const handleHeartbeat = useCallback((next: HeartbeatResponse) => {
     setHeartbeat(next);
-    setClock(synchronizeClock(next.serverNow));
+    setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
     setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
     setServerNowMs(new Date(next.serverNow).getTime());
     setSnapshot((current) => ({
@@ -199,10 +199,10 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   useEffect(() => {
     if (walking || !motionTransition.desiredWalking) return;
     const update = window.setTimeout(() => {
-      setMotionTransition({ desiredWalking: false, changedAtMs: Date.now() + clock.offsetMs });
+      setMotionTransition({ desiredWalking: false, changedAtMs: estimatedServerNow(clock) });
     }, 0);
     return () => window.clearTimeout(update);
-  }, [clock.offsetMs, motionTransition.desiredWalking, walking]);
+  }, [clock, motionTransition.desiredWalking, walking]);
 
   useEffect(() => {
     if (walking && !watchReported.current) {

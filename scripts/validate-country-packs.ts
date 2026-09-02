@@ -23,6 +23,10 @@ for (const candidate of packs) {
     ...Object.values(pack.npcAssets),
     ...Object.values(pack.traveler.fallbackSprites).filter((url): url is string => Boolean(url)),
     ...(pack.traveler.walkCycle?.frames ?? []),
+    ...(pack.traveler.spriteManifest
+      ? Object.values(pack.traveler.spriteManifest.clips).flatMap((clip) => clip?.frames ?? [])
+      : []),
+    ...(pack.schemaVersion === 3 ? Object.values(pack.npcSystem.states) : []),
     ...pack.route.zones.flatMap((zone) => [
       zone.fallbackUrl,
       ...zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
@@ -38,8 +42,11 @@ for (const candidate of packs) {
     if (fractions.some((fraction, index) => index > 0 && fraction <= fractions[index - 1])) {
       throw new Error(`${pack.assetVersion} story beats must be strictly ordered`);
     }
-    if (pack.culturalReview.status !== "approved") {
-      process.stdout.write(`Gate open: ${pack.assetVersion} cultural review is ${pack.culturalReview.status}.\n`);
+    if (!['approved', 'provisional_preview'].includes(pack.culturalReview.status)) {
+      throw new Error(`${pack.assetVersion} is not eligible for private preview`);
+    }
+    if (pack.culturalReview.status === "provisional_preview") {
+      process.stdout.write(`Private-preview only: ${pack.assetVersion} requires qualified local review before public launch.\n`);
     }
   }
   for (const url of urls) {

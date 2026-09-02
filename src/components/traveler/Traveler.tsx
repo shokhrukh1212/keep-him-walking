@@ -20,13 +20,14 @@ type Props = {
 export function Traveler({ pack, command, onReady }: Props) {
   const [riveFailed, setRiveFailed] = useState(false);
   const riveUrl = pack.traveler.riveUrl;
+  const useRive = pack.traveler.driver === "rive" && Boolean(riveUrl) && !riveFailed;
   return (
     <div
       className="traveler-wrap"
       role="img"
       aria-label={`Traveler is ${command.state.replaceAll("_", " ")}`}
     >
-      {riveUrl && !riveFailed ? (
+      {useRive && riveUrl ? (
         <RiveTravelerRenderer
           src={riveUrl}
           artboard={pack.traveler.artboard}

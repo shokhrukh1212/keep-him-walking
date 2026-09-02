@@ -224,6 +224,7 @@ export function PixiScene({
           activeZoneIndex = zoneIndex;
           pendingZoneIndex = -1;
           zoneFade = ready ? 0 : 1;
+          sky.clear().rect(0, 0, app.screen.width, app.screen.height).fill(zone.lighting.skyTop);
           layerRoot.alpha = zoneFade;
           propRoot.alpha = zoneFade;
           zoneCallback.current(zone.id, zone.label);
@@ -290,8 +291,6 @@ export function PixiScene({
           layerRoot.alpha = zoneFade;
           propRoot.alpha = zoneFade * (0.72 + state.command.backgroundLife * 0.28);
           weatherRoot.alpha = 0.5 + state.command.backgroundLife * 0.5;
-          sky.clear().rect(0, 0, width, height).fill(activeZone.lighting.skyTop);
-
           for (const pool of pools) {
             const targetHeight = height * pool.height;
             const sampleTexture = pool.textures[0];

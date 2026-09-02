@@ -281,6 +281,7 @@ export async function liveBootstrapSnapshot(
   return {
     serverNow: storyNow.toISOString(),
     realServerNow: now.toISOString(),
+    storyScale: countryDay.story_scale ?? 1,
     mode: "live",
     journeyState: "live",
     refresh: (() => {

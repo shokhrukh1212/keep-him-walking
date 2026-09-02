@@ -4,6 +4,13 @@ import sharp from "sharp";
 import { registeredCountryPacks } from "../src/content/countries/registry";
 
 const packs = registeredCountryPacks().filter((pack) => pack.schemaVersion === 3);
+const sharedTravelerUrls = new Set<string>(packs.flatMap((pack) => pack.traveler.spriteManifest
+  ? Object.values(pack.traveler.spriteManifest.clips).flatMap((clip) => clip?.frames ?? [])
+  : []));
+let sharedTravelerTransfer = 0;
+for (const url of sharedTravelerUrls) sharedTravelerTransfer += (await stat(path.join(process.cwd(), "public", url))).size;
+if (sharedTravelerTransfer > 1.6 * 1_048_576) throw new Error("Shared production traveler exceeds the 1.6 MiB mobile transfer budget");
+process.stdout.write(`shared-traveler: ${(sharedTravelerTransfer / 1_048_576).toFixed(2)} MiB deferred state transfer, 32.0 MiB decoded-cache cap\n`);
 for (const pack of packs) {
   const packUrls = new Set<string>([
     pack.scene.fallbackUrl,

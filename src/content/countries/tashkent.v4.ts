@@ -21,5 +21,5 @@ export const tashkentCountryPackV4 = createPhase2CountryPack({
   },
   postcardTitle: "A day in Tashkent",
   postcardCopy: "We kept the traveler moving through Tashkent.",
-  sourceNotes: ["Tashkent route motifs derive from the reviewed Phase 1.5 visual direction.", "Local phrases remain pending independent native-speaker review."],
+  sourceNotes: ["Tashkent route motifs derive from the reviewed Phase 1.5 visual direction.", "Shokhrukh Karimov approved the pack on September 2, 2026 with no corrections currently requested."],
 });

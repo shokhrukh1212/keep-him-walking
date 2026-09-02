@@ -17,14 +17,14 @@ const scheduledPacks = schedule.map((scheduled) => {
   if (!pack || pack.schemaVersion !== 3) throw new Error(`Missing Phase 2 pack ${scheduled.scenePackId}`);
   return pack;
 });
-const pendingReviews = scheduledPacks.filter((pack) => pack.culturalReview.status !== "approved").map((pack) => pack.assetVersion);
+const pendingReviews = scheduledPacks.filter((pack) => !["approved", "provisional_preview"].includes(pack.culturalReview.status)).map((pack) => pack.assetVersion);
 requireApply({
   slug,
   realStart: realStart.toISOString(),
   storyStart: storyStart.toISOString(),
   scale,
   days: schedule.map((day) => day.scenePackId),
-  culturalReviewGate: pendingReviews.length === 0 ? "passed" : { blocked: pendingReviews },
+  culturalReviewGate: pendingReviews.length === 0 ? "passed_for_private_preview" : { blocked: pendingReviews },
 });
 if (pendingReviews.length > 0) {
   throw new Error(`Cultural review blocks preview scheduling: ${pendingReviews.join(", ")}`);
@@ -89,7 +89,7 @@ for (const [index, scheduled] of schedule.entries()) {
   ]);
   if (optionsError) throw optionsError;
   const { error: slotError } = await supabase.from("sponsor_slots").insert({
-    country_day_id: day.id, price_cents: process.env.LEMON_SQUEEZY_TEST_MODE === "false" ? 100_000 : 100,
+    country_day_id: day.id, price_cents: process.env.SPONSOR_PAYMENT_PROVIDER === "fixture" ? 100 : process.env.LEMON_SQUEEZY_TEST_MODE === "false" ? 100_000 : 100,
     currency: "USD", status: "available",
   });
   if (slotError) throw slotError;

@@ -39,6 +39,8 @@ describe("Phase 2 country packs", () => {
     );
     expect(new Set(sceneUrls).size).toBe(175);
     expect(packs.every((pack) => pack.storyBeats.length >= 4)).toBe(true);
-    expect(packs.every((pack) => pack.culturalReview.status === "pending")).toBe(true);
+    expect(packs[0]?.culturalReview.status).toBe("approved");
+    expect(packs.slice(1).every((pack) => pack.culturalReview.status === "provisional_preview")).toBe(true);
+    expect(new Set(packs.map((pack) => pack.npcSystem.baseType))).toEqual(new Set(["resident-a", "resident-b"]));
   });
 });

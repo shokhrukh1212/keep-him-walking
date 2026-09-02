@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(24);
 
 insert into public.journeys (
   id, slug, title, starts_at, total_days, status,
@@ -123,6 +123,17 @@ select ok((select relrowsecurity from pg_class where oid = 'public.sponsorships'
 select ok((select relrowsecurity from pg_class where oid = 'public.sponsor_metric_events'::regclass), 'sponsor metric events enforce RLS');
 select is((select count(*) from storage.buckets where id in ('khw-postcards', 'khw-sponsor-private', 'khw-sponsor-public')), 3::bigint, 'three scoped storage buckets exist');
 select is((select public from storage.buckets where id = 'khw-sponsor-private'), false, 'unreviewed sponsor creative bucket is private');
+select is((select public from storage.buckets where id = 'khw-sponsor-public'), true, 'approved sponsor creative bucket is public');
+select is((select public from storage.buckets where id = 'khw-postcards'), true, 'rendered postcard bucket is public');
+select is(has_table_privilege('anon', 'public.sponsorships', 'SELECT'), false, 'anon cannot read sponsorship records');
+select is(has_table_privilege('authenticated', 'public.sponsor_metric_events', 'INSERT'), false, 'authenticated clients cannot forge sponsor metrics');
+select is(has_table_privilege('anon', 'public.postcards', 'INSERT'), false, 'anon cannot insert postcard records directly');
+select is(
+  (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'Public postcard and approved sponsor creative reads'),
+  1::bigint,
+  'storage exposes only the named public-read policy'
+);
+select ok((select relrowsecurity from pg_class where oid = 'public.operation_ledger'::regclass), 'operation ledger enforces RLS');
 
 select * from finish();
 rollback;

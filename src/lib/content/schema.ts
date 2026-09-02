@@ -54,7 +54,49 @@ const sceneLayerSchema = z.object({
   scale: z.number().positive().default(1),
 });
 
+const spriteFootSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  planted: z.boolean(),
+});
+
+const spriteFrameMetadataSchema = z.object({
+  leftFoot: spriteFootSchema,
+  rightFoot: spriteFootSchema,
+  rootX: z.number().min(-0.25).max(0.25),
+  rootY: z.number().min(-0.25).max(0.25),
+  shadowScale: z.number().min(0.5).max(1.25),
+  sponsorAnchor: z.object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    scale: z.number().min(0.02).max(0.4),
+    rotation: z.number().min(-45).max(45),
+  }),
+});
+
+const spriteClipSchema = z.object({
+  frames: z.array(z.string().startsWith("/")).min(1).max(16),
+  framesPerSecond: z.number().min(1).max(18),
+  loop: z.boolean(),
+  strideWorldUnits: z.number().positive().max(300).optional(),
+  metadata: z.array(spriteFrameMetadataSchema).min(1).max(16),
+}).refine((clip) => clip.frames.length === clip.metadata.length, {
+  message: "Sprite clips require one metadata record per frame",
+});
+
+export const spriteManifestSchema = z.object({
+  version: z.literal(1),
+  canvas: z.object({
+    width: z.number().int().positive().max(1_024),
+    height: z.number().int().positive().max(1_024),
+    groundY: z.number().min(0.75).max(1),
+  }),
+  maxDecodedCacheBytes: z.number().int().positive().max(64 * 1_048_576),
+  clips: z.partialRecord(travelerStateSchema, spriteClipSchema),
+});
+
 const travelerSchema = z.object({
+  driver: z.enum(["sprite", "rive"]).optional(),
   riveUrl: z.string().startsWith("/").nullable(),
   artboard: z.string().min(1),
   stateMachine: z.string().min(1),
@@ -73,6 +115,7 @@ const travelerSchema = z.object({
     frames: z.array(z.string().startsWith("/")).length(8),
     framesPerSecond: z.number().min(6).max(18),
   }).optional(),
+  spriteManifest: spriteManifestSchema.optional(),
 });
 
 const audioSchema = z.object({
@@ -177,11 +220,23 @@ export const countryPackSchema = baseCountryPackSchema.extend({
 export const culturalReviewSchema = z.object({
   reviewerName: z.string().min(2).nullable(),
   reviewedAt: z.string().datetime().nullable(),
-  status: z.enum(["pending", "approved", "changes_requested"]),
+  status: z.enum(["pending", "approved", "provisional_preview", "changes_requested"]),
+  qualification: z.string().min(2).nullable().default(null),
+  disposition: z.string().min(2).nullable().default(null),
+  publicLaunchRequirement: z.string().min(2).nullable().default(null),
+  citations: z.array(z.object({
+    title: z.string().min(2),
+    url: z.string().url(),
+  })).default([]),
   notes: z.string().max(1_000),
 }).refine(
-  (review) => review.status !== "approved" || Boolean(review.reviewerName && review.reviewedAt),
-  { message: "Approved cultural reviews require a named reviewer and review timestamp" },
+  (review) => !["approved", "provisional_preview"].includes(review.status)
+    || Boolean(review.reviewerName && review.reviewedAt && review.qualification && review.disposition),
+  { message: "Approved and provisional reviews require reviewer, qualification, disposition and timestamp" },
+).refine(
+  (review) => review.status !== "provisional_preview"
+    || Boolean(review.publicLaunchRequirement && review.citations.length >= 1),
+  { message: "Provisional reviews require citations and a public-launch requirement" },
 );
 
 export const localPhraseSchema = z.object({
@@ -235,6 +290,18 @@ export const countryPackV3Schema = baseCountryPackSchema
     storyBeats: z.array(storyBeatSchema).min(4).max(6),
     localPhrases: z.array(localPhraseSchema).min(1),
     culturalReview: culturalReviewSchema,
+    npcSystem: z.object({
+      baseType: z.enum(["resident-a", "resident-b"]),
+      variantId: z.string().min(2),
+      states: z.object({
+        neutral: z.string().startsWith("/"),
+        greet: z.string().startsWith("/"),
+        talk: z.string().startsWith("/"),
+        listen: z.string().startsWith("/"),
+        react: z.string().startsWith("/"),
+        goodbye: z.string().startsWith("/"),
+      }),
+    }),
     editorial: z.object({
       owner: z.string().min(2),
       researchedAt: z.string().datetime(),
@@ -289,3 +356,4 @@ export type RouteLayer = z.infer<typeof routeLayerSchema>;
 export type RouteProp = z.infer<typeof routePropSchema>;
 export type RouteZone = z.infer<typeof routeZoneSchema>;
 export type TravelerState = z.infer<typeof travelerStateSchema>;
+export type SpriteManifest = z.infer<typeof spriteManifestSchema>;

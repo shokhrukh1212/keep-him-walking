@@ -10,6 +10,7 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
   return {
     serverNow: now.toISOString(),
     realServerNow: now.toISOString(),
+    storyScale: 1,
     mode: "offline_preview",
     journeyState: "live",
     refresh: { nextAt: endsAt.toISOString(), afterMs: 5 * 60_000, reason: "country_rollover" },

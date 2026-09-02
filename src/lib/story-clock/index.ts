@@ -4,17 +4,22 @@ import type { CountryPack, CountryPackV1, TravelerState } from "@/lib/content/sc
 export type ServerClock = {
   offsetMs: number;
   synchronizedAt: number;
+  serverAnchorMs: number;
+  scale: number;
 };
 
-export function synchronizeClock(serverNow: string, clientNow = Date.now()): ServerClock {
+export function synchronizeClock(serverNow: string, clientNow = Date.now(), scale = 1): ServerClock {
+  const serverAnchorMs = new Date(serverNow).getTime();
   return {
-    offsetMs: new Date(serverNow).getTime() - clientNow,
+    offsetMs: serverAnchorMs - clientNow,
     synchronizedAt: clientNow,
+    serverAnchorMs,
+    scale: Number.isFinite(scale) && scale >= 1 ? scale : 1,
   };
 }
 
 export function estimatedServerNow(clock: ServerClock, clientNow = Date.now()): number {
-  return clientNow + clock.offsetMs;
+  return clock.serverAnchorMs + (clientNow - clock.synchronizedAt) * clock.scale;
 }
 
 export function eventProgress(event: ScheduledEventView, serverNowMs: number): number {

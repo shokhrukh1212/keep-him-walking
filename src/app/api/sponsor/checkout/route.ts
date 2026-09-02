@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { trackServerEvent } from "@/lib/analytics/server";
 import { visitorFromRequest, attachVisitorCookie } from "@/lib/identity/cookie";
 import { hashOpaqueValue } from "@/lib/identity/server";
-import { createLemonCheckout } from "@/lib/payments/checkout";
+import { createSponsorCheckout } from "@/lib/payments/provider";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { sponsorCheckoutBodySchema } from "@/lib/validation/api";
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   const config = serverRuntimeConfig();
   if (!config.phase2Enabled) return apiError(503, "UNAVAILABLE", "Phase 2 preview is disabled.");
   const now = new Date();
-  const testMode = process.env.LEMON_SQUEEZY_TEST_MODE !== "false";
+  const testMode = config.sponsorPaymentProvider === "fixture" || process.env.LEMON_SQUEEZY_TEST_MODE !== "false";
   const { data, error } = await supabase.rpc("reserve_sponsor_slot", {
     p_slot_id: parsed.data.slotId,
     p_sponsor_name: parsed.data.sponsorName,
@@ -39,22 +39,26 @@ export async function POST(request: NextRequest) {
   const sponsorship = Array.isArray(data) ? data[0] : data;
   try {
     const origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
-    const checkout = await createLemonCheckout({
+    const checkout = await createSponsorCheckout({
       sponsorshipId: String(sponsorship.id),
       slotId: parsed.data.slotId,
       email: parsed.data.sponsorEmail,
       priceCents: Number(sponsorship.expected_price_cents),
       expiresAt: new Date(now.getTime() + config.sponsorReservationMinutes * 60_000).toISOString(),
       returnUrl: `${origin}/sponsor/return?purchase=${sponsorship.public_id}`,
+      origin,
     });
-    const { error: updateError } = await supabase.from("sponsorships")
-      .update({ lemon_checkout_id: checkout.id, updated_at: new Date().toISOString() })
-      .eq("id", sponsorship.id).eq("status", "checkout_pending");
-    if (updateError) throw updateError;
+    if (checkout.provider === "lemonsqueezy") {
+      const { error: updateError } = await supabase.from("sponsorships")
+        .update({ lemon_checkout_id: checkout.providerCheckoutId, updated_at: new Date().toISOString() })
+        .eq("id", sponsorship.id).eq("status", "checkout_pending");
+      if (updateError) throw updateError;
+    }
     trackServerEvent("sponsor_checkout_started", String(sponsorship.id), {
       sponsorship_id: String(sponsorship.id), slot_id: parsed.data.slotId, test_mode: testMode,
+      payment_provider: checkout.provider,
     });
-    const response = NextResponse.json({ checkoutUrl: checkout.url, purchase: sponsorship.public_id });
+    const response = NextResponse.json({ checkoutUrl: checkout.url, purchase: sponsorship.public_id, paymentProvider: checkout.provider });
     attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
     return response;
   } catch {

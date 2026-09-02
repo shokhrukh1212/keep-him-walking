@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json({
     serverNow: countryDay.story_now ?? now.toISOString(),
     realServerNow: String(row?.out_accounted_at ?? now.toISOString()),
+    storyScale: countryDay.story_scale ?? 1,
     activeViewers,
     walking: activeViewers > 0,
     globalSteps: Number(row?.out_global_steps ?? 0),

@@ -1,36 +1,53 @@
 # Phase 2 implementation evidence
 
-Updated: 2026-09-02. Branch: `phase-2-seven-day-mvp`.
+Updated: 2026-09-02. Branch: `phase-2-seven-day-mvp`. Public launch and Phase 3 remain out of scope.
 
-## Implemented technical surface
+## Delivered preview surface
 
-- Additive migrations `004`–`006`: rehearsal/story clock, cross-tab contribution, postcards, sponsor/payment state, webhook and metric ledgers, operation claims, reconciliation, retention, and scoped storage.
-- Seven schema-v3 packs in the approved route, each with five zones, five major beats, local-phrase metadata, explicit pending cultural review, unique runtime ownership, next-zone/next-country preload data, postcard data, NPCs, ambience, and production Rive manifest contract.
-- 35 final environment masters and runtime derivatives. Asset report: 4.13–5.22 MiB transfer per pack; largest decoded zone 25.7 MiB, below the 96 MiB low-tier cap.
-- Server-verified opaque postcards, public metadata/download page, archive, local anonymous passport stamps, hosted Lemon checkout, signed raw-body webhook, review-only activation, refunds/removal, sponsor redirect metrics, daily reconciliation, and guarded operational scripts.
-- Stable Lemon provider-event identities reject checksum conflicts; failed/stale processing can be reclaimed, and paid status, sponsorship ID, slot ID, price, currency, and test/live mode are all revalidated server-side.
+- Migrations `004`–`006` are applied only to isolated Supabase project `pqtfhkiftiubwuwxnuzd`. The guarded environment preflight confirms all four project identities differ from `.env.local` without printing values.
+- Seven schema-v3 packs provide five independently illustrated zones each, five canonical story beats, unique scene ownership, country NPC variants, ambience, postcards, preload groups and explicit cultural-review metadata.
+- The current production path is the versioned sprite manifest. It provides every required action, planted-foot metadata, shadows, fallbacks, two reusable NPC base systems and a separately transformed sponsor patch. The valid Rive adapter remains optional; no placeholder `.riv` files exist.
+- Postcards, opaque public share routes, Open Graph metadata, archive/passport, sponsor inventory, review/scheduling/removal, first-party sponsor metrics and the deterministic **TEST PAYMENT — NO MONEY** adapter are implemented.
+- Preview reset enumerates and deletes only the guarded journey's exact postcard and sponsor object paths before deleting that preview journey. It cannot select a Production journey.
 
-## Recorded local verification
+## Recorded verification
 
 | Command | Result |
 |---|---|
-| `pnpm verify:phase2:code` plus final bounded-body tests | Pass: lint and typecheck clean; 16 files/41 tests pass; covered Phase 2 domain scope reports 82.6% statements, 67.19% branches, 93.47% functions and 85.78% lines; production build emits 19 routes; all content and asset checks pass. |
-| `pnpm content:validate` | Pass with seven explicit open-review notices: 9 rollback/current packs and 402 uniquely owned scene assets validate. |
-| `pnpm assets:report:phase2` | Pass: 4.13–5.22 MiB transfer per Phase 2 pack and 25.2–25.7 MiB largest decoded zone, below the 5.5 MiB transfer and 96 MiB low-tier texture limits. |
-| `pnpm test:e2e` | Pass: 12 active cases passed and 10 intentional opt-in/mobile duplicates skipped. Coverage includes shared presence, no-WebGL fallback, route/stop/resume, NPC encounter, full/reduced scenes, 320px layout and distinct complete reduced-motion environments for all seven Phase 2 packs. |
-| `pnpm exec playwright test tests/e2e/phase2-smoke.spec.ts` | Pass: 4 desktop/mobile cases, including distinct complete reduced-motion environments for all seven packs. |
-| `git diff --check` | Pass: no whitespace errors. |
+| `pnpm phase2:preflight` | Pass: isolated project ref `pqtfhkiftiubwuwxnuzd`, fingerprint `4af19e174f99`; no secret values printed. |
+| `pnpm phase2:db:apply` | Pass: baseline `001`–`003` and Phase 2 `004`–`006` applied to the initially empty isolated preview only. |
+| `pnpm db:lint:phase2` | Pass: hosted schema lint reports no findings. |
+| `pnpm db:test:phase2` | Pass: Phase 1 10/10, Phase 1.5 4/4 and Phase 2 24/24 pgTAP assertions, including RLS, grants and storage policy coverage. |
+| `pnpm verify:phase2:code` | Pass: lint/typecheck clean; 20 files and 55 tests pass; 84.11% statements, 71.69% branches, 93.87% functions and 86.93% lines; production build emits 22 routes. |
+| `pnpm content:validate` | Pass: 9 registered rollback/current packs and 402 uniquely owned scene assets; six packs are truthfully labeled private-preview only. |
+| `pnpm assets:report:phase2` | Pass: shared traveler transfer 0.69 MiB; country transfers 4.13–5.22 MiB; largest decoded zone 25.2–25.7 MiB, below repository limits. |
+| `pnpm test:e2e` | Pass: 14 active desktop/mobile cases and 10 intentional opt-in/device duplicates skipped. Includes shared presence, accessibility, no-WebGL, stop/resume, encounter, full/reduced scenes, 320px bounds, seven distinct static packs and closed vote results. |
+| `pnpm motion:record:phase2` | Pass: two 72-second production-sprite proofs plus seven checkpoints per device. Frame review caught and fixed an oversized sponsor-layer selector; rerun proves a patch width below 25% of traveler width. |
+| Deterministic sponsor fixture | Pass before final reseed: approval/presentation, aggregation, cancellation, refund and emergency removal; zero Lemon webhook-ledger writes. It is not real-provider evidence. |
 
-The generated-art contact sheet is `artifacts/phase2/seven-pack-contact-sheet.webp`. It was visually reviewed for country/zone distinction and progression; it is not a substitute for the named cultural reviewers.
+## Motion evidence
 
-## Gates still open (must not be marked passed by automation)
+| Target | Video | Bytes | SHA-256 |
+|---|---|---:|---|
+| Desktop 1440×900 | `artifacts/phase2-motion-v1/phase2-record-Phase-2-production-sprite-motion-proof-desktop-proof/video.webm` | 10,962,109 | `9cf3da65d0bb4a3bbc6f2a5a256cae94267711446eb7c2c89c7e27941fd8db73` |
+| Emulated iPhone 13 | `artifacts/phase2-motion-v1/phase2-record-Phase-2-production-sprite-motion-proof-mobile-proof/video.webm` | 11,084,197 | `9ab6ef552c54d53f3f48ed543a69407f6e9a6360bbab2f77005789eeac7fee2f` |
 
-- The named external cultural reviewer and approved disposition for all seven packs.
-- Production traveler and two NPC `.riv` files plus recorded rig/ground-contact/mobile evidence.
-- Lemon Squeezy $1 test checkout, duplicate webhook, approval, live placement, refund, and cancellation against a configured test account.
-- Hosted migration/pgTAP execution against the isolated preview database.
-- Full 70-minute accelerated rehearsal, low/mid-range physical-device budgets, Phase 1 comprehension evidence, and product-owner approval of the final motion proof.
+The checkpoint review covers five Tashkent zones, planted and airborne stride poses, stop/resume, encounter dialogue and NPC composition, ambient phone/photo/drink/wave actions, ground shadow, character/environment scale and the small runtime sponsor patch. The debug overlay during development-mode emulated-mobile video capture is not physical-device performance evidence; low- and mid-range phone budgets remain a product-owner device gate.
 
-`pnpm verify:phase2` and `pnpm rehearse:phase2` are therefore correctly still open. The local code gate passing does not imply provider, hosted-database, cultural, Rive, device or human acceptance.
+## Remaining Phase 2 gate work
 
-No Phase 2 production launch date or production seed has been created.
+- Deploy the corrected branch with its already configured branch-only Vercel Preview variables.
+- Reseed a fresh reversible 144× seven-day run, rerun the fixture lifecycle, run `pnpm verify:phase2`, and complete `pnpm rehearse:phase2`.
+- Record the final hosted transition/postcard/archive/vote/sponsor evidence, exercise reset, then restore a stable 1× private-preview seed.
+- Run the five-minute desktop and ten-minute physical-phone product-owner checks. Do not claim physical-device/Core Web Vitals acceptance from browser emulation.
+
+## Deferred launch blockers
+
+- Lemon Squeezy test checkout.
+- Webhook signature verification against real test-mode deliveries.
+- Duplicate webhook delivery against Lemon Squeezy.
+- Refund lifecycle against Lemon Squeezy.
+- Live-mode configuration.
+- Qualified local reviews for Dushanbe, Bishkek, Almaty, Baku, Tbilisi and Istanbul.
+
+No real Lemon payment lifecycle is claimed. No Production environment variable, database, journey or launch date has been modified.

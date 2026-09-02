@@ -1,20 +1,9 @@
-# Phase 2 production Rive handoff
+# Optional future Rive handoff
 
-Status: **external delivery gate open**. The application adapter and manifest contract are implemented, but the production `.riv` binaries have not been delivered and the temporary sprite rig is not relabeled as production.
+Status: **deferred enhancement, not a Phase 2 gate**.
 
-Required immutable files:
+The production path currently uses the versioned sprite manifest in the seven schema-v3 country packs. The Rive adapter remains intact so valid `.riv` files can replace the sprite driver later without changing Pixi world ownership, React dialogue/HUD ownership, or the semantic traveler command contract.
 
-- `public/rive/traveler/v1/traveler.riv`
-- `public/rive/npcs/v1/base-a.riv`
-- `public/rive/npcs/v1/base-b.riv`
+No fake or invalid `.riv` files are present. If Rive assets are commissioned later, use the existing `JourneyCharacter` / `JourneyMachine` / `JourneyCharacterVM` contract and validate the same actions, locomotion speed, reduced-motion state, and replaceable sponsor patch before switching any pack to `driver: "rive"`.
 
-Contract:
-
-- Artboard: `JourneyCharacter`
-- State machine: `JourneyMachine`
-- View model: `JourneyCharacterVM`
-- Properties: `walking` (boolean), `walkingSpeed` (number), `action` (enum), `mood` (enum), `facingRight` (boolean), `reducedMotion` (boolean), `sponsorPatch` (replaceable image)
-- Action values: `idle`, `start_walk`, `walk`, `slow_walk`, `stop`, `notice`, `approach`, `greet`, `talk`, `listen`, `react`, `goodbye`
-- `rest` and resume are transitions around the action values. Dialogue remains semantic React/HTML.
-
-Delivery evidence still required before the Phase 2 exit gate: source/license, Rive editor and web-runtime versions, manifest contract test, full-motion and reduced-motion recordings, ground contact at all locomotion speeds, secondary clothing/hair/backpack motion, two NPC bases, sponsor-patch replacement, failure fallback, and low/mid-range physical-device results.
+The current sprite delivery must pass manifest, state transition, missing-frame, planted-foot, sponsor-patch, fallback, asset-budget, desktop-video and mobile-video gates before it can be described as production-ready.

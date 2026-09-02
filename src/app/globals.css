@@ -270,12 +270,25 @@ body {
   transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1), opacity 280ms ease;
 }
 
-.traveler-sprite img {
+.traveler-sprite .traveler-frame {
   position: relative;
   z-index: 2;
   object-fit: contain;
   object-position: center bottom;
   filter: drop-shadow(0 0.8rem 0.9rem rgb(19 23 17 / 22%));
+}
+
+.traveler-sprite .traveler-sponsor-patch {
+  position: absolute;
+  z-index: 3;
+  top: var(--sponsor-y);
+  left: var(--sponsor-x);
+  width: calc(100% * var(--sponsor-scale));
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  transform: translate(-50%, -50%) rotate(var(--sponsor-rotation));
+  filter: drop-shadow(0 2px 3px rgb(8 22 28 / 35%));
 }
 
 .traveler-sprite[data-walking="true"]:not([data-reduced-motion="true"]) .character-shadow {
@@ -299,7 +312,7 @@ body {
   border-radius: 50%;
   background: rgb(30 28 16 / 28%);
   filter: blur(8px);
-  transform: skewX(-18deg);
+  transform: skewX(-18deg) scaleX(var(--shadow-scale, 1));
 }
 
 .traveler-state {
@@ -617,6 +630,51 @@ body {
   padding: 0.25rem 0.35rem 0.25rem 0.85rem;
   color: rgb(247 240 223 / 72%);
   font-size: 0.68rem;
+}
+
+.fixture-checkout {
+  min-height: 100svh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: radial-gradient(circle at top, #315f67, #0c202a 65%);
+  color: #fff8e8;
+  text-align: center;
+}
+
+.fixture-checkout h1,
+.fixture-checkout p {
+  max-width: 38rem;
+  margin: 0;
+}
+
+.fixture-checkout form {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.fixture-checkout button {
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 999px;
+  padding: 0.8rem 1.1rem;
+  background: #fff8e8;
+  color: #10232d;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.fixture-label {
+  border: 1px solid #ffd67c;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  color: #ffd67c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
 }
 
 .sponsor-note a {
@@ -1047,9 +1105,10 @@ body:has(.content-page) {
     right: 0.65rem;
     bottom: max(0.65rem, env(safe-area-inset-bottom));
     left: 0.65rem;
-    width: calc(100% - 1.3rem);
+    width: auto;
     min-width: 0;
     max-width: calc(100% - 1.3rem);
+    overflow: hidden;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.55rem;
     border-radius: 1.1rem;
