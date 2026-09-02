@@ -7,8 +7,10 @@ export const PHASE2_VERCEL_STORAGE_STATE = path.join(
   tmpdir(),
   "keep-him-walking-phase2-vercel-storage-state.json",
 );
+export const PHASE2_PREVIEW_DEPLOYMENT = process.env.PHASE2_PREVIEW_URL
+  ?? "https://keep-him-walking-git-phase-2-f6cf95-shokhrukh-karimovs-projects.vercel.app";
 
-type NetscapeCookie = {
+export type NetscapeCookie = {
   name: string;
   value: string;
   domain: string;
@@ -39,9 +41,7 @@ function parseCookieJar(source: string): NetscapeCookie[] {
   });
 }
 
-export default async function phase2GlobalSetup() {
-  const deployment = process.env.PHASE2_PREVIEW_URL
-    ?? "https://keep-him-walking-git-phase-2-f6cf95-shokhrukh-karimovs-projects.vercel.app";
+export async function protectedPreviewCookies(deployment: string): Promise<NetscapeCookie[]> {
   const parsed = new URL(deployment);
   if (parsed.protocol !== "https:" || !parsed.hostname.includes("git-phase-2")) {
     throw new Error("Refusing to create a bypass cookie for anything except the Phase 2 branch alias");
@@ -62,15 +62,23 @@ export default async function phase2GlobalSetup() {
       "--silent",
       "--output",
       "/dev/null",
-    ], { encoding: "utf8" });
+    ], { encoding: "utf8", timeout: 45_000, killSignal: "SIGTERM" });
+    if (result.error) {
+      throw new Error(`Protected-preview session command failed: ${result.error.message}`);
+    }
     if (result.status !== 0) {
       throw new Error(`Unable to obtain a protected-preview session: ${(result.stderr || result.stdout).trim()}`);
     }
     const cookies = parseCookieJar(await readFile(cookieJar, "utf8"));
     if (!cookies.length) throw new Error("Vercel did not return a protected-preview bypass cookie");
-    await writeFile(PHASE2_VERCEL_STORAGE_STATE, JSON.stringify({ cookies, origins: [] }), { mode: 0o600 });
-    process.stdout.write(`${JSON.stringify({ protectedPreviewSession: true, cookieCount: cookies.length, valuesPrinted: false })}\n`);
+    return cookies;
   } finally {
     await rm(work, { recursive: true, force: true });
   }
+}
+
+export default async function phase2GlobalSetup() {
+  const cookies = await protectedPreviewCookies(PHASE2_PREVIEW_DEPLOYMENT);
+  await writeFile(PHASE2_VERCEL_STORAGE_STATE, JSON.stringify({ cookies, origins: [] }), { mode: 0o600 });
+  process.stdout.write(`${JSON.stringify({ protectedPreviewSession: true, cookieCount: cookies.length, valuesPrinted: false })}\n`);
 }

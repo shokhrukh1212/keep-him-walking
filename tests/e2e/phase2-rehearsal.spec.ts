@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { adminClient } from "../../scripts/phase2/lib";
 import { phase2EnvironmentIdentity } from "../../scripts/phase2/environment";
 import { PHASE2_ROUTE } from "../../src/lib/story-clock/schedule";
+import { PHASE2_PREVIEW_DEPLOYMENT, protectedPreviewCookies } from "./phase2-global-setup";
 
 type RehearsalEvidence = {
   countryOrder: string[];
@@ -27,11 +28,29 @@ async function responseJson(response: { json(): Promise<unknown> }): Promise<Rec
 }
 
 async function reconcilePreview() {
-  const { data, error } = await adminClient().rpc("reconcile_phase2_state", {
-    p_real_now: new Date().toISOString(),
-  });
-  if (error) throw error;
-  return data;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const request = adminClient().rpc("reconcile_phase2_state", {
+        p_real_now: new Date().toISOString(),
+      }).abortSignal(AbortSignal.timeout(20_000));
+      const { data, error } = await Promise.race([
+        Promise.resolve(request),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error(`Preview reconciliation attempt ${attempt} timed out`)), 20_000);
+        }),
+      ]);
+      if (!error) return data;
+      lastError = error;
+    } catch (cause) {
+      lastError = cause;
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1_000));
+  }
+  throw lastError;
 }
 
 async function currentCity(page: Page): Promise<string | null> {
@@ -94,8 +113,13 @@ test("isolated accelerated preview traverses and exercises all seven country-day
   const deadline = startedAt + 71 * 60_000;
   let lastCountry: string | null = null;
   let sponsorMetricChecked = false;
+  let protectionRefreshedAt = Date.now();
 
   while (Date.now() < deadline) {
+    if (Date.now() - protectionRefreshedAt >= 25 * 60_000) {
+      await page.context().addCookies(await protectedPreviewCookies(PHASE2_PREVIEW_DEPLOYMENT));
+      protectionRefreshedAt = Date.now();
+    }
     const city = await currentCity(page);
     if (!city) {
       await page.waitForTimeout(500);
@@ -106,8 +130,6 @@ test("isolated accelerated preview traverses and exercises all seven country-day
       expect(city, `country transition ${observedOrder.length + 1}`).toBe(expected);
       observedOrder.push(city);
       lastCountry = city;
-      await reconcilePreview();
-      await page.screenshot({ path: testInfo.outputPath(`country-${String(observedOrder.length).padStart(2, "0")}-${city.toLowerCase()}.png`) });
     }
 
     countrySamples.set(city, (countrySamples.get(city) ?? 0) + 1);

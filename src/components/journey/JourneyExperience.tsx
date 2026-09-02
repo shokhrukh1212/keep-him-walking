@@ -76,7 +76,13 @@ function encounterTravelerState(
 
 export function JourneyExperience({ initialSnapshot }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [heartbeat, setHeartbeat] = useState<HeartbeatResponse | null>(null);
+  const [heartbeatState, setHeartbeat] = useState<{
+    countryDayId: string;
+    response: HeartbeatResponse;
+  } | null>(null);
+  const heartbeat = heartbeatState?.countryDayId === snapshot.countryDay.id
+    ? heartbeatState.response
+    : null;
   const [clock, setClock] = useState(() => synchronizeClock(initialSnapshot.serverNow, Date.now(), initialSnapshot.storyScale ?? 1));
   const [realClock, setRealClock] = useState(() => synchronizeClock(initialSnapshot.realServerNow ?? initialSnapshot.serverNow));
   const [serverNowMs, setServerNowMs] = useState(() => new Date(initialSnapshot.serverNow).getTime());
@@ -159,25 +165,27 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   }, [clock]);
 
   const handleHeartbeat = useCallback((next: HeartbeatResponse) => {
-    setHeartbeat(next);
+    setHeartbeat({ countryDayId: snapshot.countryDay.id, response: next });
     setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
     setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
     setServerNowMs(new Date(next.serverNow).getTime());
-    setSnapshot((current) => ({
-      ...current,
-      route: {
-        globalActiveSeconds: next.globalActiveSeconds,
-        authoritativeAt: next.routeAuthoritativeAt,
-        walking: next.walking,
-      },
-    }));
+    setSnapshot((current) => current.countryDay.id === snapshot.countryDay.id
+      ? {
+          ...current,
+          route: {
+            globalActiveSeconds: next.globalActiveSeconds,
+            authoritativeAt: next.routeAuthoritativeAt,
+            walking: next.walking,
+          },
+        }
+      : current);
     setMotionTransition((current) => current.desiredWalking === next.walking
       ? current
       : {
           desiredWalking: next.walking,
           changedAtMs: new Date(next.serverNow).getTime(),
         });
-  }, []);
+  }, [snapshot.countryDay.id]);
 
   const experienceReady = sceneRenderer !== null && travelerReady;
   const connectionStatus = useJourneyPresence({

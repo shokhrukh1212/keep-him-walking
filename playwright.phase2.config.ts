@@ -24,8 +24,10 @@ export default defineConfig({
   use: {
     baseURL,
     ...devices["Desktop Chrome"],
+    actionTimeout: 20_000,
+    navigationTimeout: 30_000,
     storageState: PHASE2_VERCEL_STORAGE_STATE,
-    trace: "retain-on-failure",
+    trace: "off",
     screenshot: "only-on-failure",
     serviceWorkers: "block",
   },

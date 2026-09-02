@@ -87,9 +87,11 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
       setStatus("offline");
       void heartbeat(true);
     };
+    const onPageHide = () => void heartbeat(true);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
+    window.addEventListener("pagehide", onPageHide);
     const initialHeartbeat = window.setTimeout(() => void heartbeatRef.current(), 0);
 
     let reconciliationTimer: number | null = null;
@@ -109,10 +111,10 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
+      window.removeEventListener("pagehide", onPageHide);
       window.clearTimeout(initialHeartbeat);
       if (timer.current) window.clearTimeout(timer.current);
       if (reconciliationTimer) window.clearTimeout(reconciliationTimer);
-      void heartbeat(true);
       if (channel && supabase) {
         void channel.untrack();
         void supabase.removeChannel(channel);
