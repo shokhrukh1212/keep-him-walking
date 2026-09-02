@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { PHASE2_VERCEL_STORAGE_STATE } from "./tests/e2e/phase2-global-setup";
 
 const baseURL = process.env.PHASE2_PREVIEW_URL
   ?? "https://keep-him-walking-git-phase-2-f6cf95-shokhrukh-karimovs-projects.vercel.app";
@@ -9,6 +10,8 @@ if (parsed.protocol !== "https:" || !parsed.hostname.includes("git-phase-2")) {
 }
 
 export default defineConfig({
+  globalSetup: "./tests/e2e/phase2-global-setup.ts",
+  globalTeardown: "./tests/e2e/phase2-global-teardown.ts",
   testDir: "./tests/e2e",
   testMatch: "phase2-rehearsal.spec.ts",
   fullyParallel: false,
@@ -21,6 +24,7 @@ export default defineConfig({
   use: {
     baseURL,
     ...devices["Desktop Chrome"],
+    storageState: PHASE2_VERCEL_STORAGE_STATE,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     serviceWorkers: "block",

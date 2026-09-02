@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
     });
     attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
     return response;
-  } catch {
+  } catch (cause) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Live bootstrap failed", cause);
+    }
     const response = NextResponse.json(
       { error: "The live snapshot is temporarily unavailable." },
       { status: 503 },

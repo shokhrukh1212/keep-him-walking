@@ -159,7 +159,7 @@ async function loadVote(
   if (!supabase) return null;
   const { data: vote, error } = await supabase
     .from("votes")
-    .select("id,question,opens_at,closes_at,status,vote_options(id,label,display_order)")
+    .select("id,question,opens_at,closes_at,status,vote_options!vote_options_vote_id_fkey(id,label,display_order)")
     .eq("country_day_id", countryDayId)
     .lte("opens_at", now.toISOString())
     .order("opens_at", { ascending: false })

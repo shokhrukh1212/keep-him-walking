@@ -16,7 +16,7 @@ const slots = dayIds.length
 if (slots.error) throw slots.error;
 const slotIds = slots.data.map((row) => row.id);
 const sponsorships = slotIds.length
-  ? await supabase.from("sponsorships").select("private_creative_path,public_creative_path").in("slot_id", slotIds)
+  ? await supabase.from("sponsorships").select("id,private_creative_path,public_creative_path").in("slot_id", slotIds)
   : { data: [], error: null };
 if (sponsorships.error) throw sponsorships.error;
 const postcards = dayIds.length
@@ -34,6 +34,7 @@ requireApply({
     sponsorPrivate: privateCreative.length,
     sponsorPublic: publicCreative.length,
     postcards: postcardObjects.length,
+    sponsorships: sponsorships.data.length,
   },
 });
 
@@ -45,6 +46,17 @@ for (const [bucket, objects] of [
   if (!objects.length) continue;
   const removal = await supabase.storage.from(bucket).remove(objects);
   if (removal.error) throw removal.error;
+}
+if (slotIds.length) {
+  const releaseSlots = await supabase.from("sponsor_slots").update({
+    status: "available",
+    reserved_by: null,
+    reserved_until: null,
+    updated_at: new Date().toISOString(),
+  }).in("id", slotIds);
+  if (releaseSlots.error) throw releaseSlots.error;
+  const deleteSponsorships = await supabase.from("sponsorships").delete().in("slot_id", slotIds);
+  if (deleteSponsorships.error) throw deleteSponsorships.error;
 }
 const { error: deleteError } = await supabase.from("journeys").delete().eq("id", journey.id).eq("slug", slug);
 if (deleteError) throw deleteError;
