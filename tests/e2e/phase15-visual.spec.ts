@@ -9,7 +9,10 @@ function snapshot(routeSeconds: number): BootstrapSnapshot {
   const now = new Date();
   return {
     serverNow: now.toISOString(),
+    realServerNow: now.toISOString(),
     mode: "live",
+    journeyState: "live",
+    refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
     countryDay: {
       id: tashkentCountryPackV3.countryDayId,
       dayNumber: 1,
@@ -30,6 +33,7 @@ function snapshot(routeSeconds: number): BootstrapSnapshot {
     steps: { global: Math.floor(routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
     route: { globalActiveSeconds: routeSeconds, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },
+    postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     assets: tashkentCountryPackV3,
   };
 }

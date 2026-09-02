@@ -9,7 +9,10 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
 
   return {
     serverNow: now.toISOString(),
+    realServerNow: now.toISOString(),
     mode: "offline_preview",
+    journeyState: "live",
+    refresh: { nextAt: endsAt.toISOString(), afterMs: 5 * 60_000, reason: "country_rollover" },
     countryDay: {
       id: tashkentCountryPackV3.countryDayId,
       dayNumber: 1,
@@ -34,6 +37,7 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     steps: { global: 0, updatedAt: now.toISOString(), stale: true },
     route: { globalActiveSeconds: 0, authoritativeAt: now.toISOString(), walking: false },
     sponsor: { status: "unsponsored" },
+    postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     assets: tashkentCountryPackV3,
   };
 }

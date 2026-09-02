@@ -31,6 +31,7 @@ export function Traveler({ pack, command, onReady }: Props) {
           src={riveUrl}
           artboard={pack.traveler.artboard}
           stateMachine={pack.traveler.stateMachine}
+          viewModel={pack.traveler.viewModel ?? "JourneyCharacterVM"}
           command={command}
           onReady={onReady}
           onFailure={() => setRiveFailed(true)}

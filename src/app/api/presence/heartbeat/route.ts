@@ -5,6 +5,7 @@ import { hashOpaqueValue } from "@/lib/identity/server";
 import { nextHeartbeatDelay } from "@/lib/presence";
 import { findCurrentCountryDay } from "@/lib/bootstrap/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { getCountryPack } from "@/content/countries/registry";
 import { heartbeatBodySchema } from "@/lib/validation/api";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
 
@@ -27,7 +28,8 @@ export async function POST(request: NextRequest) {
   }
   const visitor = visitorFromRequest(request);
   const config = serverRuntimeConfig();
-  const { data, error } = await supabase.rpc("record_presence_heartbeat_v2", {
+  const pack = getCountryPack(countryDay.scene_pack_id);
+  const { data, error } = await supabase.rpc(pack?.schemaVersion === 3 ? "record_presence_heartbeat_v3" : "record_presence_heartbeat_v2", {
     p_country_day_id: countryDay.id,
     p_visitor_hash: hashOpaqueValue(visitor.visitorId),
     p_session_hash: hashOpaqueValue(parsed.data.sessionId),
@@ -43,7 +45,8 @@ export async function POST(request: NextRequest) {
   const row = Array.isArray(data) ? data[0] : data;
   const activeViewers = Number(row?.out_active_viewers ?? 0);
   const response = NextResponse.json({
-    serverNow: String(row?.out_accounted_at ?? now.toISOString()),
+    serverNow: countryDay.story_now ?? now.toISOString(),
+    realServerNow: String(row?.out_accounted_at ?? now.toISOString()),
     activeViewers,
     walking: activeViewers > 0,
     globalSteps: Number(row?.out_global_steps ?? 0),

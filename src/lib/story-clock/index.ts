@@ -34,14 +34,14 @@ function stringSeed(value: string): number {
 }
 
 export function deterministicAmbientAction(
-  pack: Pick<CountryPack | CountryPackV1, "countryDayId" | "ambientActions">,
+  pack: Pick<CountryPack | CountryPackV1, "assetVersion" | "ambientActions">,
   serverNowMs: number,
 ): { state: TravelerState; label: string } | null {
   const windowSeconds = 40;
   const window = Math.floor(serverNowMs / (windowSeconds * 1_000));
   const phase = Math.floor(serverNowMs / 1_000) % windowSeconds;
   if (phase < 26 || phase > 35) return null;
-  const index = stringSeed(`${pack.countryDayId}:${window}`) % pack.ambientActions.length;
+  const index = stringSeed(`${pack.assetVersion}:${window}`) % pack.ambientActions.length;
   return pack.ambientActions[index] ?? null;
 }
 

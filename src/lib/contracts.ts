@@ -50,7 +50,10 @@ export type VoteView = {
 
 export type BootstrapSnapshot = {
   serverNow: string;
+  realServerNow: string;
   mode: "live" | "offline_preview";
+  journeyState: "prelaunch" | "live" | "intermission" | "completed";
+  refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "none" };
   countryDay: CountryDayView;
   activeEvent: ScheduledEventView | null;
   nextEvent: ScheduledEventView | null;
@@ -66,12 +69,29 @@ export type BootstrapSnapshot = {
     stale: boolean;
   };
   route: RouteRuntime;
-  sponsor: { status: "unsponsored" };
+  sponsor:
+    | { status: "unsponsored" }
+    | {
+        status: "sponsored";
+        publicId: string;
+        name: string;
+        disclosure: string;
+        patchUrl: string | null;
+        ctaLabel: string | null;
+        clickUrl: string | null;
+      };
+  postcard: {
+    eligible: boolean;
+    unlockSeconds: number;
+    contributedSeconds: number;
+    url: string | null;
+  };
   assets: CountryPack;
 };
 
 export type HeartbeatResponse = {
   serverNow: string;
+  realServerNow: string;
   activeViewers: number;
   walking: boolean;
   globalSteps: number;

@@ -37,6 +37,10 @@ import { DailyVote } from "@/components/vote/DailyVote";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
 import { IntroHeadline } from "@/components/hud/IntroHeadline";
 import { WalkingRuleStatus } from "@/components/hud/WalkingRuleStatus";
+import { PostcardButton } from "@/components/postcard/PostcardButton";
+import { PASSPORT_KEY } from "@/components/archive/PassportArchive";
+import Link from "next/link";
+import { getNextCountryPack } from "@/content/countries/registry";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -62,7 +66,7 @@ function encounterTravelerState(
   if (progress < 0.08) return "notice";
   if (progress < 0.15) return "slow_walk";
   if (progress < 0.28) return "approach";
-  if (progress < 0.36) return "wave";
+  if (progress < 0.36) return "greet";
   if (progress >= 0.82) return "resume_walk";
   if (progress >= 0.62) return "goodbye";
   if (progress >= 0.55) return "react";
@@ -74,6 +78,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeat, setHeartbeat] = useState<HeartbeatResponse | null>(null);
   const [clock, setClock] = useState(() => synchronizeClock(initialSnapshot.serverNow));
+  const [realClock, setRealClock] = useState(() => synchronizeClock(initialSnapshot.realServerNow ?? initialSnapshot.serverNow));
   const [serverNowMs, setServerNowMs] = useState(() => new Date(initialSnapshot.serverNow).getTime());
   const [sceneRenderer, setSceneRenderer] = useState<"pixi" | "static" | null>(null);
   const [travelerReady, setTravelerReady] = useState(false);
@@ -99,6 +104,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const lastZone = useRef<string | null>(null);
   const qualityReported = useRef(false);
   const lastBudgetReport = useRef(0);
+  const sponsorMetrics = useRef(new Set<string>());
   const [hasWalked, setHasWalked] = useState(false);
   const loadStarted = useRef(0);
   const { reducedMotion, toggle: toggleMotion } = useMotionPreference();
@@ -119,6 +125,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       const next = (await response.json()) as BootstrapSnapshot;
       setSnapshot(next);
       setClock(synchronizeClock(next.serverNow));
+      setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
     } catch {
       setSnapshot((current) => ({
         ...current,
@@ -134,12 +141,15 @@ export function JourneyExperience({ initialSnapshot }: Props) {
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refreshBootstrap(), 0);
-    const resync = window.setInterval(() => void refreshBootstrap(), 5 * 60 * 1_000);
+    const resync = window.setTimeout(
+      () => void refreshBootstrap(),
+      Math.max(1_000, Math.min(5 * 60_000, snapshot.refresh.afterMs)),
+    );
     return () => {
       window.clearTimeout(initial);
-      window.clearInterval(resync);
+      window.clearTimeout(resync);
     };
-  }, [refreshBootstrap]);
+  }, [refreshBootstrap, snapshot.refresh.afterMs]);
 
   useEffect(() => {
     const tick = window.setInterval(() => {
@@ -151,6 +161,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const handleHeartbeat = useCallback((next: HeartbeatResponse) => {
     setHeartbeat(next);
     setClock(synchronizeClock(next.serverNow));
+    setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
     setServerNowMs(new Date(next.serverNow).getTime());
     setSnapshot((current) => ({
       ...current,
@@ -225,7 +236,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     };
   }, [hasWalked, locomotionPhase]);
   const { runtime: routeRuntime, seconds: routeSeconds, position: routePosition } =
-    useRouteRuntime(snapshot, heartbeat, serverNowMs);
+    useRouteRuntime(snapshot, heartbeat, estimatedServerNow(realClock));
   const introHeadline = useIntroHeadline(walking, welcomeOriginMs, serverNowMs);
   const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
   const eventStage = snapshot.assets.route.zones[routePosition.zoneIndex]?.eventStage;
@@ -247,6 +258,21 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       route_seconds: Math.round(routeSeconds),
     });
   }, [routePosition.zoneId, routeSeconds]);
+
+  useEffect(() => {
+    if (snapshot.assets.schemaVersion !== 3) return;
+    const isDeparture = routePosition.zoneIndex === snapshot.assets.route.zones.length - 1;
+    if (!isDeparture || routePosition.zoneProgress < 0.7) return;
+    const next = getNextCountryPack(snapshot.assets.assetVersion);
+    if (!next) return;
+    for (const url of next.schemaVersion === 3
+      ? next.preloadGroups.find((group) => group.timing === "critical")?.assets ?? next.preload
+      : next.preload) {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url;
+    }
+  }, [routePosition.zoneIndex, routePosition.zoneProgress, snapshot.assets]);
 
   useEffect(() => {
     if (qualityReported.current) return;
@@ -338,6 +364,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     facing: "right",
     walkingSpeed: worldCommand.speedFactor,
     reducedMotion,
+    sponsorPatchUrl: snapshot.sponsor.status === "sponsored" ? snapshot.sponsor.patchUrl ?? undefined : undefined,
   };
 
   const sceneDidReady = useCallback((renderer: "pixi" | "static") => {
@@ -360,7 +387,31 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       asset_version: snapshot.assets.assetVersion,
       renderer: sceneRenderer,
     });
-  }, [experienceReady, sceneRenderer, snapshot.assets.assetVersion]);
+    if (snapshot.assets.schemaVersion === 3) {
+      try {
+        const stamps = new Set(JSON.parse(localStorage.getItem(PASSPORT_KEY) ?? "[]") as string[]);
+        stamps.add(snapshot.assets.assetVersion);
+        localStorage.setItem(PASSPORT_KEY, JSON.stringify([...stamps]));
+      } catch {
+        // Storage can be blocked; passport stamps are an optional local enhancement.
+      }
+    }
+  }, [experienceReady, sceneRenderer, snapshot.assets.assetVersion, snapshot.assets.schemaVersion]);
+
+  useEffect(() => {
+    if (!experienceReady || snapshot.sponsor.status !== "sponsored") return;
+    const eventType = visitorSeconds >= 10 ? "engaged_view" : "impression";
+    if (sponsorMetrics.current.has(eventType)) return;
+    sponsorMetrics.current.add(eventType);
+    void fetch("/api/sponsor/metrics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId: snapshot.sponsor.publicId, eventType }),
+    });
+    trackVisitorEvent(eventType === "impression" ? "sponsor_impression" : "sponsor_engaged_view", {
+      sponsor_id: snapshot.sponsor.publicId,
+    });
+  }, [experienceReady, snapshot.sponsor, visitorSeconds]);
 
   const localTime = useMemo(
     () =>
@@ -376,7 +427,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const share = async () => {
     const data = {
       title: "Keep Him Walking",
-      text: "He only walks while someone is watching. I’m helping him cross Tashkent.",
+      text: `He only walks while someone is watching. I’m helping him cross ${snapshot.countryDay.cityName}.`,
       url: window.location.href,
     };
     try {
@@ -440,6 +491,11 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>
         <strong>{displayedZoneLabel}</strong>
       </div>
+      <nav className="journey-links" aria-label="Journey links">
+        <Link href="/archive">Passport</Link>
+        <Link href="/sponsor">Sponsor a day</Link>
+        <Link href="/privacy">Privacy</Link>
+      </nav>
       <EncounterDialogue
         line={activeLine}
         locationLabel={activeEvent?.locationLabel}
@@ -466,6 +522,16 @@ export function JourneyExperience({ initialSnapshot }: Props) {
             <span className="control-icon" aria-hidden="true">↗</span>
             Share
           </button>
+          {snapshot.assets.schemaVersion === 3 ? (
+            <PostcardButton
+              countryDayId={snapshot.countryDay.id}
+              eligible={snapshot.postcard.eligible}
+              unlockSeconds={snapshot.postcard.unlockSeconds}
+              contributedSeconds={visitorSeconds}
+              existingUrl={snapshot.postcard.url}
+              sponsorPublicId={snapshot.sponsor.status === "sponsored" ? snapshot.sponsor.publicId : undefined}
+            />
+          ) : null}
         </div>
         <SoundMotionControls
           soundEnabled={soundEnabled}
@@ -476,7 +542,11 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         />
         <div className="sponsor-note">
           <span className="eyebrow">TODAY</span>
-          <span>Unsponsored</span>
+          {snapshot.sponsor.status === "sponsored" ? (
+            snapshot.sponsor.clickUrl
+              ? <a href={snapshot.sponsor.clickUrl} onClick={() => trackVisitorEvent("sponsor_cta_clicked", { sponsor_id: snapshot.sponsor.status === "sponsored" ? snapshot.sponsor.publicId : "" })}>{snapshot.sponsor.disclosure} · {snapshot.sponsor.name}</a>
+              : <span>{snapshot.sponsor.disclosure} · {snapshot.sponsor.name}</span>
+          ) : <a href="/sponsor">Unsponsored · Sponsor a day</a>}
         </div>
       </section>
 
