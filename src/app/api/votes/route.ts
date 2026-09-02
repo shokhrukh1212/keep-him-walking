@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { trackServerEvent } from "@/lib/analytics/server";
+import { findCurrentCountryDay } from "@/lib/bootstrap/server";
 import { attachVisitorCookie, visitorFromRequest } from "@/lib/identity/cookie";
 import { hashOpaqueValue } from "@/lib/identity/server";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -21,6 +22,10 @@ export async function POST(request: NextRequest) {
   const visitor = visitorFromRequest(request);
   const visitorHash = hashOpaqueValue(visitor.visitorId);
   const now = new Date();
+  const currentCountryDay = await findCurrentCountryDay(now);
+  const ballotNow = currentCountryDay?.story_now
+    ? new Date(currentCountryDay.story_now)
+    : now;
   const { data: allowed, error: rateError } = await supabase.rpc(
     "consume_mutation_rate_limit",
     {
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
     p_vote_id: parsed.data.voteId,
     p_option_id: parsed.data.optionId,
     p_visitor_hash: visitorHash,
-    p_now: now.toISOString(),
+    p_now: ballotNow.toISOString(),
   });
   if (error) {
     return NextResponse.json({ error: "Vote could not be accepted." }, { status: 409 });
