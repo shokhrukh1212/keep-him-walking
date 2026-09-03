@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-09-03T07:46:28Z",
+  "branch": "phase-2-seven-day-mvp",
+  "mode": "guarded-clock-staged-not-70-minute-soak",
+  "duration": "2.8m",
+  "result": "passed",
+  "countryOrder": [
+    "Tashkent",
+    "Dushanbe",
+    "Bishkek",
+    "Almaty",
+    "Baku",
+    "Tbilisi",
+    "Istanbul"
+  ],
+  "votesSubmitted": 7,
+  "postcardsCreated": 7,
+  "archiveCompletedCards": 6,
+  "archiveStampedCards": 6,
+  "sponsorDisclosureSeen": true,
+  "sponsorRedirectVerified": true,
+  "offlineRecoveryVerified": true,
+  "fullMotionVerified": true,
+  "reducedMotionVerified": true,
+  "publicPostcardMetadataVerified": true,
+  "fixturePaymentOnly": true,
+  "realPaymentVerified": false
+}

@@ -845,7 +845,7 @@ Implementation started on `phase-2-seven-day-mvp` after the product owner's expl
 - [x] Extend the analytics adapters with postcard, archive, country-day, rollover and sponsor lifecycle events. Trusted payment/rollover events originate on the server.
 - [x] Add body-size limits, schema validation, origin checks, URL allowlists and anonymous rate limits to state-changing public endpoints. Add stable-identity/checksum webhook replay handling and pure-domain tests for signature, correlation, amount/currency/slot and transition behavior.
 - [x] Add only Phase 2 names and safe defaults to `.env.example`; no secret values are copied or printed in repository evidence.
-- [ ] Configure Phase 2 values only for the `phase-2-seven-day-mvp` Vercel Preview branch; keep Lemon Squeezy credentials deferred and Production variables untouched.
+- [x] Configure 23 Phase 2 values only for the `phase-2-seven-day-mvp` Vercel Preview branch; keep Lemon Squeezy credentials deferred and Production variables untouched. The 2026-09-03 run reported `productionVariablesModified:false` and printed no values.
 - [x] Add privacy, sponsor terms, refund/creative policy and contact routes. Document anonymous hashes, postcard token retention, payment minimization, sponsor metrics and removal procedures.
 
 #### 7. Phase 2 migrations, tests and seven-day rehearsal
@@ -887,10 +887,13 @@ The deterministic fixture rehearsal is evidence for the application workflow onl
 | `pnpm motion:record` | Pass | Desktop and emulated-mobile 68-second WebM proofs recorded with checksums in `docs/phase-1.5-results.md`; actual frames were extracted and visually reviewed. |
 | `pnpm content:validate` | Pass | Registered v2 rollback and live `tashkent-v3` packs validate with 87 owned scene assets. |
 | `pnpm assets:report` | Pass | 4.38 MiB total v3 route transfer; every zone estimates 24.1 MiB decoded in the complete manifest and the low renderer reports 15.8 MiB active textures, below the 96 MiB low-tier cap. |
-| `pnpm verify:phase2:code` plus final bounded-body tests | Pass | Final Phase 2 local code gate: lint/typecheck clean; 16 files and 41 tests pass with 82.6% statement coverage in the covered domain scope; production build emits 19 routes; all nine registered packs and 402 unique scene assets validate; every Phase 2 pack remains within 4.13–5.22 MiB transfer and 25.2–25.7 MiB largest decoded zone. |
-| `pnpm test:e2e` | Pass | Final combined regression run: 12 active cases pass and 10 intentional opt-in/mobile duplicates skip. It covers shared truth, no-WebGL, motion/encounter, coherent full/reduced scenes, 320px layout and all seven distinct reduced-motion country packs. |
-| Phase 2 guarded preview seed dry-run | Pass / blocked as designed | A safe test timestamp maps to the exact seven-pack route at 144× without a database write; `--apply` reports and refuses all seven pending cultural reviews. No production or preview date was seeded. |
-| Hosted Phase 2 pgTAP + Lemon test lifecycle + 70-minute rehearsal | Pending | Requires isolated preview migrations/configuration, seven cultural approvals and external provider/device/Rive inputs. These are not claimed by the local code gate. |
+| `pnpm verify:phase2:code` | Pass | Final Phase 2 code gate: lint/typecheck clean; 21 files and 56 tests pass with 84.11% statements, 71.69% branches, 93.87% functions and 86.93% lines; production build emits 22 routes; all nine registered packs and 402 unique scene assets validate; every Phase 2 pack remains within 4.13–5.22 MiB transfer and 25.2–25.7 MiB largest decoded zone. |
+| `pnpm db:lint:phase2` and `pnpm db:test:phase2` | Pass | Isolated hosted schema lint has no findings. Phase 1 10/10, Phase 1.5 4/4 and Phase 2 24/24 pgTAP assertions pass, including RLS and storage boundaries. |
+| `pnpm test:e2e` | Pass | Final combined regression run: 14 active cases pass and 12 intentional opt-in/mobile duplicates skip. It covers shared truth, no-WebGL, motion/encounter, coherent full/reduced scenes, 320px layout and all seven distinct reduced-motion country packs. |
+| `pnpm rehearse:phase2:staged` | Pass | The guarded 2.8-minute staged proof traversed all seven countries, submitted seven votes, created seven postcards, verified archive/metadata, sponsor disclosure/redirect, offline recovery and both motion modes. `docs/phase-2-staged-rehearsal.json` labels this truthfully as not the 70-minute soak. |
+| Fixture sponsor lifecycle | Pass / real provider deferred | Presentation, impressions/click fixture events and aggregation, cancellation, refund and emergency removal pass deterministically with zero Lemon webhook-ledger writes. Real Lemon delivery is not claimed. |
+| Preview rollover, rollback and stable seed | Pass | Reconciliation completed Day 7; guarded reset removed 16 scoped objects and only the preview journey; a reversible 1× seven-day preview was reseeded at `2026-09-03T07:57:00Z`. No Production state or final launch date changed. |
+| `pnpm rehearse:phase2` 70-minute observation | Pending | The staged functional proof does not replace the planned uninterrupted ten-minute-per-country observation. Physical-phone performance and product-owner approval also remain open gates. |
 
 ### Phase 1.5 verification commands
 

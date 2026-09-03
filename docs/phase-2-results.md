@@ -1,6 +1,6 @@
 # Phase 2 implementation evidence
 
-Updated: 2026-09-02. Branch: `phase-2-seven-day-mvp`. Public launch and Phase 3 remain out of scope.
+Updated: 2026-09-03. Branch: `phase-2-seven-day-mvp`. Public launch and Phase 3 remain out of scope.
 
 ## Delivered preview surface
 
@@ -16,14 +16,19 @@ Updated: 2026-09-02. Branch: `phase-2-seven-day-mvp`. Public launch and Phase 3 
 |---|---|
 | `pnpm phase2:preflight` | Pass: isolated project ref `pqtfhkiftiubwuwxnuzd`, fingerprint `4af19e174f99`; no secret values printed. |
 | `pnpm phase2:db:apply` | Pass: baseline `001`–`003` and Phase 2 `004`–`006` applied to the initially empty isolated preview only. |
+| `pnpm verify:phase2` | Pass on the final 2026-09-03 retry. One earlier attempt reached the remote-lint step and encountered a transient Supabase pooler timeout; the unchanged exact command then completed successfully. |
 | `pnpm db:lint:phase2` | Pass: hosted schema lint reports no findings. |
 | `pnpm db:test:phase2` | Pass: Phase 1 10/10, Phase 1.5 4/4 and Phase 2 24/24 pgTAP assertions, including RLS, grants and storage policy coverage. |
-| `pnpm verify:phase2:code` | Pass: lint/typecheck clean; 20 files and 55 tests pass; 84.11% statements, 71.69% branches, 93.87% functions and 86.93% lines; production build emits 22 routes. |
+| `pnpm verify:phase2:code` | Pass: lint/typecheck clean; 21 files and 56 tests pass; 84.11% statements, 71.69% branches, 93.87% functions and 86.93% lines; production build emits 22 routes. |
 | `pnpm content:validate` | Pass: 9 registered rollback/current packs and 402 uniquely owned scene assets; six packs are truthfully labeled private-preview only. |
 | `pnpm assets:report:phase2` | Pass: shared traveler transfer 0.69 MiB; country transfers 4.13–5.22 MiB; largest decoded zone 25.2–25.7 MiB, below repository limits. |
-| `pnpm test:e2e` | Pass: 14 active desktop/mobile cases and 10 intentional opt-in/device duplicates skipped. Includes shared presence, accessibility, no-WebGL, stop/resume, encounter, full/reduced scenes, 320px bounds, seven distinct static packs and closed vote results. |
+| `pnpm test:e2e` | Pass: 14 active desktop/mobile cases and 12 intentional opt-in/device duplicates skipped. Includes shared presence, accessibility, no-WebGL, stop/resume, encounter, full/reduced scenes, 320px bounds, seven distinct static packs and closed vote results. |
 | `pnpm motion:record:phase2` | Pass: two 72-second production-sprite proofs plus seven checkpoints per device. Frame review caught and fixed an oversized sponsor-layer selector; rerun proves a patch width below 25% of traveler width. |
-| Deterministic sponsor fixture | Pass before final reseed: approval/presentation, aggregation, cancellation, refund and emergency removal; zero Lemon webhook-ledger writes. It is not real-provider evidence. |
+| `pnpm rehearse:phase2:staged` | Pass in 2.8 minutes: guarded clock staging traversed Tashkent → Dushanbe → Bishkek → Almaty → Baku → Tbilisi → Istanbul; submitted seven votes, created seven postcards, verified six completed/stamped archive cards, public metadata, sponsor disclosure/redirect, offline recovery and full/reduced motion. Exact summary: `docs/phase-2-staged-rehearsal.json`. This is not the 70-minute soak. |
+| `pnpm phase2:smoke-rollover -- --apply` | Pass: reconciliation reached the completed state after staged Day 7 and changed the final country-day state exactly once. |
+| Preview rollback and stable reseed | Pass: reset removed the exact guarded journey and 16 scoped storage objects, then created a fresh reversible seven-day seed at 1× beginning `2026-09-03T07:57:00Z`. No Production row or final launch date was changed. |
+| `pnpm phase2:configure-vercel` | Pass: 23 values configured only for the `phase-2-seven-day-mvp` Preview branch; `productionVariablesModified:false` and no values printed. |
+| Deterministic sponsor fixture | Pass before final reseed: presentation `live`, cancellation `cancelled`, refund `refunded`, emergency removal `cancelled`, one metric aggregate row and zero Lemon webhook-ledger writes. It is not real-provider evidence. |
 
 ## Motion evidence
 
@@ -34,12 +39,13 @@ Updated: 2026-09-02. Branch: `phase-2-seven-day-mvp`. Public launch and Phase 3 
 
 The checkpoint review covers five Tashkent zones, planted and airborne stride poses, stop/resume, encounter dialogue and NPC composition, ambient phone/photo/drink/wave actions, ground shadow, character/environment scale and the small runtime sponsor patch. The debug overlay during development-mode emulated-mobile video capture is not physical-device performance evidence; low- and mid-range phone budgets remain a product-owner device gate.
 
-## Remaining Phase 2 gate work
+## Remaining Phase 2 gates
 
-- Deploy the corrected branch with its already configured branch-only Vercel Preview variables.
-- Reseed a fresh reversible 144× seven-day run, rerun the fixture lifecycle, run `pnpm verify:phase2`, and complete `pnpm rehearse:phase2`.
-- Record the final hosted transition/postcard/archive/vote/sponsor evidence, exercise reset, then restore a stable 1× private-preview seed.
+- Complete the uninterrupted `pnpm rehearse:phase2` 70-minute observation. The guarded staged proof passes functional country transitions, but is deliberately labeled as a different gate and is not substituted for ten observed minutes per country.
 - Run the five-minute desktop and ten-minute physical-phone product-owner checks. Do not claim physical-device/Core Web Vitals acceptance from browser emulation.
+- Product-owner approval remains open. Phase 3 must not begin before that approval.
+
+The deployment also exposed and verified a live-data regression fix: `src/lib/bootstrap/server.ts` now names `sponsorships_slot_id_fkey` explicitly. Without it, PostgREST's second slot/sponsorship relationship made valid live fixtures appear unsponsored. The corrected protected Preview deployment passed the staged sponsor disclosure and redirect checks.
 
 ## Deferred launch blockers
 
