@@ -58,6 +58,10 @@ async function seed(clock: PreviewClock): Promise<void> {
   await runGuardedScript("scripts/phase2/seed-preview.ts", clock);
 }
 
+async function seedSponsorFixture(clock: PreviewClock): Promise<void> {
+  await runGuardedScript("scripts/phase2/rehearse-sponsor-fixtures.ts", clock);
+}
+
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {
     receivedSignal = signal;
@@ -110,6 +114,7 @@ try {
   await reset(originalClock);
   previewReplaced = true;
   await seed(acceleratedClock);
+  await seedSponsorFixture(acceleratedClock);
   process.stdout.write(`${JSON.stringify({ canonicalRehearsal: true, scale: ACCELERATED_SCALE, stablePreviewWillBeRestored: true, valuesPrinted: false })}\n`);
   rehearsalCode = await run(
     process.execPath,

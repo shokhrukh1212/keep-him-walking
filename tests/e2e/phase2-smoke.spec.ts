@@ -91,6 +91,24 @@ test("bootstrap polling recovers after a transient failure and applies the next 
   expect(requests).toBeGreaterThanOrEqual(2);
 });
 
+test("postcard state resets when the live country rolls over without navigation", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  let routeIndex = 0;
+  await install(page, () => {
+    const next = snapshot(routeIndex);
+    next.countryDay.id = `10000000-0000-4000-8000-${String(70 + routeIndex).padStart(12, "0")}`;
+    next.refresh.afterMs = 1_000;
+    return next;
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Postcard$/ }).click();
+  await expect(page.getByRole("button", { name: "View postcard" })).toBeVisible();
+  routeIndex = 1;
+  await expect(page.locator(".day-mark")).toContainText("Dushanbe", { timeout: 5_000 });
+  await expect(page.getByRole("button", { name: /^Postcard$/ })).toBeVisible();
+});
+
 test("a closed daily vote presents deterministic result counts", async ({ page }) => {
   const closed = snapshot();
   closed.vote = {

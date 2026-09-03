@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trackVisitorEvent } from "@/lib/analytics/client";
 
 export function PostcardButton({ countryDayId, eligible, unlockSeconds, contributedSeconds, existingUrl, sponsorPublicId }: {
@@ -15,6 +15,11 @@ export function PostcardButton({ countryDayId, eligible, unlockSeconds, contribu
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const unlocked = eligible || contributedSeconds >= unlockSeconds;
+  useEffect(() => {
+    setUrl(existingUrl);
+    setBusy(false);
+    setMessage("");
+  }, [countryDayId, existingUrl]);
   const create = async () => {
     if (url) { window.open(url, "_blank", "noopener,noreferrer"); return; }
     setBusy(true); setMessage("");

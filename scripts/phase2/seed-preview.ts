@@ -67,7 +67,9 @@ for (const [index, scheduled] of schedule.entries()) {
     country_day_id: day.id,
     type: beat.kind === "encounter" ? "encounter" : beat.kind === "arrival" ? "arrival" : beat.kind === "departure" ? "departure" : "action",
     starts_at: beat.startsAt,
-    duration_seconds: beat.durationSeconds,
+    // Keep event stages visible for the same real-time duration during an
+    // accelerated rehearsal. Production seeds run at 1x and are unchanged.
+    duration_seconds: Math.round(beat.durationSeconds * scale),
     status: "scheduled",
     payload_json: beat.encounterId
       ? { travelerState: "notice", locationLabel: pack.encounters[0]?.locationLabel, lines: pack.encounters[0]?.lines, storyBeatId: beat.id }

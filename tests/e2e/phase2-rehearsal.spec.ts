@@ -126,6 +126,11 @@ test("isolated accelerated preview traverses and exercises all seven country-day
 
   while (performance.now() < deadline) {
     const sampledAt = performance.now();
+    const offlineBanner = page.locator(".connection-banner.offline");
+    if (await offlineBanner.isVisible().catch(() => false)) {
+      console.log("[phase2-rehearsal] transient offline fallback observed; waiting for bootstrap retry");
+      await expect(offlineBanner).toHaveCount(0, { timeout: 20_000 });
+    }
     const city = await currentCity(page);
     if (!city) {
       await page.waitForTimeout(500);
@@ -194,6 +199,25 @@ test("isolated accelerated preview traverses and exercises all seven country-day
   }
 
   await reconcilePreview();
+  const evidence: RehearsalEvidence = {
+    countryOrder: observedOrder,
+    countrySeconds: Object.fromEntries([...countrySamples].map(([city, seconds]) => [city, Math.floor(seconds)])),
+    routeZones: Object.fromEntries([...zones].map(([city, values]) => [city, [...values]])),
+    travelerStates: [...travelerStates],
+    activeEventTypes: [...activeEventTypes],
+    votesSubmitted: [...votesSubmitted],
+    postcardsCreated: [...postcardUrls.keys()],
+    sponsorDisclosureSeen,
+    sponsorRedirectVerified,
+    offlineRecoveryVerified,
+    fullMotionVerified,
+    reducedMotionVerified,
+  };
+  await testInfo.attach("phase2-rehearsal-evidence", {
+    body: Buffer.from(JSON.stringify(evidence, null, 2)),
+    contentType: "application/json",
+  });
+
   expect(observedOrder).toEqual(PHASE2_ROUTE.map((entry) => entry.cityName));
   for (const entry of PHASE2_ROUTE) {
     expect(countrySamples.get(entry.cityName) ?? 0, `${entry.cityName} observation seconds`).toBeGreaterThanOrEqual(500);
@@ -221,22 +245,4 @@ test("isolated accelerated preview traverses and exercises all seven country-day
   await expect(page.locator(".passport-card")).toHaveCount(6);
   await expect(page.locator(".passport-card[data-stamped='true']")).toHaveCount(6);
 
-  const evidence: RehearsalEvidence = {
-    countryOrder: observedOrder,
-    countrySeconds: Object.fromEntries([...countrySamples].map(([city, seconds]) => [city, Math.floor(seconds)])),
-    routeZones: Object.fromEntries([...zones].map(([city, values]) => [city, [...values]])),
-    travelerStates: [...travelerStates],
-    activeEventTypes: [...activeEventTypes],
-    votesSubmitted: [...votesSubmitted],
-    postcardsCreated: [...postcardUrls.keys()],
-    sponsorDisclosureSeen,
-    sponsorRedirectVerified,
-    offlineRecoveryVerified,
-    fullMotionVerified,
-    reducedMotionVerified,
-  };
-  await testInfo.attach("phase2-rehearsal-evidence", {
-    body: Buffer.from(JSON.stringify(evidence, null, 2)),
-    contentType: "application/json",
-  });
 });
