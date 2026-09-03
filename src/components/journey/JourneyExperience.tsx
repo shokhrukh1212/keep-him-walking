@@ -538,6 +538,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
           </button>
           {snapshot.assets.schemaVersion === 3 ? (
             <PostcardButton
+              key={snapshot.countryDay.id}
               countryDayId={snapshot.countryDay.id}
               eligible={snapshot.postcard.eligible}
               unlockSeconds={snapshot.postcard.unlockSeconds}

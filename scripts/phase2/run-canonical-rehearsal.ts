@@ -4,6 +4,7 @@ import { phase2EnvironmentIdentity } from "./environment";
 
 const PREVIEW_SLUG = "phase2-seven-day-preview";
 const ACCELERATED_SCALE = 144;
+const staged = process.argv.includes("--staged");
 
 type PreviewClock = {
   realStart: string;
@@ -115,7 +116,7 @@ try {
   previewReplaced = true;
   await seed(acceleratedClock);
   await seedSponsorFixture(acceleratedClock);
-  process.stdout.write(`${JSON.stringify({ canonicalRehearsal: true, scale: ACCELERATED_SCALE, stablePreviewWillBeRestored: true, valuesPrinted: false })}\n`);
+  process.stdout.write(`${JSON.stringify({ canonicalRehearsal: !staged, stagedRehearsal: staged, scale: ACCELERATED_SCALE, stablePreviewWillBeRestored: true, valuesPrinted: false })}\n`);
   rehearsalCode = await run(
     process.execPath,
     [
@@ -126,7 +127,8 @@ try {
     ],
     {
       ...process.env,
-      RUN_PHASE2_REHEARSAL: "1",
+      RUN_PHASE2_REHEARSAL: staged ? undefined : "1",
+      RUN_PHASE2_STAGED_REHEARSAL: staged ? "1" : undefined,
       PHASE2_PREVIEW_START_AT: acceleratedClock.realStart,
       PHASE2_REHEARSAL_SCALE: String(ACCELERATED_SCALE),
     },
