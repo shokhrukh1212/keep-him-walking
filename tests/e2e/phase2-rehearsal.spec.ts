@@ -2,7 +2,6 @@ import { expect, test, type Page } from "@playwright/test";
 import { adminClient } from "../../scripts/phase2/lib";
 import { phase2EnvironmentIdentity } from "../../scripts/phase2/environment";
 import { PHASE2_ROUTE } from "../../src/lib/story-clock/schedule";
-import { PHASE2_PREVIEW_DEPLOYMENT, protectedPreviewCookies } from "./phase2-global-setup";
 
 type RehearsalEvidence = {
   countryOrder: string[];
@@ -63,6 +62,15 @@ test("isolated accelerated preview traverses and exercises all seven country-day
   test.setTimeout(75 * 60_000);
 
   await phase2EnvironmentIdentity();
+  const { data: rehearsalJourney, error: rehearsalJourneyError } = await adminClient()
+    .from("journeys")
+    .select("status,phase2_enabled,story_time_scale")
+    .eq("slug", "phase2-seven-day-preview")
+    .maybeSingle();
+  if (rehearsalJourneyError) throw rehearsalJourneyError;
+  expect(rehearsalJourney?.status).toBe("preview");
+  expect(rehearsalJourney?.phase2_enabled).toBe(true);
+  expect(Number(rehearsalJourney?.story_time_scale), "canonical rehearsal requires the guarded 144× clock").toBe(144);
   const observedOrder: string[] = [];
   const countrySamples = new Map<string, number>();
   const zones = new Map<string, Set<string>>();
@@ -109,25 +117,19 @@ test("isolated accelerated preview traverses and exercises all seven country-day
   await expect(page.locator(".live-status")).toContainText(/watching/, { timeout: 20_000 });
   offlineRecoveryVerified = true;
 
-  const startedAt = Date.now();
+  const startedAt = performance.now();
   const deadline = startedAt + 71 * 60_000;
   let lastCountry: string | null = null;
   let sponsorMetricChecked = false;
-  let protectionRefreshedAt = Date.now();
+  let lastSampledAt = startedAt;
+  let lastProgressReportedAt = startedAt;
 
-  while (Date.now() < deadline) {
-    if (Date.now() - protectionRefreshedAt >= 25 * 60_000) {
-      try {
-        await page.context().addCookies(await protectedPreviewCookies(PHASE2_PREVIEW_DEPLOYMENT));
-      } catch (cause) {
-        const authenticatedProbe = await page.request.get("/api/bootstrap", { timeout: 20_000 });
-        if (!authenticatedProbe.ok()) throw cause;
-      }
-      protectionRefreshedAt = Date.now();
-    }
+  while (performance.now() < deadline) {
+    const sampledAt = performance.now();
     const city = await currentCity(page);
     if (!city) {
       await page.waitForTimeout(500);
+      lastSampledAt = sampledAt;
       continue;
     }
     if (city !== lastCountry) {
@@ -135,9 +137,12 @@ test("isolated accelerated preview traverses and exercises all seven country-day
       expect(city, `country transition ${observedOrder.length + 1}`).toBe(expected);
       observedOrder.push(city);
       lastCountry = city;
+      console.log(`[phase2-rehearsal] entered ${city} (${observedOrder.length}/7)`);
     }
 
-    countrySamples.set(city, (countrySamples.get(city) ?? 0) + 1);
+    const observedSeconds = Math.max(0, (sampledAt - lastSampledAt) / 1_000);
+    countrySamples.set(city, (countrySamples.get(city) ?? 0) + observedSeconds);
+    lastSampledAt = sampledAt;
     const zone = (await page.locator(".route-status strong").textContent().catch(() => null))?.trim();
     if (zone) {
       const cityZones = zones.get(city) ?? new Set<string>();
@@ -148,8 +153,8 @@ test("isolated accelerated preview traverses and exercises all seven country-day
     if (state) travelerStates.add(state);
     if (await page.locator(".dialogue-bubble").isVisible().catch(() => false)) activeEventTypes.add("encounter-visible");
 
-    if (!votesSubmitted.has(city) && Date.now() - (lastVoteAttempt.get(city) ?? 0) >= 10_000) {
-      lastVoteAttempt.set(city, Date.now());
+    if (!votesSubmitted.has(city) && sampledAt - (lastVoteAttempt.get(city) ?? 0) >= 10_000) {
+      lastVoteAttempt.set(city, sampledAt);
       await page.getByRole("button", { name: "Daily vote" }).click();
       const panel = page.getByRole("region", { name: "Daily vote" });
       const option = panel.locator(".vote-options button:not([disabled])").first();
@@ -181,6 +186,10 @@ test("isolated accelerated preview traverses and exercises all seven country-day
     }
 
     if (observedOrder.length === PHASE2_ROUTE.length && (countrySamples.get("Istanbul") ?? 0) >= 500) break;
+    if (sampledAt - lastProgressReportedAt >= 5 * 60_000) {
+      console.log(`[phase2-rehearsal] ${Math.floor((sampledAt - startedAt) / 60_000)}m healthy; current=${city}`);
+      lastProgressReportedAt = sampledAt;
+    }
     await page.waitForTimeout(1_000);
   }
 
@@ -214,7 +223,7 @@ test("isolated accelerated preview traverses and exercises all seven country-day
 
   const evidence: RehearsalEvidence = {
     countryOrder: observedOrder,
-    countrySeconds: Object.fromEntries(countrySamples),
+    countrySeconds: Object.fromEntries([...countrySamples].map(([city, seconds]) => [city, Math.floor(seconds)])),
     routeZones: Object.fromEntries([...zones].map(([city, values]) => [city, [...values]])),
     travelerStates: [...travelerStates],
     activeEventTypes: [...activeEventTypes],

@@ -72,6 +72,25 @@ test("all seven reduced-motion country packs retain distinct complete environmen
   expect(renderedSources.size).toBe(PHASE2_ROUTE.length);
 });
 
+test("bootstrap polling recovers after a transient failure and applies the next country", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await install(page);
+  let requests = 0;
+  await page.route("**/api/bootstrap", (route) => {
+    requests += 1;
+    if (requests === 1) {
+      return route.fulfill({ status: 503, json: { error: "transient preview failure" } });
+    }
+    return route.fulfill({ json: snapshot(1) });
+  });
+
+  await page.goto("/");
+  await expect(page.locator(".connection-banner.offline")).toBeVisible();
+  await expect(page.locator(".day-mark")).toContainText("Dushanbe", { timeout: 12_000 });
+  await expect(page.locator(".connection-banner.offline")).toHaveCount(0);
+  expect(requests).toBeGreaterThanOrEqual(2);
+});
+
 test("a closed daily vote presents deterministic result counts", async ({ page }) => {
   const closed = snapshot();
   closed.vote = {

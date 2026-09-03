@@ -124,7 +124,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     });
   }, [initialSnapshot.countryDay.countryCode, initialSnapshot.countryDay.dayNumber]);
 
-  const refreshBootstrap = useCallback(async () => {
+  const refreshBootstrap = useCallback(async (): Promise<number> => {
     try {
       const response = await fetch("/api/bootstrap", { cache: "no-store" });
       if (!response.ok) throw new Error("Bootstrap unavailable");
@@ -132,6 +132,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       setSnapshot(next);
       setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
       setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
+      return Math.max(1_000, Math.min(5 * 60_000, next.refresh.afterMs));
     } catch {
       setSnapshot((current) => ({
         ...current,
@@ -140,22 +141,27 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         steps: { ...current.steps, stale: true },
         vote: null,
       }));
+      return 5_000;
     } finally {
       setLoadingLive(false);
     }
   }, []);
 
   useEffect(() => {
-    const initial = window.setTimeout(() => void refreshBootstrap(), 0);
-    const resync = window.setTimeout(
-      () => void refreshBootstrap(),
-      Math.max(1_000, Math.min(5 * 60_000, snapshot.refresh.afterMs)),
-    );
-    return () => {
-      window.clearTimeout(initial);
-      window.clearTimeout(resync);
+    let stopped = false;
+    let timer: number | null = null;
+    const schedule = (delayMs: number) => {
+      timer = window.setTimeout(async () => {
+        const nextDelayMs = await refreshBootstrap();
+        if (!stopped) schedule(nextDelayMs);
+      }, delayMs);
     };
-  }, [refreshBootstrap, snapshot.refresh.afterMs]);
+    schedule(0);
+    return () => {
+      stopped = true;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [refreshBootstrap]);
 
   useEffect(() => {
     const tick = window.setInterval(() => {
