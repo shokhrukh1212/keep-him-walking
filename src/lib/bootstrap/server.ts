@@ -243,11 +243,12 @@ export async function liveBootstrapSnapshot(
   };
   let sponsor: BootstrapSnapshot["sponsor"] = { status: "unsponsored" };
   if (config.phase2Enabled && countryPack.schemaVersion === 3) {
-    const [{ data: contribution }, { data: existingPostcard }, { data: slot }] = await Promise.all([
+    const [{ data: contribution }, { data: existingPostcard }, { data: slot, error: sponsorError }] = await Promise.all([
       supabase.from("visitor_day_contributions").select("active_seconds").eq("country_day_id", countryDay.id).eq("visitor_hash", visitorHash).maybeSingle(),
       supabase.from("postcards").select("public_token,status,expires_at").eq("country_day_id", countryDay.id).eq("visitor_hash", visitorHash).eq("status", "ready").gt("expires_at", now.toISOString()).maybeSingle(),
-      supabase.from("sponsor_slots").select("id,sponsorships(public_id,status,sponsor_name,disclosure,public_creative_path,cta_label)").eq("country_day_id", countryDay.id).maybeSingle(),
+      supabase.from("sponsor_slots").select("id,sponsorships!sponsorships_slot_id_fkey(public_id,status,sponsor_name,disclosure,public_creative_path,cta_label)").eq("country_day_id", countryDay.id).maybeSingle(),
     ]);
+    if (sponsorError) throw sponsorError;
     const contributedSeconds = Number(contribution?.active_seconds ?? row?.out_visitor_active_seconds ?? 0);
     postcard = {
       eligible: contributedSeconds >= config.postcardUnlockSeconds,
