@@ -26,7 +26,7 @@ Updated: 2026-09-03. Branch: `phase-2-seven-day-mvp`. Public launch and Phase 3 
 | `pnpm motion:record:phase2` | Pass: two 72-second production-sprite proofs plus seven checkpoints per device. Frame review caught and fixed an oversized sponsor-layer selector; rerun proves a patch width below 25% of traveler width. |
 | `pnpm rehearse:phase2:staged` | Pass in 2.8 minutes: guarded clock staging traversed Tashkent → Dushanbe → Bishkek → Almaty → Baku → Tbilisi → Istanbul; submitted seven votes, created seven postcards, verified six completed/stamped archive cards, public metadata, sponsor disclosure/redirect, offline recovery and full/reduced motion. Exact summary: `docs/phase-2-staged-rehearsal.json`. This is not the 70-minute soak. |
 | `pnpm phase2:smoke-rollover -- --apply` | Pass: reconciliation reached the completed state after staged Day 7 and changed the final country-day state exactly once. |
-| Preview rollback and stable reseed | Pass: reset removed the exact guarded journey and 16 scoped storage objects, then created a fresh reversible seven-day seed at 1× beginning `2026-09-03T07:57:00Z`. No Production row or final launch date was changed. |
+| Preview rollback and stable reseed | Pass: the staged reset removed the exact guarded journey and 16 scoped storage objects; the interrupted canonical run was later removed with its four scoped objects. A fresh reversible seven-day seed now runs at 1× from `2026-09-03T09:11:00Z`. No Production row or final launch date was changed. |
 | `pnpm phase2:configure-vercel` | Pass: 23 values configured only for the `phase-2-seven-day-mvp` Preview branch; `productionVariablesModified:false` and no values printed. |
 | Deterministic sponsor fixture | Pass before final reseed: presentation `live`, cancellation `cancelled`, refund `refunded`, emergency removal `cancelled`, one metric aggregate row and zero Lemon webhook-ledger writes. It is not real-provider evidence. |
 
@@ -46,6 +46,8 @@ The checkpoint review covers five Tashkent zones, planted and airborne stride po
 - Product-owner approval remains open. Phase 3 must not begin before that approval.
 
 The deployment also exposed and verified a live-data regression fix: `src/lib/bootstrap/server.ts` now names `sponsorships_slot_id_fkey` explicitly. Without it, PostgREST's second slot/sponsorship relationship made valid live fixtures appear unsponsored. The corrected protected Preview deployment passed the staged sponsor disclosure and redirect checks.
+
+The latest canonical observer remained healthy for 30.1 minutes, then Vercel CLI timed out while refreshing its deployment-protection cookie. This is recorded as a failed/incomplete gate, not an application pass. The rehearsal now falls back to an authenticated `/api/bootstrap` probe when a refresh command times out, preventing a healthy existing protected session from being discarded; the full 70-minute rerun remains pending.
 
 ## Deferred launch blockers
 

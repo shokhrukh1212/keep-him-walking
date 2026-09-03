@@ -117,7 +117,12 @@ test("isolated accelerated preview traverses and exercises all seven country-day
 
   while (Date.now() < deadline) {
     if (Date.now() - protectionRefreshedAt >= 25 * 60_000) {
-      await page.context().addCookies(await protectedPreviewCookies(PHASE2_PREVIEW_DEPLOYMENT));
+      try {
+        await page.context().addCookies(await protectedPreviewCookies(PHASE2_PREVIEW_DEPLOYMENT));
+      } catch (cause) {
+        const authenticatedProbe = await page.request.get("/api/bootstrap", { timeout: 20_000 });
+        if (!authenticatedProbe.ok()) throw cause;
+      }
       protectionRefreshedAt = Date.now();
     }
     const city = await currentCity(page);
