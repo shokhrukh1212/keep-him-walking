@@ -101,7 +101,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   });
   const [worldDiagnostics, setWorldDiagnostics] = useState<WorldDiagnosticsSnapshot | null>(null);
   const [welcomeOriginMs] = useState(() => new Date(initialSnapshot.serverNow).getTime());
-  const readyReported = useRef(false);
+  const readyReported = useRef(new Set<string>());
   const watchReported = useRef(false);
   const seenMilestones = useRef(new Set<number>());
   const viewedEvents = useRef(new Set<string>());
@@ -388,8 +388,8 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!experienceReady || !sceneRenderer || readyReported.current) return;
-    readyReported.current = true;
+    if (!experienceReady || !sceneRenderer || readyReported.current.has(snapshot.assets.assetVersion)) return;
+    readyReported.current.add(snapshot.assets.assetVersion);
     trackVisitorEvent("scene_ready", {
       load_ms: Math.max(0, Math.round(performance.now() - loadStarted.current)),
       asset_version: snapshot.assets.assetVersion,

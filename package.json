@@ -58,7 +58,8 @@
     "verify:phase1.5": "pnpm verify:phase15 && pnpm test:motion:soak",
     "verify:phase2:code": "pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build && pnpm content:validate && pnpm assets:report:phase2",
     "verify:phase2": "pnpm verify:phase2:code && pnpm phase2:preflight && pnpm db:lint:phase2 && pnpm db:test:phase2 && pnpm test:e2e",
-    "rehearse:phase2": "RUN_PHASE2_REHEARSAL=1 node --env-file=.env.phase2-preview.local node_modules/@playwright/test/cli.js test --config=playwright.phase2.config.ts"
+    "rehearse:phase2": "RUN_PHASE2_REHEARSAL=1 node --env-file=.env.phase2-preview.local node_modules/@playwright/test/cli.js test --config=playwright.phase2.config.ts",
+    "rehearse:phase2:staged": "RUN_PHASE2_STAGED_REHEARSAL=1 node --env-file=.env.phase2-preview.local node_modules/@playwright/test/cli.js test --config=playwright.phase2.config.ts"
   },
   "dependencies": {
     "@rive-app/react-webgl2": "^4.33.0",

@@ -13,7 +13,9 @@ export default defineConfig({
   globalSetup: "./tests/e2e/phase2-global-setup.ts",
   globalTeardown: "./tests/e2e/phase2-global-teardown.ts",
   testDir: "./tests/e2e",
-  testMatch: "phase2-rehearsal.spec.ts",
+  testMatch: process.env.RUN_PHASE2_STAGED_REHEARSAL === "1"
+    ? "phase2-staged-rehearsal.spec.ts"
+    : "phase2-rehearsal.spec.ts",
   fullyParallel: false,
   workers: 1,
   retries: 0,
