@@ -1,12 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+test.skip(
+  !process.env.PHASE3_PREVIEW_URL || !process.env.PREVIEW_ACCESS_SECRET,
+  "Opt-in protected Preview recording requires local environment configuration",
+);
+
 test("protected Phase 3 staging and live journey evidence", async ({ page }, testInfo) => {
   const previewSecret = process.env.PREVIEW_ACCESS_SECRET;
   if (!previewSecret) throw new Error("PREVIEW_ACCESS_SECRET is required");
 
-  await page.goto("/?debug=world");
-  await expect(page.getByRole("heading", { name: "Tashkent" })).toBeVisible();
-  await expect(page.getByTestId("world-diagnostics")).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByText("Tashkent", { exact: true })).toBeVisible();
+  await expect(page.locator(".traveler-sprite")).toBeVisible();
+  await expect(page.getByRole("status", { name: /Walking rule/ })).toBeVisible();
   await page.waitForTimeout(5_000);
   await page.screenshot({ path: testInfo.outputPath("live-journey.png"), fullPage: true });
 

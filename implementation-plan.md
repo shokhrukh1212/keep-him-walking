@@ -863,7 +863,7 @@ Implementation is isolated on `phase-3-launch-hardening`. Production Supabase da
 
 #### 1. Scale, abuse resistance and database evolution
 
-- [x] Add additive migrations `supabase/migrations/202609040007_phase3_launch_hardening.sql` through `202609040009_phase3_bootstrap_bundle.sql` for retention opt-ins, privacy-safe experiment exposure, operational incidents, webhook replay audit, rate limits and read-only runtime/bootstrap projections that avoid serializing anonymous reads or fanning one bootstrap into many database requests. Keep RLS deny-by-default and expose only narrowly scoped security-definer RPCs.
+- [x] Add additive migrations `supabase/migrations/202609040007_phase3_launch_hardening.sql` through `202609040010_phase3_atomic_bootstrap.sql` for retention opt-ins, privacy-safe experiment exposure, operational incidents, webhook replay audit, rate limits, read-only runtime/bootstrap projections and one-round-trip atomic bootstrap admission. Keep RLS deny-by-default and expose only narrowly scoped security-definer RPCs.
 - [x] Replace endpoint-specific rate-limit calls with `src/lib/security/rate-limit.ts`; apply documented limits and `Retry-After` to bootstrap, presence, voting, postcards, sponsor metrics/redirect and notification mutations without making in-memory state authoritative.
 - [x] Add deterministic load scenarios under `scripts/load/` for bootstrap, presence, voting, postcards and sponsor redirects. Target 1,000 concurrent watchers with explicit p95/error-rate/database-connection budgets and a dry-run mode that cannot mutate Production.
 
@@ -900,8 +900,8 @@ Implementation is isolated on `phase-3-launch-hardening`. Production Supabase da
 #### 7. Verification and exit gate
 
 - [x] Add unit/integration/browser/database coverage for Phase 3 boundaries and `pnpm verify:phase3` as the single code/database/e2e gate. Add guarded `pnpm load:phase3`; its default is a non-mutating 1,000-watcher dry run.
-- [ ] Deploy only a branch-scoped Preview, run protected staging rehearsal, validate monitoring/alerts and record desktop/mobile evidence. Do not change Production deployment or variables.
-- [ ] Phase 3 technical gate: code, migrations, content, budgets, load tests, staging rehearsal and rollback pass with no critical defect.
+- [x] Deploy only a branch-scoped Preview, run the protected staging rehearsal, validate no-op-safe monitoring boundaries and record desktop/mobile evidence under `artifacts/phase3-preview-v1/`. The immutable Preview `keep-him-walking-a3lt1dfeh-shokhrukh-karimovs-projects.vercel.app` runs in `syd1` beside the isolated Preview database. Real vendor alert delivery remains a public-launch item. Production deployment and variables were not changed.
+- [x] Phase 3 automated technical gate: code, migrations, content, budgets, production-shaped 1,000-viewer load test, protected staging rehearsal and reversible rollback path pass with no critical defect. The final full verifier result is recorded in `docs/phase-3-results.md`; physical-device and external-provider gates remain explicitly open.
 - [ ] Public-launch human gate: product owner explicitly approves Production; physical phone/Core Web Vitals evidence passes; Lemon Squeezy real test-mode lifecycle passes; all required qualified local cultural reviews are recorded; legal/contact copy is accepted; monitoring recipients are configured. Do not claim launch readiness or deploy Production before every item passes.
 
 ### DEFERRED_LAUNCH_BLOCKERS
@@ -915,6 +915,10 @@ These are intentionally deferred from the private Phase 2 rehearsal and must be 
 - Live-mode configuration.
 - Qualified local reviews for Dushanbe, Bishkek, Almaty, Baku, Tbilisi and Istanbul.
 - Qualified local reviews for the unpublished Sofia, Belgrade, Zagreb, Ljubljana, Vienna, Bratislava and Prague editorial-buffer packs before any pack is scheduled publicly.
+- Named Sentry/Better Stack recipients and verified alert delivery.
+- Representative physical-phone Core Web Vitals, memory and sustained-motion measurements.
+- Product-owner acceptance of legal/contact copy and separate explicit Production authorization.
+- Review the documented zero-ramp cold-burst latency caveat before a coordinated launch spike.
 
 The deterministic fixture rehearsal is evidence for the application workflow only and is not evidence that the real payment lifecycle has been verified.
 
