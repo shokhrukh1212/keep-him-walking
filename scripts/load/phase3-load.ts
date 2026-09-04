@@ -49,11 +49,12 @@ async function measured(scenario: string, url: URL, init?: RequestInit) {
 }
 async function watcher() {
   const sessionId = randomUUID();
+  let cookie = "";
   while (Date.now() < deadline) {
-    const bypassHeaders: Record<string, string> = {};
+    const bypassHeaders: Record<string, string> = cookie ? { Cookie: cookie } : {};
     if (protectionBypass) bypassHeaders["x-vercel-protection-bypass"] = protectionBypass;
     const bootstrap = await measured("bootstrap", new URL("/api/bootstrap", target), { cache: "no-store", headers: bypassHeaders });
-    const cookie = bootstrap?.headers.get("set-cookie")?.split(";")[0] ?? "";
+    cookie = bootstrap?.headers.get("set-cookie")?.split(";")[0] ?? cookie;
     const headers = { "Content-Type": "application/json", Origin: target.origin, ...bypassHeaders, ...(cookie ? { Cookie: cookie } : {}) };
     await measured("presence", new URL("/api/presence/heartbeat", target), { method: "POST", headers, body: JSON.stringify({ sessionId, state: "visible", sceneReady: true }) });
     await measured("vote-validation", new URL("/api/votes", target), { method: "POST", headers, body: "{}" });

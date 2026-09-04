@@ -12,6 +12,7 @@ import type {
 import { dialogueLineSchema, travelerStateSchema } from "@/lib/content/schema";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { scaledStoryNow } from "@/lib/story-clock/schedule";
+import { RATE_LIMITS } from "@/lib/security/rate-limit";
 
 const eventPayloadSchema = z.object({
   travelerState: travelerStateSchema.optional(),
@@ -74,6 +75,18 @@ type BootstrapBundleRow = {
     cta_label: string | null;
   };
 };
+
+type AtomicBootstrapRow = {
+  allowed: boolean;
+  bundle: BootstrapBundleRow | null;
+};
+
+export class BootstrapRateLimitError extends Error {
+  constructor() {
+    super("Bootstrap rate limit exceeded");
+    this.name = "BootstrapRateLimitError";
+  }
+}
 
 export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | null> {
   const supabase = getServerSupabase();
@@ -346,14 +359,18 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: bundle, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v3", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v4", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
       p_steps_per_second: config.stepsPerActiveSecond,
+      p_rate_limit: RATE_LIMITS.bootstrap.limit,
+      p_rate_window_seconds: RATE_LIMITS.bootstrap.windowSeconds,
     });
     if (bundleError) throw bundleError;
-    if (bundle) return bootstrapFromBundle(bundle as BootstrapBundleRow, visitorHash, config, supabase);
+    const result = atomic as AtomicBootstrapRow | null;
+    if (result && !result.allowed) throw new BootstrapRateLimitError();
+    if (result?.bundle) return bootstrapFromBundle(result.bundle, visitorHash, config, supabase);
   }
   const countryDay = await findCurrentCountryDay(now);
   if (!countryDay) return null;

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(23);
 
 select has_table('public', 'country_notification_opt_ins', 'notification preference table exists');
 select has_table('public', 'experiment_exposures', 'privacy-safe exposure table exists');
@@ -20,6 +20,11 @@ select is(has_function_privilege('service_role', 'public.read_journey_runtime_v3
 select has_function('public', 'read_bootstrap_bundle_v3', array['text', 'timestamp with time zone', 'integer', 'numeric'], 'single-call bootstrap projection exists');
 select is(has_function_privilege('anon', 'public.read_bootstrap_bundle_v3(text,timestamptz,integer,numeric)', 'EXECUTE'), false, 'anon cannot call the bootstrap projection directly');
 select is(has_function_privilege('service_role', 'public.read_bootstrap_bundle_v3(text,timestamptz,integer,numeric)', 'EXECUTE'), true, 'service role can call the bootstrap projection');
+select has_function('public', 'read_bootstrap_bundle_v4', array['text', 'timestamp with time zone', 'integer', 'numeric', 'integer', 'integer'], 'atomic rate-limited bootstrap projection exists');
+select is(has_function_privilege('anon', 'public.read_bootstrap_bundle_v4(text,timestamptz,integer,numeric,integer,integer)', 'EXECUTE'), false, 'anon cannot call the atomic bootstrap projection directly');
+select is(has_function_privilege('service_role', 'public.read_bootstrap_bundle_v4(text,timestamptz,integer,numeric,integer,integer)', 'EXECUTE'), true, 'service role can call the atomic bootstrap projection');
+select is((public.read_bootstrap_bundle_v4(repeat('b', 64), '2026-09-04T02:00:00Z', 50, 1.8, 1, 60)->>'allowed')::boolean, true, 'atomic bootstrap admits a request inside its limit');
+select is((public.read_bootstrap_bundle_v4(repeat('b', 64), '2026-09-04T02:00:01Z', 50, 1.8, 1, 60)->>'allowed')::boolean, false, 'atomic bootstrap rejects a request over its limit');
 
 select * from finish();
 rollback;
