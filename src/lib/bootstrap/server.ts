@@ -44,6 +44,37 @@ type EventRow = {
   payload_json: unknown;
 };
 
+type BootstrapBundleRow = {
+  country_day: Omit<CountryDayRow, "journeys"> & { total_days: number };
+  runtime: {
+    out_active_viewers: number;
+    out_global_steps: number;
+    out_visitor_active_seconds: number;
+    out_accounted_at: string;
+    out_global_active_seconds: number;
+  };
+  events: EventRow[];
+  vote: null | {
+    id: string;
+    question: string;
+    opens_at: string;
+    closes_at: string;
+    status: string;
+    vote_options: Array<{ id: string; label: string; display_order: number }>;
+    ballots: Array<{ option_id: string; voter_hash: string }>;
+  };
+  contribution_seconds: number | null;
+  postcard: null | { public_token: string; status: string; expires_at: string };
+  sponsor: null | {
+    public_id: string;
+    status: string;
+    sponsor_name: string;
+    disclosure: string;
+    public_creative_path: string | null;
+    cta_label: string | null;
+  };
+};
+
 export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
@@ -116,6 +147,111 @@ function eventView(row: EventRow): ScheduledEventView {
     durationSeconds: row.duration_seconds,
     status: row.status,
     ...(payload.success ? payload.data : {}),
+  };
+}
+
+function bootstrapFromBundle(
+  bundle: BootstrapBundleRow,
+  visitorHash: string,
+  config: ReturnType<typeof serverRuntimeConfig>,
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+): BootstrapSnapshot {
+  const countryDay = {
+    ...bundle.country_day,
+    journeys: { total_days: bundle.country_day.total_days },
+  } as CountryDayRow;
+  const countryPack = getCountryPack(countryDay.scene_pack_id);
+  if (!countryPack || countryPack.schemaVersion !== 3) {
+    throw new Error(`No matching Phase 3 country pack for ${countryDay.scene_pack_id}`);
+  }
+  const storyNow = new Date(countryDay.story_now ?? new Date().toISOString());
+  const eventRows = bundle.events.map(eventView);
+  const nowMs = storyNow.getTime();
+  const activeEvent = eventRows.find((event) => {
+    const start = new Date(event.startsAt).getTime();
+    return nowMs >= start && nowMs < start + event.durationSeconds * 1_000;
+  }) ?? null;
+  const nextEvent = eventRows.find((event) => new Date(event.startsAt).getTime() > nowMs)
+    ?? [...eventRows].reverse().find((event) => {
+      const start = new Date(event.startsAt).getTime();
+      return start + event.durationSeconds * 1_000 <= nowMs;
+    })
+    ?? null;
+  const vote = bundle.vote ? (() => {
+    const closed = nowMs >= new Date(bundle.vote.closes_at).getTime();
+    const selected = bundle.vote.ballots.find((ballot) => ballot.voter_hash === visitorHash);
+    return {
+      id: bundle.vote.id,
+      question: bundle.vote.question,
+      opensAt: bundle.vote.opens_at,
+      closesAt: bundle.vote.closes_at,
+      status: closed ? "closed" as const : "open" as const,
+      totalBallots: bundle.vote.ballots.length,
+      selectedOptionId: selected?.option_id ?? null,
+      options: bundle.vote.vote_options.map((option) => ({
+        id: option.id,
+        label: option.label,
+        displayOrder: option.display_order,
+        ...(closed ? { votes: bundle.vote!.ballots.filter((ballot) => ballot.option_id === option.id).length } : {}),
+      })),
+    };
+  })() : null;
+  const contributedSeconds = Number(bundle.contribution_seconds ?? bundle.runtime.out_visitor_active_seconds ?? 0);
+  const liveSponsor = bundle.sponsor?.status === "live" ? bundle.sponsor : null;
+  const patchUrl = liveSponsor?.public_creative_path
+    ? supabase.storage.from(config.sponsorPublicBucket).getPublicUrl(liveSponsor.public_creative_path).data.publicUrl
+    : null;
+  const nextAt = nextEvent && new Date(nextEvent.startsAt).getTime() > storyNow.getTime()
+    ? nextEvent.startsAt : countryDay.ends_at;
+
+  return {
+    serverNow: storyNow.toISOString(),
+    realServerNow: new Date().toISOString(),
+    storyScale: countryDay.story_scale ?? 1,
+    mode: "live",
+    journeyState: "live",
+    refresh: {
+      nextAt,
+      afterMs: Math.max(1_000, Math.min(5 * 60_000, (new Date(nextAt).getTime() - storyNow.getTime()) / Math.max(1, countryDay.story_scale ?? 1))),
+      reason: nextAt === countryDay.ends_at ? "country_rollover" : "event",
+    },
+    countryDay: countryDayView(countryDay),
+    activeEvent,
+    nextEvent,
+    vote,
+    presence: {
+      activeViewers: Number(bundle.runtime.out_active_viewers ?? 0),
+      status: "live",
+      ttlSeconds: config.presenceTtlSeconds,
+    },
+    steps: {
+      global: Number(bundle.runtime.out_global_steps ?? 0),
+      updatedAt: String(bundle.runtime.out_accounted_at),
+      stale: false,
+    },
+    route: {
+      globalActiveSeconds: Number(bundle.runtime.out_global_active_seconds ?? 0),
+      authoritativeAt: String(bundle.runtime.out_accounted_at),
+      walking: Number(bundle.runtime.out_active_viewers ?? 0) > 0,
+    },
+    sponsor: liveSponsor ? {
+      status: "sponsored",
+      publicId: liveSponsor.public_id,
+      name: liveSponsor.sponsor_name,
+      disclosure: liveSponsor.disclosure,
+      patchUrl,
+      ctaLabel: liveSponsor.cta_label,
+      clickUrl: liveSponsor.cta_label ? `/r/sponsor/${liveSponsor.public_id}` : null,
+    } : { status: "unsponsored" },
+    postcard: {
+      eligible: contributedSeconds >= config.postcardUnlockSeconds,
+      unlockSeconds: config.postcardUnlockSeconds,
+      contributedSeconds,
+      url: bundle.postcard?.public_token
+        ? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/p/${bundle.postcard.public_token}`
+        : null,
+    },
+    assets: countryPack,
   };
 }
 
@@ -208,6 +344,17 @@ export async function liveBootstrapSnapshot(
 ): Promise<BootstrapSnapshot | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
+  const config = serverRuntimeConfig();
+  if (config.phase2Enabled) {
+    const { data: bundle, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v3", {
+      p_visitor_hash: visitorHash,
+      p_real_now: now.toISOString(),
+      p_ttl_seconds: config.presenceTtlSeconds,
+      p_steps_per_second: config.stepsPerActiveSecond,
+    });
+    if (bundleError) throw bundleError;
+    if (bundle) return bootstrapFromBundle(bundle as BootstrapBundleRow, visitorHash, config, supabase);
+  }
   const countryDay = await findCurrentCountryDay(now);
   if (!countryDay) return null;
   const countryPack = getCountryPack(countryDay.scene_pack_id);
@@ -217,7 +364,6 @@ export async function liveBootstrapSnapshot(
   ) {
     throw new Error(`No matching country pack for ${countryDay.scene_pack_id}`);
   }
-  const config = serverRuntimeConfig();
   const storyNow = new Date(countryDay.story_now ?? now.toISOString());
   const runtimeRequest = countryPack.schemaVersion === 3
     ? supabase.rpc("read_journey_runtime_v3", {

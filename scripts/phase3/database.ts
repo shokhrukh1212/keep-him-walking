@@ -3,7 +3,7 @@ import { phase2EnvironmentIdentity } from "../phase2/environment";
 
 const identity = await phase2EnvironmentIdentity();
 const apply = process.argv.includes("--apply");
-process.stdout.write(`${JSON.stringify({ projectRef: identity.projectRef, operation: apply ? "apply-additive-phase3-migrations-007-008" : "list-migrations", productionModified: false, apply })}\n`);
+process.stdout.write(`${JSON.stringify({ projectRef: identity.projectRef, operation: apply ? "apply-additive-phase3-migrations-007-009" : "list-migrations", productionModified: false, apply })}\n`);
 const command = apply
   ? ["exec", "supabase", "db", "push", "--include-all", "--db-url", identity.databaseUrl]
   : ["exec", "supabase", "migration", "list", "--db-url", identity.databaseUrl];

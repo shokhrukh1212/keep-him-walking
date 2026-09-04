@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(18);
 
 select has_table('public', 'country_notification_opt_ins', 'notification preference table exists');
 select has_table('public', 'experiment_exposures', 'privacy-safe exposure table exists');
@@ -17,6 +17,9 @@ select throws_ok($$select public.set_country_notification_opt_in('short', 'bad',
 select has_function('public', 'read_journey_runtime_v3', array['uuid', 'timestamp with time zone', 'integer', 'numeric'], 'read-only runtime projection exists');
 select is(has_function_privilege('anon', 'public.read_journey_runtime_v3(uuid,timestamptz,integer,numeric)', 'EXECUTE'), false, 'anon cannot read the runtime projection directly');
 select is(has_function_privilege('service_role', 'public.read_journey_runtime_v3(uuid,timestamptz,integer,numeric)', 'EXECUTE'), true, 'service role can read the runtime projection');
+select has_function('public', 'read_bootstrap_bundle_v3', array['text', 'timestamp with time zone', 'integer', 'numeric'], 'single-call bootstrap projection exists');
+select is(has_function_privilege('anon', 'public.read_bootstrap_bundle_v3(text,timestamptz,integer,numeric)', 'EXECUTE'), false, 'anon cannot call the bootstrap projection directly');
+select is(has_function_privilege('service_role', 'public.read_bootstrap_bundle_v3(text,timestamptz,integer,numeric)', 'EXECUTE'), true, 'service role can call the bootstrap projection');
 
 select * from finish();
 rollback;
