@@ -7,8 +7,10 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { postcardBodySchema } from "@/lib/validation/api";
 import { apiError, readLimitedJson } from "@/lib/validation/http";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
+import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
+import { withRouteTelemetry } from "@/lib/observability/route";
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   if (!hasTrustedOrigin(request)) return apiError(403, "FORBIDDEN", "Untrusted request origin.");
   let body: unknown;
   try { body = await readLimitedJson(request); } catch { return apiError(400, "BAD_REQUEST", "Invalid postcard request."); }
@@ -18,10 +20,8 @@ export async function POST(request: NextRequest) {
   const visitorHash = hashOpaqueValue(visitor.visitorId);
   const supabase = getServerSupabase();
   if (!supabase) return apiError(503, "UNAVAILABLE", "Postcards are not configured.");
-  const { data: allowed } = await supabase.rpc("consume_mutation_rate_limit", {
-    p_key_hash: visitorHash, p_action: "postcard", p_limit: 4, p_window_seconds: 300, p_now: new Date().toISOString(),
-  });
-  if (!allowed) return apiError(429, "RATE_LIMITED", "Please wait before trying again.");
+  const limit = await consumeRateLimit(visitorHash, RATE_LIMITS.postcard);
+  if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds);
   try {
     const origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const postcard = await createPostcard({ countryDayId: parsed.data.countryDayId, visitorHash, origin });
@@ -35,3 +35,5 @@ export async function POST(request: NextRequest) {
     return apiError(503, "UNAVAILABLE", "The postcard could not be prepared.");
   }
 }
+
+export const POST = withRouteTelemetry("postcards", handlePost);

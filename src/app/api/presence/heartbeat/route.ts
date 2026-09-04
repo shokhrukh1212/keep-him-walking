@@ -8,8 +8,10 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { getCountryPack } from "@/content/countries/registry";
 import { heartbeatBodySchema } from "@/lib/validation/api";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
+import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
+import { withRouteTelemetry } from "@/lib/observability/route";
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   if (!hasTrustedOrigin(request)) {
     return NextResponse.json({ error: "Untrusted request origin." }, { status: 403 });
   }
@@ -27,11 +29,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No country-day is active." }, { status: 409 });
   }
   const visitor = visitorFromRequest(request);
+  const visitorHash = hashOpaqueValue(visitor.visitorId);
+  const limit = await consumeRateLimit(visitorHash, RATE_LIMITS.presence);
+  if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds, "Presence updates are arriving too quickly.");
   const config = serverRuntimeConfig();
   const pack = getCountryPack(countryDay.scene_pack_id);
   const { data, error } = await supabase.rpc(pack?.schemaVersion === 3 ? "record_presence_heartbeat_v3" : "record_presence_heartbeat_v2", {
     p_country_day_id: countryDay.id,
-    p_visitor_hash: hashOpaqueValue(visitor.visitorId),
+    p_visitor_hash: visitorHash,
     p_session_hash: hashOpaqueValue(parsed.data.sessionId),
     p_state: parsed.data.state,
     p_scene_ready: parsed.data.sceneReady,
@@ -60,3 +65,5 @@ export async function POST(request: NextRequest) {
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
   return response;
 }
+
+export const POST = withRouteTelemetry("presence_heartbeat", handlePost);

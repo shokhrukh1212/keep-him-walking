@@ -11,8 +11,9 @@ const preview = {
 };
 
 describe("Phase 2 deployment policy", () => {
-  it("enables only the intended preview branch", () => {
+  it("enables only the approved Phase 2 and Phase 3 preview branches", () => {
     expect(phase2DeploymentAllowed(preview)).toBe(true);
+    expect(phase2DeploymentAllowed({ ...preview, VERCEL_GIT_COMMIT_REF: "phase-3-launch-hardening" })).toBe(true);
     expect(phase2DeploymentAllowed({ ...preview, VERCEL_GIT_COMMIT_REF: "main" })).toBe(false);
   });
 

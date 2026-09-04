@@ -4,7 +4,7 @@ export function phase2DeploymentAllowed(environment: DeploymentEnvironment = pro
   if (environment.PHASE2_ENABLED !== "true") return false;
   if (environment.VERCEL_ENV === "production") return false;
   if (environment.VERCEL_ENV === "preview") {
-    return environment.VERCEL_GIT_COMMIT_REF === "phase-2-seven-day-mvp";
+    return ["phase-2-seven-day-mvp", "phase-3-launch-hardening"].includes(environment.VERCEL_GIT_COMMIT_REF ?? "");
   }
   return environment.PHASE2_REHEARSAL_MODE === "true";
 }

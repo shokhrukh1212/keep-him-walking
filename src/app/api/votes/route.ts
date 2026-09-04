@@ -6,8 +6,10 @@ import { hashOpaqueValue } from "@/lib/identity/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { voteBodySchema } from "@/lib/validation/api";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
+import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
+import { withRouteTelemetry } from "@/lib/observability/route";
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   if (!hasTrustedOrigin(request)) {
     return NextResponse.json({ error: "Untrusted request origin." }, { status: 403 });
   }
@@ -26,19 +28,8 @@ export async function POST(request: NextRequest) {
   const ballotNow = currentCountryDay?.story_now
     ? new Date(currentCountryDay.story_now)
     : now;
-  const { data: allowed, error: rateError } = await supabase.rpc(
-    "consume_mutation_rate_limit",
-    {
-      p_key_hash: visitorHash,
-      p_action: "vote",
-      p_limit: 10,
-      p_window_seconds: 60,
-      p_now: now.toISOString(),
-    },
-  );
-  if (rateError || !allowed) {
-    return NextResponse.json({ error: "Too many vote attempts." }, { status: 429 });
-  }
+  const limit = await consumeRateLimit(visitorHash, RATE_LIMITS.vote, now);
+  if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds, "Too many vote attempts.");
 
   const { data, error } = await supabase.rpc("submit_phase1_ballot", {
     p_vote_id: parsed.data.voteId,
@@ -74,3 +65,5 @@ export async function POST(request: NextRequest) {
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
   return response;
 }
+
+export const POST = withRouteTelemetry("votes", handlePost);

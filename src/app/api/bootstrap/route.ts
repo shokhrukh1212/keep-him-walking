@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { liveBootstrapSnapshot } from "@/lib/bootstrap/server";
 import { attachVisitorCookie, visitorFromRequest } from "@/lib/identity/cookie";
 import { hashOpaqueValue } from "@/lib/identity/server";
+import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
+import { withRouteTelemetry } from "@/lib/observability/route";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   const visitor = visitorFromRequest(request);
   try {
+    const limit = await consumeRateLimit(hashOpaqueValue(visitor.visitorId), RATE_LIMITS.bootstrap);
+    if (limit.configured && !limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds, "Too many refresh attempts.");
     const snapshot = await liveBootstrapSnapshot(hashOpaqueValue(visitor.visitorId));
     if (!snapshot) {
       const response = NextResponse.json(
@@ -34,3 +38,5 @@ export async function GET(request: NextRequest) {
     return response;
   }
 }
+
+export const GET = withRouteTelemetry("bootstrap", handleGet);

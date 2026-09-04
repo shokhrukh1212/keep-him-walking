@@ -5,8 +5,10 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { sponsorMetricBodySchema } from "@/lib/validation/api";
 import { apiError, readLimitedJson } from "@/lib/validation/http";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
+import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
+import { withRouteTelemetry } from "@/lib/observability/route";
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   if (!hasTrustedOrigin(request)) return apiError(403, "FORBIDDEN", "Untrusted request origin.");
   let body: unknown;
   try { body = await readLimitedJson(request, 4_096); } catch { return apiError(400, "BAD_REQUEST", "Invalid metric request."); }
@@ -20,6 +22,8 @@ export async function POST(request: NextRequest) {
   const slot = Array.isArray(sponsor.sponsor_slots) ? sponsor.sponsor_slots[0] : sponsor.sponsor_slots;
   const visitor = visitorFromRequest(request);
   const visitorDayHash = hashOpaqueValue(`${visitor.visitorId}:${slot?.country_day_id ?? "unknown"}`);
+  const limit = await consumeRateLimit(visitorDayHash, RATE_LIMITS.sponsorMetric);
+  if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds);
   const dedupeKey = `${visitorDayHash}:${parsed.data.eventType}`;
   await supabase.from("sponsor_metric_events").upsert({
     sponsorship_id: sponsor.id,
@@ -32,3 +36,5 @@ export async function POST(request: NextRequest) {
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
   return response;
 }
+
+export const POST = withRouteTelemetry("sponsor_metrics", handlePost);

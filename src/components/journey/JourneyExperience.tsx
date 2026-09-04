@@ -41,6 +41,7 @@ import { PostcardButton } from "@/components/postcard/PostcardButton";
 import { PASSPORT_KEY } from "@/components/archive/PassportArchive";
 import Link from "next/link";
 import { getNextCountryPack } from "@/content/countries/registry";
+import { TomorrowPreview } from "@/components/hud/TomorrowPreview";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -455,6 +456,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const displayedZoneIndex = reducedMotion
     ? routePosition.zoneIndex
     : Math.max(0, snapshot.assets.route.zones.findIndex((zone) => zone.id === renderedZone.id));
+  const tomorrowPack = getNextCountryPack(snapshot.assets.assetVersion);
 
   const acceptVote = (optionId: string, totalBallots: number) => {
     setSnapshot((current) => ({
@@ -505,6 +507,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>
         <strong>{displayedZoneLabel}</strong>
       </div>
+      {tomorrowPack ? <TomorrowPreview cityName={tomorrowPack.cityName} countryName={tomorrowPack.countryName} packId={tomorrowPack.assetVersion} startsAt={snapshot.countryDay.endsAt} /> : null}
       <nav className="journey-links" aria-label="Journey links">
         <Link href="/archive">Passport</Link>
         <Link href="/sponsor">Sponsor a day</Link>

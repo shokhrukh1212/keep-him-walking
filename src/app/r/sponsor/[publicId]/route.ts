@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { visitorFromRequest, attachVisitorCookie } from "@/lib/identity/cookie";
 import { hashOpaqueValue } from "@/lib/identity/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { RATE_LIMITS, consumeRateLimit } from "@/lib/security/rate-limit";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ publicId: string }> }) {
   const { publicId } = await params;
@@ -19,10 +20,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const countryDayId = String(slotRelation?.country_day_id ?? "unknown");
   const visitorDayHash = hashOpaqueValue(`${visitor.visitorId}:${countryDayId}`);
   const fiveMinuteWindow = Math.floor(Date.now() / 300_000);
-  const { data: allowed } = await supabase.rpc("consume_mutation_rate_limit", {
-    p_key_hash: visitorDayHash, p_action: "sponsor_click", p_limit: 20, p_window_seconds: 300, p_now: new Date().toISOString(),
-  });
-  if (allowed) {
+  const limit = await consumeRateLimit(visitorDayHash, RATE_LIMITS.sponsorClick);
+  if (limit.allowed) {
     await supabase.from("sponsor_metric_events").upsert({
       sponsorship_id: data.id,
       event_type: "cta_click",

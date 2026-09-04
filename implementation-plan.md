@@ -787,8 +787,8 @@ Implemented shape as of 2026-09-01: `tashkent-v3` is the live five-zone country 
 
 - [x] Phase 2 remained isolated until the product owner explicitly approved starting it on 2026-09-02. The implementation now lives on `phase-2-seven-day-mvp`; the still-open Phase 1/1.5 external, physical-device and motion-review gates remain Phase 2 launch blockers.
 - [x] Phase 1/1.5 technical implementation is approved for promotion to `main`; promotion does not close the external comprehension, physical-device or product-owner gates and does not authorize Phase 2 feature work.
-- [ ] Phase 2 implemented and seven-day rehearsal completed according to the repository-specific plan below.
-- [ ] Phase 3 hardening tasks prioritized from observed usage under future `scripts/load/`, `src/lib/observability/` and `docs/runbooks/` paths.
+- [x] Phase 2 implemented, rehearsed and explicitly approved by the product owner on 2026-09-04.
+- [x] Phase 3 hardening work is isolated on `phase-3-launch-hardening` under `scripts/load/`, `scripts/phase3/`, `src/lib/{observability,security,admin,i18n,experiments,retention}/` and `docs/runbooks/`.
 
 ### Phase 2 repository-specific implementation plan
 
@@ -855,7 +855,54 @@ Implementation started on `phase-2-seven-day-mvp` after the product owner's expl
 - [x] Add `pnpm verify:phase2`, `pnpm rehearse:phase2` and guarded preview cleanup commands.
 - [ ] Keep Core Web Vitals targets at LCP ≤2.5 s, INP ≤200 ms and CLS ≤0.1 on representative mobile fast 4G, plus the current ≤96 MiB low-tier texture cap, bounded object pools, ≤25 MiB post-warm-up heap growth and no sustained motion jank. Capture low- and mid-range physical-device results rather than claiming them from emulation.
 - [x] Rehearse all seven country-days with accelerated UTC rollover. The 4,040,358 ms uninterrupted observer recorded all seven cities in order, 505–612 seconds and 4–5 zones per city, encounter/action cadence, seven votes, sponsor disclosure/redirect, offline recovery and both motion modes. Its final postcard assertion exposed a same-page state leak; the fix passed a dedicated rollover regression plus the self-restoring staged seven-country run with seven distinct postcards, archive/share metadata and the complete deterministic sponsor lifecycle. Exact evidence: `docs/phase-2-canonical-rehearsal.json`. Real Lemon delivery remains deferred and is not claimed.
-- [ ] Phase 2 product-owner gate: `pnpm verify:phase2` and the complete accelerated rehearsal pass; the final sprite videos demonstrate the required motion; and no critical truthfulness, privacy, accessibility, synchronization, visual or mobile defect remains. Real Lemon Squeezy delivery and six qualified local reviews remain public-launch blockers but do not block Phase 2 completion or Phase 3 after explicit product-owner approval. Do not start Phase 3 until that approval.
+- [x] Phase 2 product-owner gate: approved by the product owner on 2026-09-04 after `pnpm verify:phase2`, the accelerated seven-country rehearsal and the recorded desktop/mobile sprite proof passed. Real Lemon Squeezy delivery, physical-device measurements and six qualified local reviews remain public-launch blockers; this approval authorizes Phase 3 implementation, not a public Production launch.
+
+### Phase 3 repository-specific implementation plan
+
+Implementation is isolated on `phase-3-launch-hardening`. Production Supabase data, Production Vercel variables and the Production deployment remain untouched until the explicit launch gate. The existing ownership boundaries remain unchanged: Pixi owns the world/camera, the production sprite adapter owns current character animation while the Rive adapter remains replaceable, React/HTML owns UI and accessibility, PostgreSQL/server UTC owns canonical shared state, and analytics/observability never powers product truth.
+
+#### 1. Scale, abuse resistance and database evolution
+
+- [x] Add additive migration `supabase/migrations/202609040007_phase3_launch_hardening.sql` for retention opt-ins, privacy-safe experiment exposure, operational incidents, webhook replay audit and indexed/atomic rate-limit aggregation. Keep RLS deny-by-default and expose only narrowly scoped security-definer RPCs.
+- [x] Replace endpoint-specific rate-limit calls with `src/lib/security/rate-limit.ts`; apply documented limits and `Retry-After` to bootstrap, presence, voting, postcards, sponsor metrics/redirect and notification mutations without making in-memory state authoritative.
+- [x] Add deterministic load scenarios under `scripts/load/` for bootstrap, presence, voting, postcards and sponsor redirects. Target 1,000 concurrent watchers with explicit p95/error-rate/database-connection budgets and a dry-run mode that cannot mutate Production.
+
+#### 2. Observability and operations
+
+- [x] Add vendor-neutral structured logging and error/latency telemetry under `src/lib/observability/`, optional Sentry/Better Stack adapters, correlation IDs and redaction tests. Missing vendors are a no-op.
+- [x] Add `/api/health` for non-secret application/content/database readiness plus guarded operational/content/report tooling under `scripts/phase3/`; never expose secrets, visitor hashes or raw provider payloads. Real provider replay remains a public-launch blocker.
+- [x] Add `docs/runbooks/{launch,incident,rollback,sponsor-removal,webhook-replay}.md` with alert thresholds, reversible commands and Production safeguards. Named alert recipients remain a launch configuration task.
+
+#### 3. Protected preview and content operations
+
+- [x] Add protected staging preview API/pages using an expiring signed HTTP-only session, server-side preview secret and hard Production denial. Pack/zone inspection never changes the canonical live clock.
+- [x] Extend the existing validator with the registered editorial buffer and add `scripts/phase3/content-cli.ts` for schema/review/version/ownership and machine-readable asset-budget output.
+- [x] Add sponsor metric CSV export with stable definitions and UTC boundaries; reuse the isolated-project identity guard for admin scripts.
+
+#### 4. Localization, retention and experiments
+
+- [x] Add an English-first locale dictionary boundary under `src/lib/i18n/` without duplicating route trees or shipping unused dictionaries to the client; validate locale fallback behavior.
+- [x] Add a compact tomorrow preview plus privacy-preserving `.ics` calendar download. Notification preference storage is explicit/revocable and the API remains inactive until a delivery provider is configured.
+- [x] Add deterministic, allowlisted copy/CTA experiments under `src/lib/experiments/`; explicitly exclude the walking rule, sponsor disclosure, consent and safety copy.
+
+#### 5. Editorial buffer: Days 8–14
+
+- [x] Add seven versioned, visually distinct country packs in this order: Sofia, Belgrade, Zagreb, Ljubljana, Vienna, Bratislava and Prague. Each has five connected route zones, structured encounters, audio/postcard assets, a unique generated painterly city master and cited provisional primary-source cultural review.
+- [x] Register the packs as unpublished editorial buffer content. They are excluded from `getNextCountryPack` and are not seeded in the live seven-day schedule.
+- [x] Keep each new pack within the Phase 2 mobile transfer/decoded-memory budgets; validation reports 2.70–4.00 MiB transfer and 24.5 MiB maximum decoded zone, with unique scene URLs per country.
+
+#### 6. Launch surface, metadata and accessibility
+
+- [x] Add robots/sitemap/manifest, durable share metadata, global error/not-found UI and Web Vitals forwarding through the no-op-safe observability boundary.
+- [x] Recheck automated keyboard, semantic status, reduced motion, asset failure, analytics-blocked, offline/reconnect and sponsor disclosure paths in the combined desktop/320px Playwright suite.
+- [ ] Preserve LCP <=2.5 s, INP <=200 ms and CLS <=0.1 targets on representative mobile fast 4G; distinguish lab evidence from physical-device/field evidence.
+
+#### 7. Verification and exit gate
+
+- [x] Add unit/integration/browser/database coverage for Phase 3 boundaries and `pnpm verify:phase3` as the single code/database/e2e gate. Add guarded `pnpm load:phase3`; its default is a non-mutating 1,000-watcher dry run.
+- [ ] Deploy only a branch-scoped Preview, run protected staging rehearsal, validate monitoring/alerts and record desktop/mobile evidence. Do not change Production deployment or variables.
+- [ ] Phase 3 technical gate: code, migrations, content, budgets, load tests, staging rehearsal and rollback pass with no critical defect.
+- [ ] Public-launch human gate: product owner explicitly approves Production; physical phone/Core Web Vitals evidence passes; Lemon Squeezy real test-mode lifecycle passes; all required qualified local cultural reviews are recorded; legal/contact copy is accepted; monitoring recipients are configured. Do not claim launch readiness or deploy Production before every item passes.
 
 ### DEFERRED_LAUNCH_BLOCKERS
 
@@ -867,6 +914,7 @@ These are intentionally deferred from the private Phase 2 rehearsal and must be 
 - Refund lifecycle against Lemon Squeezy.
 - Live-mode configuration.
 - Qualified local reviews for Dushanbe, Bishkek, Almaty, Baku, Tbilisi and Istanbul.
+- Qualified local reviews for the unpublished Sofia, Belgrade, Zagreb, Ljubljana, Vienna, Bratislava and Prague editorial-buffer packs before any pack is scheduled publicly.
 
 The deterministic fixture rehearsal is evidence for the application workflow only and is not evidence that the real payment lifecycle has been verified.
 

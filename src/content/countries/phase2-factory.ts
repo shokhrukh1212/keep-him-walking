@@ -144,6 +144,7 @@ export type Phase2CountryDefinition = {
   postcardTitle: string;
   postcardCopy: string;
   sourceNotes: [string, string, ...string[]];
+  culturalReview?: CountryPackV3["culturalReview"];
 };
 
 function routeProps(city: string, version: string, zoneId: string): RouteProp[] {
@@ -338,7 +339,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
       { id: `${city}-departure`, kind: "departure", atFraction: 0.94, durationSeconds: 90, title: "Until tomorrow", summary: `The road turns toward the next country.` },
     ],
     localPhrases: [definition.encounter.phrase],
-    culturalReview: CULTURAL_REVIEWS[city as keyof typeof CULTURAL_REVIEWS],
+    culturalReview: definition.culturalReview ?? CULTURAL_REVIEWS[city as keyof typeof CULTURAL_REVIEWS],
     editorial: {
       owner: "Keep Him Walking editorial",
       researchedAt: "2026-09-02T00:00:00.000Z",

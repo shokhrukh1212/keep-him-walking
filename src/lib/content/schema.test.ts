@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { tashkentCountryPackV3 } from "@/content/countries/tashkent.v3";
-import { registeredCountryPacks } from "@/content/countries/registry";
+import { phase3EditorialBufferOrder, registeredCountryPacks } from "@/content/countries/registry";
 import { countryPackV3Schema } from "./schema";
 import { countryPackSchema } from "./schema";
+import type { CountryPackV3 } from "./schema";
 
 describe("Tashkent content pack", () => {
   it("satisfies the production-compatible asset contract", () => {
@@ -22,7 +23,7 @@ describe("Tashkent content pack", () => {
 });
 
 describe("Phase 2 country packs", () => {
-  const packs = registeredCountryPacks().filter((pack) => pack.schemaVersion === 3);
+  const packs = registeredCountryPacks().filter((pack): pack is CountryPackV3 => pack.schemaVersion === 3 && !phase3EditorialBufferOrder.includes(pack.assetVersion as typeof phase3EditorialBufferOrder[number]));
 
   it("registers the immutable seven-country route", () => {
     expect(packs.map((pack) => pack.assetVersion)).toEqual([
@@ -42,5 +43,17 @@ describe("Phase 2 country packs", () => {
     expect(packs[0]?.culturalReview.status).toBe("approved");
     expect(packs.slice(1).every((pack) => pack.culturalReview.status === "provisional_preview")).toBe(true);
     expect(new Set(packs.map((pack) => pack.npcSystem.baseType))).toEqual(new Set(["resident-a", "resident-b"]));
+  });
+});
+
+describe("Phase 3 editorial buffer", () => {
+  const packs = phase3EditorialBufferOrder.map((packId) => registeredCountryPacks().find((pack) => pack.assetVersion === packId));
+
+  it("registers seven unpublished, validated and distinct country packs", () => {
+    expect(packs.every((pack) => pack?.schemaVersion === 3)).toBe(true);
+    const typed = packs.filter((pack): pack is NonNullable<typeof pack> => Boolean(pack));
+    expect(typed.map((pack) => pack.assetVersion)).toEqual(phase3EditorialBufferOrder);
+    expect(typed.every((pack) => pack.schemaVersion === 3 && pack.route.zones.length === 5 && pack.culturalReview.status === "provisional_preview")).toBe(true);
+    expect(new Set(typed.map((pack) => pack.countryCode)).size).toBe(7);
   });
 });
