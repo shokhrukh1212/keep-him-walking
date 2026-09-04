@@ -219,8 +219,14 @@ export async function liveBootstrapSnapshot(
   }
   const config = serverRuntimeConfig();
   const storyNow = new Date(countryDay.story_now ?? now.toISOString());
-  const [{ data: runtime, error: runtimeError }, events, vote] = await Promise.all([
-    supabase.rpc(countryPack.schemaVersion === 3 ? "record_presence_heartbeat_v3" : "record_presence_heartbeat_v2", {
+  const runtimeRequest = countryPack.schemaVersion === 3
+    ? supabase.rpc("read_journey_runtime_v3", {
+      p_country_day_id: countryDay.id,
+      p_now: now.toISOString(),
+      p_ttl_seconds: config.presenceTtlSeconds,
+      p_steps_per_second: config.stepsPerActiveSecond,
+    })
+    : supabase.rpc("record_presence_heartbeat_v2", {
       p_country_day_id: countryDay.id,
       p_visitor_hash: null,
       p_session_hash: null,
@@ -229,7 +235,9 @@ export async function liveBootstrapSnapshot(
       p_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
       p_steps_per_second: config.stepsPerActiveSecond,
-    }),
+    });
+  const [{ data: runtime, error: runtimeError }, events, vote] = await Promise.all([
+    runtimeRequest,
     loadEvents(countryDay.id, storyNow),
     loadVote(countryDay.id, visitorHash, storyNow),
   ]);

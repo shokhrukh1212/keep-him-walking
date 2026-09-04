@@ -863,7 +863,7 @@ Implementation is isolated on `phase-3-launch-hardening`. Production Supabase da
 
 #### 1. Scale, abuse resistance and database evolution
 
-- [x] Add additive migration `supabase/migrations/202609040007_phase3_launch_hardening.sql` for retention opt-ins, privacy-safe experiment exposure, operational incidents, webhook replay audit and indexed/atomic rate-limit aggregation. Keep RLS deny-by-default and expose only narrowly scoped security-definer RPCs.
+- [x] Add additive migrations `supabase/migrations/202609040007_phase3_launch_hardening.sql` and `supabase/migrations/202609040008_phase3_read_runtime_snapshot.sql` for retention opt-ins, privacy-safe experiment exposure, operational incidents, webhook replay audit, rate limits and a read-only bootstrap projection that avoids serializing anonymous reads on the canonical runtime row. Keep RLS deny-by-default and expose only narrowly scoped security-definer RPCs.
 - [x] Replace endpoint-specific rate-limit calls with `src/lib/security/rate-limit.ts`; apply documented limits and `Retry-After` to bootstrap, presence, voting, postcards, sponsor metrics/redirect and notification mutations without making in-memory state authoritative.
 - [x] Add deterministic load scenarios under `scripts/load/` for bootstrap, presence, voting, postcards and sponsor redirects. Target 1,000 concurrent watchers with explicit p95/error-rate/database-connection budgets and a dry-run mode that cannot mutate Production.
 
