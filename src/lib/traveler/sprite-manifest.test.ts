@@ -18,11 +18,15 @@ describe("production sprite manifest", () => {
 
   it("keeps planted feet on the ground without metadata sliding", () => {
     const walk = manifest.clips.walk!;
+    const plants = walk.metadata.flatMap((frame) => [
+      ...(frame.leftFoot.planted ? [{ foot: "left", ...frame.leftFoot }] : []),
+      ...(frame.rightFoot.planted ? [{ foot: "right", ...frame.rightFoot }] : []),
+    ]);
+    expect(plants.map((plant) => plant.foot)).toEqual(["left", "right"]);
     for (const foot of ["leftFoot", "rightFoot"] as const) {
       const planted = walk.metadata.filter((frame) => frame[foot].planted).map((frame) => frame[foot]);
-      expect(planted.length).toBeGreaterThan(1);
+      expect(planted).toHaveLength(1);
       expect(planted.every((point) => point.y === manifest.canvas.groundY)).toBe(true);
-      expect(Math.max(...planted.map((point) => point.x)) - Math.min(...planted.map((point) => point.x))).toBeLessThanOrEqual(0.08);
     }
   });
 

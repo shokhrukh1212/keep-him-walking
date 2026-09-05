@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { BootstrapSnapshot, HeartbeatResponse } from "@/lib/contracts";
+import { travelerMotionAt } from "@/lib/traveler/motion-clock";
 import { extrapolatedRouteSeconds, routePositionAt } from "@/lib/world/route-clock";
 
 export function useRouteRuntime(
@@ -17,7 +18,14 @@ export function useRouteRuntime(
           walking: heartbeat.walking,
         }
       : snapshot.route;
-    const seconds = extrapolatedRouteSeconds(runtime, serverNowMs);
-    return { runtime, seconds, position: routePositionAt(snapshot.assets, seconds) };
+    const rawSeconds = extrapolatedRouteSeconds(runtime, serverNowMs);
+    const motion = travelerMotionAt(snapshot.assets, rawSeconds);
+    return {
+      runtime,
+      rawSeconds,
+      motion,
+      seconds: motion.locomotionSeconds,
+      position: routePositionAt(snapshot.assets, motion.locomotionSeconds),
+    };
   }, [heartbeat, serverNowMs, snapshot.assets, snapshot.route]);
 }

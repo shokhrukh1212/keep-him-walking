@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { DialogueLine } from "@/lib/content/schema";
 
 type Props = {
@@ -8,6 +9,7 @@ type Props = {
   npcSrc: string;
   replayAvailable: boolean;
   replayOpen: boolean;
+  motionSeconds?: number;
   onReplay: () => void;
   onCloseReplay: () => void;
 };
@@ -18,6 +20,7 @@ export function EncounterDialogue({
   npcSrc,
   replayAvailable,
   replayOpen,
+  motionSeconds = 0,
   onReplay,
   onCloseReplay,
 }: Props) {
@@ -25,7 +28,14 @@ export function EncounterDialogue({
   return (
     <>
       {visible ? (
-        <div className="npc-wrap" aria-hidden="true">
+        <div
+          className="npc-wrap"
+          aria-hidden="true"
+          style={{
+            "--npc-life-y": `${Math.sin(motionSeconds * 2.1) * -1.5}px`,
+            "--npc-life-rotation": `${Math.sin(motionSeconds * 1.35) * 0.12}deg`,
+          } as CSSProperties}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={npcSrc} alt="" draggable={false} />
         </div>

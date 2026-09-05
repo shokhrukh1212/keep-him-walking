@@ -57,21 +57,21 @@ export function SceneStage({
     onWorldFailure();
   }, [onReady, onWorldFailure]);
   useEffect(() => {
-    if (!reducedMotion && !pixiFailed) return;
+    if (!pixiFailed) return;
     const update = window.setTimeout(() => {
       activeRenderer.current = "static";
       setPixiReady(false);
       onReady("static");
     }, 0);
     return () => window.clearTimeout(update);
-  }, [onReady, pixiFailed, reducedMotion]);
+  }, [onReady, pixiFailed]);
   const route = routePositionAt(pack, routeSeconds);
   const fallbackUrl = pack.route.zones[route.zoneIndex]?.fallbackUrl ?? pack.scene.fallbackUrl;
 
   return (
-    <div className="scene-stage" data-renderer={pixiReady && !reducedMotion ? "pixi" : "static"}>
+    <div className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"}>
       <StaticScene src={fallbackUrl} onReady={staticReady} />
-      {!reducedMotion && !pixiFailed ? (
+      {!pixiFailed ? (
         <PixiScene
           pack={pack}
           routeSeconds={routeSeconds}

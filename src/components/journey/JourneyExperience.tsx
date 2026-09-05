@@ -9,19 +9,19 @@ import type {
 } from "@/lib/contracts";
 import type { TravelerState } from "@/lib/content/schema";
 import {
-  activeDialogueLineIndex,
   estimatedServerNow,
-  eventProgress,
   synchronizeClock,
 } from "@/lib/story-clock";
 import type { TravelerCommand } from "@/lib/traveler/types";
+import { travelerMotionAt, visibleStepsBetween } from "@/lib/traveler/motion-clock";
 import { useJourneyAudio } from "@/hooks/useJourneyAudio";
 import { useJourneyPresence } from "@/hooks/useJourneyPresence";
 import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { useQualityTier } from "@/hooks/useQualityTier";
 import { useRouteRuntime } from "@/hooks/useRouteRuntime";
 import { useIntroHeadline } from "@/hooks/useIntroHeadline";
-import { encounterPhaseAt, worldCommandForEncounter } from "@/lib/world/encounter-timeline";
+import { confirmedWalkingLease, walkingLeaseIsActive } from "@/lib/presence/walking-lease";
+import { worldCommandForEncounter } from "@/lib/world/encounter-timeline";
 import { motionPhaseAt, motionSpeedForPhase } from "@/lib/world/motion-machine";
 import { routePositionAt } from "@/lib/world/route-clock";
 import type { MotionTransition } from "@/lib/world/motion-machine";
@@ -58,22 +58,6 @@ function currentlyActiveEvent(
   return null;
 }
 
-function encounterTravelerState(
-  event: ScheduledEventView,
-  nowMs: number,
-): TravelerState {
-  const progress = eventProgress(event, nowMs);
-  if (progress < 0.08) return "notice";
-  if (progress < 0.15) return "slow_walk";
-  if (progress < 0.28) return "approach";
-  if (progress < 0.36) return "greet";
-  if (progress >= 0.82) return "resume_walk";
-  if (progress >= 0.62) return "goodbye";
-  if (progress >= 0.55) return "react";
-  const lineIndex = activeDialogueLineIndex(event, nowMs);
-  return event.lines?.[lineIndex]?.speaker === "traveler" ? "talk" : "listen";
-}
-
 export function JourneyExperience({ initialSnapshot }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeatState, setHeartbeat] = useState<{
@@ -86,6 +70,9 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const [clock, setClock] = useState(() => synchronizeClock(initialSnapshot.serverNow, Date.now(), initialSnapshot.storyScale ?? 1));
   const [realClock, setRealClock] = useState(() => synchronizeClock(initialSnapshot.realServerNow ?? initialSnapshot.serverNow));
   const [serverNowMs, setServerNowMs] = useState(() => new Date(initialSnapshot.serverNow).getTime());
+  const [realNowMs, setRealNowMs] = useState(() => new Date(
+    initialSnapshot.realServerNow ?? initialSnapshot.serverNow,
+  ).getTime());
   const [sceneRenderer, setSceneRenderer] = useState<"pixi" | "static" | null>(null);
   const [travelerReady, setTravelerReady] = useState(false);
   const [voteOpen, setVoteOpen] = useState(false);
@@ -97,10 +84,15 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   }));
   const [motionTransition, setMotionTransition] = useState<MotionTransition>({
     desiredWalking: false,
-    changedAtMs: new Date(initialSnapshot.serverNow).getTime(),
+    changedAtMs: new Date(initialSnapshot.realServerNow ?? initialSnapshot.serverNow).getTime(),
   });
   const [worldDiagnostics, setWorldDiagnostics] = useState<WorldDiagnosticsSnapshot | null>(null);
   const [welcomeOriginMs] = useState(() => new Date(initialSnapshot.serverNow).getTime());
+  const [walkingLease, setWalkingLease] = useState(() => confirmedWalkingLease(
+    (initialSnapshot.presence.activeViewers ?? 0) > 0,
+    initialSnapshot.presence.ttlSeconds,
+    new Date(initialSnapshot.realServerNow ?? initialSnapshot.serverNow).getTime(),
+  ));
   const readyReported = useRef(new Set<string>());
   const watchReported = useRef(false);
   const seenMilestones = useRef(new Set<number>());
@@ -130,17 +122,24 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       if (!response.ok) throw new Error("Bootstrap unavailable");
       const next = (await response.json()) as BootstrapSnapshot;
       setSnapshot(next);
+      if (next.mode === "live" && (next.presence.activeViewers ?? 0) > 0) {
+        setWalkingLease(confirmedWalkingLease(
+          true,
+          next.presence.ttlSeconds,
+          new Date(next.realServerNow ?? next.serverNow).getTime(),
+        ));
+      }
       setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
       setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
       return Math.max(1_000, Math.min(5 * 60_000, next.refresh.afterMs));
     } catch {
-      setSnapshot((current) => ({
-        ...current,
-        mode: "offline_preview",
-        presence: { ...current.presence, activeViewers: null, status: "offline" },
-        steps: { ...current.steps, stale: true },
-        vote: null,
-      }));
+      setSnapshot((current) => current.mode === "live"
+        ? {
+            ...current,
+            presence: { ...current.presence, status: "reconnecting" },
+            steps: { ...current.steps, stale: true },
+          }
+        : current);
       return 5_000;
     } finally {
       setLoadingLive(false);
@@ -166,15 +165,17 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   useEffect(() => {
     const tick = window.setInterval(() => {
       setServerNowMs(estimatedServerNow(clock));
-    }, 500);
+      setRealNowMs(estimatedServerNow(realClock));
+    }, 100);
     return () => window.clearInterval(tick);
-  }, [clock]);
+  }, [clock, realClock]);
 
   const handleHeartbeat = useCallback((next: HeartbeatResponse) => {
     setHeartbeat({ countryDayId: snapshot.countryDay.id, response: next });
     setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
     setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
     setServerNowMs(new Date(next.serverNow).getTime());
+    setRealNowMs(new Date(next.realServerNow ?? next.serverNow).getTime());
     setSnapshot((current) => current.countryDay.id === snapshot.countryDay.id
       ? {
           ...current,
@@ -185,11 +186,16 @@ export function JourneyExperience({ initialSnapshot }: Props) {
           },
         }
       : current);
+    setWalkingLease(confirmedWalkingLease(
+      next.walking,
+      next.ttlSeconds,
+      new Date(next.realServerNow ?? next.serverNow).getTime(),
+    ));
     setMotionTransition((current) => current.desiredWalking === next.walking
       ? current
       : {
           desiredWalking: next.walking,
-          changedAtMs: new Date(next.serverNow).getTime(),
+          changedAtMs: new Date(next.realServerNow ?? next.serverNow).getTime(),
         });
   }, [snapshot.countryDay.id]);
 
@@ -200,10 +206,14 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     onHeartbeat: handleHeartbeat,
   });
   const activeViewers = heartbeat?.activeViewers ?? snapshot.presence.activeViewers;
-  const walking = snapshot.mode === "live" && connectionStatus === "live" && (activeViewers ?? 0) > 0;
+  const walking = snapshot.mode === "live"
+    && walkingLeaseIsActive(walkingLease, realNowMs);
   const initialRoutePosition = routePositionAt(
     snapshot.assets,
-    heartbeat?.globalActiveSeconds ?? snapshot.route.globalActiveSeconds,
+    travelerMotionAt(
+      snapshot.assets,
+      heartbeat?.globalActiveSeconds ?? snapshot.route.globalActiveSeconds,
+    ).locomotionSeconds,
   );
   const zoneAudioId = snapshot.assets.route.zones[initialRoutePosition.zoneIndex]?.audioIds[0];
   const ambientAudioUrl = snapshot.assets.audio.find((asset) => asset.id === zoneAudioId)?.url;
@@ -211,12 +221,12 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     useJourneyAudio(walking, ambientAudioUrl);
 
   useEffect(() => {
-    if (walking || !motionTransition.desiredWalking) return;
+    if (walking === motionTransition.desiredWalking) return;
     const update = window.setTimeout(() => {
-      setMotionTransition({ desiredWalking: false, changedAtMs: estimatedServerNow(clock) });
+      setMotionTransition({ desiredWalking: walking, changedAtMs: realNowMs });
     }, 0);
     return () => window.clearTimeout(update);
-  }, [clock, motionTransition.desiredWalking, walking]);
+  }, [motionTransition.desiredWalking, realNowMs, walking]);
 
   useEffect(() => {
     if (walking && !watchReported.current) {
@@ -229,13 +239,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   }, [snapshot.countryDay.countryCode, snapshot.countryDay.dayNumber, walking]);
 
   const activeEvent = currentlyActiveEvent(snapshot, serverNowMs);
-  const lineIndex = activeEvent ? activeDialogueLineIndex(activeEvent, serverNowMs) : -1;
-  const activeLine = activeEvent?.lines?.[lineIndex] ?? null;
-  const encounterProgress = activeEvent?.type === "encounter"
-    ? eventProgress(activeEvent, serverNowMs)
-    : -1;
-  const encounterPhase = encounterPhaseAt(encounterProgress);
-  const locomotionPhase = motionPhaseAt(motionTransition, serverNowMs, hasWalked);
+  const locomotionPhase = motionPhaseAt(motionTransition, realNowMs, hasWalked);
   const locomotionSpeed = motionSpeedForPhase(locomotionPhase);
   useEffect(() => {
     let walkedTimer: number | null = null;
@@ -249,19 +253,54 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       if (walkedTimer) window.clearTimeout(walkedTimer);
     };
   }, [hasWalked, locomotionPhase]);
-  const { runtime: routeRuntime, seconds: routeSeconds, position: routePosition } =
-    useRouteRuntime(snapshot, heartbeat, estimatedServerNow(realClock));
+  const {
+    runtime: routeRuntime,
+    rawSeconds: rawRouteSeconds,
+    motion,
+    seconds: routeSeconds,
+    position: routePosition,
+  } =
+    useRouteRuntime(
+      snapshot,
+      heartbeat,
+      Math.min(
+        realNowMs,
+        walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
+      ),
+    );
+  const routeEncounter = snapshot.assets.schemaVersion === 3 && motion.action?.kind === "encounter"
+    ? snapshot.assets.encounters[0]
+    : null;
+  const activeLine = routeEncounter && motion.action?.dialogueLineIndex !== undefined
+    ? routeEncounter.lines[motion.action.dialogueLineIndex] ?? null
+    : null;
+  const encounterPhase = motion.action?.kind !== "encounter"
+    ? "none"
+    : motion.action.encounterPhase === "notice"
+      ? "notice"
+      : motion.action.encounterPhase === "slow_walk"
+        ? "decelerate"
+        : motion.action.encounterPhase === "approach"
+          ? "approach"
+          : motion.action.encounterPhase === "greet"
+            ? "greeting"
+            : motion.action.encounterPhase === "goodbye"
+              ? "goodbye"
+              : motion.action.encounterPhase === "resume_walk"
+                ? "restore"
+                : "dialogue";
   const introHeadline = useIntroHeadline(walking, welcomeOriginMs, serverNowMs);
   const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
   const eventStage = snapshot.assets.route.zones[routePosition.zoneIndex]?.eventStage;
   const worldCommand = {
     ...baseWorldCommand,
-    speedFactor: baseWorldCommand.speedFactor * locomotionSpeed,
+    speedFactor: motion.action ? 0 : locomotionSpeed,
     cameraZoom: baseWorldCommand.cameraZoom > 1 ? eventStage?.cameraZoom ?? baseWorldCommand.cameraZoom : 1,
     cameraPan: baseWorldCommand.cameraZoom > 1 ? eventStage?.cameraPan ?? baseWorldCommand.cameraPan : 0,
     backgroundLife: baseWorldCommand.cameraZoom > 1
       ? eventStage?.backgroundLife ?? baseWorldCommand.backgroundLife
       : 1,
+    motionSampleUntilMs: walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
   };
 
   useEffect(() => {
@@ -341,7 +380,12 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   }, [activeEvent]);
 
   const visitorSeconds = heartbeat?.visitorActiveSeconds ?? 0;
-  const visitorSteps = Math.floor(visitorSeconds * 1.8);
+  const visitorStartRawSeconds = Math.max(0, rawRouteSeconds - visitorSeconds);
+  const visitorSteps = visibleStepsBetween(
+    snapshot.assets,
+    visitorStartRawSeconds,
+    rawRouteSeconds,
+  );
 
   useEffect(() => {
     for (const milestone of [30, 60, 120, 300]) {
@@ -349,24 +393,24 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         seenMilestones.current.add(milestone);
         trackVisitorEvent("contribution_milestone", {
           seconds: milestone,
-          steps: Math.floor(milestone * 1.8),
+          steps: Math.floor(milestone / 0.6),
           day: snapshot.countryDay.dayNumber,
         });
       }
     }
   }, [snapshot.countryDay.dayNumber, visitorSeconds]);
 
-  let travelerState: TravelerState = locomotionPhase;
-  if (activeEvent?.type === "encounter") {
-    travelerState = encounterTravelerState(activeEvent, serverNowMs);
-  } else if (serverNowMs - welcomeOriginMs >= 75_000 && serverNowMs - welcomeOriginMs < 83_000) {
-    travelerState = "wave";
-  }
+  const travelerState: TravelerState = walking && motion.action
+    ? motion.action.state
+    : locomotionPhase;
   const command: TravelerCommand = {
     state: travelerState,
     mood: activeLine?.mood ?? "neutral",
     facing: "right",
     walkingSpeed: worldCommand.speedFactor,
+    walking,
+    routeRuntime,
+    motionSampleUntilMs: walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
     reducedMotion,
     sponsorPatchUrl: snapshot.sponsor.status === "sponsored" ? snapshot.sponsor.patchUrl ?? undefined : undefined,
   };
@@ -441,10 +485,11 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       // Dismissed share sheets and blocked clipboard access are non-fatal.
     }
   };
-  const displayedZoneLabel = reducedMotion ? routePosition.zoneLabel : renderedZone.label;
-  const displayedZoneIndex = reducedMotion
-    ? routePosition.zoneIndex
-    : Math.max(0, snapshot.assets.route.zones.findIndex((zone) => zone.id === renderedZone.id));
+  const displayedZoneLabel = renderedZone.label;
+  const displayedZoneIndex = Math.max(
+    0,
+    snapshot.assets.route.zones.findIndex((zone) => zone.id === renderedZone.id),
+  );
   const tomorrowPack = getNextCountryPack(snapshot.assets.assetVersion);
 
   const acceptVote = (optionId: string, totalBallots: number) => {
@@ -488,8 +533,8 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       <Traveler pack={snapshot.assets} command={command} onReady={() => setTravelerReady(true)} />
       <WalkingRuleStatus
         walking={walking}
-        label={activeEvent
-          ? "A shared story moment"
+        label={motion.action
+          ? motion.action.label
           : walking ? `Walking · ${displayedZoneLabel}` : "Waiting for the internet"}
       />
       <div className="route-status" aria-label={`Current route zone: ${displayedZoneLabel}`}>
@@ -504,10 +549,11 @@ export function JourneyExperience({ initialSnapshot }: Props) {
       </nav>
       <EncounterDialogue
         line={activeLine}
-        locationLabel={activeEvent?.locationLabel}
+        locationLabel={routeEncounter?.locationLabel}
         npcSrc={snapshot.assets.npcAssets[activeLine?.speaker === "npc" ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral}
         replayAvailable={replayAvailable}
         replayOpen={replayOpen}
+        motionSeconds={motion.action?.elapsedSeconds}
         onReplay={() => setReplayOpen(true)}
         onCloseReplay={() => setReplayOpen(false)}
       />
@@ -516,7 +562,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         <ContributionMeter
           seconds={visitorSeconds}
           steps={visitorSteps}
-          globalSteps={heartbeat?.globalSteps ?? snapshot.steps.global}
+          globalSteps={motion.plantIndex}
           stale={connectionStatus !== "live" || snapshot.steps.stale}
         />
         <div className="primary-controls">

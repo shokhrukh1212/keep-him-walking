@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Texture as PixiTexture } from "pixi.js";
 import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
+import { travelerMotionAt } from "@/lib/traveler/motion-clock";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import { deterministicVariant, extrapolatedRouteSeconds, routePositionAt } from "@/lib/world/route-clock";
 import { segmentVariant } from "@/lib/world/segment-sequencer";
@@ -295,14 +296,11 @@ export function PixiScene({
           elapsed += wallDeltaMs;
           frameSamples.push(wallDeltaMs);
           if (frameSamples.length > 180) frameSamples.shift();
-          const target = extrapolatedRouteSeconds(state.routeRuntime, Date.now());
-          if (!state.reducedMotion) {
-            const drift = target - displayedSeconds;
-            const maxCorrection = deltaSeconds * Math.max(0.02, state.command.speedFactor) * 1.4;
-            displayedSeconds += Math.max(-maxCorrection, Math.min(maxCorrection, drift));
-          } else {
-            displayedSeconds = target;
-          }
+          const rawTarget = extrapolatedRouteSeconds(
+            state.routeRuntime,
+            Math.min(Date.now(), state.command.motionSampleUntilMs ?? Number.POSITIVE_INFINITY),
+          );
+          displayedSeconds = travelerMotionAt(pack, rawTarget).locomotionSeconds;
 
           const position = routePositionAt(pack, displayedSeconds);
           const zoneDistance = position.zoneElapsedSeconds * pack.route.worldUnitsPerSecond;
@@ -321,7 +319,7 @@ export function PixiScene({
           const height = app.screen.height;
           camera.pivot.set(width / 2, height / 2);
           camera.position.set(width / 2 + state.command.cameraPan * width, height / 2);
-          camera.scale.set(state.reducedMotion ? 1 : state.command.cameraZoom);
+          camera.scale.set(state.reducedMotion ? Math.min(1.02, state.command.cameraZoom) : state.command.cameraZoom);
           zoneFade = Math.min(1, zoneFade + deltaSeconds * 2.4);
           layerRoot.alpha = zoneFade;
           propRoot.alpha = zoneFade * (0.72 + state.command.backgroundLife * 0.28);

@@ -38,6 +38,7 @@ export type WorldCommand = {
   cameraZoom: number;
   cameraPan: number;
   backgroundLife: number;
+  motionSampleUntilMs?: number;
 };
 
 export type QualityTier = "low" | "medium" | "high";

@@ -26,16 +26,23 @@ const ACTION_ROOT = `${TRAVELER_ROOT}/actions`;
 const WALK_ROOT = `${TRAVELER_ROOT}/walk`;
 
 function frameMetadata(index = 0, moving = false) {
-  const phase = index % 8;
-  const leftPlanted = moving && [0, 1, 6, 7].includes(phase);
-  const rightPlanted = moving && [2, 3, 4, 5].includes(phase);
+  const phase = index % 6;
+  const leftPlanted = moving && phase === 0;
+  const rightPlanted = moving && phase === 3;
+  const sponsorX = [0.365, 0.35, 0.34, 0.36, 0.35, 0.34][phase] ?? 0.35;
+  const sponsorY = [0.39, 0.385, 0.38, 0.39, 0.385, 0.38][phase] ?? 0.385;
   return {
-    leftFoot: { x: leftPlanted ? 0.46 : 0.42 + phase * 0.015, y: leftPlanted ? 0.96 : 0.91, planted: leftPlanted },
-    rightFoot: { x: rightPlanted ? 0.54 : 0.58 - phase * 0.015, y: rightPlanted ? 0.96 : 0.91, planted: rightPlanted },
+    leftFoot: { x: leftPlanted ? 0.48 : 0.44, y: leftPlanted ? 0.99 : 0.94, planted: leftPlanted },
+    rightFoot: { x: rightPlanted ? 0.52 : 0.56, y: rightPlanted ? 0.99 : 0.94, planted: rightPlanted },
     rootX: 0,
-    rootY: moving ? [0, -0.006, -0.012, -0.006, 0, -0.006, -0.012, -0.006][phase] : 0,
-    shadowScale: moving ? [1, 0.96, 0.92, 0.96, 1, 0.96, 0.92, 0.96][phase] : 1,
-    sponsorAnchor: { x: 0.34, y: 0.34, scale: 0.13, rotation: moving ? [-2, -1, 0, 2, 3, 1, 0, -1][phase] : 0 },
+    rootY: moving ? [0, -0.004, -0.008, 0, -0.004, -0.008][phase] : 0,
+    shadowScale: moving ? [1, 0.95, 0.91, 1, 0.95, 0.91][phase] : 1,
+    sponsorAnchor: {
+      x: moving ? sponsorX : 0.35,
+      y: moving ? sponsorY : 0.385,
+      scale: 0.105,
+      rotation: moving ? [-2, -1, 1, 2, 1, -1][phase] : 0,
+    },
   };
 }
 
@@ -57,29 +64,29 @@ function productionSpriteManifest() {
   const walk = [1, 2, 4, 5, 6, 8].map((index) => `${WALK_ROOT}/walk-${index}.webp`);
   return {
     version: 1 as const,
-    canvas: { width: 540, height: 960, groundY: 0.96 },
+    canvas: { width: 540, height: 960, groundY: 0.99 },
     maxDecodedCacheBytes: 32 * 1_048_576,
     clips: {
       loading: clip([action("idle")], 1, true),
-      idle: clip([action("idle"), action("idle-alt")], 1.2, true),
-      start_walk: clip([action("idle"), walk[0], walk[1]], 8, false, true, 36),
-      walk: clip(walk, 10, true, true, 92),
-      slow_walk: clip(walk, 6, true, true, 52),
-      stop: clip([walk[4], walk[5], action("stop")], 7, false, true, 22),
-      rest: clip([action("rest"), action("idle-alt")], 1.2, true),
-      notice: clip([action("notice"), action("listen")], 3, false),
-      approach: clip(walk, 7, true, true, 60),
-      greet: clip([action("notice"), action("wave")], 5, false),
-      talk: clip([action("talk"), action("listen"), action("talk")], 4, true),
-      listen: clip([action("listen"), action("idle")], 2, true),
-      react: clip([action("listen"), action("react"), action("react")], 5, false),
-      wave: clip([action("wave"), action("goodbye"), action("wave")], 5, true),
-      phone: clip([action("phone"), action("listen"), action("phone")], 2, true),
-      drink: clip([action("drink"), action("drink")], 1.5, true),
-      photo: clip([action("photo"), action("photo")], 1.5, true),
-      sit: clip([action("stop"), action("rest")], 4, false),
-      goodbye: clip([action("goodbye"), action("wave")], 4, false),
-      resume_walk: clip([action("resume-walk"), walk[0], walk[1]], 8, false, true, 36),
+      idle: clip([action("idle"), action("idle-alt")], 0.25, true),
+      start_walk: clip(walk, 5, true, true, 92),
+      walk: clip(walk, 5, true, true, 92),
+      slow_walk: clip(walk, 5, true, true, 92),
+      stop: clip([action("stop")], 1, false),
+      rest: clip([action("rest"), action("idle-alt")], 0.25, true),
+      notice: clip([action("notice")], 1, false),
+      approach: clip(walk, 5, true, true, 92),
+      greet: clip([action("wave")], 1, false),
+      talk: clip([action("talk")], 1, true),
+      listen: clip([action("listen")], 1, true),
+      react: clip([action("react")], 1, false),
+      wave: clip([action("wave")], 1, true),
+      phone: clip([action("phone")], 1, true),
+      drink: clip([action("drink")], 1, true),
+      photo: clip([action("photo")], 1, true),
+      sit: clip([action("rest")], 1, false),
+      goodbye: clip([action("goodbye")], 1, false),
+      resume_walk: clip(walk, 5, true, true, 92),
     },
   };
 }
@@ -248,7 +255,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         idle: `${ACTION_ROOT}/idle.webp`,
         start_walk: `${WALK_ROOT}/walk-1.webp`,
         walk: `${WALK_ROOT}/walk-1.webp`,
-        slow_walk: `${WALK_ROOT}/walk-7.webp`,
+        slow_walk: `${WALK_ROOT}/walk-6.webp`,
         stop: `${ACTION_ROOT}/stop.webp`,
         rest: `${ACTION_ROOT}/rest.webp`,
         notice: `${ACTION_ROOT}/notice.webp`,
@@ -266,8 +273,8 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         resume_walk: `${ACTION_ROOT}/resume-walk.webp`,
       },
       walkCycle: {
-        frames: Array.from({ length: 8 }, (_, index) => `${WALK_ROOT}/walk-${index + 1}.webp`),
-        framesPerSecond: 10,
+        frames: [1, 2, 4, 5, 6, 8].map((index) => `${WALK_ROOT}/walk-${index}.webp`),
+        framesPerSecond: 5,
       },
       spriteManifest: productionSpriteManifest(),
     },

@@ -76,7 +76,7 @@ const spriteFrameMetadataSchema = z.object({
 
 const spriteClipSchema = z.object({
   frames: z.array(z.string().startsWith("/")).min(1).max(16),
-  framesPerSecond: z.number().min(1).max(18),
+  framesPerSecond: z.number().min(0.1).max(18),
   loop: z.boolean(),
   strideWorldUnits: z.number().positive().max(300).optional(),
   metadata: z.array(spriteFrameMetadataSchema).min(1).max(16),
@@ -112,8 +112,8 @@ const travelerSchema = z.object({
   ])).optional(),
   fallbackSprites: z.partialRecord(travelerStateSchema, z.string().startsWith("/")),
   walkCycle: z.object({
-    frames: z.array(z.string().startsWith("/")).length(8),
-    framesPerSecond: z.number().min(6).max(18),
+    frames: z.array(z.string().startsWith("/")).min(6).max(8),
+    framesPerSecond: z.number().min(5).max(18),
   }).optional(),
   spriteManifest: spriteManifestSchema.optional(),
 });
