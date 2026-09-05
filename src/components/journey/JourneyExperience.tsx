@@ -10,7 +10,6 @@ import type {
 import type { TravelerState } from "@/lib/content/schema";
 import {
   activeDialogueLineIndex,
-  deterministicAmbientAction,
   estimatedServerNow,
   eventProgress,
   synchronizeClock,
@@ -114,7 +113,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
   const sponsorMetrics = useRef(new Set<string>());
   const [hasWalked, setHasWalked] = useState(false);
   const loadStarted = useRef(0);
-  const { reducedMotion, toggle: toggleMotion } = useMotionPreference();
+  const reducedMotion = useMotionPreference();
   const qualityTier = useQualityTier(reducedMotion);
 
   useEffect(() => {
@@ -341,10 +340,6 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     });
   }, [activeEvent]);
 
-  const ambient = useMemo(
-    () => deterministicAmbientAction(snapshot.assets, serverNowMs),
-    [serverNowMs, snapshot.assets],
-  );
   const visitorSeconds = heartbeat?.visitorActiveSeconds ?? 0;
   const visitorSteps = Math.floor(visitorSeconds * 1.8);
 
@@ -366,12 +361,6 @@ export function JourneyExperience({ initialSnapshot }: Props) {
     travelerState = encounterTravelerState(activeEvent, serverNowMs);
   } else if (serverNowMs - welcomeOriginMs >= 75_000 && serverNowMs - welcomeOriginMs < 83_000) {
     travelerState = "wave";
-  } else if (
-    locomotionPhase === "walk" &&
-    serverNowMs - motionTransition.changedAtMs > 5_000 &&
-    ambient
-  ) {
-    travelerState = ambient.state;
   }
   const command: TravelerCommand = {
     state: travelerState,
@@ -501,7 +490,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         walking={walking}
         label={activeEvent
           ? "A shared story moment"
-          : ambient?.label ?? (walking ? `Walking · ${displayedZoneLabel}` : "Waiting for the internet")}
+          : walking ? `Walking · ${displayedZoneLabel}` : "Waiting for the internet"}
       />
       <div className="route-status" aria-label={`Current route zone: ${displayedZoneLabel}`}>
         <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>
@@ -554,9 +543,7 @@ export function JourneyExperience({ initialSnapshot }: Props) {
         <SoundMotionControls
           soundEnabled={soundEnabled}
           soundAvailable={soundAvailable}
-          reducedMotion={reducedMotion}
           onToggleSound={() => void toggleSound()}
-          onToggleMotion={toggleMotion}
         />
         <div className="sponsor-note">
           <span className="eyebrow">TODAY</span>

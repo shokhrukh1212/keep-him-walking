@@ -116,13 +116,14 @@ test("guarded staged preview exercises all seven country-days", async ({ page },
       evidence.countryOrder.push(day.city_name);
 
       if (index === 0) {
-        const motionButton = page.getByRole("button", { name: /Full motion|Motion reduced/ });
-        await expect(motionButton).toHaveText("Full motion");
+        await expect(page.getByRole("button", { name: /Full motion|Motion reduced/ })).toHaveCount(0);
         evidence.fullMotionVerified = await page.locator(".pixi-scene canvas").isVisible();
-        await motionButton.click();
-        await expect(motionButton).toHaveText("Motion reduced");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.reload();
         evidence.reducedMotionVerified = await page.locator(".static-scene img").isVisible();
-        await motionButton.click();
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+        await page.reload();
+        await expect(page.locator(".pixi-scene canvas")).toBeVisible();
 
         await page.context().setOffline(true);
         await expect(page.locator(".live-status")).toContainText(/unavailable|reconnecting/i, { timeout: 10_000 });

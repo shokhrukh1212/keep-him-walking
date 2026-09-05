@@ -79,14 +79,12 @@ test("captures coherent full-motion zones and the complete reduced-motion fallba
   await captureZone(156, "mahalla-street", "mahalla-full-motion");
   await captureZone(276, "chorsu-market", "chorsu-full-motion");
 
-  await page.evaluate(() => localStorage.setItem("khw_reduced_motion", "true"));
+  await page.emulateMedia({ reducedMotion: "reduce" });
   routeSeconds = 276;
   await page.goto("/");
   await expect(page.locator(".scene-stage")).toHaveAttribute("data-renderer", "static");
   await expect(page.locator("main.journey-shell")).toHaveAttribute("data-motion", "reduced");
-  if (testInfo.project.name === "chromium") {
-    await expect(page.getByRole("button", { name: "Motion reduced" })).toBeVisible();
-  }
+  await expect(page.getByRole("button", { name: /motion/i })).toHaveCount(0);
   await expect(page.locator(".static-scene img")).toHaveAttribute(
     "src",
     /chorsu-market\/fallback\.webp/,

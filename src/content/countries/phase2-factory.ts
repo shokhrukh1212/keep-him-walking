@@ -21,7 +21,7 @@ export const PHASE2_RIVE_CONTRACT = {
   ] as const,
 };
 
-const TRAVELER_ROOT = "/traveler/production/v1";
+const TRAVELER_ROOT = "/traveler/production/v2";
 const ACTION_ROOT = `${TRAVELER_ROOT}/actions`;
 const WALK_ROOT = `${TRAVELER_ROOT}/walk`;
 
@@ -51,19 +51,22 @@ function clip(frames: string[], framesPerSecond: number, loop: boolean, moving =
 
 function productionSpriteManifest() {
   const action = (name: string) => `${ACTION_ROOT}/${name}.webp`;
-  const walk = Array.from({ length: 8 }, (_, index) => `${WALK_ROOT}/walk-${index + 1}.webp`);
+  // The high-resolution source includes two exaggerated knee-up poses. Keep
+  // them available for future transition work, but omit them from the calm
+  // route gait so the live loop reads as an adult walk rather than a skip.
+  const walk = [1, 2, 4, 5, 6, 8].map((index) => `${WALK_ROOT}/walk-${index}.webp`);
   return {
     version: 1 as const,
-    canvas: { width: 360, height: 640, groundY: 0.96 },
+    canvas: { width: 540, height: 960, groundY: 0.96 },
     maxDecodedCacheBytes: 32 * 1_048_576,
     clips: {
       loading: clip([action("idle")], 1, true),
-      idle: clip([action("idle"), action("idle")], 2, true),
+      idle: clip([action("idle"), action("idle-alt")], 1.2, true),
       start_walk: clip([action("idle"), walk[0], walk[1]], 8, false, true, 36),
       walk: clip(walk, 10, true, true, 92),
       slow_walk: clip(walk, 6, true, true, 52),
-      stop: clip([walk[6], walk[7], action("stop")], 7, false, true, 22),
-      rest: clip([action("rest"), action("idle")], 2, true),
+      stop: clip([walk[4], walk[5], action("stop")], 7, false, true, 22),
+      rest: clip([action("rest"), action("idle-alt")], 1.2, true),
       notice: clip([action("notice"), action("listen")], 3, false),
       approach: clip(walk, 7, true, true, 60),
       greet: clip([action("notice"), action("wave")], 5, false),
@@ -71,10 +74,10 @@ function productionSpriteManifest() {
       listen: clip([action("listen"), action("idle")], 2, true),
       react: clip([action("listen"), action("react"), action("react")], 5, false),
       wave: clip([action("wave"), action("goodbye"), action("wave")], 5, true),
-      phone: clip([action("phone"), action("phone")], 2, true),
-      drink: clip([action("drink"), action("drink")], 2, true),
-      photo: clip([action("photo"), action("photo")], 2, true),
-      sit: clip([action("sit-start"), action("rest")], 4, false),
+      phone: clip([action("phone"), action("listen"), action("phone")], 2, true),
+      drink: clip([action("drink"), action("drink")], 1.5, true),
+      photo: clip([action("photo"), action("photo")], 1.5, true),
+      sit: clip([action("stop"), action("rest")], 4, false),
       goodbye: clip([action("goodbye"), action("wave")], 4, false),
       resume_walk: clip([action("resume-walk"), walk[0], walk[1]], 8, false, true, 36),
     },
@@ -244,7 +247,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         loading: `${ACTION_ROOT}/idle.webp`,
         idle: `${ACTION_ROOT}/idle.webp`,
         start_walk: `${WALK_ROOT}/walk-1.webp`,
-        walk: `${WALK_ROOT}/walk-3.webp`,
+        walk: `${WALK_ROOT}/walk-1.webp`,
         slow_walk: `${WALK_ROOT}/walk-7.webp`,
         stop: `${ACTION_ROOT}/stop.webp`,
         rest: `${ACTION_ROOT}/rest.webp`,

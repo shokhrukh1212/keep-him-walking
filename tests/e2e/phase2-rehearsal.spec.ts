@@ -102,14 +102,14 @@ test("isolated accelerated preview traverses and exercises all seven country-day
   await expect(page.locator(".connection-banner.offline")).toHaveCount(0, { timeout: 30_000 });
   await expect(page.locator(".scene-stage")).toBeVisible();
 
-  const motionButton = page.getByRole("button", { name: /Full motion|Motion reduced/ });
-  await expect(motionButton).toHaveText("Full motion");
+  await expect(page.getByRole("button", { name: /Full motion|Motion reduced/ })).toHaveCount(0);
   fullMotionVerified = await page.locator(".pixi-scene canvas").isVisible();
-  await motionButton.click();
-  await expect(motionButton).toHaveText("Motion reduced");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
   reducedMotionVerified = await page.locator(".static-scene img").isVisible();
-  await motionButton.click();
-  await expect(motionButton).toHaveText("Full motion");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.reload();
+  await expect(page.locator(".pixi-scene canvas")).toBeVisible();
 
   await page.context().setOffline(true);
   await expect(page.locator(".live-status")).toContainText(/unavailable|reconnecting/i, { timeout: 10_000 });

@@ -1,6 +1,6 @@
 # Phase 3 implementation evidence
 
-Status on 2026-09-04: the non-payment Phase 3 implementation and automated technical gate pass on `phase-3-launch-hardening`. Production Supabase, Production Vercel variables and the Production deployment were not changed. The public-launch human gate remains open.
+Status on 2026-09-06: the non-payment Phase 3 implementation, automated technical gate and reported Dushanbe visual-motion remediation pass on `phase-3-launch-hardening`. Production Supabase, Production Vercel variables and the Production deployment were not changed. The public-launch human gate remains open.
 
 ## Preview under test
 
@@ -19,6 +19,8 @@ Status on 2026-09-04: the non-payment Phase 3 implementation and automated techn
 - English-first dictionary contract, allowlisted deterministic experiments, tomorrow preview, UTC `.ics` download and provider-gated revocable notification preferences.
 - Seven unpublished editorial-buffer packs: Sofia, Belgrade, Zagreb, Ljubljana, Vienna, Bratislava and Prague. See `docs/phase-3-cultural-review.md`.
 - Launch, incident, rollback, sponsor-removal and webhook-replay runbooks plus launch metadata/error surfaces.
+- A consistent 540×960 production-v2 traveler with 8 walk and 16 action/transition frames, planted-foot walk metadata, secondary clothing/backpack movement, moving ground shadow and the existing runtime-replaceable sponsor layer.
+- A coherent schema-v3 panorama compositor that removes the opaque horizontal crop seams and repeated pasted tree/lamp/planter strip while retaining visible panorama travel, bounded ground-life motion and weather. The walking HUD now always corresponds to advancing frames; reduced motion is an automatic OS accessibility fallback, not a visitor-facing scene mode.
 
 ## Recorded verification
 
@@ -26,12 +28,12 @@ Status on 2026-09-04: the non-payment Phase 3 implementation and automated techn
 |---|---|
 | `pnpm db:lint:phase3` | Pass; no schema findings on the isolated Preview database. |
 | `pnpm db:test:phase3` | Pass; 61 total pgTAP assertions: Phase 1 10, Phase 1.5 4, Phase 2 24, Phase 3 23. |
-| `pnpm test:coverage` | Pass; 27 files and 65 tests. Scoped coverage: 84.11% statements, 71.69% branches, 93.87% functions and 86.93% lines. |
+| `pnpm test:coverage` | Pass; 27 files and 66 tests. Scoped coverage: 84.11% statements, 71.69% branches, 93.87% functions and 86.93% lines. |
 | `pnpm lint` / `pnpm typecheck` | Pass without findings. |
 | `pnpm build` | Pass; Next.js 16.3.3 emitted 31 static/dynamic routes. |
 | `pnpm content:validate` | Pass; 16 registered packs and 717 uniquely owned scene assets. |
 | `pnpm assets:report:phase2` | Pass; new packs are 2.70–4.00 MiB transfer and 24.5 MiB maximum decoded zone. |
-| `pnpm test:e2e` | Pass; 28 active desktop/320px tests and 14 intentional opt-in rehearsal/soak/recording skips in 6.2 minutes. |
+| `pnpm test:e2e` | Pass after the visual fix; 30 active desktop/320px tests and 14 intentional opt-in rehearsal/soak/recording skips in 6.9 minutes. The Dushanbe regression samples ten animation instants, requires advancing production-v2 walk frames, verifies the zone transition and confirms the motion-mode button is absent. |
 | `pnpm verify:phase3` | Pass end to end: lint, typecheck, coverage, production build, content and asset reports, isolated-project preflight, schema lint, 61 pgTAP assertions and the complete browser matrix. |
 | Protected Preview recording | Pass; two projects (desktop and mobile) exercised the live Tashkent scene plus authenticated Sofia and Prague editorial previews. |
 | 100-viewer traffic-model check | Pass; 400 requests, zero errors, 593 ms overall p95. Endpoint p95: bootstrap 800 ms, presence 588 ms, vote validation 576 ms, postcard validation 341 ms. |
@@ -46,12 +48,15 @@ Development-server Web Vitals are not representative production lab or field evi
 - Desktop video: `artifacts/phase3-preview-v1/phase3-preview-record-prot-2084b-g-and-live-journey-evidence-desktop-preview/video.webm`
 - Mobile video: `artifacts/phase3-preview-v1/phase3-preview-record-prot-2084b-g-and-live-journey-evidence-mobile-preview/video.webm`
 - Each directory also contains live Tashkent, Sofia and Prague screenshots captured from the protected deployed Preview.
+- Updated Dushanbe desktop video: `artifacts/phase3-visual-fix/phase3-visual-fix-Dushanbe-1b020-ncing-production-v2-walking-desktop/video.webm`
+- Updated Dushanbe mobile video: `artifacts/phase3-visual-fix/phase3-visual-fix-Dushanbe-1b020-ncing-production-v2-walking-mobile/video.webm`
+- Each Dushanbe directory also contains `dushanbe-walking.png` and `dushanbe-zone-transition.png`. The recordings show one coherent illustrated environment, advancing high-resolution walk frames, incoming route composition, grounded feet/shadow and no pasted prop strip.
 - The prior immutable `bdd40e3` Preview was rechecked after deployment and returned healthy, providing a verified application rollback target without changing Production.
 
 ## Five-minute desktop check
 
 1. Open the protected Preview and confirm the live Tashkent scene, traveler walk, moving world and compact walking rule.
-2. Toggle reduced motion; confirm the complete static scene remains and continuous motion stops.
+2. Confirm there is no motion-mode button. If accessibility verification is needed, enable the operating system's reduced-motion preference and reload; the complete static country scene must remain.
 3. Open Passport, sponsor, privacy and tomorrow-calendar links; use keyboard-only navigation and inspect focus.
 4. Enter the application Preview key at `/preview`, open Sofia and Prague, and scan all five zones in each.
 5. Return to the journey, briefly go offline/online, and confirm the truthful reconnect state recovers without a blank scene.
