@@ -4,9 +4,9 @@ Status on 2026-09-06: the non-payment Phase 3 implementation, automated technica
 
 ## Preview under test
 
-- Immutable Preview: `https://keep-him-walking-a3lt1dfeh-shokhrukh-karimovs-projects.vercel.app`
-- Deployment: `dpl_71S8AbqkCzFah8yTVzFyZXZ1ocHQ`, target `preview`, status `Ready`.
-- Release: `8cb8e3e` with application functions in Vercel `syd1`, adjacent to isolated Supabase Preview project `pqtfhkiftiubwuwxnuzd` in `ap-southeast-2`.
+- Branch Preview: `https://keep-him-walking-git-phase-3-be3a9e-shokhrukh-karimovs-projects.vercel.app`
+- Visual-remediation deployment: `https://keep-him-walking-c432w09mk-shokhrukh-karimovs-projects.vercel.app`; `dpl_8vWeN8tVjdqeSQMDKWhZBXXDswKj`, target `preview`, status `Ready`.
+- Release: `ff49e15d1826` with application functions in Vercel `syd1`, adjacent to isolated Supabase Preview project `pqtfhkiftiubwuwxnuzd` in `ap-southeast-2`. Authenticated `/api/health` returned `ready` for the database and all 16 registered packs.
 - Vercel Deployment Protection remains enabled. Browser evidence used the existing automation bypass and the branch-only expiring application Preview session; neither value was printed or committed.
 
 ## Implemented
@@ -51,7 +51,7 @@ Development-server Web Vitals are not representative production lab or field evi
 - Updated Dushanbe desktop video: `artifacts/phase3-visual-fix/phase3-visual-fix-Dushanbe-1b020-ncing-production-v2-walking-desktop/video.webm`
 - Updated Dushanbe mobile video: `artifacts/phase3-visual-fix/phase3-visual-fix-Dushanbe-1b020-ncing-production-v2-walking-mobile/video.webm`
 - Each Dushanbe directory also contains `dushanbe-walking.png` and `dushanbe-zone-transition.png`. The recordings show one coherent illustrated environment, advancing high-resolution walk frames, incoming route composition, grounded feet/shadow and no pasted prop strip.
-- The prior immutable `bdd40e3` Preview was rechecked after deployment and returned healthy, providing a verified application rollback target without changing Production.
+- The prior immutable `bdd40e3` Preview remains a verified application rollback target without changing Production.
 
 ## Five-minute desktop check
 
