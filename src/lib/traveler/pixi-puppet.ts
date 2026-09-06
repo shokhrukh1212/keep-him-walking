@@ -117,9 +117,9 @@ export async function createTravelerPuppet() {
     root,
     get textureBytes() {return owned.reduce((bytes,texture)=>bytes+texture.width*texture.height*4,0);},
     get sponsorAttached() {return patch.visible;},
-    update(seconds: number, moving: boolean, life: number, action?: {kind:string;progress:number}, reduced = false) {
+    update(seconds: number, moving: boolean, life: number, action?: {kind:string;progress:number}, reduced = false, gaitWeight=1) {
       const pose = puppetPose(reduced ? 0 : seconds, moving && !reduced, reduced ? 0 : life,
-        reduced && action ? {...action,progress:0.5} : action);
+        reduced && action ? {...action,progress:0.5} : action,gaitWeight);
       placeBone(farThigh, pose.hip, pose.rightKnee); placeBone(farShin, pose.rightKnee, pose.rightAnkle);
       placeBone(nearThigh, pose.hip, pose.leftKnee); placeBone(nearShin, pose.leftKnee, pose.leftAnkle);
       farShoe.position.set(pose.rightFoot.x,pose.rightFoot.y); farShoe.rotation = pose.rightFoot.roll;

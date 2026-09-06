@@ -40,18 +40,19 @@ export function actionLift(progress: number) {
   return smooth(progress / 0.27) * (1 - smooth((progress - 0.7) / 0.3));
 }
 
-export function puppetPose(seconds: number, moving: boolean, life: number, action?: { kind: string; progress: number }) {
+export function puppetPose(seconds: number, moving: boolean, life: number, action?: { kind: string; progress: number }, gaitWeight = 1) {
   const phase = seconds / GAIT_CYCLE_SECONDS * TAU;
   const lift = action ? actionLift(action.progress) : 0;
-  const bob = moving ? -3 * Math.cos(phase * 2) : Math.sin(life * 1.8) * 0.6;
+  const weight = moving ? Math.max(0,Math.min(1,gaitWeight)) : 0;
+  const bob = -3 * Math.cos(phase * 2)*weight + Math.sin(life * 1.8)*0.6*(1-weight);
   const hip = { x: 192, y: 245 + bob };
   const leftFoot = moving ? footAt(seconds) : { x: seconds>0 ? footAt(seconds).x : 164, y: GROUND_Y, planted: true, roll: 0 };
   const rightFoot = moving ? footAt(seconds, true) : { x: seconds>0 ? footAt(seconds,true).x : 215, y: GROUND_Y, planted: true, roll: 0 };
   const leftAnkle={x:leftFoot.x,y:leftFoot.y-28}, rightAnkle={x:rightFoot.x,y:rightFoot.y-28};
   const shoulder = { x: 176, y: 123 + bob };
   const farShoulder = { x: 213, y: 126 + bob };
-  let hand = { x: 175 + (moving ? Math.sin(phase) * 41 : 0), y: 265 + bob - (moving ? Math.abs(Math.sin(phase)) * 12 : 0) };
-  let farHand = { x: 214 - (moving ? Math.sin(phase) * 41 : 0), y: 263 + bob };
+  let hand = { x: 175 - Math.cos(phase)*41*weight, y: 265 + bob - Math.abs(Math.cos(phase))*12*weight };
+  let farHand = { x: 214 + Math.cos(phase)*41*weight, y: 263 + bob };
   const head = { x: 212, y: 73 + bob };
   let prop: "camera" | "bottle" | "phone" | null = null;
   if (action) {
@@ -68,7 +69,7 @@ export function puppetPose(seconds: number, moving: boolean, life: number, actio
   return { hip, shoulder, farShoulder, hand, farHand, head, bob, leftFoot, rightFoot,leftAnkle,rightAnkle,
     leftKnee: jointBetween(hip, leftAnkle, 126, 128), rightKnee: jointBetween(hip, rightAnkle, 126, 128),
     elbow: jointBetween(shoulder, hand, 77, 79, -1), farElbow: jointBetween(farShoulder, farHand, 77, 79, -1),
-    packRotation: moving ? Math.sin(phase - 0.45) * 0.023 : Math.sin(life * 1.8 - 0.3) * 0.004,
+    packRotation: Math.sin(phase - 0.45)*0.023*weight + Math.sin(life*1.8-0.3)*0.004*(1-weight),
     headRotation: action ? Math.sin(life * 2) * 0.012 * lift : 0.008 * Math.sin(life * 0.7),
     lift, prop };
 }

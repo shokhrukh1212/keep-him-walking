@@ -370,7 +370,7 @@ export function PixiScene({
             puppet.root.scale.set(characterScale);
             puppet.root.position.set(width*(width<=600 ? (acting?.kind==="encounter"?0.4:0.51) : 0.61)-192*characterScale,baseline-GROUND_Y*characterScale);
             puppet.update(motion.locomotionSeconds,sample.traveling&&motion.speedFactor>0.001,tickAt/1000,
-              acting ? {kind:acting.kind,progress:acting.progress} : undefined,state.reducedMotion);
+              acting ? {kind:acting.kind,progress:acting.progress} : undefined,state.reducedMotion,motion.speedFactor);
             puppet.setSponsor(state.travelerCommand?.sponsorPatchUrl);
             element.dataset.gaitPhase=String(motion.cyclePhase);
             element.dataset.characterState=sample.traveling ? motion.action?.state ?? "walk" : "idle";

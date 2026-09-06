@@ -37,4 +37,13 @@ describe("connected traveler geometry",()=>{
     expect(high.hand.y).toBeLessThan(low.hand.y-100);
     expect(high.hip).toEqual(low.hip);expect(high.head).toEqual(low.head);
   });
+  it("swings the near arm behind the forward near leg and settles with speed",()=>{
+    const contact=puppetPose(0,true,0);
+    expect(contact.leftFoot.x).toBeGreaterThan(contact.hip.x);
+    expect(contact.hand.x).toBeLessThan(contact.shoulder.x);
+    const other=puppetPose(0.6,true,0);
+    expect(other.hand.x).toBeGreaterThan(other.shoulder.x);
+    const settled=puppetPose(0.6,true,0,undefined,0);
+    expect(settled.hand).toEqual(puppetPose(0.6,false,0).hand);
+  });
 });

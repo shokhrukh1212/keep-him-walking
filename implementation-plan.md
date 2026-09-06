@@ -984,6 +984,6 @@ The current Preview uses a character-specific Pixi puppet assembled at runtime f
 
 Heartbeat requests now time out and reject stale country responses. Unknown presence is not confirmed zero; presentation is bounded by the confirmed lease and stale counters are not advanced. The Preview-only demonstration sponsor does not create payment records or paid metrics. Detailed controls remain available in Journey details.
 
-Targeted verification: 20 Vitest regressions, desktop and phone Playwright checks with all recording disabled, lint, typecheck, and production build. Browser checks exercise walking, confirmed stopping/resuming, action changes, texture budget and sponsor attachment. They are not visual approval.
+Targeted verification: 21 Vitest regressions, desktop and phone Playwright checks with all recording disabled, lint, typecheck, and production build. Browser checks exercise walking, confirmed stopping/resuming, action changes, texture budget and sponsor attachment. They are not visual approval.
 
 Remaining art limitations: no authentic rear three-quarter drawing or complete clean joint/turn layers exist; the existing side view is retained without distortion. NPC sources retain their original, more realistic illustration style. Natural-motion and identity approval remain with the product owner after inspecting Preview; no new image sheets, screenshots, videos, or soak evidence were generated for this correction.
