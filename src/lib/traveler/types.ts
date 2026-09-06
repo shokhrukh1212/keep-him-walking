@@ -1,5 +1,6 @@
 import type { DialogueMood, TravelerState } from "@/lib/content/schema";
 import type { RouteRuntime } from "@/lib/world/types";
+import type { ActionReview } from "./action-preview";
 
 export type FacingDirection = "left" | "right";
 
@@ -14,6 +15,7 @@ export type TravelerCommand = {
   presenceTtlMs?: number;
   reducedMotion: boolean;
   sponsorPatchUrl?: string;
+  actionReview?: ActionReview;
 };
 
 export const DEFAULT_TRAVELER_COMMAND: TravelerCommand = {

@@ -1,6 +1,7 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import {useEffect,useRef,type CSSProperties} from "react";
+import {actorLayout} from "@/lib/traveler/actor-layout";
 import type { DialogueLine } from "@/lib/content/schema";
 
 type Props = {
@@ -27,10 +28,22 @@ export function EncounterDialogue({
   onCloseReplay,
 }: Props) {
   const visible = Boolean(line) || replayOpen;
+  const actor=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const resize=()=>{
+      if(!actor.current)return;
+      const layout=actorLayout(window.innerWidth,window.innerHeight);
+      actor.current.style.height=`${layout.height*0.94}px`;
+      actor.current.style.bottom=`${layout.bottom}px`;
+    };
+    resize();window.addEventListener("resize",resize);
+    return ()=>window.removeEventListener("resize",resize);
+  },[visible]);
   return (
     <>
       {visible ? (
         <div
+          ref={actor}
           className="npc-wrap"
           aria-hidden="true"
           style={{

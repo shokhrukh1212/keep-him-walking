@@ -6,6 +6,8 @@ import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
 import { travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import { BODY_HEIGHT, BODY_METRES, GROUND_Y } from "@/lib/traveler/puppet";
+import {actorLayout} from "@/lib/traveler/actor-layout";
+import {reviewPoseAt} from "@/lib/traveler/action-preview";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import { deterministicVariant, routePositionAt } from "@/lib/world/route-clock";
@@ -361,19 +363,24 @@ export function PixiScene({
 
           const width = app.screen.width;
           const height = app.screen.height;
-          const characterHeight = width <= 600 ? Math.min(height*0.44,360) : Math.min(Math.max(height*0.59,304),608);
-          const baseline = height - (width <= 600 ? 92 : 90);
+          const layout=actorLayout(width,height);
+          const characterHeight=layout.height;
+          const baseline = height-layout.bottom;
           const characterScale=characterHeight/BODY_HEIGHT;
           const groundPixels=motion.distanceMetres*(characterHeight/BODY_METRES);
           if (puppet) {
             const acting = sample.traveling ? motion.action : null;
+            const review=state.travelerCommand?.actionReview;
+            const local=review ? reviewPoseAt(review,tickAt) : null;
             puppet.root.scale.set(characterScale);
-            puppet.root.position.set(width*(width<=600 ? (acting?.kind==="encounter"?0.4:0.51) : 0.61)-192*characterScale,baseline-GROUND_Y*characterScale);
-            puppet.update(motion.locomotionSeconds,sample.traveling&&motion.speedFactor>0.001,tickAt/1000,
-              acting ? {kind:acting.kind,progress:acting.progress} : undefined,state.reducedMotion,motion.speedFactor);
+            const conversation=local?["talk","listen","greet","goodbye"].includes(local.state):acting?.kind==="encounter";
+            puppet.root.position.set(width*(width<=600 ? (conversation?0.36:0.51) : 0.61)-192*characterScale,baseline-GROUND_Y*characterScale);
+            puppet.update(local?.seconds??motion.locomotionSeconds,local?.moving??(sample.traveling&&motion.speedFactor>0.001),tickAt/1000,
+              local ? local.action : acting ? {kind:acting.kind,progress:acting.progress,state:acting.state} : undefined,state.reducedMotion,local?.weight??motion.speedFactor);
             puppet.setSponsor(state.travelerCommand?.sponsorPatchUrl);
             element.dataset.gaitPhase=String(motion.cyclePhase);
-            element.dataset.characterState=sample.traveling ? motion.action?.state ?? "walk" : "idle";
+            element.dataset.characterState=local?.state??(sample.traveling ? motion.action?.state ?? "walk" : "idle");
+            element.dataset.actionReview=local?"true":"false";
             element.dataset.groundPixels=String(groundPixels);
             element.dataset.sponsorAttached=String(puppet.sponsorAttached);
             element.dataset.characterTextureBytes=String(puppet.textureBytes);

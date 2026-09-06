@@ -42,6 +42,7 @@ import { PASSPORT_KEY } from "@/components/archive/PassportArchive";
 import Link from "next/link";
 import { getNextCountryPack } from "@/content/countries/registry";
 import { TomorrowPreview } from "@/components/hud/TomorrowPreview";
+import {REVIEW_ACTIONS,reviewPoseAt,type ActionReview,type ReviewAction} from "@/lib/traveler/action-preview";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -80,6 +81,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const [puppetReady, setPuppetReady] = useState(false);
   const [presentationFrame,setPresentationFrame]=useState<{assetVersion:string;motion:TravelerMotionSnapshot}|null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [actionReview,setActionReview]=useState<ActionReview>({action:"auto",startedAt:0});
+  const [reviewNow,setReviewNow]=useState(0);
+  useEffect(()=>{
+    if(!previewDemoSponsor||actionReview.action==="auto")return;
+    const timer=window.setInterval(()=>setReviewNow(performance.now()),100);
+    return ()=>window.clearInterval(timer);
+  },[previewDemoSponsor,actionReview]);
+  const review=previewDemoSponsor?reviewPoseAt(actionReview,reviewNow):null;
   const [visitorSteps,setVisitorSteps]=useState(0);
   const newestHeartbeat = useRef(-Infinity);
   const confirmedContribution = useRef({day:initialSnapshot.countryDay.id,raw:0,visitor:0,steps:0});
@@ -432,6 +441,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     reducedMotion,
     presenceTtlMs:snapshot.presence.ttlSeconds*1000,
     sponsorPatchUrl: sponsor?.logo ?? undefined,
+    actionReview: previewDemoSponsor?actionReview:undefined,
   };
 
   const sceneDidReady = useCallback((renderer: "pixi" | "static") => {
@@ -554,8 +564,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
 
       {!puppetReady ? <Traveler pack={snapshot.assets} command={command} onReady={() => setTravelerReady(true)} /> : null}
       <WalkingRuleStatus
-        walking={walking}
-        label={walking && motion.action
+        walking={review?review.moving:walking}
+        label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : walking && motion.action
           ? motion.action.label
           : walking ? `Walking · ${displayedZoneLabel}` : "Waiting for the internet"}
       />
@@ -564,9 +574,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         <strong>{displayedZoneLabel}</strong>
       </div> : null}
       <EncounterDialogue
-        line={activeLine}
+        line={review ? ["talk","listen","greet","goodbye"].includes(review.state)
+          ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine}
         locationLabel={routeEncounter?.locationLabel}
-        npcSrc={snapshot.assets.npcAssets[activeLine?.speaker === "npc" ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral}
+        npcSrc={snapshot.assets.npcAssets[(review?review.state==="listen":activeLine?.speaker === "npc") ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral}
         replayAvailable={replayAvailable}
         replayOpen={replayOpen}
         motionSeconds={motion.action?.elapsedSeconds}
@@ -582,6 +593,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
             {sponsor.href ? <a href={sponsor.href}>{sponsor.cta} ↗</a> : null}</div>
         </aside> : <Link className="sponsor-invitation" href="/sponsor">Sponsor a day</Link>}
+        {previewDemoSponsor ? <label className="action-review-select">Preview action
+          <select aria-label="Preview action" value={actionReview.action} onChange={event=>{
+            const now=performance.now();setReviewNow(now);
+            setActionReview({action:event.target.value as ReviewAction,startedAt:now});
+          }}>{REVIEW_ACTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
+        </label> : null}
         <button type="button" onClick={()=>setVoteOpen(true)}>Daily vote</button>
         <button type="button" aria-expanded={detailsOpen} aria-controls="journey-details" onClick={()=>setDetailsOpen(!detailsOpen)}> {detailsOpen ? "Close details" : "Journey details"}</button>
       </section>

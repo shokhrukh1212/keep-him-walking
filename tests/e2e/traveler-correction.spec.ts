@@ -4,7 +4,7 @@ import {bishkekCountryPackV1 as bishkekCountryPack} from "../../src/content/coun
 import {DEMO_LOGO} from "../../src/lib/traveler/demo-sponsor";
 import {travelerMotionAt} from "../../src/lib/traveler/motion-clock";
 
-test("connected puppet advances, rests, resumes and keeps controls compact",async({page})=>{
+test("connected puppet advances, rests, resumes and keeps controls compact",async({page},testInfo)=>{
   let raw=30,walking=true;
   let anchoredAt=Date.now();
   const errors:string[]=[];
@@ -52,5 +52,23 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
   await page.emulateMedia({reducedMotion:"reduce"});
   await expect(page.locator("main")).toHaveAttribute("data-motion","reduced");
   await expect(page.locator(".static-scene img")).toBeAttached();
+  const selector=page.getByRole("combobox",{name:"Preview action"});
+  if(testInfo.config.metadata.actionReview)await expect(selector).toBeVisible();
+  if(await selector.count()) {
+    await page.emulateMedia({reducedMotion:"no-preference"});
+    for(const action of ["idle","walk","photo","drink","phone","wave","talk","listen","react","rest","sit","goodbye"]) {
+      await selector.selectOption(action);
+      await expect(stage).toHaveAttribute("data-action-review","true");
+      await expect(stage).toHaveAttribute("data-character-state",action);
+      await expect(stage).toHaveAttribute("data-sponsor-attached","true");
+      if(action==="talk") {
+        const height=await page.locator(".npc-wrap").evaluate(node=>node.getBoundingClientRect().height);
+        expect(height).toBeGreaterThan(200);
+        await expect(page.locator(".dialogue-bubble")).toContainText("Local animation test");
+      }
+    }
+    await selector.selectOption("auto");
+    await expect(stage).toHaveAttribute("data-action-review","false");
+  }
   expect(errors).toEqual([]);
 });

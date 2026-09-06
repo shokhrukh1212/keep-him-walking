@@ -1308,6 +1308,9 @@ button:focus-visible,
 }
 
 /* Shared character composition overrides the earlier large HUD/dock layout. */
+.action-review-select {position:fixed;right:18px;top:90px;z-index:25;display:grid;gap:4px;padding:8px 10px;background:#12343ded;color:#fff4d9;border-radius:12px;font-size:11px;}
+.action-review-select select {max-width:210px;background:#fff4d9;color:#12343d;border-radius:5px;padding:6px;font-size:12px;}
+.action-review-select select:focus-visible {outline:3px solid #ffd777;outline-offset:3px;}
 .journey-hud .day-mark strong {font-size:clamp(1.3rem,2vw,1.8rem);}
 .journey-hud .day-mark .eyebrow,.journey-hud .day-mark > span:last-child {font-size:11px;}
 .journey-hud .live-status {padding:10px 14px;max-width:245px;}
@@ -1315,13 +1318,14 @@ button:focus-visible,
 .premise-lockup[data-collapsed="true"] {opacity:0;pointer-events:none;}
 .traveler-state {bottom:96px;font-size:11px;}
 .traveler-wrap {bottom:90px;height:clamp(304px,59vh,608px);width:auto;aspect-ratio:384/490;}
-.npc-wrap {bottom:90px;right:7%;height:clamp(289px,56vh,578px);width:auto;aspect-ratio:0.5;animation:none;}
+.npc-wrap {bottom:90px;right:7%;height:clamp(289px,56vh,578px);width:auto;aspect-ratio:560/900;animation:none;}
 .npc-wrap::before {content:"";position:absolute;left:15%;right:15%;bottom:-2px;height:10px;border-radius:50%;background:#14251d38;filter:blur(3px);}
 .dialogue-bubble,.dialogue-traveler,.dialogue-npc {top:16%;left:24px;right:auto;width:min(29vw,390px);max-height:30svh;overflow:auto;}
 .dialogue-bubble::after {display:none;}
 .dialogue-bubble p {font-size:clamp(15px,1.4vw,20px);}
 .journey-details .tomorrow-preview,.journey-details .tomorrow-card {position:static;transform:none;}
 @media(max-width:600px) {
+  .action-review-select {top:62px;right:8px;padding:5px;}.action-review-select select {max-width:165px;font-size:11px;}
   .journey-hud .live-status {max-width:180px;padding:8px;font-size:11px;}
   .journey-hud .live-status small {display:none;}
   .compact-dock {left:8px;right:8px;gap:5px;bottom:max(8px,env(safe-area-inset-bottom));}
