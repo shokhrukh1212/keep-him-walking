@@ -11,6 +11,7 @@ export type TravelerCommand = {
   walking: boolean;
   routeRuntime: RouteRuntime;
   motionSampleUntilMs: number;
+  presenceTtlMs?: number;
   reducedMotion: boolean;
   sponsorPatchUrl?: string;
 };

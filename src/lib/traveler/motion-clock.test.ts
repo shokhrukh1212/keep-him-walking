@@ -18,7 +18,7 @@ describe("traveler motion clock", () => {
     expect(visibleStepsBetween(tashkentCountryPackV4, start, start + 12)).toBe(20);
   });
 
-  it("holds steps and world distance for the complete arrival action", () => {
+  it("preserves route scheduling while counting the approach and departure plants", () => {
     const routeDuration = tashkentCountryPackV4.route.zones.reduce(
       (total, zone) => total + zone.durationActiveSeconds,
       0,
@@ -30,8 +30,9 @@ describe("traveler motion clock", () => {
     const before = travelerMotionAt(tashkentCountryPackV4, arrivalAt);
     const during = travelerMotionAt(tashkentCountryPackV4, arrivalAt + ACTION_DURATIONS.wave - 0.01);
     expect(during.action?.kind).toBe("wave");
-    expect(during.plantIndex).toBe(before.plantIndex);
-    expect(during.distanceMetres).toBe(before.distanceMetres);
+    expect(during.routeSeconds).toBe(before.routeSeconds);
+    expect(during.plantIndex-before.plantIndex).toBeLessThanOrEqual(2);
+    expect(during.distanceMetres).toBeGreaterThan(before.distanceMetres);
   });
 
   it("uses exact bounded action durations and resumes walking immediately", () => {
@@ -45,7 +46,7 @@ describe("traveler motion clock", () => {
     ) * 0.6;
     // Pauses before the landmark shift its raw-time start.
     let raw = landmarkAt;
-    while (travelerMotionAt(tashkentCountryPackV4, raw).locomotionSeconds < landmarkAt) raw += 0.1;
+    while (travelerMotionAt(tashkentCountryPackV4, raw).routeSeconds < landmarkAt) raw += 0.1;
     const start = travelerMotionAt(tashkentCountryPackV4, raw);
     expect(start.action?.kind).toBe("photo");
     expect(start.action?.durationSeconds).toBe(ACTION_DURATIONS.photo);

@@ -10,6 +10,7 @@ type Props = {
   replayAvailable: boolean;
   replayOpen: boolean;
   motionSeconds?: number;
+  reducedMotion?: boolean;
   onReplay: () => void;
   onCloseReplay: () => void;
 };
@@ -21,6 +22,7 @@ export function EncounterDialogue({
   replayAvailable,
   replayOpen,
   motionSeconds = 0,
+  reducedMotion = false,
   onReplay,
   onCloseReplay,
 }: Props) {
@@ -32,8 +34,8 @@ export function EncounterDialogue({
           className="npc-wrap"
           aria-hidden="true"
           style={{
-            "--npc-life-y": `${Math.sin(motionSeconds * 2.1) * -1.5}px`,
-            "--npc-life-rotation": `${Math.sin(motionSeconds * 1.35) * 0.12}deg`,
+            "--npc-life-y": "0px",
+            "--npc-life-rotation": `${reducedMotion ? 0 : Math.sin(motionSeconds * 1.35) * 0.12}deg`,
           } as CSSProperties}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -42,7 +44,7 @@ export function EncounterDialogue({
       ) : null}
       {line ? (
         <section className={`dialogue-bubble dialogue-${line.speaker}`} aria-live="polite">
-          <span className="eyebrow">{line.speaker === "npc" ? "LOCAL CHEF" : "TRAVELER"}</span>
+          <span className="eyebrow">{line.speaker === "npc" ? "LOCAL RESIDENT" : "TRAVELER"}</span>
           <p>{line.text}</p>
           {locationLabel ? <small>{locationLabel}</small> : null}
         </section>

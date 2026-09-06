@@ -92,6 +92,7 @@ export type BootstrapSnapshot = {
 };
 
 export type HeartbeatResponse = {
+  countryDayId?: string;
   serverNow: string;
   realServerNow: string;
   /** Story-clock multiplier. It is greater than one only in an isolated rehearsal. */

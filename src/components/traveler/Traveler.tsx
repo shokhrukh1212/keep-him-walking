@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { CountryPack } from "@/lib/content/schema";
 import type { TravelerCommand } from "@/lib/traveler/types";
-import { SpriteTravelerRenderer } from "./SpriteTravelerRenderer";
 
 const RiveTravelerRenderer = dynamic(
   () => import("./RiveTravelerRenderer").then((module) => module.RiveTravelerRenderer),
@@ -38,7 +37,9 @@ export function Traveler({ pack, command, onReady }: Props) {
           onFailure={() => setRiveFailed(true)}
         />
       ) : (
-        <SpriteTravelerRenderer command={command} pack={pack} onReady={onReady} />
+        // A single connected idle image remains until the Pixi puppet is ready.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="traveler-safe-fallback" src={pack.traveler.fallbackSprites.idle} alt="" onLoad={onReady} onError={onReady} />
       )}
     </div>
   );

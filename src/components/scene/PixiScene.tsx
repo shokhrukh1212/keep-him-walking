@@ -3,9 +3,12 @@
 import { useEffect, useRef } from "react";
 import type { Texture as PixiTexture } from "pixi.js";
 import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
-import { travelerMotionAt } from "@/lib/traveler/motion-clock";
+import { travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { PresentationClock } from "@/lib/traveler/presentation-clock";
+import { BODY_HEIGHT, BODY_METRES, GROUND_Y } from "@/lib/traveler/puppet";
+import type { TravelerCommand } from "@/lib/traveler/types";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
-import { deterministicVariant, extrapolatedRouteSeconds, routePositionAt } from "@/lib/world/route-clock";
+import { deterministicVariant, routePositionAt } from "@/lib/world/route-clock";
 import { segmentVariant } from "@/lib/world/segment-sequencer";
 import { composedSegmentSignature } from "@/lib/world/segment-sequencer";
 import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
@@ -17,13 +20,16 @@ type Props = {
   command: WorldCommand;
   reducedMotion: boolean;
   qualityTier: QualityTier;
+  travelerCommand?: TravelerCommand;
+  onTravelerReady?: (ready: boolean) => void;
+  onMotionSample?: (frame: {assetVersion:string;motion:TravelerMotionSnapshot}) => void;
   onZoneChange: (zoneId: string, zoneLabel: string) => void;
   onDiagnostics: (snapshot: WorldDiagnosticsSnapshot) => void;
   onReady: () => void;
   onFailure: () => void;
 };
 
-type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion">;
+type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">;
 
 export function PixiScene({
   pack,
@@ -32,21 +38,28 @@ export function PixiScene({
   command,
   reducedMotion,
   qualityTier,
+  travelerCommand,
+  onTravelerReady,
+  onMotionSample,
   onZoneChange,
   onDiagnostics,
   onReady,
   onFailure,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion });
+  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand });
+  const characterReady = useRef(onTravelerReady);
+  const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const diagnosticsCallback = useRef(onDiagnostics);
 
   useEffect(() => {
-    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion };
+    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand };
+    characterReady.current = onTravelerReady;
+    motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     diagnosticsCallback.current = onDiagnostics;
-  }, [command, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds]);
+  }, [command, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, travelerCommand, onTravelerReady,onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -56,7 +69,7 @@ export function PixiScene({
       const element = host.current;
       if (!element) return;
       try {
-        const { Application, Assets, Container, Graphics, Sprite } = await import("pixi.js");
+        const { Application, Assets, Container, Graphics, Sprite, Texture } = await import("pixi.js");
         if (disposed) return;
         const limits = QUALITY_LIMITS[qualityTier];
         const app = new Application();
@@ -85,6 +98,16 @@ export function PixiScene({
         const weatherRoot = new Container();
         camera.addChild(sky, layerRoot, propRoot, groundLifeRoot, weatherRoot);
         app.stage.addChild(camera);
+        const clock = new PresentationClock();
+        const { createTravelerPuppet } = await import("@/lib/traveler/pixi-puppet");
+        const puppet = pack.traveler.driver === "rive" ? null : await createTravelerPuppet().catch(() => null);
+        if (disposed) { puppet?.destroy(); app.destroy(true, {children:true}); return; }
+        if (puppet) camera.addChild(puppet.root);
+        characterReady.current?.(Boolean(puppet));
+        const groundRoot = new Container();
+        camera.addChildAt(groundRoot, camera.children.indexOf(weatherRoot));
+        let contactSprites: InstanceType<typeof Sprite>[] = [];
+        let contactTexture: PixiTexture | null = null;
 
         // V3 country packs include a complete editorial fallback for every
         // zone. Use that coherent painting as the panorama instead of stacking
@@ -187,6 +210,26 @@ export function PixiScene({
           );
           if (disposed || generation !== buildGeneration) return;
 
+          const groundUrl = zone.layers.find(layer => layer.id === "ground")?.segments[0]?.url;
+          let nextContact: PixiTexture | null = null;
+          if (groundUrl) {
+            try {
+              const source = new Image();source.src=groundUrl;await source.decode();
+              const canvas=document.createElement("canvas");canvas.width=source.naturalWidth;canvas.height=source.naturalHeight;
+              const ctx=canvas.getContext("2d")!;ctx.drawImage(source,0,0);
+              ctx.globalCompositeOperation="destination-in";
+              const vertical=ctx.createLinearGradient(0,0,0,canvas.height);vertical.addColorStop(0,"transparent");vertical.addColorStop(0.45,"white");vertical.addColorStop(1,"white");
+              ctx.fillStyle=vertical;ctx.fillRect(0,0,canvas.width,canvas.height);
+              const edge=ctx.createLinearGradient(0,0,canvas.width,0);edge.addColorStop(0,"transparent");edge.addColorStop(0.12,"white");edge.addColorStop(0.88,"white");edge.addColorStop(1,"transparent");
+              ctx.fillStyle=edge;ctx.fillRect(0,0,canvas.width,canvas.height);
+              nextContact=Texture.from(canvas);
+            } catch { /* The approved painting remains visible if the optional contact layer fails. */ }
+          }
+          if (disposed || generation !== buildGeneration) { nextContact?.destroy(true); return; }
+          groundRoot.removeChildren().forEach(child=>child.destroy());contactTexture?.destroy(true);
+          contactTexture=nextContact;
+          contactSprites=nextContact ? Array.from({length:5},()=>{const sprite=new Sprite(nextContact!);groundRoot.addChild(sprite);return sprite;}) : [];
+
           layerRoot.removeChildren().forEach((child) => child.destroy());
           propRoot.removeChildren().forEach((child) => child.destroy());
           groundLifeRoot.removeChildren().forEach((child) => child.destroy());
@@ -285,6 +328,7 @@ export function PixiScene({
         let elapsed = 0;
         let lastTickAt = performance.now();
         let lastDiagnosticAt = 0;
+        let lastMotionAt=0;
         const frameSamples: number[] = [];
         app.ticker.add(() => {
           if (document.hidden) return;
@@ -296,11 +340,11 @@ export function PixiScene({
           elapsed += wallDeltaMs;
           frameSamples.push(wallDeltaMs);
           if (frameSamples.length > 180) frameSamples.shift();
-          const rawTarget = extrapolatedRouteSeconds(
-            state.routeRuntime,
-            Math.min(Date.now(), state.command.motionSampleUntilMs ?? Number.POSITIVE_INFINITY),
-          );
-          displayedSeconds = travelerMotionAt(pack, rawTarget).locomotionSeconds;
+          clock.accept(state.routeRuntime, state.travelerCommand?.presenceTtlMs ?? 50_000, tickAt);
+          const sample = clock.sample(tickAt);
+          const motion = travelerMotionAt(pack, sample.rawSeconds);
+          if(tickAt-lastMotionAt>=100) {lastMotionAt=tickAt;motionCallback.current?.({assetVersion:pack.assetVersion,motion});}
+          displayedSeconds = motion.routeSeconds;
 
           const position = routePositionAt(pack, displayedSeconds);
           const zoneDistance = position.zoneElapsedSeconds * pack.route.worldUnitsPerSecond;
@@ -317,9 +361,38 @@ export function PixiScene({
 
           const width = app.screen.width;
           const height = app.screen.height;
+          const characterHeight = width <= 600 ? Math.min(height*0.44,360) : Math.min(Math.max(height*0.59,304),608);
+          const baseline = height - (width <= 600 ? 92 : 90);
+          const characterScale=characterHeight/BODY_HEIGHT;
+          const groundPixels=motion.distanceMetres*(characterHeight/BODY_METRES);
+          if (puppet) {
+            const acting = sample.traveling ? motion.action : null;
+            puppet.root.scale.set(characterScale);
+            puppet.root.position.set(width*(width<=600 ? (acting?.kind==="encounter"?0.4:0.51) : 0.61)-192*characterScale,baseline-GROUND_Y*characterScale);
+            puppet.update(motion.locomotionSeconds,sample.traveling&&motion.speedFactor>0.001,tickAt/1000,
+              acting ? {kind:acting.kind,progress:acting.progress} : undefined,state.reducedMotion);
+            puppet.setSponsor(state.travelerCommand?.sponsorPatchUrl);
+            element.dataset.gaitPhase=String(motion.cyclePhase);
+            element.dataset.characterState=sample.traveling ? motion.action?.state ?? "walk" : "idle";
+            element.dataset.groundPixels=String(groundPixels);
+            element.dataset.sponsorAttached=String(puppet.sponsorAttached);
+            element.dataset.characterTextureBytes=String(puppet.textureBytes);
+          }
+          if (contactTexture) {
+            const stripHeight=Math.max(100,height*0.19);
+            const stripScale=stripHeight/contactTexture.height;
+            const span=contactTexture.width*stripScale;
+            const pitch=span*0.86;
+            const offset=state.reducedMotion?0:groundPixels;
+            const first=Math.floor(offset/pitch)-1;
+            contactSprites.forEach((sprite,index)=>{
+              sprite.scale.set(stripScale);sprite.x=(first+index)*pitch-offset;
+              sprite.y=baseline-stripHeight*0.7;sprite.visible=sprite.x<width&&sprite.x+span>0;
+            });
+          }
           camera.pivot.set(width / 2, height / 2);
-          camera.position.set(width / 2 + state.command.cameraPan * width, height / 2);
-          camera.scale.set(state.reducedMotion ? Math.min(1.02, state.command.cameraZoom) : state.command.cameraZoom);
+          camera.position.set(width / 2, height / 2);
+          camera.scale.set(1);
           zoneFade = Math.min(1, zoneFade + deltaSeconds * 2.4);
           layerRoot.alpha = zoneFade;
           propRoot.alpha = zoneFade * (0.72 + state.command.backgroundLife * 0.28);
@@ -333,7 +406,7 @@ export function PixiScene({
               const scale = coverScale * 1.1;
               const renderedWidth = texture.width * scale;
               const renderedHeight = texture.height * scale;
-              const progress = Math.min(1, Math.max(0, position.zoneElapsedSeconds / activeZone.durationActiveSeconds));
+              const progress = state.reducedMotion ? 0.5 : Math.min(1, Math.max(0, position.zoneElapsedSeconds / activeZone.durationActiveSeconds));
               sprite.texture = texture;
               sprite.scale.set(scale);
               sprite.x = -(renderedWidth - width) * progress;
@@ -364,7 +437,7 @@ export function PixiScene({
             }
           }
 
-          const groundCamera = zoneDistance * (width / 1_600);
+          const groundCamera = state.reducedMotion ? 0 : groundPixels;
           const groundSpacing = width < 500 ? 170 : 240;
           const firstGround = Math.floor(groundCamera / groundSpacing) - 2;
           for (let index = 0; index < groundLife.length; index += 1) {
@@ -380,7 +453,7 @@ export function PixiScene({
           const propSpacing = width < 500 ? 390 : 470;
           for (const item of props) {
             const depthSpeed = 0.42 + Math.min(1.2, item.definition.depth) * 0.48;
-            const propCamera = zoneDistance * depthSpeed * (width / 1_600);
+              const propCamera = state.reducedMotion ? 0 : zoneDistance * depthSpeed * (width / 1_600);
             const firstProp = Math.floor(propCamera / propSpacing) - 2;
             const index = firstProp + item.slot;
             const jitter = deterministicVariant(
@@ -458,6 +531,9 @@ export function PixiScene({
         resize();
         cleanup = () => {
           observer.disconnect();
+          characterReady.current?.(false);
+          puppet?.destroy();
+          contactTexture?.destroy(true);
           app.destroy(true, { children: true });
         };
       } catch {

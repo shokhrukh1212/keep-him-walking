@@ -48,8 +48,12 @@ async function handlePost(request: NextRequest) {
     return NextResponse.json({ error: "Presence update failed." }, { status: 503 });
   }
   const row = Array.isArray(data) ? data[0] : data;
+  if (!row || !Number.isFinite(Number(row.out_active_viewers)) || !row.out_accounted_at) {
+    return NextResponse.json({ error: "Presence confirmation unavailable." }, {status:503});
+  }
   const activeViewers = Number(row?.out_active_viewers ?? 0);
   const response = NextResponse.json({
+    countryDayId: countryDay.id,
     serverNow: countryDay.story_now ?? now.toISOString(),
     realServerNow: String(row?.out_accounted_at ?? now.toISOString()),
     storyScale: countryDay.story_scale ?? 1,

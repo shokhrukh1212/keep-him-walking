@@ -11,7 +11,7 @@ export function useRouteRuntime(
   serverNowMs: number,
 ) {
   return useMemo(() => {
-    const runtime = heartbeat
+    const runtime = heartbeat && Date.parse(heartbeat.routeAuthoritativeAt) >= Date.parse(snapshot.route.authoritativeAt)
       ? {
           globalActiveSeconds: heartbeat.globalActiveSeconds,
           authoritativeAt: heartbeat.routeAuthoritativeAt,
@@ -24,8 +24,8 @@ export function useRouteRuntime(
       runtime,
       rawSeconds,
       motion,
-      seconds: motion.locomotionSeconds,
-      position: routePositionAt(snapshot.assets, motion.locomotionSeconds),
+      seconds: motion.routeSeconds,
+      position: routePositionAt(snapshot.assets, motion.routeSeconds),
     };
   }, [heartbeat, serverNowMs, snapshot.assets, snapshot.route]);
 }

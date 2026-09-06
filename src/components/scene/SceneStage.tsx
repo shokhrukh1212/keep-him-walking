@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CountryPack } from "@/lib/content/schema";
 import { routePositionAt } from "@/lib/world/route-clock";
 import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
+import type { TravelerCommand } from "@/lib/traveler/types";
+import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { StaticScene } from "./StaticScene";
 
 const PixiScene = dynamic(
@@ -19,6 +21,9 @@ type Props = {
   command: WorldCommand;
   qualityTier: QualityTier;
   reducedMotion: boolean;
+  travelerCommand?: TravelerCommand;
+  onTravelerReady?: (ready: boolean) => void;
+  onMotionSample?: (frame: {assetVersion:string;motion:TravelerMotionSnapshot}) => void;
   onZoneChange: (zoneId: string, zoneLabel: string) => void;
   onDiagnostics: (snapshot: WorldDiagnosticsSnapshot) => void;
   onWorldFailure: () => void;
@@ -32,6 +37,9 @@ export function SceneStage({
   command,
   qualityTier,
   reducedMotion,
+  travelerCommand,
+  onTravelerReady,
+  onMotionSample,
   onZoneChange,
   onDiagnostics,
   onWorldFailure,
@@ -79,6 +87,9 @@ export function SceneStage({
           command={command}
           qualityTier={qualityTier}
           reducedMotion={reducedMotion}
+          travelerCommand={travelerCommand}
+          onTravelerReady={onTravelerReady}
+          onMotionSample={onMotionSample}
           onZoneChange={onZoneChange}
           onDiagnostics={onDiagnostics}
           onReady={liveReady}
