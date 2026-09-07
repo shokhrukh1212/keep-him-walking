@@ -12,4 +12,7 @@ artifacts/**/.last-run.json
 supabase/.branches/
 supabase/.temp/
 *.tsbuildinfo
+.cache/character-authoring/
+__pycache__/
 implementation-plan.md:Zone.Identifier
+traveler-finalization-master-prompt.md:Zone.Identifier

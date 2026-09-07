@@ -1,0 +1,32 @@
+[
+  {
+    "archive": "blender.tar.xz",
+    "source": "https://download.blender.org/release/Blender4.5/blender-4.5.4-linux-x64.tar.xz",
+    "sha256": "2e6ef8e99fc36327270429ddc8e7bad2859dd878a5a137d2e0bf0f02f6792505"
+  },
+  {
+    "archive": "mpfb.zip",
+    "source": "https://github.com/makehumancommunity/mpfb2/archive/refs/tags/v2.0.17.zip",
+    "sha256": "d08e726c798fdc4eefb02b06b6c4efe37d40b5439777e53cf96dce0e5073297d"
+  },
+  {
+    "archive": "system.zip",
+    "source": "https://static.makehumancommunity.org/assets/assetpacks.html",
+    "sha256": "b542127a8e25547c7c29c19f2d1d2adb9a664c80396ecd694095dbc8028a0107"
+  },
+  {
+    "archive": "pants01.zip",
+    "source": "https://static.makehumancommunity.org/assets/assetpacks/pants01.html",
+    "sha256": "e4e0ec60db34f279be291a83cfd7b342a7c5cf09bb7676682a5f39f4f6ac4ad9"
+  },
+  {
+    "archive": "shirts02.zip",
+    "source": "https://static.makehumancommunity.org/assets/assetpacks/shirts02.html",
+    "sha256": "d711ca9f73212de855257ac08422e1e0ccb802e5231315c2a360d0fcfea5033e"
+  },
+  {
+    "archive": "hair02.zip",
+    "source": "https://static.makehumancommunity.org/assets/assetpacks/hair02.html",
+    "sha256": "c681e5efd37df4007a52253a8d071aedbfe3b614f199d8dae4ae76d5bd7d95c9"
+  }
+]
