@@ -33,6 +33,7 @@ export const travelerStateSchema = z.enum([
   "rest",
   "notice",
   "approach",
+  "greet",
   "talk",
   "listen",
   "react",
@@ -53,15 +54,68 @@ const sceneLayerSchema = z.object({
   scale: z.number().positive().default(1),
 });
 
+const spriteFootSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  planted: z.boolean(),
+});
+
+const spriteFrameMetadataSchema = z.object({
+  leftFoot: spriteFootSchema,
+  rightFoot: spriteFootSchema,
+  rootX: z.number().min(-0.25).max(0.25),
+  rootY: z.number().min(-0.25).max(0.25),
+  shadowScale: z.number().min(0.5).max(1.25),
+  sponsorAnchor: z.object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    scale: z.number().min(0.02).max(0.4),
+    rotation: z.number().min(-45).max(45),
+  }),
+});
+
+const spriteClipSchema = z.object({
+  frames: z.array(z.string().startsWith("/")).min(1).max(16),
+  framesPerSecond: z.number().min(0.1).max(18),
+  loop: z.boolean(),
+  strideWorldUnits: z.number().positive().max(300).optional(),
+  metadata: z.array(spriteFrameMetadataSchema).min(1).max(16),
+}).refine((clip) => clip.frames.length === clip.metadata.length, {
+  message: "Sprite clips require one metadata record per frame",
+});
+
+export const spriteManifestSchema = z.object({
+  version: z.literal(1),
+  canvas: z.object({
+    width: z.number().int().positive().max(1_024),
+    height: z.number().int().positive().max(1_024),
+    groundY: z.number().min(0.75).max(1),
+  }),
+  maxDecodedCacheBytes: z.number().int().positive().max(64 * 1_048_576),
+  clips: z.partialRecord(travelerStateSchema, spriteClipSchema),
+});
+
 const travelerSchema = z.object({
+  driver: z.enum(["sprite", "rive"]).optional(),
   riveUrl: z.string().startsWith("/").nullable(),
   artboard: z.string().min(1),
   stateMachine: z.string().min(1),
+  viewModel: z.string().min(1).optional(),
+  requiredInputs: z.array(z.enum([
+    "walking",
+    "walkingSpeed",
+    "action",
+    "mood",
+    "facingRight",
+    "reducedMotion",
+    "sponsorPatch",
+  ])).optional(),
   fallbackSprites: z.partialRecord(travelerStateSchema, z.string().startsWith("/")),
   walkCycle: z.object({
-    frames: z.array(z.string().startsWith("/")).length(8),
-    framesPerSecond: z.number().min(6).max(18),
+    frames: z.array(z.string().startsWith("/")).min(6).max(8),
+    framesPerSecond: z.number().min(5).max(18),
   }).optional(),
+  spriteManifest: spriteManifestSchema.optional(),
 });
 
 const audioSchema = z.object({
@@ -163,12 +217,143 @@ export const countryPackSchema = baseCountryPackSchema.extend({
   postcardBackgroundUrl: z.string().startsWith("/"),
 });
 
+export const culturalReviewSchema = z.object({
+  reviewerName: z.string().min(2).nullable(),
+  reviewedAt: z.string().datetime().nullable(),
+  status: z.enum(["pending", "approved", "provisional_preview", "changes_requested"]),
+  qualification: z.string().min(2).nullable().default(null),
+  disposition: z.string().min(2).nullable().default(null),
+  publicLaunchRequirement: z.string().min(2).nullable().default(null),
+  citations: z.array(z.object({
+    title: z.string().min(2),
+    url: z.string().url(),
+  })).default([]),
+  notes: z.string().max(1_000),
+}).refine(
+  (review) => !["approved", "provisional_preview"].includes(review.status)
+    || Boolean(review.reviewerName && review.reviewedAt && review.qualification && review.disposition),
+  { message: "Approved and provisional reviews require reviewer, qualification, disposition and timestamp" },
+).refine(
+  (review) => review.status !== "provisional_preview"
+    || Boolean(review.publicLaunchRequirement && review.citations.length >= 1),
+  { message: "Provisional reviews require citations and a public-launch requirement" },
+);
+
+export const localPhraseSchema = z.object({
+  original: z.string().min(1),
+  transliteration: z.string().min(1),
+  gloss: z.string().min(1),
+  pronunciation: z.string().min(1),
+});
+
+export const storyBeatSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["arrival", "encounter", "food", "landmark", "departure"]),
+  atFraction: z.number().min(0).max(1),
+  durationSeconds: z.number().int().min(15).max(1_800),
+  title: z.string().min(1),
+  summary: z.string().min(1).max(360),
+  encounterId: z.string().optional(),
+}).refine((beat) => beat.kind !== "encounter" || Boolean(beat.encounterId), {
+  message: "Encounter story beats require an encounterId",
+});
+
+export const preloadGroupSchema = z.object({
+  id: z.string().min(1),
+  timing: z.enum(["critical", "next_zone", "next_country"]),
+  zoneId: z.string().optional(),
+  assets: z.array(z.string().startsWith("/")).min(1),
+});
+
+export const countryPackV3Schema = baseCountryPackSchema
+  .omit({ countryDayId: true })
+  .extend({
+    schemaVersion: z.literal(3),
+    packId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*-v\d+$/),
+    revision: z.number().int().positive(),
+    route: z.object({
+      worldUnitsPerSecond: z.number().positive().max(300),
+      travelerViewportAnchor: z.number().min(0.55).max(0.65),
+      zones: z.array(routeZoneSchema).min(4).max(6),
+    }),
+    postcardBackgroundUrl: z.string().startsWith("/"),
+    postcard: z.object({
+      title: z.string().min(1).max(80),
+      safeCopy: z.string().min(1).max(240),
+      focalPoint: z.object({
+        x: z.number().min(0).max(1),
+        y: z.number().min(0).max(1),
+      }),
+      textColor: z.string().min(1),
+    }),
+    preloadGroups: z.array(preloadGroupSchema).min(2),
+    storyBeats: z.array(storyBeatSchema).min(4).max(6),
+    localPhrases: z.array(localPhraseSchema).min(1),
+    culturalReview: culturalReviewSchema,
+    npcSystem: z.object({
+      baseType: z.enum(["resident-a", "resident-b"]),
+      variantId: z.string().min(2),
+      states: z.object({
+        neutral: z.string().startsWith("/"),
+        greet: z.string().startsWith("/"),
+        talk: z.string().startsWith("/"),
+        listen: z.string().startsWith("/"),
+        react: z.string().startsWith("/"),
+        goodbye: z.string().startsWith("/"),
+      }),
+    }),
+    editorial: z.object({
+      owner: z.string().min(2),
+      researchedAt: z.string().datetime(),
+      sourceNotes: z.array(z.string().min(1)).min(2),
+    }),
+    assetBudgetBytes: z.number().int().positive().max(5_767_168),
+  })
+  .superRefine((pack, context) => {
+    if (pack.assetVersion !== pack.packId) {
+      context.addIssue({
+        code: "custom",
+        path: ["assetVersion"],
+        message: "assetVersion must equal immutable packId",
+      });
+    }
+    const zoneIds = new Set(pack.route.zones.map((zone) => zone.id));
+    for (const group of pack.preloadGroups) {
+      if (group.zoneId && !zoneIds.has(group.zoneId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["preloadGroups"],
+          message: `Unknown preload zone ${group.zoneId}`,
+        });
+      }
+    }
+    const encounterIds = new Set(pack.encounters.map((encounter) => encounter.id));
+    for (const beat of pack.storyBeats) {
+      if (beat.encounterId && !encounterIds.has(beat.encounterId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["storyBeats"],
+          message: `Unknown encounter ${beat.encounterId}`,
+        });
+      }
+    }
+  });
+
+export const readableCountryPackSchema = z.union([
+  countryPackV1Schema,
+  countryPackSchema,
+  countryPackV3Schema,
+]);
+
 export type DialogueMood = z.infer<typeof dialogueMoodSchema>;
 export type DialogueLine = z.infer<typeof dialogueLineSchema>;
 export type EncounterContent = z.infer<typeof encounterContentSchema>;
-export type CountryPack = z.infer<typeof countryPackSchema>;
+export type CountryPackV2 = z.infer<typeof countryPackSchema>;
+export type CountryPackV3 = z.infer<typeof countryPackV3Schema>;
+export type CountryPack = CountryPackV2 | CountryPackV3;
 export type CountryPackV1 = z.infer<typeof countryPackV1Schema>;
 export type RouteLayer = z.infer<typeof routeLayerSchema>;
 export type RouteProp = z.infer<typeof routePropSchema>;
 export type RouteZone = z.infer<typeof routeZoneSchema>;
 export type TravelerState = z.infer<typeof travelerStateSchema>;
+export type SpriteManifest = z.infer<typeof spriteManifestSchema>;

@@ -1,0 +1,69 @@
+{
+  "observedAt": "2026-09-04T02:08:50+05:00",
+  "durationMilliseconds": 4040358,
+  "countryOrder": [
+    "Tashkent",
+    "Dushanbe",
+    "Bishkek",
+    "Almaty",
+    "Baku",
+    "Tbilisi",
+    "Istanbul"
+  ],
+  "countrySeconds": {
+    "Tashkent": 505,
+    "Dushanbe": 589,
+    "Bishkek": 612,
+    "Almaty": 591,
+    "Baku": 588,
+    "Tbilisi": 612,
+    "Istanbul": 506
+  },
+  "routeZoneCounts": {
+    "Tashkent": 4,
+    "Dushanbe": 5,
+    "Bishkek": 4,
+    "Almaty": 4,
+    "Baku": 4,
+    "Tbilisi": 5,
+    "Istanbul": 4
+  },
+  "travelerStates": [
+    "start_walk",
+    "walk",
+    "notice",
+    "greet",
+    "talk",
+    "react",
+    "goodbye",
+    "resume_walk",
+    "wave",
+    "photo",
+    "drink",
+    "phone",
+    "approach",
+    "rest"
+  ],
+  "activeEventTypes": [
+    "arrival",
+    "encounter-visible",
+    "encounter",
+    "action"
+  ],
+  "votesSubmitted": 7,
+  "sponsorDisclosureSeen": true,
+  "sponsorRedirectVerified": true,
+  "offlineRecoveryVerified": true,
+  "fullMotionVerified": true,
+  "reducedMotionVerified": true,
+  "postcardsCreatedBeforeFix": 1,
+  "postcardDefect": "PostcardButton retained the prior country-day URL across a same-page rollover.",
+  "postcardFixVerification": {
+    "samePageRegression": "passed",
+    "guardedStagedSevenCountryRehearsal": "passed",
+    "postcardsCreated": 7,
+    "archiveCardsVerified": 6,
+    "stablePreviewRestored": true
+  },
+  "realPaymentVerified": false
+}

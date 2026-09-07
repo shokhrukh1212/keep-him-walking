@@ -1,0 +1,20 @@
+import { adminClient, requireApply, requireArgument } from "./lib";
+
+const id = requireArgument("id");
+const reviewer = requireArgument("reviewer");
+const supabase = adminClient();
+const { data, error } = await supabase.from("sponsorships").select("id,status,private_creative_path,slot_id").eq("id", id).single();
+if (error) throw error;
+if (data.status !== "paid_pending_review" || !data.private_creative_path) throw new Error("Sponsor must be paid_pending_review with private creative before approval");
+requireApply({ id, transition: "paid_pending_review -> approved", reviewer, creative: data.private_creative_path });
+const privateBucket = process.env.SUPABASE_SPONSOR_PRIVATE_BUCKET ?? "khw-sponsor-private";
+const publicBucket = process.env.SUPABASE_SPONSOR_PUBLIC_BUCKET ?? "khw-sponsor-public";
+const { data: creative, error: downloadError } = await supabase.storage.from(privateBucket).download(data.private_creative_path);
+if (downloadError) throw downloadError;
+const publicPath = `${id}/${Date.now()}-${data.private_creative_path.split("/").at(-1)}`;
+const { error: uploadError } = await supabase.storage.from(publicBucket).upload(publicPath, creative, { contentType: creative.type || "image/webp", upsert: false, cacheControl: "31536000" });
+if (uploadError) throw uploadError;
+const now = new Date().toISOString();
+const { error: updateError } = await supabase.from("sponsorships").update({ status: "approved", reviewed_at: now, approved_at: now, public_creative_path: publicPath, updated_at: now }).eq("id", id).eq("status", "paid_pending_review");
+if (updateError) throw updateError;
+process.stdout.write(`${JSON.stringify({ approved: true, id, reviewer, publicPath })}\n`);

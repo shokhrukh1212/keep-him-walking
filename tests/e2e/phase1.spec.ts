@@ -31,7 +31,10 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
   const now = new Date();
   return {
     serverNow: now.toISOString(),
+    realServerNow: now.toISOString(),
     mode: "live",
+    journeyState: "live",
+    refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
     countryDay: {
       id: tashkentCountryPackV2.countryDayId,
       dayNumber: 1,
@@ -84,6 +87,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       walking: server.sessions.size > 0,
     },
     sponsor: { status: "unsponsored" },
+    postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     assets: tashkentCountryPackV2,
   };
 }

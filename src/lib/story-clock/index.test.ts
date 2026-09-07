@@ -29,6 +29,13 @@ describe("server story clock", () => {
     );
   });
 
+  it("interpolates an isolated accelerated rehearsal between heartbeats", () => {
+    const clock = synchronizeClock("2026-09-01T00:00:00.000Z", 1_000, 144);
+    expect(estimatedServerNow(clock, 2_000)).toBe(
+      new Date("2026-09-01T00:02:24.000Z").getTime(),
+    );
+  });
+
   it("clamps scheduled event progress", () => {
     expect(eventProgress(event, new Date("2026-08-31T23:59:59Z").getTime())).toBe(0);
     expect(eventProgress(event, new Date("2026-09-01T00:00:10Z").getTime())).toBe(0.5);

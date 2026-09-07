@@ -19,11 +19,18 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
   const sessionId = useRef<string | null>(null);
   const timer = useRef<number | null>(null);
   const requestInFlight = useRef(false);
+  const requestController = useRef<AbortController | null>(null);
+  const generation = useRef(0);
   const heartbeatRef = useRef<(forceInactive?: boolean) => Promise<void>>(async () => undefined);
 
   const heartbeat = useCallback(async (forceInactive = false) => {
     if (snapshot.mode !== "live" || !sceneReady || !sessionId.current) return;
     if (requestInFlight.current && !forceInactive) return;
+    if (forceInactive) requestController.current?.abort();
+    const requestGeneration = ++generation.current;
+    const controller = new AbortController();
+    requestController.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 8_000);
     requestInFlight.current = true;
     const active = !forceInactive && document.visibilityState === "visible" && navigator.onLine;
     try {
@@ -36,9 +43,18 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
           sceneReady,
         }),
         keepalive: forceInactive,
+        signal: controller.signal,
       });
       if (!response.ok) throw new Error("Presence update failed");
       const result = (await response.json()) as HeartbeatResponse;
+      if (requestGeneration !== generation.current) return;
+      if (result.countryDayId && result.countryDayId !== snapshot.countryDay.id) {
+        throw new Error("Country changed during heartbeat");
+      }
+      if (!Number.isFinite(result.activeViewers) || typeof result.walking !== "boolean"
+        || !Number.isFinite(result.globalActiveSeconds) || !Number.isFinite(Date.parse(result.routeAuthoritativeAt))) {
+        throw new Error("Invalid presence confirmation");
+      }
       onHeartbeat(result);
       setStatus("live");
       if (!forceInactive) {
@@ -49,15 +65,17 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
         );
       }
     } catch {
+      if (requestGeneration !== generation.current) return;
       setStatus(navigator.onLine ? "reconnecting" : "offline");
       if (!forceInactive) {
         if (timer.current) window.clearTimeout(timer.current);
         timer.current = window.setTimeout(() => void heartbeatRef.current(), 5_000);
       }
     } finally {
-      requestInFlight.current = false;
+      window.clearTimeout(timeout);
+      if (requestGeneration === generation.current) requestInFlight.current = false;
     }
-  }, [onHeartbeat, sceneReady, snapshot.mode]);
+  }, [onHeartbeat, sceneReady, snapshot.mode, snapshot.countryDay.id]);
 
   useEffect(() => {
     heartbeatRef.current = heartbeat;
@@ -82,14 +100,16 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
       void trackRealtimePresence();
       void heartbeat(document.visibilityState !== "visible");
     };
-    const onOnline = () => void heartbeat();
+    const onOnline = () => { requestController.current?.abort(); generation.current++; requestInFlight.current=false; void heartbeat(); };
     const onOffline = () => {
       setStatus("offline");
-      void heartbeat(true);
+      // Offline is unknown presence, not an inactive session confirmation.
     };
+    const onPageHide = () => void heartbeat(true);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
+    window.addEventListener("pagehide", onPageHide);
     const initialHeartbeat = window.setTimeout(() => void heartbeatRef.current(), 0);
 
     let reconciliationTimer: number | null = null;
@@ -106,13 +126,18 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
       });
 
     return () => {
+      // This is a request-generation counter, intentionally invalidated at cleanup.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      generation.current++;
+      requestController.current?.abort();
+      requestInFlight.current=false;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
+      window.removeEventListener("pagehide", onPageHide);
       window.clearTimeout(initialHeartbeat);
       if (timer.current) window.clearTimeout(timer.current);
       if (reconciliationTimer) window.clearTimeout(reconciliationTimer);
-      void heartbeat(true);
       if (channel && supabase) {
         void channel.untrack();
         void supabase.removeChannel(channel);

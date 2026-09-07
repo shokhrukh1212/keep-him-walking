@@ -6,17 +6,12 @@ export function useMotionPreference() {
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("khw_reduced_motion");
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const initial = window.setTimeout(
-      () => setReducedMotion(stored === null ? media.matches : stored === "true"),
-      0,
-    );
-    const update = () => {
-      if (window.localStorage.getItem("khw_reduced_motion") === null) {
-        setReducedMotion(media.matches);
-      }
-    };
+    // Retire the old manual mode. A stale local value must never leave the
+    // traveler frozen while the HUD says he is walking.
+    window.localStorage.removeItem("khw_reduced_motion");
+    const initial = window.setTimeout(() => setReducedMotion(media.matches), 0);
+    const update = () => setReducedMotion(media.matches);
     media.addEventListener("change", update);
     return () => {
       window.clearTimeout(initial);
@@ -24,12 +19,5 @@ export function useMotionPreference() {
     };
   }, []);
 
-  const toggle = () => {
-    setReducedMotion((current) => {
-      window.localStorage.setItem("khw_reduced_motion", String(!current));
-      return !current;
-    });
-  };
-
-  return { reducedMotion, toggle };
+  return reducedMotion;
 }

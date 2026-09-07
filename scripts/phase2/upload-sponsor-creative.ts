@@ -1,0 +1,20 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import sharp from "sharp";
+import { adminClient, requireApply, requireArgument } from "./lib";
+
+const id = requireArgument("id");
+const file = path.resolve(requireArgument("file"));
+const bytes = await readFile(file);
+const metadata = await sharp(bytes).metadata();
+if (!metadata.width || !metadata.height || metadata.width > 4096 || metadata.height > 4096) throw new Error("Creative must be a decodable image no larger than 4096×4096");
+requireApply({ id, file, width: metadata.width, height: metadata.height, bytes: bytes.length });
+const supabase = adminClient();
+const bucket = process.env.SUPABASE_SPONSOR_PRIVATE_BUCKET ?? "khw-sponsor-private";
+const extension = metadata.format === "jpeg" ? "jpg" : metadata.format;
+const objectPath = `${id}/creative-${Date.now()}.${extension}`;
+const { error: uploadError } = await supabase.storage.from(bucket).upload(objectPath, bytes, { contentType: `image/${metadata.format}`, upsert: false });
+if (uploadError) throw uploadError;
+const { error: updateError } = await supabase.from("sponsorships").update({ private_creative_path: objectPath, updated_at: new Date().toISOString() }).eq("id", id).eq("status", "paid_pending_review");
+if (updateError) throw updateError;
+process.stdout.write(`${JSON.stringify({ uploaded: true, id, privatePath: objectPath })}\n`);

@@ -11,7 +11,8 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
   const makeSnapshot = (): BootstrapSnapshot => {
     const now = new Date();
     return {
-      serverNow: now.toISOString(), mode: "live",
+      serverNow: now.toISOString(), realServerNow: now.toISOString(), mode: "live",
+      journeyState: "live", refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
       countryDay: {
         id: tashkentCountryPackV2.countryDayId, dayNumber: 1, totalDays: 195,
         countryCode: "UZ", countryName: "Uzbekistan", cityName: "Tashkent",
@@ -23,7 +24,9 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
       presence: { activeViewers: 0, status: "live", ttlSeconds: 1 },
       steps: { global: 0, updatedAt: now.toISOString(), stale: false },
       route: { globalActiveSeconds: routeSeconds, authoritativeAt: now.toISOString(), walking: false },
-      sponsor: { status: "unsponsored" }, assets: tashkentCountryPackV2,
+      sponsor: { status: "unsponsored" },
+      postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
+      assets: tashkentCountryPackV2,
     };
   };
   await page.route("**/api/bootstrap", (route) => route.fulfill({ json: makeSnapshot() }));

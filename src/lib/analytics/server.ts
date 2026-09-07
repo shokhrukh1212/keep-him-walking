@@ -11,7 +11,14 @@ function getClient(): Vemetric | null {
 }
 
 export function trackServerEvent(
-  event: "vote_submitted",
+  event:
+    | "vote_submitted"
+    | "postcard_created"
+    | "rollover_completed"
+    | "sponsor_checkout_started"
+    | "sponsor_payment_confirmed"
+    | "sponsor_refunded"
+    | "sponsor_creative_approved",
   userIdentifier: string,
   eventData: Record<string, string | number | boolean | null>,
 ): void {

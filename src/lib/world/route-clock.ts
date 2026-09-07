@@ -40,7 +40,7 @@ export function extrapolatedRouteSeconds(runtime: RouteRuntime, nowMs: number): 
   if (!Number.isFinite(authoritativeMs)) return runtime.globalActiveSeconds;
   // Presence is reconciled frequently. A cap prevents a disconnected client
   // from inventing route progress indefinitely.
-  const elapsed = Math.min(30, Math.max(0, (nowMs - authoritativeMs) / 1_000));
+  const elapsed = Math.min(60, Math.max(0, (nowMs - authoritativeMs) / 1_000));
   return runtime.globalActiveSeconds + elapsed;
 }
 

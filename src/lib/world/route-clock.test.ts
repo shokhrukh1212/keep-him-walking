@@ -16,7 +16,7 @@ describe("route clock", () => {
     const walking = { ...paused, walking: true };
     const later = new Date("2026-09-01T00:01:00Z").getTime();
     expect(extrapolatedRouteSeconds(paused, later)).toBe(50);
-    expect(extrapolatedRouteSeconds(walking, later)).toBe(80);
+    expect(extrapolatedRouteSeconds(walking, later)).toBe(110);
   });
 
   it("selects segment variants deterministically", () => {
