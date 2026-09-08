@@ -6,7 +6,7 @@ P0 orientation, 2026-09-08. Inspected baseline: `3e2174f` on `main`. Read `00-RE
 
 - **Prompt numbers and titles come from [07-CODEX-PROMPTS.md](07-CODEX-PROMPTS.md)**. Numbered priority lists in other documents are not interchangeable with prompt IDs.
 - P0 changes documentation and example configuration only. All P1–P22 rows are planned, not completed or visually accepted.
-- Execute prompts in source order after resolving their listed conflicts. Dependencies and owner-supplied assets may block a prompt even when earlier prompts pass.
+- Execute prompts in source order after resolving their listed conflicts. The owner explicitly pulled asset URL/upload tooling forward from P18; this does not complete P18. Current owner policy is in [DECISIONS.md](DECISIONS.md).
 - **High** risk: authority, accounting, privacy, payments, synchronization, compatibility, or launch. **Medium** risk: bounded presentation and tooling changes. Risk is not an effort estimate.
 - Paths are repository-relative; directories identify groups of expected edits. Paths marked **new** are proposed additions. Every row includes relevant `TECHNICAL.md` updates when behavior changes.
 - Unit tests belong beside their modules as `*.test.ts`/`*.test.tsx`; browser scenarios belong in `tests/e2e/`; every new RPC gets pgTAP in `supabase/tests/database/`, including grants/RLS and relevant row-lock/concurrency invariants. `pnpm verify` does not run pgTAP or Playwright.
@@ -83,14 +83,41 @@ P0 records these issues; it does not change the source prompts or silently choos
 
 - **Numbering:** `docs/plan/06-LAUNCH-AND-GROWTH.md:142` calls corrections P18; canonical corrections are P20 and performance is P18. Use §07 numbering throughout execution.
 - **Pre-launch order:** §01 calls P1–P16 pre-launch work, while §06 requires P18 asset/cost protection before launch. Keep P21 dependent on P18; do not imply that finishing P16 is launch readiness.
-- **Owner checkpoints:** product name, domain, character shortlist and rollover hour are not filled in. Preserve TODO values in [DECISIONS.md](DECISIONS.md); 16:00 in `.env.example` remains a proposed default.
+- **Owner checkpoints:** name/domain, shortlist and 16:00 UTC rollover are now confirmed in [DECISIONS.md](DECISIONS.md). Actual launch remains TODO; 23 September 2026 at 16:00 UTC is a working target only.
 - **Unassigned behavior:** creator-review support is needed in P9; P19 scaffolds notebook lines and personal postcard copy but no prompt clearly owns their unlock/render behavior. Record that feature gap for an owner-approved follow-up rather than claiming the entire §01 wishlist is covered by P1–P22.
 - **Season scheduling:** name voting, destination selection, 30-day content availability, no-vote ties, replayed rollover and ticket overrides need one consistent schedule model. Existing `reconcile_phase2_state` updates pre-existing days rather than creating tomorrow (`supabase/migrations/202609010006_phase2_rollover_metrics_storage.sql:69`).
-- **Asset/model ownership:** P11 prepares runtime integration. External model/clip production and Sofia paintings are not guaranteed by that runtime work. Preserve licenses/credits and verify terms before acquiring new assets.
+- **Asset/model ownership:** P11 now includes CC0 acquisition and Blender retarget repairs by Codex. Manual Mixamo account work goes to the owner only when needed; per-clip procedural fallback is allowed. P19 includes image generation when available, otherwise per-zone prompts for owner PNGs. Sofia/Phase-3 paintings are week-1 work, not launch blockers. Preserve licenses/credits and verify terms before acquiring assets.
 - **Services and launch:** real provider/payout validation, a domain/asset host, physical-device performance, creator content review and comprehension testing require actual evidence. The bundle suggests paid hosting upgrades; house rules prohibit adding paid services. Record these as owner launch decisions and verify current service terms when that work is requested, rather than provisioning anything in P0.
 - **Review-route preservation:** later deletion must preserve `/preview/characters` as a working test surface, consistent with the owner's earlier instruction. A deleted baseline must not remain a broken dropdown option.
 
-## P0 acceptance and verification
+## Owner resolutions after P0
+
+The conflict table above retains its baseline evidence. These answers supersede its open owner-policy wording; the related implementation remains required:
+
+| Affected work | Decision / acceptance additions |
+|---|---|
+| C09 / P9, P19 | Documented owner checklist review is sufficient; add eligibility support without automatically approving provisional packs. |
+| C10 / P9 | Sequential Day-1 name/destination ballots, single chip, noon switch in the 16:00-to-16:00 journey day. Extra split has a one-hour/risk limit; otherwise name-only Day 1 and fixed Dushanbe Day 2. Test switch boundaries, retries, no overlapping ballots and both fallback paths. |
+| C10 / P9, P14, P22 | Rolling ready content; non-neighbour transfers explicitly named train/flight and dashed on map. Preserve travel mode in server contracts, status and map. Test that no transfer appears as walking. |
+| P9 candidates | Apply unordered blocked pairs AM–AZ, AM–TR, RS–XK, GR–TR and every pair involving IL/RU for Season 1. Test order symmetry, whole-ballot filtering, nearest ready replacement and exhaustion. No global country ban. Tashkent start; include KZ/GE/TR when possible. |
+| C11 / P11 | Codex owns CC0 motion acquisition and Blender retargeting; owner supplies manual Mixamo FBX only if necessary. Preserve current per-clip fallback and missing-clip indicators. |
+| C13 / P13, P20 | Separate signed HttpOnly admin session, 12-hour expiry; secret at least 48 characters, exchange limited to five/hour/IP, no secret logs. Return 404 to unauthenticated admin requests. Test expiry, tampering, rate limit, log redaction and 404 behavior. |
+| C14 / P15, P22 | Approved pricing and ticket policy are in DECISIONS. Full refund on creative rejection; restore the normal destination vote. Test refund retry/idempotence, approval cutoff and vote restoration under the day lock. |
+| C19 / P18 partial | Asset URL helper and upload tooling pulled forward now. Canonical pack paths remain local; a validated public origin is embedded at build time. Upload only public runtime trees; dry-run default, no deletes, private S3 credentials. Test URLs, upload preflight, signing and failures. Live R2/CORS verification waits for the owner's bucket. |
+| C21 / P19 | Deliver pack:build and distinct per-zone prompts. Generate pictures if available; otherwise owner PNG inputs. Sofia/Phase-3 paintings are week-1 work, not launch blockers. |
+| C22 / P20 | Use exactly “Improved with help from N contributors”; count distinct accepted contributors. |
+| C23 / P21 | Rollover 16:00 UTC confirmed. Store/payout eligibility unchecked, no real $1 payment/refund rehearsal. Actual launch TODO until every gate passes; working target 23 September 2026, 16:00 UTC. |
+
+This decision-recording increment does not implement P1–P22's other product changes. Payment eligibility, R2 provisioning, actual content review, device/comprehension gates and final launch confirmation remain owner/external work.
+
+Verification for this increment, 2026-09-08: `pnpm verify` passed lint, typecheck,
+39 unit-test files / 127 tests, and the production build. `pnpm assets:upload`
+completed a dry run: 851 files, 78,992,133 bytes, zero uploads. Live R2 credentials,
+uploads and CORS remain unverified. No additional visual tests, images or videos
+were produced. Manual hosting checks and rollback are in the
+[asset hosting runbook](../runbooks/asset-hosting.md).
+
+## P0 acceptance and verification (historical)
 
 - Only `docs/plan/ROADMAP.md`, `docs/plan/DECISIONS.md` and `.env.example` are intended changes. No product code, dependencies, database state, deployed configuration or assets change in P0.
 - ROADMAP has exactly P1–P22, with canonical titles, expected paths, risk and tests. Its conflicts cite baseline file:line evidence and distinguish future replacement from an unresolved contradiction.

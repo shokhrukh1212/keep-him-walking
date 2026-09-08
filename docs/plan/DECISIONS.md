@@ -1,6 +1,6 @@
 # Season 1 decision register
 
-Recorded during P0 on 2026-09-08. Sources: [00-README.md §The five decisions](00-README.md#the-five-decisions-this-plan-makes-so-you-dont-have-to-re-decide-them) and [01-PRODUCT.md §0](01-PRODUCT.md#0-four-decisions-only-you-can-make-decide-before-prompt-4).
+Recorded during P0 on 2026-09-08; updated with the owner's sixteen answers on the same date. These answers supersede conflicting recommendations in the source plan. Sources: [00-README.md §The five decisions](00-README.md#the-five-decisions-this-plan-makes-so-you-dont-have-to-re-decide-them) and [01-PRODUCT.md §0](01-PRODUCT.md#0-four-decisions-only-you-can-make-decide-before-prompt-4). Decisions authorize implementation; they do not prove implementation or launch readiness.
 
 ## Five decisions established by the plan
 
@@ -11,26 +11,52 @@ These describe the intended product, not features already implemented.
 | Journey promise | Season 1 lasts **30 days**. Visiting 195 countries remains the dream, not a promise of 195 consecutive days. | P9, P12, P16, P21 |
 | Collective pace | More watchers make him walk faster: one watcher = 1×, two = 2×, four = 3×, eight = 4×, sixteen or more = 5×. No watchers means no progress. | P4–P5 |
 | Daily stakes | Reach the landmark at **8,000 metres**; marathon stretch goal at **42,195 metres**. Completed days retain grey, colour, or gold outcomes. | P4, P13, P16 |
-| Destination vote | Vote between neighbouring countries. Candidate exhaustion, fallback destinations, and the Day-1 name vote need the resolutions recorded in ROADMAP.md before P9. | P9, P22 |
+| Destination vote | Prefer neighbouring ready countries. Explicit train/flight fallback is allowed; apply the Season-1 blocked-pair policy below. Day 1 uses sequential name and destination votes, with the bounded Dushanbe fallback below. | P9, P22 |
 | Watching countries | Show, rank, and thank the countries contributing watch time, using server-confirmed aggregates. | P7, P12–P14 |
 
 ## Four owner-choice categories
 
-Recommendations below are copied from the plan and are **not owner selections**. The current repository/package name does not establish a final product name or domain. TODO values remain unresolved until the owner supplies them.
+The owner has selected these values. Domain ownership and service readiness still need evidence.
 
 | Choice | Selected value | Recommendation from 01-PRODUCT §0 | Needed before |
 |---|---|---|---|
-| Product name + domain | Product name: **TODO**; domain: **TODO** | Keep Him Walking; `keephimwalking.lol` if available, then `.com`, then `.live`. Availability has not been checked. | P4 planning checkpoint; final copy, share URLs, assets and launch |
-| Character naming | Character-name shortlist: **TODO**; final name: unset until naming is resolved | Day-1 name vote; suggested shortlist: Milo, Nur, Sami, Bek. Suggested choice if skipping the vote: Milo. | P4 planning checkpoint; P9 name-vote seed |
+| Product name + domain | **Keep Him Walking**; **keephimwalking.lol** | Owner confirmed Q1. | P4 planning checkpoint; final copy, share URLs, assets and launch |
+| Character naming | Day-1 vote: **Milo, Nur, Sami, Bek**; final name: unset until vote closes | Owner confirmed Q2. | P4 planning checkpoint; P9 name-vote seed |
 | Season length | **30 days** | 30 days; already established by README decision 1, rather than a new inferred owner choice. | P9 scheduling; P21 seed |
-| Rollover time | UTC hour: **TODO** | 16:00 UTC | P4 planning checkpoint; P9 rollover, P15 inventory, P21 cron/seed |
+| Rollover time | **16:00 UTC** | Owner confirmed Q3. | P4 planning checkpoint; P9 rollover, P15 inventory, P21 cron/seed |
 
-`.env.example` contains `ROLLOVER_UTC_HOUR=16` because §04.9 specifies that proposed default. It does not approve a production rollover time. Likewise, `ASSET_BASE_URL=https://assets.<domain>` is a placeholder, not a selected or provisioned domain.
+`ROLLOVER_UTC_HOUR=16` is now approved. `ASSET_BASE_URL` stays empty until the asset host is provisioned and uploaded; empty means same-origin. No actual launch timestamp is enabled by these example defaults.
+
+## Owner answers and implementation boundaries
+
+| Answer | Approved decision | Implementation / remaining evidence |
+|---|---|---|
+| Q4 | Name vote opens at launch and closes at 12:00 UTC during journey Day 1; then the Day-2 destination vote runs until 16:00 UTC. Candidates: Tajikistan, Kyrgyzstan, Kazakhstan. Exactly one vote chip at a time. | P9: interpret journey Day 1 as the 24 hours starting at 16:00 UTC, so noon is on the following calendar date (20 hours naming, four hours destination voting). With the working launch target this means 24 September at noon and 16:00 UTC. If the extra split costs more than one hour or risks rollover, use the ordinary name vote and fix Day 2 as Dushanbe; record which path shipped. |
+| Q5 | Use the rolling ready-content buffer. Non-neighbour fallbacks are allowed only as an explicit night train or flight, announced to viewers and drawn as a dashed map segment. | P9/P14/P22: carry travel mode in authoritative schedule/contracts. Never silently teleport, label the transfer as walking, or invent neighbours. |
+| Q6 | The owner's documented cultural-safety review under §01.7 is sufficient for public launch. | P9/P19/P21: retain actual checklist/reviewer evidence; existing provisional packs are not automatically reviewed. |
+| Q7 | Contributor credit is exactly “Improved with help from N contributors”. | P20: N is the confirmed distinct accepted-contributor count; do not imply contributors endorsed the whole product. |
+| Q8 | Use CC0 motion sources and repair retargeting in Blender. | P11: preserve source/license evidence. If a best clip needs manual Mixamo upload/download, tell the owner, who will provide the FBX. A current procedural fallback for an individual clip is acceptable and must not block other clips. |
+| Q9 | Generate paintings if image generation is available; otherwise produce per-zone prompts and the pack:build pipeline for owner-produced PNGs. | P19: Sofia and Phase-3 city paintings are week-1 work, not launch blockers. Ship the pipeline; do not claim unproduced pictures are finished. |
+| Q10 | ADMIN_ACCESS_SECRET (at least 48 characters) exchanged for a signed HttpOnly session with 12-hour expiry. Exchange limited to five attempts per hour per IP. Never log the secret. Unauthenticated admin routes return 404. | P13/P20: production admin auth is separate from preview auth. Apply rate limiting using a protected IP-derived key, without storing raw IPs. No auth implementation is implied by this decision. |
+| Q11 | Accept proposed sponsor pricing: founding 2,900 cents, floor 4,900 cents, one cent per unique watcher, premium multiplier 1.5, seven-day window, cap 299,900 cents. | P15: server pricing, locked purchase snapshot and rounding tests remain required. |
+| Q12 | Tickets are eligible only on unsold eligible days and include Standard sponsorship; payment plus creative approval is required to override a destination vote. | P22: rejected creative triggers a full refund and the day reverts to a normal destination vote. Define cutoff handling under the same locked schedule/inventory workflow. |
+| Q13 | Use R2; implement assetUrl and upload tooling now, with same-origin fallback. | Owner creates the bucket and supplies credentials privately before launch. Host activation and live upload verification remain pending. Other P18 work is still planned. |
+| Q14 | Store eligibility: not checked. Payout eligibility: not checked. Real $1 checkout/webhook/replay/refund: not performed. | Owner/provider launch gates remain open. Do not equate fixture success with real payment acceptance. |
+| Q15 | Actual launch date: **TODO until all gates pass**. Working target: **Wednesday 23 September 2026, 16:00 UTC**. | P21: target is not permission to bypass launch gates or set a live launch timestamp now. |
+| Q16 | Start in Tashkent. Day 2 follows Q4, with Dushanbe fallback. Include Kazakhstan, Georgia and Türkiye if the route allows. No country is globally banned. | P9: exclude unordered pairs AM–AZ, AM–TR, RS–XK and GR–TR from the same vote; exclude every pair involving IL or RU for Season 1. If candidates conflict, drop one and choose the nearest ready third country that also passes the pair filter. Apply the rule to the whole ballot, including Q4 and fallbacks. IL/RU are not a global content ban. |
+
+## Owner work still needed before launch
+
+- Create R2 bucket/public host, configure browser CORS and provide bucket-scoped credentials privately; see the [asset hosting runbook](../runbooks/asset-hosting.md). Do not paste secrets into the conversation or commit them.
+- Check payment store and payout eligibility, then complete the real checkout/webhook/replay/refund rehearsal when the integration is ready.
+- Document cultural-safety review for the actual launch packs. Visual review, real-phone performance and launch comprehension gates still need evidence.
+- Supply a Mixamo FBX only if a specific clip needs manual account work, and PNGs only if generation is unavailable. These are conditional requests, not current blockers.
+- Confirm the actual launch date after all gates pass. The final character name comes from the vote.
 
 ## Authority and unresolved choices
 
 - Preserve Postgres authority, locked security-definer RPCs, pure motion inputs, and a separate 60-second maximum on browser extrapolation.
 - Preserve honest state labels and confirmed/extrapolated/last-confirmed number labels.
 - Visitor reactions are enums. P20 corrections are the sole visitor free-text exception and remain private. Sponsor creative continues through its separate approval workflow.
-- Owner choices and policy conflicts remain recorded as TODO or unresolved; P0 does not silently choose fallback countries, naming policy, paid services, or launch dates.
+- The policy answers above resolve owner choices; unresolved engineering conflicts in ROADMAP.md still need implementation and tests. No new paid services are approved.
 - See [ROADMAP.md](ROADMAP.md) for code references, missing prerequisites, and the prompt responsible for resolving each issue.

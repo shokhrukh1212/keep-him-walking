@@ -1,5 +1,7 @@
 # Keep Him Walking — the plan from here to viral
 
+Owner answers recorded on 8 September 2026 are authoritative in [DECISIONS.md](DECISIONS.md). Consult that register and [ROADMAP.md](ROADMAP.md) before executing these original prompts; some recommendations below have been superseded.
+
 Written 8 September 2026 from the current repo state (`traveler-finalization-v2`),
 `PRODUCT.md`, `TECHNICAL.md`, and six screenshots. Everything below is scoped to one
 person, Codex, and a budget of roughly a domain plus $5–10.
