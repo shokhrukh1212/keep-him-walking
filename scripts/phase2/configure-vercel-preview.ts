@@ -3,7 +3,18 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { phase2EnvironmentIdentity } from "./environment";
 
-const branch = "phase-2-seven-day-mvp";
+const branchIndex = process.argv.indexOf("--branch");
+const branch = branchIndex >= 0 ? process.argv[branchIndex + 1] : "phase-2-seven-day-mvp";
+const appUrlIndex = process.argv.indexOf("--app-url");
+const appUrl = appUrlIndex >= 0 ? process.argv[appUrlIndex + 1] : undefined;
+const allowedBranches = new Set([
+  "phase-2-seven-day-mvp",
+  "phase-3-launch-hardening",
+  "traveler-finalization-v2",
+]);
+if (!branch || !allowedBranches.has(branch)) {
+  throw new Error("The requested Preview branch is not approved for the isolated rehearsal backend");
+}
 await phase2EnvironmentIdentity();
 
 function parse(source: string) {
@@ -18,6 +29,7 @@ const local = parse(await readFile(path.join(process.cwd(), ".env.local"), "utf8
 if (!preview.NEXT_PUBLIC_VEMETRIC_TOKEN && local.NEXT_PUBLIC_VEMETRIC_TOKEN) {
   preview.NEXT_PUBLIC_VEMETRIC_TOKEN = local.NEXT_PUBLIC_VEMETRIC_TOKEN;
 }
+if (appUrl) preview.NEXT_PUBLIC_APP_URL = new URL(appUrl).origin;
 
 const names = [
   "NEXT_PUBLIC_APP_URL",
