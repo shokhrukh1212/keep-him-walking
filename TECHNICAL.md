@@ -3,9 +3,10 @@
 > Companion to `PRODUCT.md`. Read that first for what the product is. This file covers
 > how it is built, with the character system as its centre, plus the image/scene
 > pipeline and the two rendering defects found in it — §8.3, fixed in `98e1c77`, and
-> §8.4, still open.
+> §8.4, repaired with shared stage calibration on 2026-09-08.
 >
-> Every number below was measured from the repository, not estimated.
+> Runtime numbers come from the repository. Stage calibration values are explicitly
+> identified visual estimates; historical measurements are labelled by their original version.
 
 ---
 
@@ -91,8 +92,8 @@ Note that `.scene-stage` sits at `z-index: -2`, i.e. *behind* the page backgroun
 with the HUD painted in normal document order on top of it.
 
 Because the character lives in a **separate canvas above** the world canvas, nothing in
-the Pixi scene graph can occlude him and nothing in the world knows his position. This
-is the structural cause of the defect in §8.
+the Pixi scene graph can occlude him. The two canvases now share a measured stage frame
+through a ref (§8.4), so their scale and ground plane agree without merging renderers.
 
 ---
 
@@ -438,9 +439,9 @@ are read through a ref so the renderer is never torn down mid-journey.
 - Lighting: hemisphere `0xe8f3ff / 0x6f6046` at 1.55, a shadow-casting key
   `0xffead5` at 2.35 from `(−3, 5, 4)`, a cool fill `0x9bc8dc` at 0.8 from `(4, 2, 3)`,
   and a 20×20 `ShadowMaterial` floor at opacity 0.2.
-- **Orthographic camera**, sized each resize so that 1.78 m maps to exactly
-  `actorLayout().height` pixels and the world origin lands at
-  `height − actorLayout().bottom`. (This is the source of the scale/float problem in §8.)
+- **Orthographic camera**, updated from the current stage frame: 1.78 m maps to
+  `stageLayout().personHeightPx` and world y=0 projects to `stageLayout().groundY`.
+  `actorLayout(viewportHeight, layout)` adapts these to height/bottom (§8.4).
 - Traveler and resident GLBs load in parallel; each reports availability upward so the
   React tree can swap away the static idle image and hide the 2D NPC picture.
 - Per frame: accept the runtime into the shared `PresentationClock`, sample it, run
@@ -551,7 +552,7 @@ layout. These are fixed; the list above is what is still open.
 
 ---
 
-## 8. The image / scene system, and a confirmed rendering defect
+## 8. The image / scene system and stage calibration
 
 ### 8.1 Where country imagery comes from
 
@@ -582,15 +583,21 @@ Both pipelines then derive the **same six files per zone**. Measured on
 
 | File | Phase 2 derivation | Dimensions | Size |
 |---|---|---|---|
-| `fallback.webp` | whole normalized master → 1600×900 cover | 1600×900 | 235 KB |
+| `fallback.webp` | full original master, proportional resize to width 1600 | 1600×1067 for Rustaveli | see current asset report |
 | `distant.webp` | rows 0–450, stretched to 900, blur 0.35 | 2400×900 | 158 KB |
 | `architecture.webp` | rows 162–684 | 2400×522 | 186 KB |
 | `ground-1.webp` | rows 684–900, x 0–1200 | 1200×216 | 31 KB |
 | `ground-2.webp` | rows 684–900, x 600–1800 | 1200×216 | 36 KB |
 | `ground-3.webp` | rows 684–900, x 1200–2400 | 1200×216 | 30 KB |
 
-(Phase 3 uses rows 0–500 blur 0.4 for `distant` and rows 150–710 for `architecture`;
-`fallback` and the three `ground` windows are identical.)
+(Phase 3 retains its old fallback pipeline and uses rows 0–500 blur 0.4 for `distant`
+and rows 150–710 for `architecture`.)
+
+The Phase 2 fallback pipeline now preserves the full original composition. Its old
+2400×900 normalization followed by a second 1600×900 cover crop discarded pavement.
+Only Tbilisi and Tashkent fallbacks have been rebuilt in this change; other checked-in
+Phase 2 fallbacks retain the previous crop until rebuilt. Legacy layer crops are unchanged.
+See `docs/stage-calibration.md` for master dimensions and calibration estimates.
 
 Plus a per-zone `.wav` ambience and a postcard background.
 
@@ -608,16 +615,17 @@ what any visitor currently sees.
 
 On the v3 panorama branch:
 
-- **One** panorama sprite, textured with `zone.fallbackUrl`:
+- **One** panorama sprite, textured with `zone.fallbackUrl`, width-fit:
   ```
-  coverScale = max(width / texW, height / texH);  scale = coverScale * 1.1
-  x = -(renderedWidth - width) * zoneProgress     // slides across the zone's 150 s
-  y = (height - renderedHeight) / 2               // vertically centred
+  imageScale = viewportWidth / imageWidth
+  imageX = 0
+  imageY = groundY - zone.stage.groundLineY * imageHeight * imageScale
   ```
-  Reduced motion pins `progress` to 0.5.
+  There is no vertical centering or extra cover zoom. The width-fit painting is static;
+  distance-driven wrapping/tileable panoramas and 60 m dissolves remain P4 work.
 - **Props are disabled entirely** (`props = []`).
-- `groundLifeRoot`: 7 (low tier) or 12 translucent ellipses/rounded-rects at
-  `y = height × (0.845 … 0.881)`, scrolled by the character's ground offset.
+- `groundLifeRoot`: 7 (low tier) or 12 translucent ellipses/rounded-rects below the shared
+  ground line, scrolled by `motion.distanceMetres * layout.pxPerMetre`.
 - `weatherRoot`: 0/14/22 drifting motes by tier.
 - A sky `Graphics` fill behind everything, per-zone 0.4 s fade-in, background preload of
   the next zone, and a once-per-second diagnostics snapshot (fps, p95 frame ms, live and
@@ -804,43 +812,59 @@ pre-fix renderer and **fails on each of the two assertions independently**, so n
 half is vacuous.
 
 
-### 8.4 The related defect: the floating, oversized traveler
+### 8.4 Shared ground and person scale — repaired 2026-09-08
 
-Independent of the strip, visible in the same screenshots, and **still open** after
-`98e1c77`. Removing the ghost makes it easier to see, not better.
+Previously the traveler occupied 59% of viewport height and stood 90 px above its
+bottom, independently of the pavement in a vertically centered panorama. Both renderers
+now use `src/lib/world/stage-layout.ts`, a pure function of viewport dimensions, decoded
+image dimensions and the current zone's `stage` block.
+
+`src/lib/content/schema.ts` supplies backward-compatible defaults for all 16 packs:
 
 ```ts
-// src/lib/traveler/actor-layout.ts — 5 lines, and the entire spatial contract
-export function actorLayout(width, height) {
-  const mobile = width <= 600;
-  return {
-    height: mobile ? Math.min(height * 0.44, 360)
-                   : Math.min(Math.max(height * 0.59, 304), 608),
-    bottom: mobile ? 92 : 90,
-  };
+stage: {
+  groundLineY: 0.82, horizonY: 0.55, personHeightFrac: 0.28,
+  walkableX: [0.15, 0.85], palette: ["#b9a27a", "#6f7a5a", "#2e3a4f"],
+  lightDir: "left", parallax: { far: 0.35, mid: 0.7, near: 1.25 }
 }
 ```
 
-- **Foot plane** is `height − bottom`, i.e. a hardcoded 90 px (desktop) or 92 px (mobile)
-  from the bottom of the window.
-- **Height** is 1.78 m mapped to `layout.height` px — on a 1213 px viewport that is
-  608 px, **about 50 % of the screen height**, on a boulevard whose buildings are four
-  or five storeys tall.
-- Nothing connects either number to where a given city's pavement is actually painted.
-  Worse, the panorama is cover-scaled ×1.1 and *vertically centred*, so its horizon and
-  pavement line drift with the viewport's aspect ratio while the character's foot plane
-  stays put.
+Image-space fractions remain fractions of the full served image height. Width fit uses
+`imageScale = viewportW / imageW`. Ground is `0.86 * viewportH`, or `0.80 * viewportH`
+at widths ≤600 px. Person height is `personHeightFrac * imageH * imageScale`, and
+`pxPerMetre = personHeightPx / 1.78`. Sky fills space above a short painting; the first
+palette colour fills below the ground behind the image. Horizon, light direction and
+parallax metadata are preserved for later grading/parallax work; they do not move the
+fixed foot plane. There is no height clamp that would break the calibrated perspective.
 
-Net effect: the character is far too large for the perspective, and his shoes land
-wherever 90 px from the bottom of the window happens to fall rather than on the
-panorama's painted ground. The contact shadow does not rescue it either — the catcher is
-a 0.2-opacity `ShadowMaterial` lit from `(−3, 5, 4)`, so the shadow falls behind and to
-the left, inside a transparent canvas floating over a photograph.
+Pixi publishes the actual loaded zone's stage frame through `SceneStage`'s ref. Three
+reads that ref in its existing frame loop, updates the orthographic camera, and clamps
+actor anchors to `walkableX`. Height and ground values blend with smoothstep over 400 ms
+at zone changes. Resize recalculates immediately. CSS variables give loading traveler and
+fallback NPC images the same height and bottom; the no-WebGL static scene publishes the
+same layout after decoding its image. No journey progress or authoritative inputs change.
 
-A correct fix needs the pack to declare, per zone, where the walkable ground line sits in
-the panorama and what a 1.78 m person should measure there — then both canvases can be
-derived from the same ground truth. That is a content-schema change plus a compositor
-change, not a constant tweak, which is why it is scoped separately.
+The Three host publishes `data-foot-y` (projection of y=0) and `data-person-height`
+(projected 1.78 m standing reference), plus `data-zone-id`. These measure the camera's
+foot plane, not each animated shoe vertex. Unit tests cover 320×568, 390×844, 1440×900
+and 2560×1080, defaults, invalid inputs and transition endpoints. The geometry-only
+Playwright spec checks every Tbilisi/Tashkent zone at 390×844 and 1440×900: foot plane
+within 2 px, calibrated height agreement, desktop height ≤36% of the viewport, and resize.
+No screenshots or recordings are needed for these assertions.
+
+The private Preview-only calibration entry is `/api/admin/preview/<packId>`. Signed
+browser requests redirect to `/preview/<packId>?calibrate=1`; API clients retain JSON
+responses, now including stage metadata. Unauthenticated API requests and Production
+requests return 404. The existing HttpOnly preview session now has Path=/ so it also
+reaches the API entry; sign in again at `/preview` after upgrading an old session.
+The editor shows the complete panorama, draggable ground/horizon lines and a draggable
+1.78 m figure height, keyboard adjustments, and a copy-stage-JSON button. Drafts exist only
+in component state; nothing is persisted or submitted. Paste the block into the pack.
+
+Tbilisi and Tashkent's ten zones are calibrated from pavement and doorway estimates in
+their original masters (`docs/stage-calibration.md`). Other packs use defaults. This fixes
+the independent scale/ground contract; character anatomy and animation quality remain
+separate review work, and later P4 still owns distance-driven panorama wrapping.
 
 ### 8.5 Shipped-but-never-drawn assets
 
@@ -1093,5 +1117,5 @@ provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or
   paintings; Phase 3 cities have one master cropped five ways. Either way only one of the
   six derived files per zone is actually drawn (§8.5).
 - **The character is a work-in-progress candidate.** The duplicated ground layer is gone
-  (§8.3, `98e1c77`), but there is still no shared ground truth between the painted
-  pavement and the character's feet (§8.4).
+  (§8.3, `98e1c77`), and both canvases now share the painted
+  pavement and person scale (§8.4). Calibration and character quality still need owner review.

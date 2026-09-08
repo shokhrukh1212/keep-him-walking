@@ -2,6 +2,8 @@ import {describe,it,expect} from "vitest";
 import {REVIEW_ACTIONS,reviewPoseAt} from "./action-preview";
 import {skinPoint} from "./limb-skin";
 import {actorLayout} from "./actor-layout";
+import { stageSchema } from "../content/schema";
+import { stageLayout } from "../world/stage-layout";
 describe("local action inspection",()=>{
   it("leaves the authoritative journey alone in automatic mode",()=>{
     expect(reviewPoseAt({action:"auto",startedAt:0},5000)).toBeNull();
@@ -29,7 +31,9 @@ describe("local action inspection",()=>{
     expect(Math.hypot(a.x-b.x,a.y-b.y)).toBeLessThan(0.01);
   });
   it("uses one shared physical scale for all states and both actor layouts",()=>{
-    expect(actorLayout(1440,900)).toEqual({height:531,bottom:90});
-    expect(actorLayout(390,844)).toEqual({height:360,bottom:92});
+    for (const [width, height] of [[1440, 900], [390, 844]]) {
+      const stage = stageLayout(width, height, 1600, 900, stageSchema.parse({}));
+      expect(actorLayout(height, stage)).toEqual({height: stage.personHeightPx, bottom: height - stage.groundY});
+    }
   });
 });

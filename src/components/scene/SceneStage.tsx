@@ -8,6 +8,7 @@ import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot 
 import type { TravelerCommand } from "@/lib/traveler/types";
 import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { StaticScene } from "./StaticScene";
+import type { StageFrame } from "@/lib/world/stage-layout";
 
 const PixiScene = dynamic(
   () => import("./PixiScene").then((module) => module.PixiScene),
@@ -54,6 +55,16 @@ export function SceneStage({
   const [pixiFailed, setPixiFailed] = useState(false);
   const [pixiReady, setPixiReady] = useState(false);
   const activeRenderer = useRef<"pixi" | "static" | null>(null);
+  const stageFrame = useRef<StageFrame | null>(null);
+  const container = useRef<HTMLDivElement>(null);
+  const publishStage = useCallback((frame: StageFrame, source: "static" | "pixi") => {
+    if (source === "static" && activeRenderer.current === "pixi") return;
+    stageFrame.current = frame;
+    // The loading traveler and fallback NPC are siblings of SceneStage.
+    const shell = container.current?.closest<HTMLElement>(".journey-shell");
+    shell?.style.setProperty("--stage-person-height", `${frame.layout.personHeightPx}px`);
+    shell?.style.setProperty("--stage-bottom", `${frame.viewportH - frame.layout.groundY}px`);
+  }, []);
   const staticReady = useCallback(() => {
     if (activeRenderer.current === "pixi") return;
     activeRenderer.current = "static";
@@ -83,11 +94,13 @@ export function SceneStage({
   const fallbackUrl = pack.route.zones[route.zoneIndex]?.fallbackUrl ?? pack.scene.fallbackUrl;
 
   return (
-    <div className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"}>
-      <StaticScene src={fallbackUrl} onReady={staticReady} />
+    <div ref={container} className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"}>
+      <StaticScene src={fallbackUrl} zone={pack.route.zones[route.zoneIndex]} assetVersion={pack.assetVersion}
+        active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
       {!pixiFailed ? (
         <PixiScene
           pack={pack}
+          onStageFrame={publishStage}
           routeSeconds={routeSeconds}
           routeRuntime={routeRuntime}
           command={command}
@@ -103,6 +116,7 @@ export function SceneStage({
       ) : null}
       <ProductCharacterStage3D
         pack={pack}
+        stageFrame={stageFrame}
         routeRuntime={routeRuntime}
         command={travelerCommand}
         qualityTier={qualityTier}

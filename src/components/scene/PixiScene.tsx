@@ -6,7 +6,7 @@ import type { Texture as PixiTexture } from "pixi.js";
 import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
 import { travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
-import { actorLayout } from "@/lib/traveler/actor-layout";
+import { stageLayout, blendStageLayout, type StageFrame, type StageLayout } from "@/lib/world/stage-layout";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import { deterministicVariant, routePositionAt } from "@/lib/world/route-clock";
@@ -16,6 +16,7 @@ import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot 
 
 type Props = {
   pack: CountryPack;
+  onStageFrame: (frame: StageFrame, source: "static" | "pixi") => void;
   routeSeconds: number;
   routeRuntime: RouteRuntime;
   command: WorldCommand;
@@ -33,6 +34,7 @@ type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "re
 
 export function PixiScene({
   pack,
+  onStageFrame,
   routeSeconds,
   routeRuntime,
   command,
@@ -135,6 +137,11 @@ export function PixiScene({
         let ready = false;
         let estimatedTextureBytes = 0;
         let zoneFade = 1;
+        let imageW = 1600, imageH = 900;
+        let displayedLayout: StageLayout | null = null;
+        let previousLayout: StageLayout | null = null;
+        let layoutChangedAt = 0;
+        let lastWidth = 0, lastHeight = 0;
 
         const zoneAssetUrls = (zone: RouteZone) => [
           ...(coherentPanorama
@@ -179,10 +186,11 @@ export function PixiScene({
           pendingZoneIndex = zoneIndex;
           const generation = ++buildGeneration;
           const zone = pack.route.zones[zoneIndex];
+          const panoramaTexture = await Assets.load<PixiTexture>(publicAssetUrl(zone.fallbackUrl));
           const loaded = coherentPanorama
             ? [{
               layer: { id: "coherent-panorama", speed: 0.055, y: 0, height: 1, segments: [] },
-              textures: [await Assets.load<PixiTexture>(publicAssetUrl(zone.fallbackUrl))],
+              textures: [panoramaTexture],
             }]
             : await Promise.all(
               zone.layers.map(async (layer) => ({
@@ -200,6 +208,11 @@ export function PixiScene({
                 : Promise.resolve(null)),
           );
           if (disposed || generation !== buildGeneration) return;
+
+          imageW = panoramaTexture.width;
+          imageH = panoramaTexture.height;
+          previousLayout = displayedLayout;
+          layoutChangedAt = performance.now();
 
           layerRoot.removeChildren().forEach((child) => child.destroy());
           propRoot.removeChildren().forEach((child) => child.destroy());
@@ -332,8 +345,22 @@ export function PixiScene({
 
           const width = app.screen.width;
           const height = app.screen.height;
-          const layout=actorLayout(width,height);
-          const groundPixels=motion.distanceMetres*(layout.height/1.78);
+          const targetLayout = stageLayout(width, height, imageW, imageH, activeZone.stage);
+          // Resizing immediately reanchors both canvases; zone switches ease for 400 ms.
+          if (width !== lastWidth || height !== lastHeight) previousLayout = null;
+          lastWidth = width; lastHeight = height;
+          const layout = previousLayout
+            ? blendStageLayout(previousLayout, targetLayout, tickAt - layoutChangedAt) : targetLayout;
+          displayedLayout = layout;
+          onStageFrame({ assetVersion: pack.assetVersion, zoneId: activeZone.id,
+            viewportW: width, viewportH: height, imageW, imageH, stage: activeZone.stage, layout }, "pixi");
+          const groundPixels=motion.distanceMetres*layout.pxPerMetre;
+          element.dataset.groundY = String(layout.groundY);
+          element.dataset.personHeight = String(layout.personHeightPx);
+          element.dataset.zoneId = activeZone.id;
+          sky.clear().rect(0, 0, width, height).fill(activeZone.lighting.skyTop);
+          // Width-fit can leave space below the image too: extend only the pavement colour.
+          sky.rect(0, layout.groundY, width, height - layout.groundY).fill(activeZone.stage.palette[0]);
           element.dataset.gaitPhase=String(motion.cyclePhase);
           element.dataset.characterState=sample.traveling ? motion.action?.state ?? "walk" : "idle";
           element.dataset.actionReview=String(Boolean(state.travelerCommand?.actionReview&&state.travelerCommand.actionReview.action!=="auto"));
@@ -350,15 +377,10 @@ export function PixiScene({
             if (pool.panorama) {
               const sprite = pool.sprites[0];
               const texture = pool.textures[0];
-              const coverScale = Math.max(width / Math.max(1, texture.width), height / Math.max(1, texture.height));
-              const scale = coverScale * 1.1;
-              const renderedWidth = texture.width * scale;
-              const renderedHeight = texture.height * scale;
-              const progress = state.reducedMotion ? 0.5 : Math.min(1, Math.max(0, position.zoneElapsedSeconds / activeZone.durationActiveSeconds));
               sprite.texture = texture;
-              sprite.scale.set(scale);
-              sprite.x = -(renderedWidth - width) * progress;
-              sprite.y = (height - renderedHeight) / 2;
+              sprite.scale.set(layout.imageScale);
+              sprite.x = layout.imageX;
+              sprite.y = layout.imageY;
               sprite.visible = true;
               continue;
             }
@@ -393,7 +415,7 @@ export function PixiScene({
             const streamIndex = firstGround + index;
             const jitter = deterministicVariant(`${activeZone.id}:ground-life`, streamIndex, 95);
             detail.x = streamIndex * groundSpacing + jitter - groundCamera;
-            detail.y = height * (0.845 + (index % 3) * 0.018);
+            detail.y = layout.groundY + layout.personHeightPx * (0.03 + (index % 3) * 0.06);
             detail.scale.set((0.75 + (index % 4) * 0.12) * height / 900);
             detail.visible = detail.x > -100 && detail.x < width + 100;
           }
@@ -509,7 +531,7 @@ export function PixiScene({
       disposed = true;
       cleanup();
     };
-  }, [onFailure, onReady, pack, qualityTier]);
+  }, [onFailure, onReady, onStageFrame, pack, qualityTier]);
 
   return <div className="pixi-scene" ref={host} aria-hidden="true" />;
 }

@@ -172,7 +172,9 @@ test("Tbilisi arrival draws one panorama with no ground strip over it", async ({
 
   // The walking clock must actually have advanced, or the drift check proves nothing.
   // The retired strip scrolled by exactly this quantity.
-  expect(groundPixelsAfter - groundPixelsBefore).toBeGreaterThan(300);
+  // P2 calibrates the actor against doors in the painting, reducing px/metre.
+  // Require substantial motion without assuming the former oversized traveler.
+  expect(groundPixelsAfter - groundPixelsBefore).toBeGreaterThan(100);
 
   const shifts = SAMPLE_ROWS.map((fraction) => {
     const measured = bestShift(before, after, fraction);

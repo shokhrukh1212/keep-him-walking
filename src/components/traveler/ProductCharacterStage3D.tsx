@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -9,6 +9,7 @@ import { CharacterActor } from "@/lib/characters/actor";
 import { CHARACTER_MANIFEST } from "@/lib/characters/manifest";
 import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { actorLayout } from "@/lib/traveler/actor-layout";
+import type { StageFrame } from "@/lib/world/stage-layout";
 import { travelerMotionAt } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import type { TravelerCommand } from "@/lib/traveler/types";
@@ -16,6 +17,7 @@ import type { QualityTier, RouteRuntime } from "@/lib/world/types";
 
 type Props = {
   pack: CountryPack;
+  stageFrame: RefObject<StageFrame | null>;
   routeRuntime: RouteRuntime;
   command?: TravelerCommand;
   qualityTier: QualityTier;
@@ -143,8 +145,10 @@ export function ProductCharacterStage3D(props: Props) {
       const height = element.clientHeight;
       if (!width || !height) return;
       renderer.setSize(width, height, false);
-      const layout = actorLayout(width, height);
-      const vertical = CHARACTER_MANIFEST.traveler.heightMetres / Math.max(0.1, layout.height / height);
+    };
+    const updateCamera = (width: number, height: number, frame: StageFrame) => {
+      const layout = actorLayout(height, frame.layout);
+      const vertical = CHARACTER_MANIFEST.traveler.heightMetres * height / layout.height;
       const aspect = width / height;
       const centerY = vertical / 2 - layout.bottom * vertical / height;
       camera.left = -vertical * aspect / 2;
@@ -182,13 +186,18 @@ export function ProductCharacterStage3D(props: Props) {
 
       const width = Math.max(1, element.clientWidth);
       const height = Math.max(1, element.clientHeight);
-      const layout = actorLayout(width, height);
-      const vertical = CHARACTER_MANIFEST.traveler.heightMetres / Math.max(0.1, layout.height / height);
+      const frame = state.stageFrame.current;
+      // Wait for decoded world dimensions; never invent a second layout for the actor.
+      if (!frame || frame.assetVersion !== state.pack.assetVersion
+        || frame.viewportW !== width || frame.viewportH !== height) return;
+      updateCamera(width, height, frame);
+      const vertical = CHARACTER_MANIFEST.traveler.heightMetres * height / frame.layout.personHeightPx;
       const horizontal = vertical * width / height;
       const defaultAnchor = state.pack.schemaVersion === 3 ? state.pack.route.travelerViewportAnchor : 0.61;
       const mobile = width <= 600;
-      const travelerAnchor = cue.conversation ? (mobile ? 0.34 : 0.43) : defaultAnchor;
-      const residentAnchor = mobile ? 0.76 : 0.72;
+      const [left, right] = frame.stage.walkableX;
+      const travelerAnchor = Math.min(right, Math.max(left, cue.conversation ? (mobile ? 0.34 : 0.43) : defaultAnchor));
+      const residentAnchor = Math.min(right, Math.max(left, mobile ? 0.76 : 0.72));
       travelerRoot.position.x = (travelerAnchor - 0.5) * horizontal;
       residentRoot.position.x = (residentAnchor - 0.5) * horizontal;
       travelerRoot.rotation.y = cue.conversation ? Math.PI / 2 : state.command?.facing === "left" ? -0.68 : 0.68;
@@ -196,6 +205,13 @@ export function ProductCharacterStage3D(props: Props) {
       residentRoot.visible = cue.showResident && Boolean(resident);
       element.dataset.characterState = cue.traveler.clip;
       element.dataset.residentVisible = String(residentRoot.visible);
+      // Measured through the actual camera, not just echoed from the input metadata.
+      camera.updateMatrixWorld();
+      const foot = new THREE.Vector3(travelerRoot.position.x, 0, 0).project(camera);
+      const head = new THREE.Vector3(travelerRoot.position.x, 1.78, 0).project(camera);
+      element.dataset.footY = String((1 - foot.y) * height / 2);
+      element.dataset.personHeight = String((head.y - foot.y) * height / 2);
+      element.dataset.zoneId = frame.zoneId;
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(draw);

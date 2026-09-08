@@ -303,13 +303,12 @@ These are worth stating plainly, because they are the difference between "a plac
    and it has been removed. Each country-day now shows exactly one painting per route
    zone. Full record in `TECHNICAL.md` §8.3.
 
-2. **The traveler floats and is too large — still open.** His foot plane and his height
-   are pinned to fixed fractions of the browser window, with nothing connecting either
-   to where each city's pavement is actually painted. The result is a person roughly as
-   tall as a building storey whose shoes hover above the ground. Fixing it properly means
-   each route zone declaring where its walkable ground line sits and how tall a person
-   should measure there, so the painting and the character are sized from the same
-   number. Full diagnosis in `TECHNICAL.md` §8.4.
+2. **Independent traveler scale and pavement placement — repaired in P2.** Each zone
+   now declares its painted ground and person scale, shared by the world and character
+   renderers. Tbilisi and Tashkent are calibrated from the original paintings; other
+   packs retain defaults. A private Preview editor supports later adjustments. Tall
+   mobile screens show sky above the width-fit painting. Owner review of calibration
+   and character quality remains necessary. Details in `TECHNICAL.md` §8.4.
 
 Neither affects the shared clock, the walking rule, presence accounting, votes, postcards
 or sponsor state. They are presentation defects in the scene compositor.
