@@ -1336,6 +1336,16 @@ button:focus-visible,
 .calibration-horizon { color: #a8eaff; }
 .calibration-person { position: absolute; left: 60%; width: 5%; fill: none; stroke: #fff4d9; stroke-width: 4; pointer-events: none; filter: drop-shadow(0 0 2px #102b3b); }
 .calibration-height { position: absolute; left: 58%; transform: translateY(-100%); color: #fff4d9; background: #102b3be6; font-size: 12px; padding: 6px; touch-action: none; cursor: ns-resize; }
+.calibration-preview-controls { display: grid; gap: 0.75rem; }
+.calibration-readouts { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 0.6rem; margin: 0; }
+.calibration-readouts div { padding: 0.65rem; border: 1px solid #163b4140; border-radius: 8px; background: #fffaf0; }
+.calibration-readouts dt { font-size: 0.75rem; }
+.calibration-readouts dd { margin: 0.25rem 0 0; font-weight: 700; }
+.calibration-warning { margin: 0; padding: 0.75rem; border-radius: 8px; color: #fff; background: #9d2d25; font-weight: 700; }
+.calibration-viewport { position: relative; width: 100%; overflow: hidden; isolation: isolate; border: 1px solid #163b4159; background: #d9e5e6; }
+.calibration-viewport img { position: absolute; max-width: none; object-fit: fill; }
+.calibration-target-character { position: absolute; left: 60%; z-index: 2; display: grid; width: 5%; place-items: center; border: 2px solid #fff4d9; color: #fff4d9; background: #102b3b26; font-size: clamp(7px,1vw,12px); writing-mode: vertical-rl; filter: drop-shadow(0 0 2px #102b3b); }
+@media(max-width:700px) { .calibration-readouts { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 
 /* Shared character composition overrides the earlier large HUD/dock layout. */
 .action-review-select {position:fixed;right:18px;top:90px;z-index:25;display:grid;gap:4px;padding:8px 10px;background:#12343ded;color:#fff4d9;border-radius:12px;font-size:11px;}

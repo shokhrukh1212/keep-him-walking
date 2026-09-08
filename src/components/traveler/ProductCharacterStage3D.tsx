@@ -211,6 +211,7 @@ export function ProductCharacterStage3D(props: Props) {
       const head = new THREE.Vector3(travelerRoot.position.x, 1.78, 0).project(camera);
       element.dataset.footY = String((1 - foot.y) * height / 2);
       element.dataset.personHeight = String((head.y - foot.y) * height / 2);
+      element.dataset.characterImageScale = String(frame.layout.characterImageScale);
       element.dataset.zoneId = frame.zoneId;
       renderer.render(scene, camera);
     };

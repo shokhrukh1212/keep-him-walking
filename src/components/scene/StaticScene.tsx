@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import type { RouteZone } from "@/lib/content/schema";
 import { stageLayout, type StageFrame } from "@/lib/world/stage-layout";
+import { CHARACTER_HEIGHT_TARGETS } from "@/lib/world/stage-targets";
 
 type Props = {
   src: string;
@@ -36,7 +37,10 @@ export function StaticScene({ src, zone, assetVersion, active, onStageFrame, onR
     const resize = () => {
       const width = element.clientWidth, height = element.clientHeight;
       if (!width || !height || !img.naturalWidth || !img.naturalHeight) return;
-      const layout = stageLayout(width, height, img.naturalWidth, img.naturalHeight, zone.stage);
+      const layout = stageLayout(
+        width, height, img.naturalWidth, img.naturalHeight, zone.stage, CHARACTER_HEIGHT_TARGETS,
+      );
+      element.dataset.characterImageScale = String(layout.characterImageScale);
       Object.assign(img.style, {
         width: `${img.naturalWidth * layout.imageScale}px`,
         height: `${img.naturalHeight * layout.imageScale}px`,

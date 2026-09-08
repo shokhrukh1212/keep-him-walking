@@ -8,7 +8,7 @@ import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot 
 import type { TravelerCommand } from "@/lib/traveler/types";
 import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { StaticScene } from "./StaticScene";
-import type { StageFrame } from "@/lib/world/stage-layout";
+import { stageScaleWarning, type StageFrame } from "@/lib/world/stage-layout";
 
 const PixiScene = dynamic(
   () => import("./PixiScene").then((module) => module.PixiScene),
@@ -56,10 +56,17 @@ export function SceneStage({
   const [pixiReady, setPixiReady] = useState(false);
   const activeRenderer = useRef<"pixi" | "static" | null>(null);
   const stageFrame = useRef<StageFrame | null>(null);
+  const warnedScale = useRef(new Set<string>());
   const container = useRef<HTMLDivElement>(null);
   const publishStage = useCallback((frame: StageFrame, source: "static" | "pixi") => {
     if (source === "static" && activeRenderer.current === "pixi") return;
     stageFrame.current = frame;
+    const warning = stageScaleWarning(frame.assetVersion, frame.zoneId, frame.layout);
+    const warningKey = `${frame.assetVersion}/${frame.zoneId}`;
+    if (warning && !warnedScale.current.has(warningKey)) {
+      warnedScale.current.add(warningKey);
+      console.warn(warning);
+    }
     // The loading traveler and fallback NPC are siblings of SceneStage.
     const shell = container.current?.closest<HTMLElement>(".journey-shell");
     shell?.style.setProperty("--stage-person-height", `${frame.layout.personHeightPx}px`);

@@ -28,10 +28,10 @@ with none of those, the world is broken.
 | Property | Spec |
 |---|---|
 | Master size | 3600 × 1200 (3:1). Generate at the largest size the tool allows, upscale if needed. |
-| Camera | Eye level, ~1.6 m, looking along the street. Slight wide angle. No dutch tilt. |
-| Ground line | The walkable pavement edge at **78–84 %** of image height, roughly horizontal across the middle 60 % of the width. This is where his feet go. |
+| Camera | Eye level at **1.6 m**, standing about **6 m from the subject**, looking along the street. Buildings are cropped by the top of the frame; only the lower part of a dome or tower may be visible. Slight wide angle. No dutch tilt. |
+| Ground line | The walkable pavement edge at **78–84 %** of image height, roughly horizontal across the middle 60 % of the width. This is where his feet go. Pavement occupies the lower fifth only. |
 | Horizon | ~52–58 % of image height. |
-| Scale reference | A door on the near plane should be ~22–26 % of image height. (1.78 m person ≈ 0.85 × door.) |
+| Scale reference | A doorway on the near plane should be roughly one quarter of image height. (1.78 m person ≈ 0.85 × door.) |
 | People | **None.** The rig provides people. |
 | Text | **None** legible (AI text is gibberish; real text may be wrong or political). Shop signs blank or abstract. |
 | Flags / religious symbols / political posters | None in focus. Distant church/mosque silhouettes as skyline are fine; they are landmarks. |
@@ -39,6 +39,8 @@ with none of those, the world is broken.
 | Tileable | The left 8 % and right 8 % must blend. Generate normally, then run the blend script (P4) — it cross-fades the last 8 % into the first 8 % so the zone can scroll for 2 km without a hard seam. |
 | Variants | `day` (required), `night` (required for `landmark`, optional elsewhere — made via img2img from `day` at low denoise so composition stays identical), `golden` (optional; otherwise done by grading). |
 | Foreground cutouts | 2–3 per city: a lamp post, a tree, a kiosk, a fountain edge. Generated on a flat magenta background and keyed, or generated normally and cut with any background-removal tool. Placed on the near parallax layer. |
+
+if you can see the whole dome, the camera is too far away.
 
 ### Prompt template (paste into whatever generator you use; keep the seed per city)
 
@@ -83,11 +85,15 @@ stage: {
 }
 ```
 
-**Compositor rule:** anchor the panorama so that `groundLineY` lands at a fixed viewport
-fraction (0.86 desktop, 0.80 mobile) — *bottom-anchored*, not vertically centred — and
-scale the character so that `personHeightFrac × renderedImageHeight` equals his pixel
-height. Both canvases derive from these two numbers. A calibration overlay in the preview
-route (draggable ground line, a 1.78 m stick figure) sets them per zone in under a minute.
+**Compositor rule:** the character defines the image scale. Set
+`targetCharacterPx = viewportHeight × TARGET_CHARACTER_HEIGHT_FRAC` (0.24 desktop;
+0.20 at widths ≤600 px), then set
+`imageScale = targetCharacterPx / (personHeightFrac × imageHeight)`. Anchor the panorama
+so `groundLineY` lands at exactly 0.86 of the desktop viewport or 0.80 of the mobile
+viewport; never vertically centre it. Clamp `imageScale` at 1.6 and report a master that
+needs more than 1.6 as needing regeneration at eye level. The calibration overlay keeps
+the raw-image ground, horizon and 1.78 m handles and also previews the rendered viewport,
+target outline, scale values and clamp warning.
 
 Defaults (`groundLineY 0.82, horizonY 0.55, personHeightFrac 0.28`) are applied to
 every existing zone so nothing breaks before calibration.
@@ -166,7 +172,7 @@ so every viewer sees the same bird at the same moment.
 ## 10. Making a city in 2 hours (the pipeline the CLI in P19 automates)
 
 1. `pnpm pack:new <city-slug>` scaffolds `content/countries/<slug>.ts` + `art/<slug>/` from a YAML you fill in: country, city, lat/lon, timezone, five zone descriptions, landmark name, local phrase (script/translit/gloss/pronunciation), resident description, 6 dialogue lines, 8 notebook lines, 2 vote-blurbs, postcard copy.
-2. You generate 5 day panoramas + 1 night (landmark) + 2 cutouts with the prompt template. Drop PNGs into `art/<slug>/zones/<zone>/master.png`.
+2. The owner produces 5 day panoramas + 1 night (landmark) + 2 cutouts with the prompt template and drops the PNGs into `art/<slug>/zones/<zone>/master.png`. Codex builds tooling and diagnostics; it does not generate city paintings.
 3. `pnpm pack:build <slug>` runs sharp: normalise to 3600×1200, make tileable, derive webp (day, night, window-lights if provided), estimate palette, write default `stage` values.
 4. Open `/api/admin/preview/<slug>` → calibrate ground line per zone (1 min each) → save.
 5. `pnpm content:validate` → the schema refuses unsafe fields (no free text outside the listed slots) and missing stage values.
@@ -181,5 +187,5 @@ The seven Phase 3 cities already cover most of the Balkan path.
 - `distant.webp`, `architecture.webp`, `ground-2/3.webp`, prop cutouts and preload
   entries for the v3 branch (after P2 lands, in P18).
 - The Phase 3 "one master cropped five ways" shortcut. Every zone gets its own painting.
-  Re-generate Sofia → Prague zones with the template (they are the buffer; do it during
-  week 1, not before launch).
+  The owner replaces Sofia → Prague zones with separate paintings made from the template
+  during week 1. Codex does not regenerate those cities.

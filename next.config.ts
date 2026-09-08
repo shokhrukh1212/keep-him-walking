@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 import { validateAssetBaseUrl } from "./src/lib/assets/url";
+import { characterHeightTargetsFromEnv } from "./src/lib/world/stage-targets";
+
+const characterHeightTargets = characterHeightTargetsFromEnv(process.env);
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -18,6 +21,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   env: {
     NEXT_PUBLIC_ASSET_BASE_URL: validateAssetBaseUrl(process.env.ASSET_BASE_URL),
+    // Non-secret visual configuration consumed by client renderers at build time.
+    TARGET_CHARACTER_HEIGHT_FRAC: String(characterHeightTargets.desktop),
+    TARGET_CHARACTER_HEIGHT_FRAC_MOBILE: String(characterHeightTargets.mobile),
   },
   experimental: {
     // Next 16's CLI parser can intermittently reject valid `tsc --showConfig`

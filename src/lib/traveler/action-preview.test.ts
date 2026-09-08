@@ -4,6 +4,7 @@ import {skinPoint} from "./limb-skin";
 import {actorLayout} from "./actor-layout";
 import { stageSchema } from "../content/schema";
 import { stageLayout } from "../world/stage-layout";
+import { DEFAULT_CHARACTER_HEIGHT_TARGETS } from "../world/stage-targets";
 describe("local action inspection",()=>{
   it("leaves the authoritative journey alone in automatic mode",()=>{
     expect(reviewPoseAt({action:"auto",startedAt:0},5000)).toBeNull();
@@ -32,7 +33,9 @@ describe("local action inspection",()=>{
   });
   it("uses one shared physical scale for all states and both actor layouts",()=>{
     for (const [width, height] of [[1440, 900], [390, 844]]) {
-      const stage = stageLayout(width, height, 1600, 900, stageSchema.parse({}));
+      const stage = stageLayout(
+        width, height, 1600, 900, stageSchema.parse({}), DEFAULT_CHARACTER_HEIGHT_TARGETS,
+      );
       expect(actorLayout(height, stage)).toEqual({height: stage.personHeightPx, bottom: height - stage.groundY});
     }
   });

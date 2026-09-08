@@ -4,6 +4,7 @@ import { offlineBootstrapSnapshot } from "../../src/lib/bootstrap/offline";
 import { tbilisiCountryPackV1 } from "../../src/content/countries/tbilisi.v1";
 import { tashkentCountryPackV4 } from "../../src/content/countries/tashkent.v4";
 import { stageLayout } from "../../src/lib/world/stage-layout";
+import { DEFAULT_CHARACTER_HEIGHT_TARGETS } from "../../src/lib/world/stage-targets";
 import { travelerMotionAt } from "../../src/lib/traveler/motion-clock";
 import { routePositionAt } from "../../src/lib/world/route-clock";
 
@@ -53,9 +54,19 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
         await expect(world).toHaveAttribute("data-zone-id", zone.id, {timeout: 30_000});
         await expect(actor).toHaveAttribute("data-zone-id", zone.id);
         const {width, height} = await sharp(`public${zone.fallbackUrl}`).metadata();
-        const expected = stageLayout(viewport.width, viewport.height, width!, height!, zone.stage);
+        const expected = stageLayout(
+          viewport.width,
+          viewport.height,
+          width!,
+          height!,
+          zone.stage,
+          DEFAULT_CHARACTER_HEIGHT_TARGETS,
+        );
         await expect.poll(async () => Math.abs(Number(await actor.getAttribute("data-foot-y")) - expected.groundY)).toBeLessThanOrEqual(2);
         await expect.poll(async () => Math.abs(Number(await actor.getAttribute("data-person-height")) - expected.personHeightPx)).toBeLessThan(1);
+        await expect.poll(async () => Math.abs(
+          Number(await actor.getAttribute("data-character-image-scale")) - expected.characterImageScale,
+        )).toBeLessThan(0.001);
         if (viewport.width > 600) expect(Number(await actor.getAttribute("data-person-height"))).toBeLessThanOrEqual(viewport.height * 0.36);
         // Actual Pixi publication and Three projection must also agree with one another.
         expect(Math.abs(Number(await actor.getAttribute("data-foot-y")) - Number(await world.getAttribute("data-ground-y")))).toBeLessThanOrEqual(2);

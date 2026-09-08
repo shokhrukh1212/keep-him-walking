@@ -47,6 +47,7 @@
     "art:phase2": "node scripts/process-phase2-art.mjs",
     "art:phase3": "node scripts/process-phase3-art.mjs",
     "content:validate": "node --import tsx scripts/validate-country-packs.ts",
+    "content:audit-scale": "node --import tsx --env-file-if-exists=.env.local scripts/audit-content-scale.ts",
     "assets:report": "node --import tsx scripts/report-phase15-assets.ts",
     "assets:upload": "node --import tsx --env-file-if-exists=.env.local scripts/upload-assets.mjs",
     "assets:report:phase2": "node --import tsx scripts/report-phase2-assets.ts",

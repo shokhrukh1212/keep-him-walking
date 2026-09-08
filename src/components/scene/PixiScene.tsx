@@ -7,6 +7,7 @@ import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
 import { travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import { stageLayout, blendStageLayout, type StageFrame, type StageLayout } from "@/lib/world/stage-layout";
+import { CHARACTER_HEIGHT_TARGETS } from "@/lib/world/stage-targets";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import { deterministicVariant, routePositionAt } from "@/lib/world/route-clock";
@@ -345,7 +346,9 @@ export function PixiScene({
 
           const width = app.screen.width;
           const height = app.screen.height;
-          const targetLayout = stageLayout(width, height, imageW, imageH, activeZone.stage);
+          const targetLayout = stageLayout(
+            width, height, imageW, imageH, activeZone.stage, CHARACTER_HEIGHT_TARGETS,
+          );
           // Resizing immediately reanchors both canvases; zone switches ease for 400 ms.
           if (width !== lastWidth || height !== lastHeight) previousLayout = null;
           lastWidth = width; lastHeight = height;
@@ -357,6 +360,7 @@ export function PixiScene({
           const groundPixels=motion.distanceMetres*layout.pxPerMetre;
           element.dataset.groundY = String(layout.groundY);
           element.dataset.personHeight = String(layout.personHeightPx);
+          element.dataset.characterImageScale = String(layout.characterImageScale);
           element.dataset.zoneId = activeZone.id;
           sky.clear().rect(0, 0, width, height).fill(activeZone.lighting.skyTop);
           // Width-fit can leave space below the image too: extend only the pavement colour.

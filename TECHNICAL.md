@@ -615,13 +615,16 @@ what any visitor currently sees.
 
 On the v3 panorama branch:
 
-- **One** panorama sprite, textured with `zone.fallbackUrl`, width-fit:
+- **One** panorama sprite, textured with `zone.fallbackUrl`, scaled from the stable
+  viewport-relative character target:
   ```
-  imageScale = viewportWidth / imageWidth
-  imageX = 0
+  targetCharacterPx = viewportHeight * (width <= 600 ? 0.20 : 0.24)
+  requiredImageScale = targetCharacterPx / (stage.personHeightFrac * imageHeight)
+  imageScale = min(requiredImageScale, 1.6)
+  imageX = (viewportWidth - imageWidth * imageScale) / 2
   imageY = groundY - zone.stage.groundLineY * imageHeight * imageScale
   ```
-  There is no vertical centering or extra cover zoom. The width-fit painting is static;
+  There is no vertical centering. The painting is static;
   distance-driven wrapping/tileable panoramas and 60 m dissolves remain P4 work.
 - **Props are disabled entirely** (`props = []`).
 - `groundLifeRoot`: 7 (low tier) or 12 translucent ellipses/rounded-rects below the shared
@@ -829,13 +832,24 @@ stage: {
 }
 ```
 
-Image-space fractions remain fractions of the full served image height. Width fit uses
-`imageScale = viewportW / imageW`. Ground is `0.86 * viewportH`, or `0.80 * viewportH`
-at widths ≤600 px. Person height is `personHeightFrac * imageH * imageScale`, and
-`pxPerMetre = personHeightPx / 1.78`. Sky fills space above a short painting; the first
-palette colour fills below the ground behind the image. Horizon, light direction and
-parallax metadata are preserved for later grading/parallax work; they do not move the
-fixed foot plane. There is no height clamp that would break the calibrated perspective.
+Image-space fractions remain fractions of the full served image height. The character
+target comes from `TARGET_CHARACTER_HEIGHT_FRAC` (default 0.24 desktop) or
+`TARGET_CHARACTER_HEIGHT_FRAC_MOBILE` (default 0.20 at widths ≤600 px). The image then
+scales to that character:
+
+```ts
+targetCharacterPx = targetFraction * viewportH
+requiredImageScale = targetCharacterPx / (personHeightFrac * imageH)
+imageScale = Math.min(requiredImageScale, 1.6)
+```
+
+Ground remains exactly `0.86 * viewportH`, or `0.80 * viewportH` on mobile. The actor
+stays at `targetCharacterPx`; `pxPerMetre = targetCharacterPx / 1.78`. A master requiring
+more than 1.6 is still rendered at the clamp and logs the pack/zone warning once. This
+keeps the person readable while identifying artwork whose perspective must be repaired.
+Sky fills space above a short painting; the first palette colour fills below the ground
+behind the image. Horizon, light direction and parallax metadata are preserved for later
+grading/parallax work; they do not move the fixed foot plane.
 
 Pixi publishes the actual loaded zone's stage frame through `SceneStage`'s ref. Three
 reads that ref in its existing frame loop, updates the orthographic camera, and clamps
@@ -844,22 +858,29 @@ at zone changes. Resize recalculates immediately. CSS variables give loading tra
 fallback NPC images the same height and bottom; the no-WebGL static scene publishes the
 same layout after decoding its image. No journey progress or authoritative inputs change.
 
-The Three host publishes `data-foot-y` (projection of y=0) and `data-person-height`
-(projected 1.78 m standing reference), plus `data-zone-id`. These measure the camera's
-foot plane, not each animated shoe vertex. Unit tests cover 320×568, 390×844, 1440×900
-and 2560×1080, defaults, invalid inputs and transition endpoints. The geometry-only
-Playwright spec checks every Tbilisi/Tashkent zone at 390×844 and 1440×900: foot plane
-within 2 px, calibrated height agreement, desktop height ≤36% of the viewport, and resize.
-No screenshots or recordings are needed for these assertions.
+The Three host publishes `data-foot-y` (projection of y=0), `data-person-height`
+(projected 1.78 m standing reference), `data-character-image-scale` (required image
+scale relative to width fit), and `data-zone-id`. These measure the camera's foot plane,
+not each animated shoe vertex. Unit tests cover 320×568, 390×844, 1440×900 and
+2560×1080, target fractions, clamping, warning text and environment validation.
+`pnpm content:audit-scale` measures every registered zone at five widths, prints the
+unclamped 1440×900 requirement sorted worst-first by city, flags requirements above 1.6,
+and exits nonzero when the clamped artwork reference falls outside 1/1.6×…1.6× of its
+viewport target. The geometry-only Playwright spec checks every Tbilisi/Tashkent zone at
+390×844 and 1440×900: foot plane within 2 px, exact target height, shared image-scale
+publication, and resize. No screenshots or recordings are needed for these assertions.
 
 The private Preview-only calibration entry is `/api/admin/preview/<packId>`. Signed
 browser requests redirect to `/preview/<packId>?calibrate=1`; API clients retain JSON
 responses, now including stage metadata. Unauthenticated API requests and Production
 requests return 404. The existing HttpOnly preview session now has Path=/ so it also
 reaches the API entry; sign in again at `/preview` after upgrading an old session.
-The editor shows the complete panorama, draggable ground/horizon lines and a draggable
-1.78 m figure height, keyboard adjustments, and a copy-stage-JSON button. Drafts exist only
-in component state; nothing is persisted or submitted. Paste the block into the pack.
+The editor keeps the complete panorama, draggable ground/horizon lines and draggable
+1.78 m figure for raw-image calibration. It also shows a desktop/mobile rendered viewport,
+the actor target outline, live `personHeightFrac`, `imageScale` and character-pixel
+readouts, plus the same regeneration warning used at runtime. Keyboard adjustments and
+copy-stage-JSON remain local: drafts are never persisted or submitted. Paste the block
+into the pack.
 
 Tbilisi and Tashkent's ten zones are calibrated from pavement and doorway estimates in
 their original masters (`docs/stage-calibration.md`). Other packs use defaults. This fixes
