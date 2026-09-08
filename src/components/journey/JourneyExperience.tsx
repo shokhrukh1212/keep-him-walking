@@ -79,6 +79,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const [sceneRenderer, setSceneRenderer] = useState<"pixi" | "static" | null>(null);
   const [travelerReady, setTravelerReady] = useState(false);
   const [puppetReady, setPuppetReady] = useState(false);
+  const [residentReady, setResidentReady] = useState(false);
   const [presentationFrame,setPresentationFrame]=useState<{assetVersion:string;motion:TravelerMotionSnapshot}|null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [actionReview,setActionReview]=useState<ActionReview>({action:"auto",startedAt:0});
@@ -540,7 +541,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         qualityTier={qualityTier}
         reducedMotion={reducedMotion}
         travelerCommand={command}
-        onTravelerReady={setPuppetReady}
+        onTravelerReady={(ready) => {
+          setPuppetReady(ready);
+          if (ready) setTravelerReady(true);
+        }}
+        onResidentReady={setResidentReady}
         onMotionSample={setPresentationFrame}
         onZoneChange={zoneDidChange}
         onDiagnostics={setWorldDiagnostics}
@@ -582,6 +587,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         replayOpen={replayOpen}
         motionSeconds={motion.action?.elapsedSeconds}
         reducedMotion={reducedMotion}
+        showNpcImage={!residentReady || (!activeLine && replayOpen)}
         onReplay={() => setReplayOpen(true)}
         onCloseReplay={() => setReplayOpen(false)}
       />

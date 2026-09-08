@@ -43,6 +43,10 @@ export class CharacterActor {
   private handOrientation=new THREE.Quaternion();
   private interactionUnit=1;
   private grips=new Map<string,{position:THREE.Vector3;rotation:THREE.Quaternion}>();
+  private sponsorMaterial?:THREE.MeshStandardMaterial;
+  private sponsorTexture?:THREE.Texture;
+  private sponsorUrl?:string;
+  private sponsorRevision=0;
   constructor(gltf:GLTF,height:number,withProps:boolean) {
     this.root=gltf.scene;
     this.propsEnabled=withProps;
@@ -80,6 +84,13 @@ export class CharacterActor {
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigRightHandMiddle1")this.rightGrip=object;
       if(object instanceof THREE.Mesh) {
         object.castShadow=true;object.receiveShadow=true;object.frustumCulled=false;
+        if(object.name.replace(/[^a-z0-9]/gi,"").toLowerCase()==="sponsorpatch") {
+          const source=(Array.isArray(object.material)?object.material[0]:object.material);
+          if(source instanceof THREE.MeshStandardMaterial) {
+            this.sponsorMaterial=source.clone();
+            object.material=this.sponsorMaterial;
+          }
+        }
         if(object.morphTargetDictionary)this.faces.push(object);
         for(const mat of Array.isArray(object.material)?object.material:[object.material]) {
           // Hair cards and lashes need cutout depth, not transparent sorting.
@@ -159,5 +170,21 @@ export class CharacterActor {
       }
     }
   }
-  dispose(){this.mixer.stopAllAction();this.mixer.uncacheRoot(this.root);}
+  async setSponsor(url?:string) {
+    if(url===this.sponsorUrl)return;
+    this.sponsorUrl=url;
+    const revision=++this.sponsorRevision;
+    this.sponsorTexture?.dispose();this.sponsorTexture=undefined;
+    if(!this.sponsorMaterial)return;
+    if(!url){this.sponsorMaterial.map=null;this.sponsorMaterial.color.setRGB(.035,.10,.105);this.sponsorMaterial.needsUpdate=true;return;}
+    try{
+      const texture=await new THREE.TextureLoader().loadAsync(url);
+      if(revision!==this.sponsorRevision){texture.dispose();return;}
+      texture.colorSpace=THREE.SRGBColorSpace;
+      texture.flipY=false;
+      this.sponsorTexture=texture;
+      this.sponsorMaterial.map=texture;this.sponsorMaterial.color.set(0xffffff);this.sponsorMaterial.needsUpdate=true;
+    }catch{/* The sewn patch remains visible when a remote logo cannot load. */}
+  }
+  dispose(){this.sponsorRevision+=1;this.sponsorTexture?.dispose();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.root);}
 }

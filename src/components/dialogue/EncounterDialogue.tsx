@@ -12,6 +12,7 @@ type Props = {
   replayOpen: boolean;
   motionSeconds?: number;
   reducedMotion?: boolean;
+  showNpcImage?: boolean;
   onReplay: () => void;
   onCloseReplay: () => void;
 };
@@ -24,6 +25,7 @@ export function EncounterDialogue({
   replayOpen,
   motionSeconds = 0,
   reducedMotion = false,
+  showNpcImage = true,
   onReplay,
   onCloseReplay,
 }: Props) {
@@ -41,7 +43,7 @@ export function EncounterDialogue({
   },[visible]);
   return (
     <>
-      {visible ? (
+      {visible && showNpcImage ? (
         <div
           ref={actor}
           className="npc-wrap"

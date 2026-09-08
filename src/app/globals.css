@@ -50,6 +50,8 @@ body {
 .static-scene img,
 .pixi-scene,
 .pixi-scene canvas,
+.product-character-stage,
+.product-character-stage canvas,
 .scene-grade,
 .scene-vignette {
   position: absolute;
@@ -76,8 +78,26 @@ body {
 }
 
 .pixi-scene {
+  z-index: 1;
   opacity: 0;
   transition: opacity 800ms ease;
+}
+
+.product-character-stage {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.product-character-stage canvas {
+  display: block;
+}
+
+.scene-grade {
+  z-index: 3;
+}
+
+.scene-vignette {
+  z-index: 4;
 }
 
 .scene-stage[data-renderer="pixi"] .pixi-scene {

@@ -13,6 +13,10 @@ const PixiScene = dynamic(
   () => import("./PixiScene").then((module) => module.PixiScene),
   { ssr: false },
 );
+const ProductCharacterStage3D = dynamic(
+  () => import("@/components/traveler/ProductCharacterStage3D").then((module) => module.ProductCharacterStage3D),
+  { ssr: false },
+);
 
 type Props = {
   pack: CountryPack;
@@ -23,6 +27,7 @@ type Props = {
   reducedMotion: boolean;
   travelerCommand?: TravelerCommand;
   onTravelerReady?: (ready: boolean) => void;
+  onResidentReady?: (ready: boolean) => void;
   onMotionSample?: (frame: {assetVersion:string;motion:TravelerMotionSnapshot}) => void;
   onZoneChange: (zoneId: string, zoneLabel: string) => void;
   onDiagnostics: (snapshot: WorldDiagnosticsSnapshot) => void;
@@ -39,6 +44,7 @@ export function SceneStage({
   reducedMotion,
   travelerCommand,
   onTravelerReady,
+  onResidentReady,
   onMotionSample,
   onZoneChange,
   onDiagnostics,
@@ -88,7 +94,6 @@ export function SceneStage({
           qualityTier={qualityTier}
           reducedMotion={reducedMotion}
           travelerCommand={travelerCommand}
-          onTravelerReady={onTravelerReady}
           onMotionSample={onMotionSample}
           onZoneChange={onZoneChange}
           onDiagnostics={onDiagnostics}
@@ -96,6 +101,14 @@ export function SceneStage({
           onFailure={liveFailed}
         />
       ) : null}
+      <ProductCharacterStage3D
+        pack={pack}
+        routeRuntime={routeRuntime}
+        command={travelerCommand}
+        qualityTier={qualityTier}
+        onTravelerAvailability={onTravelerReady}
+        onResidentAvailability={onResidentReady}
+      />
       <div className="scene-grade" aria-hidden="true" />
       <div className="scene-vignette" aria-hidden="true" />
     </div>
