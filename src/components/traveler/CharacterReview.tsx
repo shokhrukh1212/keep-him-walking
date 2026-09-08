@@ -1,14 +1,25 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import { CHARACTER_CANDIDATES, REVIEW_ACTIONS, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, type SceneCue } from "@/lib/characters/timeline";
 import type { CharacterPlayback } from "./CharacterStage3D";
 import styles from "./character-review.module.css";
+import { tbilisiCountryPackV1 } from "@/content/countries/tbilisi.v1";
+import { almatyCountryPackV1 } from "@/content/countries/almaty.v1";
+import { StaticScene } from "@/components/scene/StaticScene";
+import type { StageFrame } from "@/lib/world/stage-layout";
+import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
+import type { QualityTier } from "@/lib/world/types";
 
 const CharacterStage3D = dynamic(() => import("./CharacterStage3D").then(m => m.CharacterStage3D), { ssr: false });
+const PixiScene = dynamic(() => import("@/components/scene/PixiScene").then(m => m.PixiScene), { ssr: false });
+const noOp = () => {};
+const reviewRuntime = { globalActiveSeconds: 0, authoritativeAt: "2026-09-09T00:00:00Z", walking: false };
+const reviewCommand = { walking: false, speedFactor: 0, encounterPhase: "none" as const,
+  cameraZoom: 1, cameraPan: 0, backgroundLife: 1 };
 
 export function CharacterReview() {
   const [view,setView]=useState("front"),[background,setBackground]=useState("studio"),[npc,setNpc]=useState(false);
@@ -18,19 +29,43 @@ export function CharacterReview() {
   const [progress,setProgress]=useState<{seconds:number;cue?:SceneCue}>({seconds:0});
   const [retry,setRetry]=useState(0);
   const [available,setAvailable]=useState(false);
+  const [quality,setQuality]=useState<QualityTier>("high");
+  const [pixiReady,setPixiReady]=useState(false);
+  const [pixiFailed,setPixiFailed]=useState(false);
+  const stageFrame=useRef<StageFrame | null>(null);
+  const contacts=useRef<CharacterContacts>({traveler:null,resident:null});
+  const grade=useRef<VisualGrade>({exposure:1,tint:{r:1,g:1,b:1}});
+  const worldReady=useRef(false);
+  const reviewPack=useMemo(()=>{
+    if(background==="studio")return null;
+    const pack=background==="almaty"?almatyCountryPackV1:tbilisiCountryPackV1;
+    const zone=background==="almaty"?pack.route.zones[0]:pack.route.zones.find(zone=>zone.id===background)!;
+    return {...pack,route:{...pack.route,zones:[zone]}};
+  },[background]);
+  const publishStage=useCallback((frame:StageFrame,source:"static"|"pixi")=>{
+    if(source==="pixi"||!worldReady.current)stageFrame.current=frame;
+  },[]);
+  const ready=useCallback(()=>{worldReady.current=true;setPixiReady(true);},[]);
+  const failed=useCallback(()=>{worldReady.current=false;setPixiFailed(true);setPixiReady(false);},[]);
   const selectAction=(action:ReviewAction)=>setPlayback(p=>({...p,action,seek:0,revision:p.revision+1,
     playing:!window.matchMedia("(prefers-reduced-motion: reduce)").matches}));
   return <main className={styles.review}>
-    {background === "almaty" &&
-      // eslint-disable-next-line @next/next/no-img-element
-      <img className={styles.backdrop} src={publicAssetUrl("/scenes/almaty/v1/zones/arbat-arrival/fallback.webp")} crossOrigin="anonymous" alt="" />}
+    {reviewPack&&<div className={styles.world} data-renderer={pixiReady?"pixi":"static"}>
+      <StaticScene src={reviewPack.route.zones[0].fallbackUrl} zone={reviewPack.route.zones[0]}
+        assetVersion={reviewPack.assetVersion} active={!pixiReady} onStageFrame={publishStage} onReady={noOp} />
+      {!pixiFailed&&<PixiScene key={background} pack={reviewPack} contacts={contacts} grade={grade}
+        onStageFrame={publishStage} routeSeconds={0} routeRuntime={reviewRuntime} command={reviewCommand}
+        reducedMotion qualityTier={quality} onZoneChange={noOp} onDiagnostics={noOp} onReady={ready} onFailure={failed} />}
+    </div>}
     {!available&&
       // eslint-disable-next-line @next/next/no-img-element
       <img className={styles.fallback} src="/traveler/temporary/v1/idle.webp" alt="Original traveler reference" />}
-    <CharacterStage3D candidate={candidate} onAvailability={setAvailable} key={`${candidate}-${retry}`} view={view} showNpc={npc} playback={playback} onStatus={setStatus}
+    <CharacterStage3D candidate={candidate} stageFrame={stageFrame} contacts={contacts} grade={grade}
+      composition={Boolean(reviewPack)} qualityTier={quality}
+      onAvailability={setAvailable} key={`${candidate}-${retry}`} view={view} showNpc={npc} playback={playback} onStatus={setStatus}
       onProgress={(seconds,cue)=>setProgress({seconds,cue})} />
     <aside className={styles.controls} aria-label="Character review controls">
-      <strong>Character review · Almaty</strong>
+      <strong>Character review · {reviewPack?.cityName??"Studio"}</strong>
       <small>Character repairs in progress — visual target not met</small>
       <label>Candidate <select aria-label="Character candidate" value={candidate} onChange={e=>{setAvailable(false);setCandidate(e.target.value as CharacterCandidate);}}>
         {Object.entries(CHARACTER_CANDIDATES).map(([value,item])=><option key={value} value={value}>{item.label}</option>)}
@@ -51,8 +86,15 @@ export function CharacterReview() {
       <label>View <select aria-label="Character view" disabled={playback.action==="encounter"} value={view} onChange={e=>setView(e.target.value)}>
         <option value="front">Front</option><option value="three-quarter">Three-quarter</option><option value="side">Side</option><option value="back">Back</option>
       </select></label>
-      <label>Setting <select aria-label="Review setting" value={background} onChange={e=>setBackground(e.target.value)}>
+      <label>Setting <select aria-label="Review setting" value={background} onChange={e=>{
+        stageFrame.current=null;worldReady.current=false;contacts.current={traveler:null,resident:null};
+        setPixiReady(false);setPixiFailed(false);setBackground(e.target.value);
+      }}>
         <option value="studio">Neutral studio</option><option value="almaty">Almaty promenade</option>
+        {tbilisiCountryPackV1.route.zones.map(zone=><option key={zone.id} value={zone.id}>Tbilisi · {zone.label}</option>)}
+      </select></label>
+      <label>Quality <select aria-label="Review quality" value={quality} onChange={e=>setQuality(e.target.value as QualityTier)}>
+        <option value="high">High · outline</option><option value="medium">Medium · outline</option><option value="low">Low · no outline</option>
       </select></label>
       <label className={styles.checkbox}><input type="checkbox" checked={npc||playback.action==="encounter"} disabled={playback.action==="encounter"} onChange={e=>setNpc(e.target.checked)} /> Show local resident</label>
       <p role="status" aria-label="Renderer status" className={styles.status}>{status}</p>

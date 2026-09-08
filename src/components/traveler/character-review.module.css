@@ -1,5 +1,7 @@
 .review { position: relative; height: 100svh; overflow: hidden; background: #d3d5cf; color: #19383b; }
-.backdrop { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+.world { position: absolute; inset: 0; }
+.world[data-renderer="pixi"] :global(.pixi-scene) { opacity: 1; }
+.world[data-renderer="pixi"] :global(.static-scene) { opacity: 0; }
 .controls { position: absolute; top: 20px; left: 20px; z-index: 5; width: 280px; max-height: calc(100svh - 80px); overflow: auto; padding: 20px; border-radius: 18px; background: #fff7e9f5; display: grid; gap: 12px; font-size: 14px; }
 .controls label { display: grid; gap: 5px; }
 .controls select, .controls button { border: 1px solid #77918f; border-radius: 7px; min-height: 34px; background: #fffaf0; color: #19383b; padding: 4px 8px; }

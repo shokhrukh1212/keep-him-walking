@@ -6,6 +6,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { CountryPack } from "@/lib/content/schema";
 import { CharacterActor } from "@/lib/characters/actor";
+import { CharacterLights } from "@/lib/characters/toon";
+import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 import { CHARACTER_MANIFEST } from "@/lib/characters/manifest";
 import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { actorLayout } from "@/lib/traveler/actor-layout";
@@ -18,6 +20,8 @@ import type { QualityTier, RouteRuntime } from "@/lib/world/types";
 type Props = {
   pack: CountryPack;
   stageFrame: RefObject<StageFrame | null>;
+  contacts: RefObject<CharacterContacts>;
+  grade: RefObject<VisualGrade>;
   routeRuntime: RouteRuntime;
   command?: TravelerCommand;
   qualityTier: QualityTier;
@@ -69,32 +73,15 @@ export function ProductCharacterStage3D(props: Props) {
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, latest.current.qualityTier === "high" ? 1.5 : 1.25));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
-    renderer.shadowMap.enabled = latest.current.qualityTier !== "low";
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.NoToneMapping;
+    renderer.toneMappingExposure = 1;
     renderer.domElement.setAttribute("aria-hidden", "true");
     element.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-2, 2, 2, -1, 0.01, 40);
-    scene.add(new THREE.HemisphereLight(0xe8f3ff, 0x6f6046, 1.55));
-    const key = new THREE.DirectionalLight(0xffead5, 2.35);
-    key.position.set(-3, 5, 4);
-    key.castShadow = true;
-    key.shadow.mapSize.set(latest.current.qualityTier === "high" ? 1024 : 512, latest.current.qualityTier === "high" ? 1024 : 512);
-    Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.1, far: 12 });
-    key.shadow.normalBias = 0.003;
-    key.shadow.bias = -0.0001;
-    scene.add(key);
-    const fill = new THREE.DirectionalLight(0x9bc8dc, 0.8);
-    fill.position.set(4, 2, 3);
-    scene.add(fill);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.ShadowMaterial({ opacity: 0.2 }));
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.004;
-    floor.receiveShadow = true;
-    scene.add(floor);
+    const lights = new CharacterLights();
+    scene.add(lights);
 
     const travelerRoot = new THREE.Group();
     const residentRoot = new THREE.Group();
@@ -189,8 +176,14 @@ export function ProductCharacterStage3D(props: Props) {
       const frame = state.stageFrame.current;
       // Wait for decoded world dimensions; never invent a second layout for the actor.
       if (!frame || frame.assetVersion !== state.pack.assetVersion
-        || frame.viewportW !== width || frame.viewportH !== height) return;
+        || frame.viewportW !== width || frame.viewportH !== height) {
+        state.contacts.current = { traveler: null, resident: null };
+        return;
+      }
       updateCamera(width, height, frame);
+      lights.update(frame.stage);
+      traveler?.setAppearance(frame.stage, state.grade.current, state.qualityTier);
+      resident?.setAppearance(frame.stage, state.grade.current, state.qualityTier);
       const vertical = CHARACTER_MANIFEST.traveler.heightMetres * height / frame.layout.personHeightPx;
       const horizontal = vertical * width / height;
       const defaultAnchor = state.pack.schemaVersion === 3 ? state.pack.route.travelerViewportAnchor : 0.61;
@@ -213,6 +206,14 @@ export function ProductCharacterStage3D(props: Props) {
       element.dataset.personHeight = String((head.y - foot.y) * height / 2);
       element.dataset.characterImageScale = String(frame.layout.characterImageScale);
       element.dataset.zoneId = frame.zoneId;
+      state.contacts.current = {
+        traveler: traveler ? { footX: (foot.x + 1) * width / 2, footY: (1 - foot.y) * height / 2,
+          scale: (head.y - foot.y) * height / 2 / 1.78 } : null,
+        resident: residentRoot.visible ? { footX: residentAnchor * width, footY: (1 - foot.y) * height / 2,
+          scale: frame.layout.pxPerMetre * CHARACTER_MANIFEST.resident.heightMetres / 1.78 } : null,
+      };
+      element.dataset.outline = String(state.qualityTier !== "low");
+      element.dataset.grade = JSON.stringify(state.grade.current);
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(draw);
@@ -220,6 +221,7 @@ export function ProductCharacterStage3D(props: Props) {
     const lost = (event: Event) => {
       event.preventDefault();
       contextLost = true;
+      latest.current.contacts.current = { traveler: null, resident: null };
       renderer.domElement.style.visibility = "hidden";
       latest.current.onTravelerAvailability?.(false);
       latest.current.onResidentAvailability?.(false);
@@ -236,6 +238,7 @@ export function ProductCharacterStage3D(props: Props) {
 
     return () => {
       disposed = true;
+      latest.current.contacts.current = { traveler: null, resident: null };
       cancelAnimationFrame(raf);
       observer.disconnect();
       latest.current.onTravelerAvailability?.(false);
@@ -245,7 +248,6 @@ export function ProductCharacterStage3D(props: Props) {
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       renderer.domElement.removeEventListener("webglcontextrestored", restored);
       disposeModel(scene);
-      key.shadow.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import type { Texture as PixiTexture } from "pixi.js";
 import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
@@ -14,9 +14,12 @@ import { deterministicVariant, routePositionAt } from "@/lib/world/route-clock";
 import { segmentVariant } from "@/lib/world/segment-sequencer";
 import { composedSegmentSignature } from "@/lib/world/segment-sequencer";
 import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
+import { contactShadowLayout, gradeMatrix, type CharacterContacts, type VisualGrade } from "@/lib/world/visual-grade";
 
 type Props = {
   pack: CountryPack;
+  contacts: RefObject<CharacterContacts>;
+  grade: RefObject<VisualGrade>;
   onStageFrame: (frame: StageFrame, source: "static" | "pixi") => void;
   routeSeconds: number;
   routeRuntime: RouteRuntime;
@@ -35,6 +38,8 @@ type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "re
 
 export function PixiScene({
   pack,
+  contacts,
+  grade: gradeRef,
   onStageFrame,
   routeSeconds,
   routeRuntime,
@@ -69,7 +74,7 @@ export function PixiScene({
       const element = host.current;
       if (!element) return;
       try {
-        const { Application, Assets, Container, Graphics, Sprite } = await import("pixi.js");
+        const { Application, Assets, Container, Graphics, Sprite, Texture, ColorMatrixFilter } = await import("pixi.js");
         if (disposed) return;
         const limits = QUALITY_LIMITS[qualityTier];
         const app = new Application();
@@ -86,6 +91,7 @@ export function PixiScene({
           app.destroy(true);
           return;
         }
+        cleanup = () => { app.destroy(true, { children: true }); return undefined; };
         app.ticker.maxFPS = limits.targetFps;
         app.canvas.setAttribute("aria-hidden", "true");
         element.appendChild(app.canvas);
@@ -95,7 +101,27 @@ export function PixiScene({
         const layerRoot = new Container();
         const propRoot = new Container();
         const groundLifeRoot = new Container();
+        const groundDetailsRoot = new Container();
         const weatherRoot = new Container();
+        // Pixi owns the grade; P10 will animate this same object in the world loop.
+        gradeRef.current = { exposure: 1, tint: { r: 1, g: 1, b: 1 } };
+        const worldGrade = new ColorMatrixFilter();
+        camera.filters = [worldGrade];
+        const shadowCanvas = document.createElement("canvas");
+        shadowCanvas.width = shadowCanvas.height = 128;
+        const context = shadowCanvas.getContext("2d");
+        if (!context) throw new Error("Contact shadow canvas unavailable");
+        const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+        gradient.addColorStop(0, "rgba(0,0,0,1)");
+        gradient.addColorStop(0.35, "rgba(0,0,0,0.65)");
+        gradient.addColorStop(1, "rgba(0,0,0,0)");
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 128, 128);
+        const shadowTexture = Texture.from(shadowCanvas);
+        shadowTexture.label = "character-contact-shadow";
+        const shadows = { traveler: new Sprite(shadowTexture), resident: new Sprite(shadowTexture) };
+        for (const shadow of Object.values(shadows)) { shadow.anchor.set(0.5); shadow.visible = false; }
+        groundLifeRoot.addChild(groundDetailsRoot, shadows.traveler, shadows.resident);
         // Draw order, back to front: sky, the panorama (or the legacy parallax
         // layers), props, ground life, weather. Nothing composites over the
         // painting itself.
@@ -217,7 +243,7 @@ export function PixiScene({
 
           layerRoot.removeChildren().forEach((child) => child.destroy());
           propRoot.removeChildren().forEach((child) => child.destroy());
-          groundLifeRoot.removeChildren().forEach((child) => child.destroy());
+          groundDetailsRoot.removeChildren().forEach((child) => child.destroy());
           weatherRoot.removeChildren().forEach((child) => child.destroy());
           let sequenceLayerIndex = 0;
           pools = loaded.map(({ layer, textures }, layerIndex) => {
@@ -274,7 +300,7 @@ export function PixiScene({
             } else {
               detail.roundRect(-12, -2, 24 + (index % 5) * 5, 4, 2).fill({ color, alpha: 0.12 });
             }
-            groundLifeRoot.addChild(detail);
+            groundDetailsRoot.addChild(detail);
             return detail;
           });
           motes = Array.from({ length: limits.motes }, (_, index) => {
@@ -290,7 +316,7 @@ export function PixiScene({
           sky.clear().rect(0, 0, app.screen.width, app.screen.height).fill(zone.lighting.skyTop);
           layerRoot.alpha = zoneFade;
           propRoot.alpha = zoneFade;
-          groundLifeRoot.alpha = zoneFade;
+          groundDetailsRoot.alpha = zoneFade;
           zoneCallback.current(zone.id, zone.label);
           const nextZone = pack.route.zones[(zoneIndex + 1) % pack.route.zones.length];
           void Assets.backgroundLoad(zoneAssetUrls(nextZone)).catch(() => undefined);
@@ -308,6 +334,13 @@ export function PixiScene({
         };
         const observer = new ResizeObserver(resize);
         observer.observe(element);
+        cleanup = () => {
+          observer.disconnect();
+          app.destroy(true, { children: true });
+          shadowTexture.destroy(true);
+          worldGrade.destroy();
+          return undefined;
+        };
 
         let displayedSeconds = runtime.current.routeSeconds;
         let elapsed = 0;
@@ -318,6 +351,8 @@ export function PixiScene({
         app.ticker.add(() => {
           if (document.hidden) return;
           const state = runtime.current;
+          worldGrade.matrix = gradeMatrix(gradeRef.current);
+          element.dataset.grade = JSON.stringify(gradeRef.current);
           const tickAt = performance.now();
           const wallDeltaMs = Math.min(500, Math.max(0, tickAt - lastTickAt));
           lastTickAt = tickAt;
@@ -375,7 +410,7 @@ export function PixiScene({
           zoneFade = Math.min(1, zoneFade + deltaSeconds * 2.4);
           layerRoot.alpha = zoneFade;
           propRoot.alpha = zoneFade * (0.72 + state.command.backgroundLife * 0.28);
-          groundLifeRoot.alpha = zoneFade * (0.75 + state.command.backgroundLife * 0.25);
+          groundDetailsRoot.alpha = zoneFade * (0.75 + state.command.backgroundLife * 0.25);
           weatherRoot.alpha = 0.5 + state.command.backgroundLife * 0.5;
           for (const pool of pools) {
             if (pool.panorama) {
@@ -412,16 +447,34 @@ export function PixiScene({
           }
 
           const groundCamera = state.reducedMotion ? 0 : groundPixels;
+          groundLifeRoot.x = -groundCamera;
+          for (const kind of ["traveler", "resident"] as const) {
+            const contact = contacts.current[kind];
+            const shadow = shadows[kind];
+            shadow.visible = Boolean(contact);
+            if (!contact) continue;
+            const placement = contactShadowLayout(contact, groundCamera);
+            shadow.position.set(placement.x, placement.y);
+            shadow.width = placement.radiusX * 2;
+            shadow.height = placement.radiusY * 2;
+            shadow.alpha = placement.alpha;
+            if (kind === "traveler") {
+              element.dataset.shadowX = String(shadow.x + groundLifeRoot.x);
+              element.dataset.shadowY = String(shadow.y);
+              element.dataset.shadowRadiusX = String(placement.radiusX);
+            }
+          }
+          element.dataset.shadowVisible = String(shadows.traveler.visible);
           const groundSpacing = width < 500 ? 170 : 240;
           const firstGround = Math.floor(groundCamera / groundSpacing) - 2;
           for (let index = 0; index < groundLife.length; index += 1) {
             const detail = groundLife[index];
             const streamIndex = firstGround + index;
             const jitter = deterministicVariant(`${activeZone.id}:ground-life`, streamIndex, 95);
-            detail.x = streamIndex * groundSpacing + jitter - groundCamera;
+            detail.x = streamIndex * groundSpacing + jitter;
             detail.y = layout.groundY + layout.personHeightPx * (0.03 + (index % 3) * 0.06);
             detail.scale.set((0.75 + (index % 4) * 0.12) * height / 900);
-            detail.visible = detail.x > -100 && detail.x < width + 100;
+            detail.visible = detail.x - groundCamera > -100 && detail.x - groundCamera < width + 100;
           }
 
           const propSpacing = width < 500 ? 390 : 470;
@@ -478,7 +531,7 @@ export function PixiScene({
             const visibleObjects = pools.flatMap((pool) => pool.sprites).filter((sprite) => sprite.visible).length
               + props.filter((item) => item.display.visible).length
               + groundLife.filter((item) => item.visible).length
-              + motes.length;
+              + motes.length + Object.values(shadows).filter((shadow) => shadow.visible).length;
             // Test-observable inventory of every texture the world holds on the
             // stage. Assets.load stamps the resolved URL onto the texture label;
             // textures built in the browser (a canvas, a render target) have no
@@ -510,8 +563,8 @@ export function PixiScene({
               fps: Math.round(1_000 / Math.max(1, average)),
               p95FrameMs: Math.round(p95 * 10) / 10,
               liveObjects: visibleObjects,
-              pooledObjects: pools.reduce((total, pool) => total + pool.sprites.length, 0) + props.length + groundLife.length + motes.length,
-              estimatedTextureBytes,
+              pooledObjects: pools.reduce((total, pool) => total + pool.sprites.length, 0) + props.length + groundLife.length + motes.length + 2,
+              estimatedTextureBytes: estimatedTextureBytes + 128 * 128 * 4,
             });
           }
         });
@@ -520,13 +573,10 @@ export function PixiScene({
         const initialNextZone = pack.route.zones[(initialZoneIndex + 1) % pack.route.zones.length];
         void Assets.backgroundLoad(zoneAssetUrls(initialNextZone)).catch(() => undefined);
         await buildZone(initialZoneIndex);
+        if (disposed) return;
         resize();
-        cleanup = () => {
-          observer.disconnect();
-          app.destroy(true, { children: true });
-        };
       } catch {
-        onFailure();
+        if (!disposed) { cleanup(); cleanup = () => undefined; onFailure(); }
       }
     }
 
@@ -535,7 +585,7 @@ export function PixiScene({
       disposed = true;
       cleanup();
     };
-  }, [onFailure, onReady, onStageFrame, pack, qualityTier]);
+  }, [onFailure, onReady, onStageFrame, pack, qualityTier, contacts, gradeRef]);
 
   return <div className="pixi-scene" ref={host} aria-hidden="true" />;
 }

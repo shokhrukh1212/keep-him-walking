@@ -9,6 +9,7 @@ import type { TravelerCommand } from "@/lib/traveler/types";
 import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { StaticScene } from "./StaticScene";
 import { stageScaleWarning, type StageFrame } from "@/lib/world/stage-layout";
+import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 
 const PixiScene = dynamic(
   () => import("./PixiScene").then((module) => module.PixiScene),
@@ -56,6 +57,8 @@ export function SceneStage({
   const [pixiReady, setPixiReady] = useState(false);
   const activeRenderer = useRef<"pixi" | "static" | null>(null);
   const stageFrame = useRef<StageFrame | null>(null);
+  const contacts = useRef<CharacterContacts>({ traveler: null, resident: null });
+  const grade = useRef<VisualGrade>({ exposure: 1, tint: { r: 1, g: 1, b: 1 } });
   const warnedScale = useRef(new Set<string>());
   const container = useRef<HTMLDivElement>(null);
   const publishStage = useCallback((frame: StageFrame, source: "static" | "pixi") => {
@@ -106,6 +109,8 @@ export function SceneStage({
         active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
       {!pixiFailed ? (
         <PixiScene
+          contacts={contacts}
+          grade={grade}
           pack={pack}
           onStageFrame={publishStage}
           routeSeconds={routeSeconds}
@@ -122,6 +127,8 @@ export function SceneStage({
         />
       ) : null}
       <ProductCharacterStage3D
+        contacts={contacts}
+        grade={grade}
         pack={pack}
         stageFrame={stageFrame}
         routeRuntime={routeRuntime}

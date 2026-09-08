@@ -143,7 +143,7 @@ test("Tbilisi arrival draws one panorama with no ground strip over it", async ({
   await expect(page.locator(".scene-stage")).toHaveAttribute("data-renderer", "pixi", { timeout: 30_000 });
   await expect(stage).toHaveAttribute("data-character-state", "walk", { timeout: 30_000 });
 
-  // 1. Structural: the only texture on the Pixi stage is the zone panorama. The
+  // 1. Structural: only the panorama and P3's named radial contact shadow. The
   //    inventory covers every Sprite reachable from app.stage; Assets-loaded
   //    textures carry their URL, browser-built ones (the retired canvas strip was
   //    one) are recorded as `generated:<w>x<h>`.
@@ -153,7 +153,10 @@ test("Tbilisi arrival draws one panorama with no ground strip over it", async ({
   const drawn = ((await stage.getAttribute("data-scene-textures")) ?? "").split(" ").filter(Boolean);
   expect(drawn.filter((url) => url.includes("ground-"))).toEqual([]);
   expect(drawn.filter((url) => url.startsWith("generated:"))).toEqual([]);
-  expect(drawn).toHaveLength(1);
+  expect(drawn.filter((url) => url !== "character-contact-shadow")).toEqual([PANORAMA_ASSET]);
+  await expect(stage).toHaveAttribute("data-shadow-visible", "true");
+  await expect.poll(async () => Number(await stage.getAttribute("data-shadow-x"))).toBeCloseTo(1440 * 0.61, 0);
+  await expect.poll(async () => Number(await stage.getAttribute("data-shadow-y"))).toBeCloseTo(900 * 0.86, 0);
 
   // 2. Isolate the world layer. The character canvas, colour grade and vignette
   //    composite above `.pixi-scene`, and the HUD is a sibling inside the same

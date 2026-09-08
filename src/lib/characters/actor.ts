@@ -3,6 +3,10 @@ import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { CLIP_DURATIONS, type CharacterClip } from "./manifest";
 import type { CharacterCue } from "./timeline";
 import { sampleProp } from "./props";
+import { CharacterToon } from "./toon";
+import type { ZoneStage } from "../content/schema";
+import type { VisualGrade } from "../world/visual-grade";
+import type { QualityTier } from "../world/types";
 
 function box(w:number,h:number,d:number,color:number,r=.65) {
   return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:r}));
@@ -43,7 +47,9 @@ export class CharacterActor {
   private handOrientation=new THREE.Quaternion();
   private interactionUnit=1;
   private grips=new Map<string,{position:THREE.Vector3;rotation:THREE.Quaternion}>();
-  private sponsorMaterial?:THREE.MeshStandardMaterial;
+  readonly toon = new CharacterToon();
+  private sourceMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+  private sponsorMaterial?:THREE.MeshToonMaterial;
   private sponsorTexture?:THREE.Texture;
   private sponsorUrl?:string;
   private sponsorRevision=0;
@@ -83,14 +89,7 @@ export class CharacterActor {
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigLeftHandMiddle1")this.leftGrip=object;
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigRightHandMiddle1")this.rightGrip=object;
       if(object instanceof THREE.Mesh) {
-        object.castShadow=true;object.receiveShadow=true;object.frustumCulled=false;
-        if(object.name.replace(/[^a-z0-9]/gi,"").toLowerCase()==="sponsorpatch") {
-          const source=(Array.isArray(object.material)?object.material[0]:object.material);
-          if(source instanceof THREE.MeshStandardMaterial) {
-            this.sponsorMaterial=source.clone();
-            object.material=this.sponsorMaterial;
-          }
-        }
+        object.castShadow=false;object.receiveShadow=false;object.frustumCulled=false;
         if(object.morphTargetDictionary)this.faces.push(object);
         for(const mat of Array.isArray(object.material)?object.material:[object.material]) {
           // Hair cards and lashes need cutout depth, not transparent sorting.
@@ -101,8 +100,17 @@ export class CharacterActor {
           }
           if(mat instanceof THREE.MeshStandardMaterial&&mat.name.includes("grump"))mat.color.setRGB(.20,.15,.12);
         }
+        this.sourceMaterials.set(object, object.material);
+        object.material = Array.isArray(object.material)
+          ? object.material.map((material) => this.toon.convert(material)) : this.toon.convert(object.material);
+        if(object.name.replace(/[^a-z0-9]/gi,"").toLowerCase()==="sponsorpatch") {
+          const material = Array.isArray(object.material) ? object.material[0] : object.material;
+          if (material instanceof THREE.MeshToonMaterial) this.sponsorMaterial = material;
+        }
       }
     });
+    // Add siblings only after traversal so outlines cannot recursively clone themselves.
+    for (const mesh of this.sourceMaterials.keys()) this.toon.addOutline(mesh);
     this.root.add(this.water,this.device);
     this.water.visible=this.device.visible=false;
     if(withProps&&this.hand) {
@@ -110,6 +118,9 @@ export class CharacterActor {
       this.water.position.set(0,.045,.022);this.device.position.set(0,.045,.014);
       this.water.visible=this.device.visible=false;
     }
+  }
+  setAppearance(stage: ZoneStage, grade: VisualGrade, quality: QualityTier) {
+    this.toon.update(stage, grade, quality);
   }
   sample(cue:CharacterCue,dt:number,snap=false,faceOffset=0) {
     const fallback:Partial<Record<CharacterClip,CharacterClip>>={notice:"walk",stop:"idle",turn:"idle",resume:"walk"};
@@ -186,5 +197,9 @@ export class CharacterActor {
       this.sponsorMaterial.map=texture;this.sponsorMaterial.color.set(0xffffff);this.sponsorMaterial.needsUpdate=true;
     }catch{/* The sewn patch remains visible when a remote logo cannot load. */}
   }
-  dispose(){this.sponsorRevision+=1;this.sponsorTexture?.dispose();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.root);}
+  dispose(){
+    this.sponsorRevision+=1;this.sponsorTexture?.dispose();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.root);
+    this.sourceMaterials.forEach((material, mesh) => { mesh.material = material; });
+    this.toon.dispose();
+  }
 }

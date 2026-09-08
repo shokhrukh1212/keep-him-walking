@@ -1,15 +1,22 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CharacterActor } from "@/lib/characters/actor";
 import { CHARACTER_CANDIDATES, CHARACTER_MANIFEST, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, sampleScene, type SceneCue } from "@/lib/characters/timeline";
+import { CharacterLights } from "@/lib/characters/toon";
+import { stageSchema } from "@/lib/content/schema";
+import type { StageFrame } from "@/lib/world/stage-layout";
+import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
+import type { QualityTier } from "@/lib/world/types";
 
 export type CharacterPlayback = { action: ReviewAction; playing: boolean; speed: number; seek: number; revision: number };
 type Props = { candidate: CharacterCandidate; view: string; showNpc: boolean; playback: CharacterPlayback;
+  stageFrame: RefObject<StageFrame | null>; contacts: RefObject<CharacterContacts>; grade: RefObject<VisualGrade>;
+  composition: boolean; qualityTier: QualityTier;
   onStatus: (status:string)=>void; onProgress:(seconds:number,cue:SceneCue)=>void;
   onAvailability:(available:boolean)=>void };
 
@@ -50,17 +57,12 @@ export function CharacterStage3D(props:Props) {
     try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:"high-performance"});}
     catch{latest.current.onStatus("3D is unavailable on this device. Showing the original traveler reference.");latest.current.onAvailability(false);element.dataset.characterError="true";return;}
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
-    renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-    renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;
+    renderer.toneMappingExposure=1;
     renderer.domElement.setAttribute("aria-label","3D traveler and local resident");element.appendChild(renderer.domElement);
     const camera=new THREE.OrthographicCamera(-2,2,2,-1,.01,40);
-    scene.add(new THREE.HemisphereLight(0xe5efff,0x786344,1.6));
-    const key=new THREE.DirectionalLight(0xffedda,2.5);
-    key.position.set(-3,5,4);key.castShadow=true;key.shadow.mapSize.set(1024,1024);
-    Object.assign(key.shadow.camera,{left:-3,right:3,top:3,bottom:-3,near:.1,far:12});
-    key.shadow.normalBias=.003;key.shadow.bias=-.0001;key.shadow.radius=3;scene.add(key);
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(50,50),new THREE.ShadowMaterial({opacity:.24}));
-    floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;floor.position.y=-.003;scene.add(floor);
+    const lights=new CharacterLights();scene.add(lights);
+    const studioStage=stageSchema.parse({palette:["#fff3df","#a0a291","#535b68"]});
     const traveler=new THREE.Group(),resident=new THREE.Group(),seat=stool();scene.add(traveler,resident,seat);
     const loader=new GLTFLoader();let actor:CharacterActor|undefined,npc:CharacterActor|undefined;
     let seconds=0,last=0,lastRender=0,lastReport=-Infinity,revision=-1,action:ReviewAction="idle",npcRequested=false;
@@ -108,12 +110,46 @@ export function CharacterStage3D(props:Props) {
       traveler.position.x=pair?cue.travelerX:element.clientWidth<=600?0:.25;
       resident.visible=pair;resident.position.x=.65;resident.rotation.y=action==="encounter"?cue.residentYaw:-.6;
       seat.visible=action==="rest";seat.position.x=traveler.position.x;seat.rotation.y=traveler.rotation.y;
-      camera.zoom=cue.cameraZoom;
+      const frame=state.composition?state.stageFrame.current:null;
+      if(state.composition&&(!frame||frame.viewportW!==element.clientWidth||frame.viewportH!==element.clientHeight)) {
+        state.contacts.current={traveler:null,resident:null};
+        return;
+      }
+      const stage=frame?.stage??studioStage;
+      lights.update(stage);
+      actor?.setAppearance(stage,state.grade.current,state.qualityTier);
+      npc?.setAppearance(stage,state.grade.current,state.qualityTier);
+      camera.zoom=frame?1:cue.cameraZoom;
       // Focus must not push the shared floor below the mobile viewport.
-      const vertical=element.clientWidth<=600?4.2:2.55;
-      const cameraY=vertical/(2*camera.zoom)-.20;
+      const width=element.clientWidth,height=element.clientHeight;
+      const vertical=frame?1.78*height/frame.layout.personHeightPx:width<=600?4.2:2.55;
+      const horizontal=vertical*width/height;
+      camera.left=-horizontal/2;camera.right=horizontal/2;camera.top=vertical/2;camera.bottom=-vertical/2;
+      const cameraY=frame?vertical*(frame.layout.groundY/height-.5):vertical/(2*camera.zoom)-.20;
+      if(frame){
+        const [left,right]=stage.walkableX;
+        const anchor=pair?(width<=600?.34:.43):.61;
+        traveler.position.x=(Math.min(right,Math.max(left,anchor))-.5)*horizontal;
+        resident.position.x=(Math.min(right,Math.max(left,width<=600?.76:.72))-.5)*horizontal;
+        seat.position.x=traveler.position.x;
+      }
       camera.position.y=cameraY;camera.lookAt(0,cameraY,0);camera.updateProjectionMatrix();
       if(pair&&!npcRequested){npcRequested=true;void load("resident");}
+      camera.updateMatrixWorld();
+      const foot=new THREE.Vector3(traveler.position.x,0,0).project(camera);
+      const residentFoot=new THREE.Vector3(resident.position.x,0,0).project(camera);
+      const scale=height/vertical*camera.zoom;
+      state.contacts.current={
+        traveler:actor?{footX:(foot.x+1)*width/2,footY:(1-foot.y)*height/2,scale}:null,
+        resident:pair&&npc?{footX:(residentFoot.x+1)*width/2,footY:(1-residentFoot.y)*height/2,
+          scale:scale*CHARACTER_MANIFEST.resident.heightMetres/1.78}:null,
+      };
+      element.dataset.footY=String((1-foot.y)*height/2);
+      element.dataset.personHeight=String(scale*1.78);
+      element.dataset.zoneId=frame?.zoneId??"studio";
+      element.dataset.outline=String(state.qualityTier!=="low");
+      element.dataset.grade=JSON.stringify(state.grade.current);
+      element.dataset.toonMaterials=String(actor?.toon.materials.size??0);
       renderer.render(scene,camera);
       cpuFrames.push(performance.now()-frameStart);if(cpuFrames.length>120)cpuFrames.shift();
       if(snap||now-lastReport>100){
@@ -125,14 +161,15 @@ export function CharacterStage3D(props:Props) {
       }
     };
     raf=requestAnimationFrame(draw);
-    const lost=(event:Event)=>{event.preventDefault();lostContext=true;renderer.domElement.style.visibility="hidden";latest.current.onAvailability(false);latest.current.onStatus("3D rendering was interrupted. Waiting for the graphics context…");};
+    const lost=(event:Event)=>{event.preventDefault();lostContext=true;latest.current.contacts.current={traveler:null,resident:null};renderer.domElement.style.visibility="hidden";latest.current.onAvailability(false);latest.current.onStatus("3D rendering was interrupted. Waiting for the graphics context…");};
     const restored=()=>{lostContext=false;last=0;renderer.domElement.style.visibility="visible";latest.current.onAvailability(!!actor);latest.current.onStatus("3D rendering restored.");};
     renderer.domElement.addEventListener("webglcontextlost",lost);renderer.domElement.addEventListener("webglcontextrestored",restored);
     return ()=>{
       disposed=true;cancelAnimationFrame(raf);observer.disconnect();actor?.dispose();npc?.dispose();
+      latest.current.contacts.current={traveler:null,resident:null};
       renderer.domElement.removeEventListener("webglcontextlost",lost);renderer.domElement.removeEventListener("webglcontextrestored",restored);
-      disposeModel(scene);key.shadow.dispose();renderer.dispose();renderer.domElement.remove();
+      disposeModel(scene);renderer.dispose();renderer.domElement.remove();
     };
   },[]);
-  return <div ref={host} data-testid="character-stage-3d" style={{position:"absolute",inset:0}} />;
+  return <div ref={host} data-testid="character-stage-3d" style={{position:"absolute",inset:0,zIndex:2}} />;
 }

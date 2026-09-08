@@ -66,7 +66,7 @@ Strict ownership. No layer reaches into another's pixels.
 | Owner | Responsibility |
 |---|---|
 | Postgres | Authority. Presence, active seconds, votes, sponsor state, postcards. |
-| Pixi canvas | The world: sky, panorama, ground-life, weather motes. |
+| Pixi canvas | The world: sky, panorama, ground-life, character contact shadows, weather motes; owns the shared visual grade. |
 | Three canvas | The characters only: traveler and resident. |
 | React DOM | HUD, dialogue, sponsor card, controls, vote, diagnostics. |
 | Web Audio | Per-zone ambience. |
@@ -410,6 +410,18 @@ change.
   alpha-cutout (`alphaTest 0.4`, `depthWrite true`) so they stop sorting through the
   head; the `high-poly` eye material keeps blending but stops writing depth; the stock
   hair map is tinted dark brown at runtime.
+- **P3 toon treatment (2026-09-09):** after those corrections, GLB standard materials
+  (skin, cloth, hair, shoes, backpack and patch) become `MeshToonMaterial`, preserving
+  colours, colour/normal/bump/alpha maps and other supported texture inputs. Eyes keep
+  their original material. Each actor owns one code-generated 3×1 red-channel
+  `DataTexture` with values 72/160/255, nearest filtering and no mipmaps.
+  The shader multiplies exposure/tint **after sRGB encoding**, matching Pixi's
+  `ColorMatrixFilter` display-space operation without modifying texture colours.
+- **Outline:** cloned mesh siblings use BackSide, 1.018 scale, `stage.palette[2]`,
+  alpha 0.7 and depth writing. Skinned clones share bones and facial morph weights;
+  their bind inverse follows the unexpanded source so attached skinning cannot cancel
+  the scale. Hair/lash hulls retain texture alpha cutouts. Low quality hides all hulls;
+  medium/high show them. Geometry and skeletons are shared, not duplicated.
 - **Props.** A capsule water bottle and a boxed phone are built in code (no asset).
   `sampleProp()` returns a deterministic `{visible, contact, progress}` from
   retrieve/contact/release/stow windows per clip — e.g. `drink` retrieves at 0.28 s,
@@ -425,7 +437,9 @@ change.
   loads a texture with an incrementing revision guard so a slow response cannot overwrite
   a newer one. On failure the sewn patch stays visible in its base colour — the character
   never shows a hole where a logo failed to load.
-- **`dispose()`** stops all actions, uncaches the root, and disposes the sponsor texture.
+- **`dispose()`** stops all actions, uncaches the root, disposes the sponsor texture,
+  removes/disposes hulls and toon materials plus their gradient, then leaves the
+  original materials attached for the host to dispose all original GLB resources.
 
 ### 6.2 `ProductCharacterStage3D` (`src/components/traveler/ProductCharacterStage3D.tsx`)
 
@@ -433,12 +447,12 @@ The live host component. Mounted once with an empty dependency array; all changi
 are read through a ref so the renderer is never torn down mid-journey.
 
 - Own `WebGLRenderer` with `alpha: true` over the world canvas. Antialias, pixel ratio
-  (1.5 / 1.25 cap), shadow map (1024 / 512, off on low tier) and the frame cap (30 vs
-  60 fps) all come from the quality tier.
-- `SRGBColorSpace` output, `ACESFilmicToneMapping`, exposure 1.05.
-- Lighting: hemisphere `0xe8f3ff / 0x6f6046` at 1.55, a shadow-casting key
-  `0xffead5` at 2.35 from `(−3, 5, 4)`, a cool fill `0x9bc8dc` at 0.8 from `(4, 2, 3)`,
-  and a 20×20 `ShadowMaterial` floor at opacity 0.2.
+  (1.5 / 1.25 cap), outlines and the frame cap (30 vs 60 fps) come from the quality tier.
+- `SRGBColorSpace` output, `NoToneMapping`, exposure 1.0. No shadow maps or shadow floor.
+- Shared `CharacterLights` in live and review stages: hemisphere palette[0]/palette[2]
+  at 1.55, key palette[0] at 0.9 from `(−3,5,4)`, `(3,5,4)` or `(0,5,4)` for
+  left/right/top, fill palette[2] at 0.35 from the opposite side. Lights and outline
+  colour follow the actually rendered zone's stage frame.
 - **Orthographic camera**, updated from the current stage frame: 1.78 m maps to
   `stageLayout().personHeightPx` and world y=0 projects to `stageLayout().groundY`.
   `actorLayout(viewportHeight, layout)` adapts these to height/bottom (§8.4).
@@ -454,9 +468,17 @@ are read through a ref so the renderer is never torn down mid-journey.
   `travelerViewportAnchor` (0.61) with a slight ±0.68 rad turn toward travel.
 - Pauses on `document.hidden`, handles `webglcontextlost` / `restored` by hiding the
   canvas and re-reporting availability, and on unmount walks the whole scene disposing
-  geometries, materials, textures, skeletons and the shadow map.
+  geometries, materials, textures and skeletons. Contact publications are cleared on
+  context loss, invalid layout and unmount so Pixi cannot retain an orphan shadow.
 - Writes `data-character-state`, `data-resident-visible`, `data-character-ready` to the
   host element — these are what the Playwright suites assert against.
+
+`CharacterStage3D` uses the same toon and lighting implementation on
+`/preview/characters`. Setting includes the studio, Almaty promenade and all five
+Tbilisi zones, using their real fallback paintings, metadata and the same Pixi renderer.
+The studio retains its close inspection camera; painted settings use the product's
+calibrated camera and foot plane. View, timeline, both candidates, resident and reload
+controls remain available; Quality makes the low-tier outline difference reviewable.
 
 ### 6.3 `product-timeline.ts` — journey → skeleton
 
@@ -629,6 +651,18 @@ On the v3 panorama branch:
 - **Props are disabled entirely** (`props = []`).
 - `groundLifeRoot`: 7 (low tier) or 12 translucent ellipses/rounded-rects below the shared
   ground line, scrolled by `motion.distanceMetres * layout.pxPerMetre`.
+- P3 adds two pooled contact-shadow sprites under this root, one per visible actor,
+  sharing one generated 128×128 radial-alpha texture. Three publishes `{footX, footY,
+  scale}` every rendered frame through `SceneStage` refs; coordinates are screen pixels,
+  scale is pixels/metre (resident adjusted to its 1.68 m height). Ellipse horizontal
+  radius is `0.55 * personHeightPx * 0.5`, vertical radius is 24% of that, alpha 0.28.
+  Ground-local x adds current scroll while the parent subtracts it, so the shadow
+  stays under the moving actor anchor as the ground stream passes. It remains on low
+  quality and reduced motion, and hides when the corresponding actor is unavailable.
+- Pixi owns `{exposure: 1, tint: {r: 1, g: 1, b: 1}}` and applies its RGB multipliers
+  through a world `ColorMatrixFilter`; the character shader reads the same object.
+  Alpha is unchanged. This is constant in P3; hourly grading/weather and a dusk rim
+  are deferred to the time-of-day work. Existing composite CSS grade/vignette remain.
 - `weatherRoot`: 0/14/22 drifting motes by tier.
 - A sky `Graphics` fill behind everything, per-zone 0.4 s fade-in, background preload of
   the next zone, and a once-per-second diagnostics snapshot (fps, p95 frame ms, live and
@@ -758,7 +792,8 @@ bottom band.)
   the once-per-second diagnostics snapshot. Textures loaded through `Assets` carry their
   resolved URL as `texture.label`; textures built in the browser have none, and are
   recorded as `generated:<width>x<height>`. On the v3 branch this attribute should read
-  exactly one entry, the zone's `fallback.webp`.
+  the zone's `fallback.webp`. P3 also adds the explicitly named
+  `character-contact-shadow` texture; arbitrary generated strips remain forbidden.
 
 #### How the fix is verified
 
@@ -767,8 +802,9 @@ bottom band.)
 (inside zone 0, clear of the `wave` action scheduled at locomotion second 15) and asserts
 two independent things.
 
-**1. Structural.** `data-scene-textures` must contain exactly one entry, the zone
-panorama — no URL containing `ground-`, and no `generated:` entry.
+**1. Structural.** `data-scene-textures` must contain the zone panorama and (since P3)
+the named `character-contact-shadow` texture — no URL containing `ground-`, and no
+unnamed `generated:` entry. The pixel sampling remains clear of the character shadow.
 
 **2. Pixel.** Two rows are sampled from screenshots of the isolated world layer, taken
 1.6 s apart. Row choice is derived from the strip's own geometry at 900 px:
