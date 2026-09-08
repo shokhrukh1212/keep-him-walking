@@ -317,10 +317,12 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         { speaker: "traveler", text: definition.encounter.exchange[3], mood: "neutral" },
       ],
     }],
+    // The v3 renderer paints one coherent panorama per zone and no props, so the
+    // ground crops and prop cutouts are never drawn and are not worth fetching.
+    // The files stay on disk until P18 retires them.
     preload: [
       `${sceneRoot}/distant.webp`,
       `${sceneRoot}/architecture.webp`,
-      `${sceneRoot}/ground-1.webp`,
       `${WALK_ROOT}/walk-1.webp`,
     ],
     route: { worldUnitsPerSecond: 92, travelerViewportAnchor: 0.61, zones },
@@ -334,11 +336,13 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     preloadGroups: [
       {
         id: `${city}-critical`, timing: "critical", zoneId: firstZone.id,
-        assets: [`${sceneRoot}/distant.webp`, `${sceneRoot}/architecture.webp`, `${sceneRoot}/ground-1.webp`],
+        assets: [`${sceneRoot}/distant.webp`, `${sceneRoot}/architecture.webp`],
       },
       ...zones.slice(1).map((zone) => ({
         id: `${city}-${zone.id}-next`, timing: "next_zone" as const, zoneId: zone.id,
-        assets: zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
+        assets: zone.layers
+          .filter((layer) => layer.id !== "ground")
+          .flatMap((layer) => layer.segments.map((segment) => segment.url)),
       })),
     ],
     storyBeats: [

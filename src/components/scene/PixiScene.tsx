@@ -66,7 +66,7 @@ export function PixiScene({
       const element = host.current;
       if (!element) return;
       try {
-        const { Application, Assets, Container, Graphics, Sprite, Texture } = await import("pixi.js");
+        const { Application, Assets, Container, Graphics, Sprite } = await import("pixi.js");
         if (disposed) return;
         const limits = QUALITY_LIMITS[qualityTier];
         const app = new Application();
@@ -93,13 +93,12 @@ export function PixiScene({
         const propRoot = new Container();
         const groundLifeRoot = new Container();
         const weatherRoot = new Container();
+        // Draw order, back to front: sky, the panorama (or the legacy parallax
+        // layers), props, ground life, weather. Nothing composites over the
+        // painting itself.
         camera.addChild(sky, layerRoot, propRoot, groundLifeRoot, weatherRoot);
         app.stage.addChild(camera);
         const clock = new PresentationClock();
-        const groundRoot = new Container();
-        camera.addChildAt(groundRoot, camera.children.indexOf(weatherRoot));
-        let contactSprites: InstanceType<typeof Sprite>[] = [];
-        let contactTexture: PixiTexture | null = null;
 
         // V3 country packs include a complete editorial fallback for every
         // zone. Use that coherent painting as the panorama instead of stacking
@@ -201,26 +200,6 @@ export function PixiScene({
                 : Promise.resolve(null)),
           );
           if (disposed || generation !== buildGeneration) return;
-
-          const groundUrl = zone.layers.find(layer => layer.id === "ground")?.segments[0]?.url;
-          let nextContact: PixiTexture | null = null;
-          if (groundUrl) {
-            try {
-              const source = new Image();source.crossOrigin="anonymous";source.src=publicAssetUrl(groundUrl);await source.decode();
-              const canvas=document.createElement("canvas");canvas.width=source.naturalWidth;canvas.height=source.naturalHeight;
-              const ctx=canvas.getContext("2d")!;ctx.drawImage(source,0,0);
-              ctx.globalCompositeOperation="destination-in";
-              const vertical=ctx.createLinearGradient(0,0,0,canvas.height);vertical.addColorStop(0,"transparent");vertical.addColorStop(0.45,"white");vertical.addColorStop(1,"white");
-              ctx.fillStyle=vertical;ctx.fillRect(0,0,canvas.width,canvas.height);
-              const edge=ctx.createLinearGradient(0,0,canvas.width,0);edge.addColorStop(0,"transparent");edge.addColorStop(0.12,"white");edge.addColorStop(0.88,"white");edge.addColorStop(1,"transparent");
-              ctx.fillStyle=edge;ctx.fillRect(0,0,canvas.width,canvas.height);
-              nextContact=Texture.from(canvas);
-            } catch { /* The approved painting remains visible if the optional contact layer fails. */ }
-          }
-          if (disposed || generation !== buildGeneration) { nextContact?.destroy(true); return; }
-          groundRoot.removeChildren().forEach(child=>child.destroy());contactTexture?.destroy(true);
-          contactTexture=nextContact;
-          contactSprites=nextContact ? Array.from({length:5},()=>{const sprite=new Sprite(nextContact!);groundRoot.addChild(sprite);return sprite;}) : [];
 
           layerRoot.removeChildren().forEach((child) => child.destroy());
           propRoot.removeChildren().forEach((child) => child.destroy());
@@ -354,24 +333,11 @@ export function PixiScene({
           const width = app.screen.width;
           const height = app.screen.height;
           const layout=actorLayout(width,height);
-          const baseline=height-layout.bottom;
           const groundPixels=motion.distanceMetres*(layout.height/1.78);
           element.dataset.gaitPhase=String(motion.cyclePhase);
           element.dataset.characterState=sample.traveling ? motion.action?.state ?? "walk" : "idle";
           element.dataset.actionReview=String(Boolean(state.travelerCommand?.actionReview&&state.travelerCommand.actionReview.action!=="auto"));
           element.dataset.groundPixels=String(groundPixels);
-          if (contactTexture) {
-            const stripHeight=Math.max(100,height*0.19);
-            const stripScale=stripHeight/contactTexture.height;
-            const span=contactTexture.width*stripScale;
-            const pitch=span*0.86;
-            const offset=state.reducedMotion?0:groundPixels;
-            const first=Math.floor(offset/pitch)-1;
-            contactSprites.forEach((sprite,index)=>{
-              sprite.scale.set(stripScale);sprite.x=(first+index)*pitch-offset;
-              sprite.y=baseline-stripHeight*0.7;sprite.visible=sprite.x<width&&sprite.x+span>0;
-            });
-          }
           camera.pivot.set(width / 2, height / 2);
           camera.position.set(width / 2, height / 2);
           camera.scale.set(1);
@@ -487,6 +453,24 @@ export function PixiScene({
               + props.filter((item) => item.display.visible).length
               + groundLife.filter((item) => item.visible).length
               + motes.length;
+            // Test-observable inventory of every texture the world holds on the
+            // stage. Assets.load stamps the resolved URL onto the texture label;
+            // textures built in the browser (a canvas, a render target) have no
+            // URL, so they are recorded by size instead. A regression that
+            // reintroduces a retired layer then fails in Playwright rather than
+            // only in visual review.
+            const drawnTextures = new Set<string>();
+            const collectTextures = (node: InstanceType<typeof Container>) => {
+              if (node instanceof Sprite) {
+                const texture = node.texture;
+                drawnTextures.add(
+                  texture.label || texture.source.label || `generated:${texture.width}x${texture.height}`,
+                );
+              }
+              for (const child of node.children) collectTextures(child as InstanceType<typeof Container>);
+            };
+            collectTextures(app.stage);
+            element.dataset.sceneTextures = [...drawnTextures].sort().join(" ");
             diagnosticsCallback.current({
               routeSeconds: displayedSeconds,
               distance: position.distance,
@@ -513,7 +497,6 @@ export function PixiScene({
         resize();
         cleanup = () => {
           observer.disconnect();
-          contactTexture?.destroy(true);
           app.destroy(true, { children: true });
         };
       } catch {
