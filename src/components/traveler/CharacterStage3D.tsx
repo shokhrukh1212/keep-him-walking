@@ -68,7 +68,8 @@ export function CharacterStage3D(props:Props) {
       let root:THREE.Group|undefined;
       try{
         const manifest=CHARACTER_MANIFEST[kind];
-        const url=kind==="traveler"?CHARACTER_CANDIDATES[latest.current.candidate].travelerUrl:manifest.url;
+        const candidate=CHARACTER_CANDIDATES[latest.current.candidate];
+        const url=kind==="traveler"?candidate.travelerUrl:candidate.residentUrl;
         const gltf=await loader.loadAsync(url);root=gltf.scene;
         if(disposed){disposeModel(root);return;}
         const model=new CharacterActor(gltf,manifest.heightMetres,kind==="traveler");

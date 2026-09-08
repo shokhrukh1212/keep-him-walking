@@ -46,7 +46,7 @@ export function sampleScene(action: ReviewAction, seconds: number): SceneCue {
       const cameraZoom=1+.12*Math.min(focusIn,focusOut);
       return {
         traveler:{clip:segment.traveler,seconds:local%CLIP_DURATIONS[segment.traveler]},
-        resident:{clip:segment.resident,seconds:segment.resident==="greet"?Math.max(0,Math.min(2.999,local-.4)):
+        resident:{clip:segment.resident,seconds:segment.resident==="greet"?Math.max(0,local-.4):
           segment.resident==="goodbye"?Math.max(0,local-.25):local%CLIP_DURATIONS[segment.resident]},
         phase:segment.phase,dialogue:segment.dialogue,
         travelerX:arriving?-1.3+.8*Math.min(1,sceneTime/4):leaving?-.5+.8*Math.min(1,(sceneTime-(duration-3))/3):-.5,

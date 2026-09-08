@@ -2,14 +2,14 @@
 export const CHARACTER_MANIFEST = {
   version: 2,
   approval: "visual-review-pending",
-  traveler: { url: "/characters/v2/traveler.glb", heightMetres: 1.78 },
-  resident: { url: "/characters/v1/almaty-host.glb", heightMetres: 1.68 },
+  traveler: { url: "/characters/v2/traveler.glb?rev=interactions-1", heightMetres: 1.78 },
+  resident: { url: "/characters/v2/almaty-host.glb?rev=interactions-1", heightMetres: 1.68 },
   combinedBudgetBytes: 8 * 1024 * 1024,
 } as const;
 
 export const CHARACTER_CANDIDATES = {
-  v2: { label: "V2 — work in progress", travelerUrl: "/characters/v2/traveler.glb" },
-  v1: { label: "Rejected baseline v1", travelerUrl: "/characters/v1/traveler.glb" },
+  v2: { label: "V2 — work in progress", travelerUrl: CHARACTER_MANIFEST.traveler.url, residentUrl: CHARACTER_MANIFEST.resident.url },
+  v1: { label: "Rejected baseline v1", travelerUrl: "/characters/v1/traveler.glb", residentUrl: "/characters/v1/almaty-host.glb" },
 } as const;
 export type CharacterCandidate = keyof typeof CHARACTER_CANDIDATES;
 

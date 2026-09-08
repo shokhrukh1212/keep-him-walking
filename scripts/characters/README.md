@@ -53,6 +53,15 @@ All source acquisition and candidate authoring has cost $0.
 
 ## Verification
 
+The scoped interaction repair preserves checkpoint geometry and untouched clips.
+To rebake its seven traveler actions and four resident actions, run Blender on
+`art/characters/v2/traveler.blend` with `--python scripts/characters/rebake_interactions.py`,
+and on `art/characters/v2/almaty-host.blend` with the same script plus `-- --resident`.
+Outputs go to `.cache/character-authoring/action-review/v2`; optimize those two
+GLBs with `optimize-glb.mjs`, then run `check-actions.mjs --interactions`.
+After visual inspection, copy the two GLBs to `public/characters/v2` and the
+editable sources to `art/characters/v2`. V1 assets remain the rejected comparison.
+
 ```sh
 pnpm exec vitest run src/lib/characters
 pnpm lint

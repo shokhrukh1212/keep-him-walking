@@ -41,6 +41,8 @@ export class CharacterActor {
   private otherPoint=new THREE.Vector3();
   private orientation=new THREE.Quaternion();
   private handOrientation=new THREE.Quaternion();
+  private interactionUnit=1;
+  private grips=new Map<string,{position:THREE.Vector3;rotation:THREE.Quaternion}>();
   constructor(gltf:GLTF,height:number,withProps:boolean) {
     this.root=gltf.scene;
     this.propsEnabled=withProps;
@@ -64,6 +66,15 @@ export class CharacterActor {
     this.root.position.y-=bounds.min.y*scale;
     this.root.position.x-=(bounds.min.x+bounds.max.x)/2*scale;
     this.root.traverse(object=>{
+      if(typeof object.userData.interactionUnit==="number"){
+        this.interactionUnit=object.userData.interactionUnit;
+        for(const name of ["drink","phone","photo"]){
+          const position=object.userData[name+"GripPosition"],rotation=object.userData[name+"GripRotation"];
+          if(Array.isArray(position)&&Array.isArray(rotation))this.grips.set(name,{
+            position:new THREE.Vector3().fromArray(position),rotation:new THREE.Quaternion().fromArray(rotation),
+          });
+        }
+      }
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigRightHand")this.hand=object;
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigLeftHandMiddle1")this.leftGrip=object;
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigRightHandMiddle1")this.rightGrip=object;
@@ -120,6 +131,13 @@ export class CharacterActor {
     this.water.visible=this.propsEnabled&&prop.kind==="water"&&prop.visible;
     this.device.visible=this.propsEnabled&&prop.kind==="device"&&prop.visible;
     this.root.updateMatrixWorld(true);
+    const grip=this.grips.get(cue.clip);
+    if(grip&&(this.water.visible||this.device.visible)){
+      const prop=this.water.visible?this.water:this.device;
+      prop.position.copy(grip.position);prop.quaternion.copy(grip.rotation);
+      if(this.water.visible){this.water.scale.setScalar(this.interactionUnit);this.water.getObjectByName("Bottle cap")!.visible=false;}
+      return;
+    }
     if(this.hand&&this.rightGrip) {
       this.root.getWorldQuaternion(this.orientation);
       this.hand.getWorldQuaternion(this.handOrientation).invert();

@@ -4,7 +4,7 @@ import sharp from 'sharp';
 const core={idle:4,walk:1.2,greet:3,talk:4,listen:4,react:3,goodbye:3,drink:5.5,phone:4.5,photo:4,rest:5};
 const assets=[
  {role:'traveler',path:'public/characters/v2/traveler.glb',clips:{...core,greet:4.8,notice:1,stop:1.2,turn:1.2,resume:1.2}},
- {role:'almaty-host',path:'public/characters/v1/almaty-host.glb',clips:core},
+ {role:'almaty-host',path:'public/characters/v2/almaty-host.glb',clips:{...core,greet:4.8}},
 ];
 let total=0,totalGpu=0;
 for(const asset of assets) {

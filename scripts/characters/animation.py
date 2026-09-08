@@ -51,6 +51,10 @@ class Animator:
         self.aim(upper,start,joint);self.aim(lower,joint,end)
         return end
     def pose(self,action,t):
+        if self.version=='v2' and action in ('greet','goodbye','talk','react','drink','phone','photo'):
+            from interaction import pose_interaction
+            pose_interaction(self,action,t)
+            return
         for bone in self.rig.pose.bones:
             bone.rotation_mode='QUATERNION'
             bone.matrix_basis=Matrix.Identity(4)
@@ -178,9 +182,10 @@ class Animator:
                 shoulder=self.bone(side+'Shoulder');shoulder.rotation_mode='QUATERNION'
                 shoulder.rotation_quaternion=Euler((0,.012*counter,-sign*.012*sway)).to_quaternion()
         self.bpy.context.view_layer.update()
-    def bake(self):
+    def bake(self,names=None):
         self.rig.animation_data_create()
         for name,duration in self.durations.items():
+            if names is not None and name not in names:continue
             action=self.bpy.data.actions.new(name);action.use_fake_user=True
             self.rig.animation_data.action=action
             for frame in range(round(duration*30)+1):

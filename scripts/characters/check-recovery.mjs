@@ -22,7 +22,7 @@ try{
  await expect(page.locator('canvas')).toHaveCount(1);
  expect(errors).toEqual([]);
  const failure=await browser.newPage();
- await failure.route('**/characters/v2/traveler.glb',route=>route.abort());
+ await failure.route('**/characters/v2/traveler.glb*',route=>route.abort());
  await failure.goto('http://localhost:3114/preview/characters');
  await failure.locator('[data-character-error="true"]').waitFor({timeout:30000});
  await expect(failure.getByAltText('Original traveler reference',{exact:true})).toBeVisible();
