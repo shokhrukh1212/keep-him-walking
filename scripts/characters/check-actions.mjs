@@ -5,10 +5,11 @@ const browser=await chromium.launch({headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'});
  const staged=process.argv.includes('--staged');
- const interactions=process.argv.includes('--interactions');
+ const stagedInteractions=process.argv.includes('--interactions');
+ const interactions=stagedInteractions||process.argv.includes('--served-interactions');
  const focused=process.argv.includes('--focused');
  const only=process.argv.includes('--clip')?process.argv[process.argv.indexOf('--clip')+1]:undefined;
- if(interactions){
+ if(stagedInteractions){
    for(const role of ['traveler','almaty-host']){
      const body=await readFile(`.cache/character-authoring/action-review/v2/${role}.glb`);
      await page.route(`**/characters/*/${role}.glb*`,route=>route.fulfill({status:200,contentType:'model/gltf-binary',body}));
