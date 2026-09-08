@@ -2,7 +2,8 @@
 
 > Companion to `PRODUCT.md`. Read that first for what the product is. This file covers
 > how it is built, with the character system as its centre, plus the image/scene
-> pipeline and a confirmed rendering defect.
+> pipeline and the two rendering defects found in it — §8.3, fixed in `98e1c77`, and
+> §8.4, still open.
 >
 > Every number below was measured from the repository, not estimated.
 
@@ -21,7 +22,7 @@
 | Validation | Zod 4 for every content pack and every API body |
 | Payments | Lemon Squeezy (hosted checkout + signed webhooks), plus a deterministic no-money fixture adapter for rehearsals |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest (37 test files, 103 tests) + Playwright (14 spec files across 8 config profiles) + pgTAP (61 assertions) |
+| Testing | Vitest (39 test files, 127 tests) + Playwright (15 spec files across 8 config profiles) + pgTAP (61 assertions) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
@@ -64,7 +65,7 @@ Strict ownership. No layer reaches into another's pixels.
 | Owner | Responsibility |
 |---|---|
 | Postgres | Authority. Presence, active seconds, votes, sponsor state, postcards. |
-| Pixi canvas | The world: sky, panorama, ground strip, ground-life, weather motes. |
+| Pixi canvas | The world: sky, panorama, ground-life, weather motes. |
 | Three canvas | The characters only: traveler and resident. |
 | React DOM | HUD, dialogue, sponsor card, controls, vote, diagnostics. |
 | Web Audio | Per-zone ambience. |
@@ -620,22 +621,28 @@ On the v3 panorama branch:
 - `weatherRoot`: 0/14/22 drifting motes by tier.
 - A sky `Graphics` fill behind everything, per-zone 0.4 s fade-in, background preload of
   the next zone, and a once-per-second diagnostics snapshot (fps, p95 frame ms, live and
-  pooled object counts, estimated decoded texture bytes).
-- **Plus a "contact" ground strip**, which is the defect.
+  pooled object counts, estimated decoded texture bytes, and a `data-scene-textures`
+  inventory of every texture the stage holds).
 
 The historical reason for the panorama branch is recorded in the code: earlier versions
 stacked opaque horizontal crops as parallax layers, and their offsets diverged into hard
-visible seams. Collapsing to one coherent painting fixed that — but left the ground strip
-behind.
+visible seams. Collapsing to one coherent painting fixed that — but until `98e1c77` it
+left a "contact" ground strip compositing over the painting. §8.3 is the record.
 
-### 8.3 The defect: a ghosted, self-overlapping second copy of the city
+### 8.3 The ghosted second copy of the city — fixed in `98e1c77`
 
-**Symptom.** In the live Tbilisi scene a translucent duplicate of the street sits across
-the lower middle of the frame, with vertical seams, a repeating doorway-and-hedge motif,
-and it slides at a different speed than the background. Below it, a third band of the
-original painting shows through again.
+**Status: fixed in `98e1c77` (branch `traveler-finalization-v2`).** The diagnosis below
+is kept as the record, because the assets it describes are still on disk and the two
+pipelines in §8.1 still produce them.
 
-**Cause.** In `buildZone`, regardless of the panorama branch:
+#### What the defect was
+
+In the live Tbilisi scene a translucent duplicate of the street sat across the lower
+middle of the frame, with vertical seams, a repeating doorway-and-hedge motif, sliding at
+a different speed than the background. Below it a third band of the original painting
+showed through again.
+
+`buildZone` built it on *every* branch, panorama included:
 
 ```js
 const groundUrl = zone.layers.find(l => l.id === "ground")?.segments[0]?.url;  // ground-1.webp
@@ -657,38 +664,40 @@ sprite.x = (first + index) * pitch - offset;
 sprite.y = baseline - stripHeight * 0.7;
 ```
 
-Four things go wrong at once:
+Four things went wrong at once:
 
 1. **`ground-1.webp` is not pavement.** It is rows 684–900 of a 900-px-tall photograph.
    At Tbilisi's framing that band contains building facades with barred doorways, tree
    trunks, planters, hedges and lamp bases. I rendered the asset to confirm this
    directly. The layer is named "ground" but contains a whole streetscape.
-2. **It is scaled up, not down.** At a 1213 px viewport,
+2. **It was scaled up, not down.** At a 1213 px viewport,
    `stripHeight = 1213 × 0.19 ≈ 231 px` against a 216 px source, so `stripScale ≈ 1.07`.
-   The duplicated buildings therefore appear at roughly the same apparent size as the
-   panorama's own — which is exactly what makes it read as a ghost rather than as
+   The duplicated buildings therefore appeared at roughly the same apparent size as the
+   panorama's own — which is exactly what made it read as a ghost rather than as
    texture.
-3. **It tiles into itself.** `pitch = span × 0.86` overlaps each tile with its neighbour
-   by 14 %, and the horizontal 12 %/88 % alpha feather makes those overlaps visible as
-   soft vertical seams. With `span ≈ 1281 px` and `pitch ≈ 1101 px` on a 2000 px-wide
-   window, roughly two full copies of the same doorway-and-hedge run are on screen.
-4. **It moves at the wrong speed.** The strip scrolls by
+3. **It tiled into itself.** `pitch = span × 0.86` overlapped each tile with its
+   neighbour by 14 %, and the horizontal 12 %/88 % alpha feather made those overlaps
+   visible as soft vertical seams. With `span ≈ 1281 px` and `pitch ≈ 1101 px` on a
+   2000 px-wide window, roughly two full copies of the same doorway-and-hedge run were
+   on screen.
+4. **It moved at the wrong speed.** The strip scrolled by
    `groundPixels = motion.distanceMetres × (layout.height / 1.78)` — the character's
-   walking rate — while the panorama behind it slides by `zoneProgress` over 150 seconds.
-   Two unrelated rates, so the ghost visibly drifts across the background.
+   walking rate, ≈373 px/s at 1440×900 — while the panorama behind it slid by
+   `zoneProgress` over 150 seconds, ≈2.13 px/s. A 175× difference, so the ghost visibly
+   drifted across the background.
 
-`sprite.y = baseline − stripHeight × 0.7` puts the strip's top edge ≈161 px above the
-character's foot line and its bottom edge ≈69 px below it, which matches the soft
+`sprite.y = baseline − stripHeight × 0.7` put the strip's top edge ≈161 px above the
+character's foot line and its bottom edge ≈69 px below it, which matched the soft
 horizontal transition measurable in the screenshots at y ≈ 962 px.
 
-**Why it exists.** Commit `af8dd03` *"feat: use finalized 3d characters in journey"*
+**Why it existed.** Commit `af8dd03` *"feat: use finalized 3d characters in journey"*
 deleted the Pixi 2D puppet and moved the character into its own Three.js canvas, but did
 not delete the contact strip. The strip's only purpose had been to give that 2D puppet a
 moving pavement to plant its feet on, in the same scene graph and the same coordinate
 space. With the puppet gone — and the character now in a canvas *above* the world that
-knows nothing about it — the strip is a decorative duplicate serving no one.
+knows nothing about it — the strip was a decorative duplicate serving no one.
 
-The Pixi draw order inside the camera container is:
+The Pixi draw order inside the camera container was:
 
 ```
 sky  →  layerRoot (the panorama)  →  propRoot  →  groundLifeRoot  →  groundRoot  →  weatherRoot
@@ -696,23 +705,109 @@ sky  →  layerRoot (the panorama)  →  propRoot  →  groundLifeRoot  →  gro
                                           the contact strip, drawn ON TOP of the painting
 ```
 
-`groundRoot` is inserted at `weatherRoot`'s index, so it paints over the panorama *and*
-over the ground-life blobs. That is why the ghost occludes rather than blends.
+`groundRoot` was inserted at `weatherRoot`'s index, so it painted over the panorama *and*
+over the ground-life blobs. That is why the ghost occluded rather than blended.
 
-So the three bands a viewer perceives, from top to bottom, are:
+So the three bands a viewer perceived, from top to bottom, were:
 
-| Band | Approx. y at 1213 px | What it actually is |
+| Band | Approx. y at 1213 px | What it actually was |
 |---|---|---|
 | Sharp background | 0 → 962 | The single `fallback.webp` panorama, cover-scaled ×1.1, sliding on zone progress |
 | Ghosted overlay | 962 → 1192 | The 5 tiled, alpha-masked, up-scaled copies of `ground-1.webp`, fading in from transparent at its top edge |
 | Bottom band | 1192 → 1213 | The panorama showing through again below the strip, under the `scene-grade` and `scene-vignette` CSS gradients |
 
-(The 12 ground-life blobs sit at y ≈ 1025–1069 — i.e. *behind* the ghost band, not in the
+(The 12 ground-life blobs sat at y ≈ 1025–1069 — i.e. *behind* the ghost band, not in the
 bottom band.)
+
+#### What changed in `98e1c77`
+
+- `PixiScene` no longer has a `groundRoot`, contact sprites, the canvas alpha masking, or
+  the `stripHeight`/`stripScale`/`span`/`pitch`/`offset` maths. `Texture` is no longer
+  imported, because nothing in the world is built in the browser any more.
+- Draw order is now, back to front:
+
+  ```
+  sky  →  layerRoot (the panorama)  →  propRoot  →  groundLifeRoot  →  weatherRoot
+  ```
+
+  `propRoot` stays in place and stays empty on the v3 branch; it still carries the
+  illustrated props of the two schema-v2 rollback packs, whose render is unchanged.
+  `groundLifeRoot` and `weatherRoot` are unchanged and still scroll on `groundPixels`,
+  which is still published as `data-ground-pixels`.
+- `phase2-factory` no longer lists the `ground-*` crops in `preload` or in any
+  `preloadGroups` entry, since the v3 renderer never draws them. Prop URLs were never in
+  those lists. `distant.webp` and `architecture.webp` **are** still listed even though
+  the v3 branch does not draw them either — see §8.5; that removal was left for the same
+  pass that retires the files.
+- The zone `layers` array itself is untouched: it is what the schema-v2 packs render
+  from, and it is what `process-phase{2,3}-art.mjs` writes. Only the strip and the
+  preload hints are gone.
+- `PixiScene` now publishes `data-scene-textures` on `.pixi-scene`: the sorted, unique
+  set of texture identities for every `Sprite` reachable from `app.stage`, refreshed with
+  the once-per-second diagnostics snapshot. Textures loaded through `Assets` carry their
+  resolved URL as `texture.label`; textures built in the browser have none, and are
+  recorded as `generated:<width>x<height>`. On the v3 branch this attribute should read
+  exactly one entry, the zone's `fallback.webp`.
+
+#### How the fix is verified
+
+`tests/e2e/scene-ground-strip.spec.ts`, pinned to 1440×900, drives Tbilisi's
+`rustaveli-arrival` zone with a mocked bootstrap/heartbeat pair at 60 raw active seconds
+(inside zone 0, clear of the `wave` action scheduled at locomotion second 15) and asserts
+two independent things.
+
+**1. Structural.** `data-scene-textures` must contain exactly one entry, the zone
+panorama — no URL containing `ground-`, and no `generated:` entry.
+
+**2. Pixel.** Two rows are sampled from screenshots of the isolated world layer, taken
+1.6 s apart. Row choice is derived from the strip's own geometry at 900 px:
+
+```
+stripHeight = max(100, 900 × 0.19)              = 171 px
+y           = (900 − 90) − 171 × 0.7            = 690.3 px      → band 690.3 … 861.3
+                                                                 = 0.767H … 0.957H
+```
+
+The mask ramped alpha from 0 at the band's top edge to 1 at 45 % of its height, so:
+
+| Sample row | y at 900 px | Pre-fix ghost alpha there |
+|---|---|---|
+| `0.79H` | 711 | ≈ 0.27 — ghost blended over the panorama |
+| `0.95H` | 855 | 1.00 — ghost fully replacing the panorama |
+
+Both rows are clear of the ground-life blobs (y 760–793) and of the motes (y < 630).
+Only x ∈ [0.05W, 0.45W) is sampled, away from the character anchored at 0.61W; the
+character canvas, colour grade and vignette are hidden and `.scene-stage` is re-stacked
+above the HUD so the screenshot contains Pixi output alone.
+
+A plain same-pixel difference does **not** discriminate — an 8 px slide of a photograph
+already yields a mean absolute difference of 20–50, pre-fix and post-fix alike. So each
+row is matched against itself in the later frame over a ±80 px shift search. One coherent
+panorama is a rigid translation of itself: the search finds a near-zero residual and every
+row agrees on the same shift. A composited strip does not — at alpha 1 it has translated
+far outside the search window, and at alpha 0.27 no single shift can fit two images moving
+at once.
+
+Measured over two runs of the pre-fix renderer and four of the fixed one (`residual` =
+mean absolute channel difference at the best in-window shift):
+
+| Row | Before `98e1c77` | After `98e1c77` |
+|---|---|---|
+| `y = 0.79H` residual | 14.99 – 16.51 | 1.83 – 6.16 |
+| `y = 0.95H` residual | 51.04 – 53.28 | 0.69 – 2.37 |
+| Agreement of the two rows' best shift | disagree by 87–91 px | identical, −7 to −12 px |
+| `data-scene-textures` | `generated:1200x216` + `fallback.webp` | `fallback.webp` only |
+
+The thresholds follow: residual < 10, the two rows' shifts equal within 1 px, and
+|shift| ≤ 40 px so the walking-rate scroll cannot pass. The spec was run against the
+pre-fix renderer and **fails on each of the two assertions independently**, so neither
+half is vacuous.
+
 
 ### 8.4 The related defect: the floating, oversized traveler
 
-Independent of the strip, and visible in the same screenshots.
+Independent of the strip, visible in the same screenshots, and **still open** after
+`98e1c77`. Removing the ghost makes it easier to see, not better.
 
 ```ts
 // src/lib/traveler/actor-layout.ts — 5 lines, and the entire spatial contract
@@ -736,11 +831,11 @@ export function actorLayout(width, height) {
   pavement line drift with the viewport's aspect ratio while the character's foot plane
   stays put.
 
-Net effect: the character is far too large for the perspective and his shoes land in the
-middle of the ghost band rather than on the painted ground of either image. The contact
-shadow does not rescue it either — the catcher is a 0.2-opacity `ShadowMaterial` lit from
-`(−3, 5, 4)`, so the shadow falls behind and to the left, inside a transparent canvas
-floating over a photograph.
+Net effect: the character is far too large for the perspective, and his shoes land
+wherever 90 px from the bottom of the window happens to fall rather than on the
+panorama's painted ground. The contact shadow does not rescue it either — the catcher is
+a 0.2-opacity `ShadowMaterial` lit from `(−3, 5, 4)`, so the shadow falls behind and to
+the left, inside a transparent canvas floating over a photograph.
 
 A correct fix needs the pack to declare, per zone, where the walkable ground line sits in
 the panorama and what a 1.78 m person should measure there — then both canvases can be
@@ -749,29 +844,34 @@ change, not a constant tweak, which is why it is scoped separately.
 
 ### 8.5 Shipped-but-never-drawn assets
 
-Because every *scheduled* pack takes the `coherentPanorama` branch, only **two of the six files per
-zone** ever reach the screen: `fallback.webp` (the panorama) and `ground-1.webp` (the
-strip from §8.3). Everything else is generated, shipped, and in most cases actively
-downloaded — because the `preload` and `preloadGroups` lists still name the old layer
-URLs — but never drawn.
+Because every *scheduled* pack takes the `coherentPanorama` branch, since `98e1c77` only
+**one of the six files per zone** reaches the screen: `fallback.webp`, the panorama.
+Everything else is still generated and shipped but never drawn.
 
-Measured on Tbilisi (`public/scenes/tbilisi/v1/`):
+Measured on Tbilisi (`public/scenes/tbilisi/v1/`), five zones:
 
 | Category | Size | Status |
 |---|---:|---|
-| `fallback.webp` + `ground-1.webp` × 5 zones | **1.14 MiB** | rendered |
-| `distant.webp`, `architecture.webp`, `ground-2/3.webp` × 5 zones | 1.74 MiB | never drawn, listed in preload groups |
-| 15 prop WebP files | 1.36 MiB | never drawn (props are disabled on this branch) |
-| **Unrendered total per city** | **3.10 MiB** | |
+| `fallback.webp` × 5 | **0.99 MiB** | rendered |
+| `distant.webp`, `architecture.webp` × 5 | 1.45 MiB | never drawn, **still listed in `preload` / `preloadGroups`** |
+| `ground-1/2/3.webp` × 5 | 0.43 MiB | never drawn, no longer preloaded |
+| 15 prop WebP files | 1.36 MiB | never drawn (props are disabled on this branch), never preloaded |
+| **Unrendered total per city** | **3.24 MiB** | |
+
+`98e1c77` stopped fetching the `ground-*` crops. The `distant`/`architecture` pair is
+deliberately still fetched: it is the same 1.45 MiB per city that the two schema-v2
+rollback packs genuinely render from, and dropping it from the v3 preload hints belongs
+with the pass that retires the files (P18) rather than with the strip removal.
 
 Separately, `public/traveler/production/v2/` ships **1.51 MiB** of sprite frames
 (8 walk + 16 action). Of those, only `actions/idle.webp` is actually used — as the
 placeholder shown while the GLB downloads — plus `walk/walk-1.webp`, which the critical
 preload list still fetches. The other 22 frames are deployed but unreachable.
 
-So roughly **3 MiB per city plus 1.4 MiB of sprites** is currently dead weight. Cleaning
-it up is a straightforward win, but it should happen *after* the render path in §8.3–8.4
-is settled, since some of those layers may be wanted again.
+So roughly **3.2 MiB per city plus 1.4 MiB of sprites** is dead weight on disk. Deleting
+the files is a straightforward win now that §8.3 is settled, but it is gated on §8.4:
+whichever way the panorama/ground/character-scale relationship is resolved may want the
+`architecture` band back as a separate layer.
 
 ### 8.6 Zone clock, budgets and quality tiers
 
@@ -881,7 +981,7 @@ Recorded results (`docs/phase-3-results.md`, 2026-09-06):
   covering RLS, grants and storage policies.
 - **Unit tests:** 27 files / 66 tests were recorded at the Phase 3 gate with 84.1 %
   statements, 71.7 % branches and 93.9 % functions on the scoped coverage set. On the
-  current `traveler-finalization-v2` branch the suite has grown to **37 files / 103
+  current `traveler-finalization-v2` branch the suite has grown to **39 files / 127
   tests, all passing** (verified by running `pnpm test`).
 - Production build emits 31 routes on Next 16.3.3.
 - `content:validate`: 16 registered packs, 717 uniquely owned scene assets.
@@ -889,6 +989,12 @@ Recorded results (`docs/phase-3-results.md`, 2026-09-06):
   Coverage includes shared presence across two browser contexts, accessibility, the
   no-WebGL fallback, stop/resume, the encounter, full and reduced motion, 320 px bounds,
   closed vote results, bootstrap reconnect, and same-page postcard rollover.
+- `tests/e2e/scene-ground-strip.spec.ts` (added with `98e1c77`) is the world-compositing
+  guard: it pins 1440×900, drives Tbilisi's `rustaveli-arrival` zone, and asserts both
+  that the Pixi stage holds only the zone panorama and that two sample rows move as one
+  rigid translation of it. Derivation, measured pre/post-fix figures and thresholds are
+  in §8.3. It was confirmed to fail on the pre-fix renderer on each assertion
+  independently, so it is not a vacuous test.
 - A **1,000-viewer load gate** passes: 30 s arrival ramp + 60 s sustained, 7,188
   requests, zero errors, 560 ms overall p95. A deliberately unrealistic zero-ramp
   100-viewer cold burst also produced zero errors but 2,849 ms p95 — documented as an
@@ -984,8 +1090,8 @@ provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or
 - **One skeleton** (`traveler.glb`, 52 joints, 15 clips, 6 face morphs) performs every
   action; only clip weights, face weights and hand-socket props change.
 - **Two art pipelines.** Phase 2 cities (including Tbilisi) have five separate master
-  paintings; Phase 3 cities have one master cropped five ways. Either way only two of the
-  six derived files per zone are actually drawn.
-- **The character is a work-in-progress candidate**, and the world compositor still has a
-  duplicated ground layer and no shared ground truth between the painted pavement and the
-  character's feet.
+  paintings; Phase 3 cities have one master cropped five ways. Either way only one of the
+  six derived files per zone is actually drawn (§8.5).
+- **The character is a work-in-progress candidate.** The duplicated ground layer is gone
+  (§8.3, `98e1c77`), but there is still no shared ground truth between the painted
+  pavement and the character's feet (§8.4).

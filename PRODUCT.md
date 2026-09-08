@@ -293,20 +293,23 @@ database. No production launch date has been seeded. No real money has moved.
 
 ## 10. Known rough edges a visitor sees right now
 
-Two are visible in the current Tbilisi build and are worth stating plainly, because they
-are the difference between "a place" and "a web page with a picture on it":
+These are worth stating plainly, because they are the difference between "a place" and
+"a web page with a picture on it":
 
-1. **A ghosted second copy of the street sits across the lower middle of the frame.**
-   A leftover ground layer is being tiled on top of the background painting — with a
-   14 % overlap between tiles, so building doorways and hedges repeat — and it slides at
-   a different speed than the scene behind it. It is a rendering leftover, not artwork.
-   Full diagnosis in `TECHNICAL.md` §8.
+1. **A ghosted second copy of the street across the lower middle of the frame — fixed.**
+   A leftover ground layer was being tiled on top of the background painting — with a
+   14 % overlap between tiles, so building doorways and hedges repeated — and it slid at
+   a different speed than the scene behind it. It was a rendering leftover, not artwork,
+   and it has been removed. Each country-day now shows exactly one painting per route
+   zone. Full record in `TECHNICAL.md` §8.3.
 
-2. **The traveler floats and is too large.** His foot plane and his height are pinned to
-   fixed fractions of the browser window, with nothing connecting either to where each
-   city's pavement is actually painted. The result is a person roughly as tall as a
-   building storey whose shoes hover above the ground. Full diagnosis in
-   `TECHNICAL.md` §8.
+2. **The traveler floats and is too large — still open.** His foot plane and his height
+   are pinned to fixed fractions of the browser window, with nothing connecting either
+   to where each city's pavement is actually painted. The result is a person roughly as
+   tall as a building storey whose shoes hover above the ground. Fixing it properly means
+   each route zone declaring where its walkable ground line sits and how tall a person
+   should measure there, so the painting and the character are sized from the same
+   number. Full diagnosis in `TECHNICAL.md` §8.4.
 
 Neither affects the shared clock, the walking rule, presence accounting, votes, postcards
 or sponsor state. They are presentation defects in the scene compositor.

@@ -32,8 +32,8 @@ import { tbilisiCountryPackV1 } from "../../src/content/countries/tbilisi.v1";
  *    strip does not: at alpha 1 it has translated far outside the search window,
  *    and at alpha 0.27 no single shift can fit two images moving at once.
  *
- * 3. Measured, four runs each (`residual` = mean absolute channel difference at
- *    the best in-window shift):
+ * 3. Measured over two runs of the pre-fix renderer and four of the fixed one
+ *    (`residual` = mean absolute channel difference at the best in-window shift):
  *
  *      row      | before the fix              | after the fix
  *      ---------|----------------------------|-----------------------
