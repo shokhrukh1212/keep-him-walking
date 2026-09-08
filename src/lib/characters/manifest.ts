@@ -1,15 +1,22 @@
 /** Review candidates remain isolated from published country packs. */
 export const CHARACTER_MANIFEST = {
-  version: 1,
+  version: 2,
   approval: "visual-review-pending",
-  traveler: { url: "/characters/v1/traveler.glb", heightMetres: 1.78 },
+  traveler: { url: "/characters/v2/traveler.glb", heightMetres: 1.78 },
   resident: { url: "/characters/v1/almaty-host.glb", heightMetres: 1.68 },
   combinedBudgetBytes: 8 * 1024 * 1024,
 } as const;
 
+export const CHARACTER_CANDIDATES = {
+  v2: { label: "V2 — work in progress", travelerUrl: "/characters/v2/traveler.glb" },
+  v1: { label: "Rejected baseline v1", travelerUrl: "/characters/v1/traveler.glb" },
+} as const;
+export type CharacterCandidate = keyof typeof CHARACTER_CANDIDATES;
+
 export const CLIP_DURATIONS = {
-  idle: 4, walk: 1.2, greet: 3, talk: 4, listen: 4, react: 3,
+  idle: 4, walk: 1.2, greet: 4.8, talk: 4, listen: 4, react: 3,
   goodbye: 3, drink: 5.5, phone: 4.5, photo: 4, rest: 5,
+  notice: 1, stop: 1.2, turn: 1.2, resume: 1.2,
 } as const;
 export type CharacterClip = keyof typeof CLIP_DURATIONS;
 export type ReviewAction = CharacterClip | "encounter";

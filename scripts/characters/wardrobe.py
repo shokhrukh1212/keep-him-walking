@@ -2,7 +2,7 @@
 import math
 from mathutils import Vector
 
-def tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material):
+def tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material,version='v1'):
     import bmesh
     unit=rig.data.bones["mixamorig:Head"].tail_local.z/1.441681
     # Retain skin underneath rolled sleeves and shortened trouser hems.
@@ -17,10 +17,36 @@ def tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material):
     # Open the outer front panels. A complete, independently skinned T-shirt
     # remains behind them, so the opening never exposes fragmented geometry.
     mesh=bmesh.new();mesh.from_mesh(shirt.data)
+    if version=='v2' and not female:
+        # Remove the stock detached buttons/buttonholes before opening the
+        # garment. Keeping fragments of them produced floating collar debris.
+        pending=set(mesh.verts);components=[]
+        while pending:
+            seed=pending.pop();part={seed};stack=[seed]
+            while stack:
+                for edge in stack.pop().link_edges:
+                    for other in edge.verts:
+                        if other in pending:
+                            pending.remove(other);part.add(other);stack.append(other)
+            components.append(part)
+        shell=max(components,key=len)
+        bmesh.ops.delete(mesh,geom=[v for part in components if part is not shell for v in part],context='VERTS')
+        # Cut new edges along the placket rather than removing entire polygons
+        # according to their centers (which made the front edge stair-stepped).
+        for x in [-.045*unit,.045*unit]:
+            bmesh.ops.bisect_plane(mesh,geom=list(mesh.verts)+list(mesh.edges)+list(mesh.faces),
+                dist=.000001,plane_co=(x,0,0),plane_no=(1,0,0))
     remove=[]
     for face in mesh.faces:
         c=face.calc_center_median()/unit
-        if c.y<-.07 and c.z<1.14 and abs(c.x)<(.032 if c.z>1.02 else .052): remove.append(face)
+        if version=='v2' and not female:
+            # Open one continuous, narrow placket from hem to neckline. The
+            # former split thresholds left a closed chest band that read as a
+            # bow and tore apart under shoulder motion.
+            if c.y<-.055 and c.z<1.39 and abs(c.x)<.0449:
+                remove.append(face)
+        elif c.y<-.07 and c.z<1.14 and abs(c.x)<(.032 if c.z>1.02 else .052):
+            remove.append(face)
     bmesh.ops.delete(mesh,geom=remove,context='FACES')
     for sign,side in [(1,'Left'),(-1,'Right')]:
         elbow=rig.data.bones['mixamorig:'+side+'ForeArm'].head_local
@@ -30,6 +56,9 @@ def tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material):
         bmesh.ops.delete(mesh,geom=verts,context='VERTS')
     mesh.to_mesh(shirt.data);mesh.free()
     bpy.context.view_layer.objects.active=shirt
+    if version=='v2' and not female:
+        sub=shirt.modifiers.new('Soft cotton surface','SUBSURF');sub.levels=1
+        bpy.ops.object.modifier_apply(modifier=sub.name)
     solid=shirt.modifiers.new('Cotton lining','SOLIDIFY');solid.thickness=.0025
     bpy.ops.object.modifier_apply(modifier=solid.name)
     # The stock under-shirt has long contrasting sleeves. Trim those beneath
@@ -43,10 +72,17 @@ def tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material):
     mesh.normal_update()
     for v in mesh.verts: v.co-=v.normal*.006*unit
     mesh.to_mesh(inner.data);mesh.free()
+    if version=='v2' and not female:
+        # The concealed undershirt retained >7k vertices after trimming. Reduce
+        # only that inner layer; preserve face, hands and outer deformation mesh.
+        bpy.context.view_layer.objects.active=inner
+        decimate=inner.modifiers.new('Inner cotton optimization','DECIMATE')
+        decimate.ratio=.30
+        bpy.ops.object.modifier_apply(modifier=decimate.name)
     # Preserve a small physical gap between the three deforming surfaces.
     # The clearance is below a real garment's thickness but prevents skin or
     # the inner shirt from surfacing through the outer layers at joints.
-    for obj,amount in [(shirt,.011),(pants,.009)]:
+    for obj,amount in [(shirt,.007 if version=='v2' and not female else .011),(pants,.009)]:
         mesh=bmesh.new();mesh.from_mesh(obj.data);mesh.normal_update()
         for v in mesh.verts: v.co+=v.normal*amount*unit
         mesh.to_mesh(obj.data);mesh.free()
@@ -64,7 +100,7 @@ def tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material):
     bmesh.ops.delete(mesh,geom=[v for v in mesh.verts if v.co.z>.103*unit],context='VERTS')
     mesh.to_mesh(shoes.data);mesh.free()
 
-def style_hair(hair):
+def style_hair(hair,version='v1'):
     # Preserve the authored flowing quiff and strand textures; introduce small,
     # nonuniform waves rather than replacing hair with geometric clumps.
     for v in hair.data.vertices:
@@ -72,3 +108,10 @@ def style_hair(hair):
         weight=max(0,min(1,(z-1.34)/.1))
         v.co.x+=.006*math.sin(y*95+z*28)*weight
         v.co.z+=.004*math.sin(x*110+y*31)*weight
+        if version=='v2':
+            # Raise and loosen the approved character's left quiff while
+            # keeping the authored textured surface and natural hairline.
+            side=max(0,min(1,(-x+.02)/.14))
+            front=max(0,min(1,(-y-.015)/.11))
+            v.co.z+=.018*side*front*weight
+            v.co.x-=.006*side*front*weight

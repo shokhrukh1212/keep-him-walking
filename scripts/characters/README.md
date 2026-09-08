@@ -6,6 +6,26 @@ Country packs and the published journey continue using their existing renderer.
 
 ## Rebuild
 
+V2 is **work in progress**, not an accepted replacement. The served V2 currently
+uses the project-authored procedural clips after the first CC0 retarget failed
+visual inspection. Source takes remain available for isolated experiments.
+
+Build experiments without altering the user's active preview:
+
+```sh
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --threads 4 --factory-startup --python scripts/characters/build_models.py -- traveler --v2 --staged --experimental-sources
+node scripts/characters/check-actions.mjs --staged
+```
+
+Staged output stays under `.cache/character-authoring/staged/v2`. The browser
+script substitutes that GLB only within its own isolated page. A build with
+`--experimental-sources` requires `--staged`. Do not promote it because the
+script reports no JavaScript errors: inspect all the images and playback.
+
+`rebake_staged.py` reuses staged geometry for animation iterations and checks
+that repeated pose sampling cannot accumulate translation. The first retarget
+had both missing T/A rest-pose alignment and stale evaluated pose positions.
+
 The checked-in `art/characters/v1/*.blend` files contain the model, skeleton,
 packed textures and eleven editable actions. They can be edited without MPFB.
 The following scripts reproduce their assembly from upstream source assets:

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { REVIEW_ACTIONS, type ReviewAction } from "@/lib/characters/manifest";
+import { CHARACTER_CANDIDATES, REVIEW_ACTIONS, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, type SceneCue } from "@/lib/characters/timeline";
 import type { CharacterPlayback } from "./CharacterStage3D";
 import styles from "./character-review.module.css";
@@ -11,6 +11,7 @@ const CharacterStage3D = dynamic(() => import("./CharacterStage3D").then(m => m.
 
 export function CharacterReview() {
   const [view,setView]=useState("front"),[background,setBackground]=useState("studio"),[npc,setNpc]=useState(false);
+  const [candidate,setCandidate]=useState<CharacterCandidate>("v2");
   const [status,setStatus]=useState("Loading the character…");
   const [playback,setPlayback]=useState<CharacterPlayback>({action:"idle",playing:false,speed:1,seek:0,revision:0});
   const [progress,setProgress]=useState<{seconds:number;cue?:SceneCue}>({seconds:0});
@@ -25,11 +26,14 @@ export function CharacterReview() {
     {!available&&
       // eslint-disable-next-line @next/next/no-img-element
       <img className={styles.fallback} src="/traveler/temporary/v1/idle.webp" alt="Original traveler reference" />}
-    <CharacterStage3D onAvailability={setAvailable} key={retry} view={view} showNpc={npc} playback={playback} onStatus={setStatus}
+    <CharacterStage3D candidate={candidate} onAvailability={setAvailable} key={`${candidate}-${retry}`} view={view} showNpc={npc} playback={playback} onStatus={setStatus}
       onProgress={(seconds,cue)=>setProgress({seconds,cue})} />
     <aside className={styles.controls} aria-label="Character review controls">
       <strong>Character review · Almaty</strong>
-      <small>3D candidate — visual acceptance pending</small>
+      <small>Character repairs in progress — visual target not met</small>
+      <label>Candidate <select aria-label="Character candidate" value={candidate} onChange={e=>{setAvailable(false);setCandidate(e.target.value as CharacterCandidate);}}>
+        {Object.entries(CHARACTER_CANDIDATES).map(([value,item])=><option key={value} value={value}>{item.label}</option>)}
+      </select></label>
       <label>Action <select aria-label="Preview action" value={playback.action} onChange={e=>selectAction(e.target.value as ReviewAction)}>
         {REVIEW_ACTIONS.map(a=><option key={a.value} value={a.value}>{a.label}</option>)}
       </select></label>
@@ -56,7 +60,7 @@ export function CharacterReview() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/traveler/temporary/v1/idle.webp" alt="Approved original traveler" className={styles.reference} />
       </details>
-      <a href="/characters/v1/CREDITS.md" target="_blank" rel="noreferrer">Character asset credits</a>
+      <a href={`/characters/${candidate}/CREDITS.md`} target="_blank" rel="noreferrer">Character asset credits</a>
       {progress.cue?.dialogue&&<p className={styles.dialogue}><strong>{progress.cue.dialogue.speaker}</strong><br />{progress.cue.dialogue.text}</p>}
     </aside>
     <output className={styles.phase}>{progress.cue?.phase??"Standing"}</output>

@@ -1,5 +1,6 @@
 /** Lossless geometry; resample oversized texture maps and preserve alpha. */
 import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import sharp from 'sharp';
 const paths=process.argv.slice(2);
 if(!paths.length)throw new Error('Pass one or more GLB paths');
@@ -17,9 +18,15 @@ for(const path of paths) {
    const result=await (alpha?pipeline.png({palette:true,quality:92,effort:10}):pipeline.jpeg({quality:85,mozjpeg:true})).toBuffer();
    replacements.set(image.bufferView,result);image.mimeType=alpha?'image/png':'image/jpeg';
  }
- let offset=0;const chunks=[];
+ let offset=0;const chunks=[],shared=new Map();
  for(const [index,view] of doc.bufferViews.entries()) {
    const data=replacements.get(index)??bin.subarray(view.byteOffset??0,(view.byteOffset??0)+view.byteLength);
+   // glTF accessors determine vertex/index usage; the bufferView target hint
+   // is optional. Identical byte ranges can safely share binary storage.
+   delete view.target;
+   const hash=createHash('sha256').update(data).digest('hex');
+   if(shared.has(hash)){view.byteOffset=shared.get(hash);view.byteLength=data.length;continue;}
+   shared.set(hash,offset);
    view.byteOffset=offset;view.byteLength=data.length;chunks.push(data);offset+=data.length;
    const pad=(4-offset%4)%4;if(pad){chunks.push(Buffer.alloc(pad));offset+=pad;}
  }

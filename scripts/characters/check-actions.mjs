@@ -1,17 +1,23 @@
 import {chromium} from '@playwright/test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 const browser=await chromium.launch({headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1280,height:900},reducedMotion:'reduce'});
+ const staged=process.argv.includes('--staged');
+ if(staged){
+   const body=await readFile('.cache/character-authoring/staged/v2/traveler.glb');
+   await page.route('**/characters/v2/traveler.glb',route=>route.fulfill({status:200,contentType:'model/gltf-binary',body}));
+ }
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:3114/preview/characters');await page.locator('[data-character-ready="true"]').waitFor({timeout:90000});
- for(const [action,time] of [['greet',1.5],['drink',2.5],['phone',2],['photo',2],['rest',2.5]]){
+ await page.goto('http://localhost:3114/preview/characters');await page.locator('[data-character-ready="true"]').waitFor({timeout:90000});
+ for(const [action,time] of [['idle',1.3],['walk',.3],['walk',.9],['greet',1.5],['drink',2.5],['phone',2],['photo',2],['rest',2.5]]){
    await page.getByLabel('Preview action').selectOption(action);
    await page.getByLabel('Animation timeline').fill(String(time));
    await page.locator(`[data-clip="${action}"]`).waitFor();
    // Let a rendered frame consume the seek before inspecting it.
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-   await page.screenshot({path:`/tmp/character-${action}.png`});
+   await page.screenshot({path:`/tmp/${staged?'staged-':''}character-${action}-${String(time).replace('.','_')}.png`});
  }
  assert.deepEqual(errors,[]);console.log('All action clips load and seek without browser exceptions.');
  await page.setViewportSize({width:390,height:844});

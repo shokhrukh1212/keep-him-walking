@@ -3,7 +3,7 @@ const browser=await chromium.launch({headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1280,height:900}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:3114/preview/characters');
+ await page.goto('http://localhost:3114/preview/characters');
  await page.locator('[data-character-ready="true"]').waitFor({timeout:90000});
  const supported=await page.locator('canvas').evaluate(canvas=>{
    const extension=canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
@@ -22,8 +22,8 @@ try{
  await expect(page.locator('canvas')).toHaveCount(1);
  expect(errors).toEqual([]);
  const failure=await browser.newPage();
- await failure.route('**/characters/v1/traveler.glb',route=>route.abort());
- await failure.goto('http://127.0.0.1:3114/preview/characters');
+ await failure.route('**/characters/v2/traveler.glb',route=>route.abort());
+ await failure.goto('http://localhost:3114/preview/characters');
  await failure.locator('[data-character-error="true"]').waitFor({timeout:30000});
  await expect(failure.getByAltText('Original traveler reference',{exact:true})).toBeVisible();
  const unsupported=await browser.newPage();
@@ -31,7 +31,7 @@ try{
    const original=HTMLCanvasElement.prototype.getContext;
    HTMLCanvasElement.prototype.getContext=function(type,...args){return /webgl/i.test(type)?null:original.call(this,type,...args);};
  });
- await unsupported.goto('http://127.0.0.1:3114/preview/characters');
+ await unsupported.goto('http://localhost:3114/preview/characters');
  await expect(unsupported.getByRole('status',{name:'Renderer status'})).toContainText('3D is unavailable',{timeout:30000});
  await expect(unsupported.getByAltText('Original traveler reference',{exact:true})).toBeVisible();
  console.log('Reload keeps one canvas; missing asset and unavailable WebGL show the original reference.');

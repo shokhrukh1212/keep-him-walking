@@ -4,11 +4,11 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CharacterActor } from "@/lib/characters/actor";
-import { CHARACTER_MANIFEST, type ReviewAction } from "@/lib/characters/manifest";
+import { CHARACTER_CANDIDATES, CHARACTER_MANIFEST, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, sampleScene, type SceneCue } from "@/lib/characters/timeline";
 
 export type CharacterPlayback = { action: ReviewAction; playing: boolean; speed: number; seek: number; revision: number };
-type Props = { view: string; showNpc: boolean; playback: CharacterPlayback;
+type Props = { candidate: CharacterCandidate; view: string; showNpc: boolean; playback: CharacterPlayback;
   onStatus: (status:string)=>void; onProgress:(seconds:number,cue:SceneCue)=>void;
   onAvailability:(available:boolean)=>void };
 
@@ -56,22 +56,25 @@ export function CharacterStage3D(props:Props) {
     scene.add(new THREE.HemisphereLight(0xe5efff,0x786344,1.6));
     const key=new THREE.DirectionalLight(0xffedda,2.5);
     key.position.set(-3,5,4);key.castShadow=true;key.shadow.mapSize.set(1024,1024);
-    Object.assign(key.shadow.camera,{left:-3,right:3,top:3,bottom:-3});
+    Object.assign(key.shadow.camera,{left:-3,right:3,top:3,bottom:-3,near:.1,far:12});
     key.shadow.normalBias=.003;key.shadow.bias=-.0001;key.shadow.radius=3;scene.add(key);
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(50,50),new THREE.ShadowMaterial({opacity:.24}));
     floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;floor.position.y=-.003;scene.add(floor);
     const traveler=new THREE.Group(),resident=new THREE.Group(),seat=stool();scene.add(traveler,resident,seat);
     const loader=new GLTFLoader();let actor:CharacterActor|undefined,npc:CharacterActor|undefined;
     let seconds=0,last=0,lastRender=0,lastReport=-Infinity,revision=-1,action:ReviewAction="idle",npcRequested=false;
+    const cpuFrames:number[]=[];
     const load=async(kind:"traveler"|"resident")=>{
       let root:THREE.Group|undefined;
       try{
-        const manifest=CHARACTER_MANIFEST[kind],gltf=await loader.loadAsync(manifest.url);root=gltf.scene;
+        const manifest=CHARACTER_MANIFEST[kind];
+        const url=kind==="traveler"?CHARACTER_CANDIDATES[latest.current.candidate].travelerUrl:manifest.url;
+        const gltf=await loader.loadAsync(url);root=gltf.scene;
         if(disposed){disposeModel(root);return;}
         const model=new CharacterActor(gltf,manifest.heightMetres,kind==="traveler");
         if(kind==="traveler"){actor=model;traveler.add(model.root);element.dataset.characterReady="true";latest.current.onAvailability(true);}
         else{npc=model;resident.add(model.root);element.dataset.residentReady="true";}
-        latest.current.onStatus("Ready for visual review. Inspect at normal and quarter speed.");
+        latest.current.onStatus("Model loaded. Character art and animation repairs are still in progress.");
       }catch(error){
         if(root)disposeModel(root);
         if(!disposed){if(kind==="traveler")latest.current.onAvailability(false);element.dataset.characterError="true";latest.current.onStatus(error instanceof Error?error.message:"The character could not load. Reload to retry.");}
@@ -90,6 +93,7 @@ export function CharacterStage3D(props:Props) {
       if(disposed)return;raf=requestAnimationFrame(draw);
       if(document.hidden||lostContext){last=now;return;}
       if(now-lastRender<(element.clientWidth<=600?1000/30:1000/60)-1)return;
+      const frameStart=performance.now();
       const dt=last?Math.min(.1,(now-last)/1000):0;last=now;lastRender=now;
       const state=latest.current,p=state.playback,pair=state.showNpc||p.action==="encounter";
       const snap=revision!==p.revision||action!==p.action;
@@ -102,11 +106,20 @@ export function CharacterStage3D(props:Props) {
       traveler.position.x=pair?cue.travelerX:element.clientWidth<=600?0:.25;
       resident.visible=pair;resident.position.x=.65;resident.rotation.y=action==="encounter"?cue.residentYaw:-.6;
       seat.visible=action==="rest";seat.position.x=traveler.position.x;seat.rotation.y=traveler.rotation.y;
+      camera.zoom=cue.cameraZoom;
+      // Focus must not push the shared floor below the mobile viewport.
+      const vertical=element.clientWidth<=600?4.2:2.55;
+      const cameraY=vertical/(2*camera.zoom)-.20;
+      camera.position.y=cameraY;camera.lookAt(0,cameraY,0);camera.updateProjectionMatrix();
       if(pair&&!npcRequested){npcRequested=true;void load("resident");}
       renderer.render(scene,camera);
+      cpuFrames.push(performance.now()-frameStart);if(cpuFrames.length>120)cpuFrames.shift();
       if(snap||now-lastReport>100){
         lastReport=now;state.onProgress(seconds,cue);element.dataset.clip=cue.traveler.clip;
         element.dataset.drawCalls=String(renderer.info.render.calls);element.dataset.triangles=String(renderer.info.render.triangles);
+        const sorted=[...cpuFrames].sort((a,b)=>a-b);
+        element.dataset.cpuFrameMedianMs=sorted[Math.floor(sorted.length*.5)]?.toFixed(2);
+        element.dataset.cpuFrameP95Ms=sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))]?.toFixed(2);
       }
     };
     raf=requestAnimationFrame(draw);

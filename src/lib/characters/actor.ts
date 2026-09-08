@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { CLIP_DURATIONS, type CharacterClip } from "./manifest";
 import type { CharacterCue } from "./timeline";
+import { sampleProp } from "./props";
 
 function box(w:number,h:number,d:number,color:number,r=.65) {
   return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:r}));
@@ -11,7 +12,7 @@ function bottle() {
   const body=new THREE.Mesh(new THREE.CapsuleGeometry(.027,.105,5,16),new THREE.MeshPhysicalMaterial({color:0x68b5df,roughness:.22,transmission:.18,transparent:true,opacity:.88}));
   const neck=new THREE.Mesh(new THREE.CylinderGeometry(.014,.020,.028,16),new THREE.MeshStandardMaterial({color:0x68b5df,roughness:.28}));
   const cap=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.016,16),new THREE.MeshStandardMaterial({color:0xe9e5d5,roughness:.5}));
-  neck.position.y=.087;cap.position.y=.108;group.add(body,neck,cap);return group;
+  neck.position.y=.087;cap.position.y=.108;cap.name="Bottle cap";group.add(body,neck,cap);return group;
 }
 function phone() {
   const group=new THREE.Group(),frame=box(.074,.142,.013,0x20262b,.32),screen=box(.066,.121,.0015,0x86b7c6,.28);
@@ -44,9 +45,11 @@ export class CharacterActor {
     this.root=gltf.scene;
     this.propsEnabled=withProps;
     this.mixer=new THREE.AnimationMixer(this.root);
+    const core=(Object.keys(CLIP_DURATIONS) as CharacterClip[]).filter(name=>
+      !["notice","stop","turn","resume"].includes(name));
     for(const name of Object.keys(CLIP_DURATIONS) as CharacterClip[]) {
       const clip=gltf.animations.find(c=>c.name===name);
-      if(!clip)throw new Error(`Character is missing the ${name} animation`);
+      if(!clip){if(core.includes(name))throw new Error(`Character is missing the ${name} animation`);continue;}
       const action=this.mixer.clipAction(clip);action.play();action.enabled=false;
       this.actions.set(name,action);
     }
@@ -87,9 +90,11 @@ export class CharacterActor {
     }
   }
   sample(cue:CharacterCue,dt:number,snap=false,faceOffset=0) {
+    const fallback:Partial<Record<CharacterClip,CharacterClip>>={notice:"walk",stop:"idle",turn:"idle",resume:"walk"};
+    const sampledClip=this.actions.has(cue.clip)?cue.clip:(fallback[cue.clip]??"idle");
     if(!this.active)snap=true;
-    if(this.active!==cue.clip) {
-      this.previous=this.active;this.active=cue.clip;this.blend=snap?1:0;
+    if(this.active!==sampledClip) {
+      this.previous=this.active;this.active=sampledClip;this.blend=snap?1:0;
     }
     this.blend=snap?1:Math.min(1,this.blend+Math.max(0,dt)/.28);
     for(const [name,action] of this.actions) {
@@ -107,12 +112,13 @@ export class CharacterActor {
       const dictionary=mesh.morphTargetDictionary!,weights=mesh.morphTargetInfluences!;
       const set=(name:string,value:number)=>{if(dictionary[name]!==undefined)weights[dictionary[name]]=value;};
       set("blinkLeft",blink*.9);set("blinkRight",blink*.9);
-      set("smile",.12+(cue.clip==="react"?.22:cue.clip==="greet"?.13:0)*gesture);
+      set("smile",.17+(cue.clip==="react"?.22:cue.clip==="greet"?.13:0)*gesture);
       set("speak",speaking?gesture*(.045+.11*Math.pow(Math.sin(t*9),2)):0);
       set("browLeft",speaking?.06*gesture:0);set("browRight",cue.clip==="react"?.10*gesture:0);
     }
-    this.water.visible=this.propsEnabled&&cue.clip==="drink"&&t>.15&&t<CLIP_DURATIONS.drink-.15;
-    this.device.visible=this.propsEnabled&&(cue.clip==="phone"||cue.clip==="photo")&&t>.15&&t<CLIP_DURATIONS[cue.clip]-.15;
+    const prop=sampleProp(cue.clip,t);
+    this.water.visible=this.propsEnabled&&prop.kind==="water"&&prop.visible;
+    this.device.visible=this.propsEnabled&&prop.kind==="device"&&prop.visible;
     this.root.updateMatrixWorld(true);
     if(this.hand&&this.rightGrip) {
       this.root.getWorldQuaternion(this.orientation);
@@ -124,7 +130,7 @@ export class CharacterActor {
         this.socketPoint.add(new THREE.Vector3(0,0,.052).applyQuaternion(this.orientation));
         this.device.position.copy(this.hand.worldToLocal(this.socketPoint));
         this.device.quaternion.copy(this.handOrientation).multiply(this.orientation)
-          .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0,0,cue.clip==="photo"?Math.PI/2:0)));
+          .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0,Math.PI,cue.clip==="photo"?Math.PI/2:0)));
       }
       if(this.water.visible) {
         this.rightGrip.getWorldPosition(this.socketPoint);

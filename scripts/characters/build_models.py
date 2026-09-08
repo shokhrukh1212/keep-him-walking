@@ -14,8 +14,13 @@ import math
 from mathutils import Vector
 from mpfb.services import HumanService, TargetService, ExportService
 
-OUTPUT = ROOT / 'public' / 'characters' / 'v1'
-SOURCE = ROOT / 'art' / 'characters' / 'v1'
+VERSION = 'v2' if '--v2' in sys.argv else 'v1'
+STAGED = '--staged' in sys.argv
+EXPERIMENTAL_SOURCES = '--experimental-sources' in sys.argv
+if EXPERIMENTAL_SOURCES and not STAGED:
+    raise ValueError('Experimental retargeting requires --staged; inspect before promotion')
+OUTPUT = CACHE / 'staged' / VERSION if STAGED else ROOT / 'public' / 'characters' / VERSION
+SOURCE = OUTPUT if STAGED else ROOT / 'art' / 'characters' / VERSION
 OUTPUT.mkdir(parents=True, exist_ok=True)
 SOURCE.mkdir(parents=True, exist_ok=True)
 
@@ -96,6 +101,39 @@ def tube(name, points, radius, mat, rig=None, bone='Spine2'):
     return obj
 
 
+def add_swept_hair(rig):
+    """Author the reference's swept, wavy silhouette as head-bound geometry."""
+    head = rig.data.bones['mixamorig:Head']
+    center = (head.head_local + head.tail_local) * .5
+    dark = material('Swept dark brown hair', (.105, .032, .012), .72)
+    # A close-fitting base hides the scalp without the stock asset's helmet edge.
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=20,
+        location=(center.x, center.y + .018, center.z + .022))
+    cap = bpy.context.object; cap.name = 'Swept hair base'
+    cap.scale = (.116, .104, .127)
+    bpy.ops.object.transform_apply(location=True, rotation=False, scale=True)
+    mesh = bmesh.new(); mesh.from_mesh(cap.data)
+    bmesh.ops.delete(mesh, geom=[v for v in mesh.verts
+        if v.co.z < center.z-.020 or (v.co.y < center.y-.072 and v.co.z < center.z+.052)], context='VERTS')
+    mesh.to_mesh(cap.data); mesh.free(); cap.data.materials.append(dark)
+    weighted(cap, rig, 'Head'); smooth(cap)
+    # Layered arcs build the high left quiff and the lower sweep over the right temple.
+    strands = [
+        [(-.090,-.076,.052),(-.083,-.100,.113),(-.030,-.112,.151),(.028,-.105,.143),(.072,-.090,.103)],
+        [(-.080,-.084,.078),(-.048,-.119,.143),(.010,-.119,.174),(.074,-.096,.130),(.094,-.071,.074)],
+        [(-.055,-.097,.099),(-.006,-.132,.164),(.057,-.110,.151),(.101,-.080,.100)],
+        [(-.104,-.058,.030),(-.120,-.069,.087),(-.096,-.078,.132),(-.050,-.093,.151)],
+        [(.024,-.105,.132),(.075,-.111,.144),(.112,-.081,.100),(.112,-.065,.045)],
+        [(-.108,.000,.076),(-.119,-.034,.119),(-.087,-.075,.148),(-.028,-.097,.166)],
+        [(.060,-.090,.124),(.108,-.078,.112),(.123,-.047,.070),(.112,-.020,.018)],
+        [(-.111,.030,.042),(-.124,.003,.092),(-.105,-.040,.136),(-.061,-.073,.157)],
+    ]
+    for index, points in enumerate(strands):
+        curve = tube('Swept wave %02d' % index,
+            [center + Vector(p) for p in points], .014 if index < 5 else .012, dark, rig, 'Head')
+        smooth(curve)
+
+
 def asset(path, body, kind='Clothes'):
     obj = HumanService.add_mhclo_asset(str(ASSETS/path), body,
         asset_type=kind, subdiv_levels=0, material_type='GAMEENGINE')
@@ -121,7 +159,7 @@ def add_backpack(rig):
     rounded_box('SponsorPatch', (0, .261, z-.18), (.098, .003, .066), .004, material('Sponsor patch', (.035,.10,.105)), rig)
     for side in [-1,1]:
         x=side*.115
-        tube('Shoulder strap',[(x,.17,z+.075),(x,-.065,z+.14),(x,-.145,z-.035),(x,-.14,z-.10),(x,.16,z-.24)],.014,canvas,rig)
+        tube('Shoulder strap',[(x,.17,z+.075),(x,-.065,z+.14),(x,-.145,z-.035),(x,-.14,z-.10),(x,.16,z-.24)],.010 if VERSION=='v2' else .014,canvas,rig)
         rounded_box('Strap buckle',(x,-.115,z-.12),(.032,.01,.042),.004,buckle,rig)
         tube('Pack seam',[(side*.10,.225,z-.25),(side*.115,.22,z+.02)],.0025,trim,rig)
     tube('Pack handle',[(-.045,.15,z+.10),(0,.15,z+.145),(.045,.15,z+.10)],.009,trim,rig)
@@ -146,17 +184,37 @@ def add_watch(rig):
 def build(role):
     female = role == 'almaty-host'
     macro = TargetService.get_default_macro_info_dict()
-    macro.update(gender=0 if female else 1, age=.46, muscle=.42 if female else .40,
-                 weight=.39 if female else .34, proportions=.65, height=.48)
+    macro.update(gender=0 if female else 1, age=.46,
+                 muscle=.42 if female else (.23 if VERSION=='v2' else .40),
+                 weight=.39 if female else (.28 if VERSION=='v2' else .34),
+                 proportions=.58 if VERSION=='v2' and not female else .65, height=.48)
     # These are shape-space controls, not a statement about the character's identity.
     macro['race'] = {'asian': .65 if female else .12, 'caucasian': .35 if female else .88, 'african': 0}
     body=HumanService.create_human(macro_detail_dict=macro)
     body.name = role+'-body'
     if not female:
-        for name,value in [('head-age-decr',.14),('head-invertedtriangular',.05),
-                           ('l-eye-scale-incr',.045),('r-eye-scale-incr',.045),
-                           ('nose-scale-horiz-decr',.06),('mouth-scale-horiz-incr',.12),
-                           ('mouth-angles-up',.10)]:
+        identity = [('head-age-decr',.14),('head-invertedtriangular',.05),
+                    ('l-eye-scale-incr',.045),('r-eye-scale-incr',.045),
+                    ('nose-scale-horiz-decr',.06),('mouth-scale-horiz-incr',.12),
+                    ('mouth-angles-up',.10)] if VERSION=='v1' else [
+                    ('head-age-decr',.32),('head-invertedtriangular',.24),
+                    ('head-scale-horiz-decr',.10),('head-scale-vert-decr',.07),
+                    ('chin-width-decr',.20),('chin-height-decr',.10),
+                    ('chin-prominent-decr',.06),
+                    ('l-cheek-bones-incr',.11),('r-cheek-bones-incr',.11),
+                    ('l-cheek-volume-incr',.05),('r-cheek-volume-incr',.05),
+                    ('l-eye-scale-incr',.24),('r-eye-scale-incr',.24),
+                    ('l-eye-height2-incr',.08),('r-eye-height2-incr',.08),
+                    ('l-eye-trans-in',.025),('r-eye-trans-in',.025),
+                    ('eyebrows-angle-up',.07),('eyebrows-trans-up',.045),
+                    ('forehead-temple-incr',.06),
+                    ('nose-scale-depth-decr',.09),('nose-scale-horiz-decr',.11),
+                    ('nose-scale-vert-decr',.045),
+                    ('mouth-scale-horiz-incr',.12),('mouth-angles-up',.16),
+                    ('torso-vshape-decr',.16),('measure-shoulder-dist-decr',.13),
+                    ('torso-scale-depth-decr',.07),
+                    ('l-upperarm-scale-horiz-decr',.07),('r-upperarm-scale-horiz-decr',.07)]
+        for name,value in identity:
             target(body,name,value)
     TargetService.bake_targets(body)
     rig=HumanService.add_builtin_rig(body,'mixamo')
@@ -172,8 +230,9 @@ def build(role):
     hair.name=role+'-hair'
     pants=asset('clothes/cortu_cargo_pants/cortu_cargo_pants.mhclo',body)
     cloth_color(pants,'Charcoal cotton' if female else 'Sand cotton',(.045,.055,.072) if female else (.54,.40,.26))
-    shirt=asset('clothes/elvs_male_shirt_untucked_bd1/elvs_male_shirt_untucked_bd1.mhclo',body)
-    cloth_color(shirt,'Ochre jacket' if female else 'Teal overshirt',(.38,.22,.105) if female else (.012,.12,.145))
+    shirt_path = 'clothes/elvs_male_shirt_untucked_bd1/elvs_male_shirt_untucked_bd1.mhclo'
+    shirt=asset(shirt_path,body)
+    cloth_color(shirt,'Ochre jacket' if female else 'Teal overshirt',(.38,.22,.105) if female else ((.018,.23,.29) if VERSION=='v2' else (.012,.12,.145)))
     inner=asset('clothes/punkduck_deathnote_t-shirt/punkduck_deathnote_t-shirt.mhclo',body)
     inner.name='Blue inner shirt' if female else 'Ivory T-shirt'
     cloth_color(inner,inner.name,(.025,.10,.20) if female else (.88,.85,.77))
@@ -192,8 +251,15 @@ def build(role):
             node.inputs['Alpha'].default_value=1
             node.inputs['Roughness'].default_value=.65
     from wardrobe import tailor, style_hair
-    tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material)
-    if not female: style_hair(hair)
+    tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material,VERSION)
+    if VERSION == 'v2' and not female:
+        # Use the garment's own collar and pockets; rigid boxes and tubes
+        # previously crossed the skinned surface and floated at the chest.
+        belt = material('Warm brown belt', (.18,.065,.022), .72)
+        tube('Trouser belt', [(-.16,-.045,.91),(0,-.085,.90),(.16,-.045,.91)],
+             .008, belt, rig, 'Hips')
+    if not female:
+        style_hair(hair, VERSION)
     # The bundled expression targets avoid a dependency on a separate face pack.
     for name,source in [('blinkLeft','eye-left-closure'),('blinkRight','eye-right-closure'),
                         ('speak','mouth-open'),('smile','mouth-corner-puller'),('browLeft','eyebrows-left-up'),('browRight','eyebrows-right-up')]:
@@ -208,7 +274,7 @@ def build(role):
         add_backpack(rig)
         add_watch(rig)
     from animation import Animator
-    Animator(bpy,rig).bake()
+    Animator(bpy,rig,VERSION,experimental_sources=EXPERIMENTAL_SOURCES).bake()
     # Record the authoritative rig coordinates for animation authoring.
     import json
     bones={b.name:{'head':list(rig.matrix_world@b.head_local),'tail':list(rig.matrix_world@b.tail_local)} for b in rig.data.bones}
@@ -216,7 +282,8 @@ def build(role):
     return rig
 
 
-role=sys.argv[sys.argv.index('--')+1] if '--' in sys.argv else 'traveler'
+arguments=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else []
+role=next((value for value in arguments if not value.startswith('--')), 'traveler')
 bpy.context.preferences.filepaths.save_version=0
 bpy.context.scene.render.fps=30
 rig=build(role)

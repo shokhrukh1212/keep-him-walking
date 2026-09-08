@@ -10,7 +10,7 @@ teal overshirt, white T-shirt, tan cuffed trousers, shoes, watch and yellow pack
 
 Use one editable character model across actions and locations. Initial asset
 spend is $0; show any proposed purchase and license before spending, with a
-$20 initial ceiling. No additional NPC library before the two-person proof.
+$5–$10 ceiling (superseded by the finalization master prompt). No additional NPC library before the two-person proof.
 
 ## Acceptance gates
 
@@ -27,7 +27,7 @@ an unrelated stock face, or separately generated 2D action images.
 
 ## Implementation status
 
-**The implementation candidate is complete and awaits visual acceptance.** It is
+**Incomplete: v1 was rejected and v2 has not met the visual target.** It is
 inspectable at `/preview/characters` in local development and Vercel Preview.
 It is blocked from Production by the route's server-side gate, as required.
 No country pack, shared journey state, payment data or deployed app was changed.
@@ -49,6 +49,10 @@ Implemented:
   the previous renderer. Context loss/restoration has explicit handling.
 - Asset optimization, binary/clip/budget checks, source checksums, and shipped
   component credits. Acquisition cost remains **$0**.
+
+The following v1 inspection notes are historical. The user's subsequent
+screenshots rejected the claimed visual improvements; they must not be read as
+evidence that likeness, deformation, or prop contact passed.
 
 Visual checks and remaining work:
 

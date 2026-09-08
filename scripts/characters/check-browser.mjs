@@ -3,7 +3,7 @@ const browser=await chromium.launch({headless:true});
 try {
  const page=await browser.newPage({viewport:{width:1440,height:960}});
  page.on('pageerror',e=>console.log('PAGEERROR',e.message));
- await page.goto('http://127.0.0.1:3114/preview/characters');
+ await page.goto('http://localhost:3114/preview/characters');
  await page.locator('[data-character-ready="true"]').waitFor({timeout:90000});
  await page.screenshot({path:'/tmp/character-front-new.png'});
  await page.getByLabel('Review setting').selectOption('almaty');

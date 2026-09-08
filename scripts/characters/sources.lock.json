@@ -28,5 +28,17 @@
     "archive": "hair02.zip",
     "source": "https://static.makehumancommunity.org/assets/assetpacks/hair02.html",
     "sha256": "c681e5efd37df4007a52253a8d071aedbfe3b614f199d8dae4ae76d5bd7d95c9"
+  },
+  {
+    "archive": "snow-v42.zip",
+    "source": "https://studio.blender.org/characters/snow/v4/",
+    "sha256": "98d58ef3a07083ede14140bc462cccb55d317062846aa0eb652d2e4a7ac422a6",
+    "usage": "evaluated only; not redistributed in candidate"
+  },
+  {
+    "source": "https://github.com/Mesh2Motion/mesh2motion-assets",
+    "revision": "9ba82162522213f3226c099ce6d0576179556a35",
+    "license": "CC0-1.0",
+    "usage": "extracted authored body motion takes in scripts/characters/motions"
   }
 ]

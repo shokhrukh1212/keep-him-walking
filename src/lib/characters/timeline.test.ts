@@ -21,8 +21,18 @@ describe("character scene timeline",()=>{
     const first=sampleScene("encounter",6);
     sampleScene("encounter",18);
     expect(sampleScene("encounter",6)).toEqual(first);
-    expect(sampleScene("encounter",2.4).traveler.clip).toBe("greet");
-    expect(sampleScene("encounter",5.4).traveler.clip).toBe("listen");
+    expect(sampleScene("encounter",1.8).traveler.clip).toBe("notice");
+    expect(sampleScene("encounter",2.8).traveler.clip).toBe("stop");
+    expect(sampleScene("encounter",4).traveler.clip).toBe("turn");
+    expect(sampleScene("encounter",5.2).traveler.clip).toBe("greet");
+    expect(sampleScene("encounter",10).traveler.clip).toBe("listen");
+  });
+  it("approaches monotonically, focuses after noticing, and restores on departure",()=>{
+    const positions=[0,.8,1.8,2.8,3.9].map(t=>sampleScene("encounter",t).travelerX);
+    expect(positions).toEqual([...positions].sort((a,b)=>a-b));
+    expect(sampleScene("encounter",2.7).cameraZoom).toBe(1);
+    expect(sampleScene("encounter",3).cameraZoom).toBeGreaterThan(1);
+    expect(sampleScene("encounter",ENCOUNTER_DURATION-.1).cameraZoom).toBe(1);
   });
   it("clamps invalid and final-frame seeks without uncovered intervals",()=>{
     for(const {value} of REVIEW_ACTIONS)for(const seconds of [-1,NaN,Infinity,reviewDuration(value),999]) {
