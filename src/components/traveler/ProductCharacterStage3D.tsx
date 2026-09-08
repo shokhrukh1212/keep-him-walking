@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { publicAssetUrl } from "@/lib/assets/url";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { CountryPack } from "@/lib/content/schema";
@@ -109,7 +110,7 @@ export function ProductCharacterStage3D(props: Props) {
       let loadedRoot: THREE.Group | undefined;
       try {
         const definition = CHARACTER_MANIFEST[kind];
-        const gltf = await loader.loadAsync(definition.url);
+        const gltf = await loader.loadAsync(publicAssetUrl(definition.url));
         loadedRoot = gltf.scene;
         if (disposed) {
           disposeModel(loadedRoot);

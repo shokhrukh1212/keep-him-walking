@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { publicAssetUrl } from "@/lib/assets/url";
 
 export function useJourneyAudio(walking: boolean, ambientUrl?: string) {
   const [enabled, setEnabled] = useState(false);
@@ -43,7 +44,7 @@ export function useJourneyAudio(walking: boolean, ambientUrl?: string) {
   useEffect(() => {
     if (!enabled || !ambientUrl) return;
     const previous = ambience.current;
-    const audio = new Audio(ambientUrl);
+    const audio = new Audio(publicAssetUrl(ambientUrl));
     audio.loop = true;
     audio.volume = 0.16;
     ambience.current = audio;
@@ -64,7 +65,7 @@ export function useJourneyAudio(walking: boolean, ambientUrl?: string) {
       context.current = audioContext;
       await audioContext.resume();
       if (ambientUrl) {
-        const audio = new Audio(ambientUrl);
+        const audio = new Audio(publicAssetUrl(ambientUrl));
         audio.loop = true;
         audio.volume = 0.16;
         await audio.play();

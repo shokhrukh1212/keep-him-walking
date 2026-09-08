@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { publicAssetUrl } from "@/lib/assets/url";
 import type { Texture as PixiTexture } from "pixi.js";
 import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
 import { travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
@@ -143,7 +144,7 @@ export function PixiScene({
           ...(!coherentPanorama
             ? zone.props.flatMap((prop) => prop.assetUrl ? [prop.assetUrl] : [])
             : []),
-        ];
+        ].map(publicAssetUrl);
 
         const drawProp = (graphic: InstanceType<typeof Graphics>, definition: RouteProp) => {
           const [primary = "#315d4d", secondary = "#d9a75a"] = definition.colors;
@@ -182,13 +183,13 @@ export function PixiScene({
           const loaded = coherentPanorama
             ? [{
               layer: { id: "coherent-panorama", speed: 0.055, y: 0, height: 1, segments: [] },
-              textures: [await Assets.load<PixiTexture>(zone.fallbackUrl)],
+              textures: [await Assets.load<PixiTexture>(publicAssetUrl(zone.fallbackUrl))],
             }]
             : await Promise.all(
               zone.layers.map(async (layer) => ({
                 layer,
                 textures: await Promise.all(
-                  layer.segments.map((segment) => Assets.load<PixiTexture>(segment.url)),
+                  layer.segments.map((segment) => Assets.load<PixiTexture>(publicAssetUrl(segment.url))),
                 ),
               })),
             );
@@ -196,7 +197,7 @@ export function PixiScene({
             coherentPanorama
               ? []
               : zone.props.map((prop) => prop.assetUrl
-                ? Assets.load<PixiTexture>(prop.assetUrl)
+                ? Assets.load<PixiTexture>(publicAssetUrl(prop.assetUrl))
                 : Promise.resolve(null)),
           );
           if (disposed || generation !== buildGeneration) return;
@@ -205,7 +206,7 @@ export function PixiScene({
           let nextContact: PixiTexture | null = null;
           if (groundUrl) {
             try {
-              const source = new Image();source.src=groundUrl;await source.decode();
+              const source = new Image();source.crossOrigin="anonymous";source.src=publicAssetUrl(groundUrl);await source.decode();
               const canvas=document.createElement("canvas");canvas.width=source.naturalWidth;canvas.height=source.naturalHeight;
               const ctx=canvas.getContext("2d")!;ctx.drawImage(source,0,0);
               ctx.globalCompositeOperation="destination-in";

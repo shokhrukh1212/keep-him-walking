@@ -316,8 +316,8 @@ Step by step, in the order the script performs it:
     `export_animation_mode='ACTIONS'`, `export_morph=True`, `export_skins=True`,
     `export_yup=True` (Blender is Z-up, glTF is Y-up), JPEG quality 82.
 14. **Optimize.** `optimize-glb.mjs` resamples **textures only** — mesh and animation
-    buffers are byte-preserved, alpha stays alpha. No runtime decoder, no CDN: Next
-    serves the `.glb` directly.
+    buffers are byte-preserved, alpha stays alpha. No runtime decoder. Next serves
+    the `.glb` directly by default; optional asset hosting added 2026-09-08 is described in §11.
 
 ### 5.3 Animation authoring
 
@@ -379,6 +379,11 @@ The resident has no `notice` / `stop` / `turn` / `resume`; the runtime falls bac
 ---
 
 ## 6. The character system — runtime
+
+Both `ProductCharacterStage3D` and `CharacterStage3D` resolve their manifest URLs
+through `publicAssetUrl` at the GLB loading boundary. Canonical manifest paths and
+revision queries are unchanged. The review route and both candidates remain available.
+This hosting change does not change the skeleton, artwork, clips or motion clocks.
 
 ### 6.1 `CharacterActor` (`src/lib/characters/actor.ts`)
 
@@ -932,6 +937,37 @@ Runtime configuration (`serverRuntimeConfig()`):
 | `SPONSOR_RESERVATION_MINUTES` | 30 | Slot hold during checkout |
 | `SPONSOR_PAYMENT_PROVIDER` | `lemonsqueezy` | Or `fixture` |
 | `PHASE2_REHEARSAL_SCALE` | 144 | Story-clock multiplier, rehearsal only |
+
+### Optional asset origin and upload command (2026-09-08)
+
+`src/lib/assets/url.ts` provides pure `assetUrl(path, baseUrl)` and a small
+`publicAssetUrl(path)` build-configuration wrapper. `next.config.ts` validates
+`ASSET_BASE_URL` as an HTTPS origin with no credentials, path, query or fragment,
+then embeds only that non-secret origin as `NEXT_PUBLIC_ASSET_BASE_URL`. Empty or
+unset means same-origin. Changes require rebuilding the application.
+
+The mirrored trees are `/characters/`, `/scenes/`, `/audio/` and `/npcs/`.
+Pack/schema values stay root-relative so content validation, file budgets and
+server-local file readers keep working. URLs are resolved at the GLB, Pixi
+load/preload, panorama, NPC image and audio boundaries, including character/pack
+review and next-country preloads. Image-to-canvas paths set anonymous CORS before
+loading. CDN images in pack preview bypass Next's image proxy. Absolute external
+URLs and other trees (including original `/traveler/` fallback artwork) are unchanged.
+
+`pnpm assets:upload` runs `scripts/upload-assets.mjs` through the already-installed
+tsx loader; typed implementation is `scripts/assets/upload.ts`. It defaults to a
+credential-free dry run. Only `--upload` sends S3 Signature V4 PUTs using private
+`ASSET_S3_ENDPOINT`, `ASSET_S3_BUCKET`, `ASSET_S3_ACCESS_KEY_ID`,
+`ASSET_S3_SECRET_ACCESS_KEY` and optional `ASSET_S3_REGION` (default `auto`). These
+credentials are never included in Next configuration or browser code. The command
+preflights public runtime file types, rejects symlinks and files above 100 MiB,
+preserves relative object keys and credits, sets MIME types and a one-hour public
+cache TTL, rejects redirects and stops on errors without printing remote bodies or
+signed headers. Upload replaces matching remote keys and never deletes objects.
+
+Local assets remain checked in. Same-origin fallback means clearing the origin and
+rebuilding; no automatic CDN-failure retry is added. R2 provisioning, live upload and
+CORS acceptance await the owner's bucket. See [asset hosting runbook](docs/runbooks/asset-hosting.md).
 
 Hard rules stated in the repository and worth repeating: never use the analytics
 provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or

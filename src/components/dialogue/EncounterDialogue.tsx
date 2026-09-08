@@ -2,6 +2,7 @@
 
 import {useEffect,useRef,type CSSProperties} from "react";
 import {actorLayout} from "@/lib/traveler/actor-layout";
+import { publicAssetUrl } from "@/lib/assets/url";
 import type { DialogueLine } from "@/lib/content/schema";
 
 type Props = {
@@ -54,7 +55,7 @@ export function EncounterDialogue({
           } as CSSProperties}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={npcSrc} alt="" draggable={false} />
+          <img src={publicAssetUrl(npcSrc)} crossOrigin="anonymous" alt="" draggable={false} />
         </div>
       ) : null}
       {line ? (

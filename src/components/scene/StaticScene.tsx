@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { publicAssetUrl } from "@/lib/assets/url";
 
 type Props = {
   src: string;
@@ -24,7 +25,7 @@ export function StaticScene({ src, onReady }: Props) {
     <div className="static-scene" aria-hidden="true">
       {/* A CSS gradient remains behind the asset if image decoding fails. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" onLoad={report} onError={report} draggable={false} />
+      <img src={publicAssetUrl(src)} crossOrigin="anonymous" alt="" onLoad={report} onError={report} draggable={false} />
     </div>
   );
 }

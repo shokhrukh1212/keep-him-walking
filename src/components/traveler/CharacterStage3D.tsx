@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { publicAssetUrl } from "@/lib/assets/url";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CharacterActor } from "@/lib/characters/actor";
@@ -70,7 +71,7 @@ export function CharacterStage3D(props:Props) {
         const manifest=CHARACTER_MANIFEST[kind];
         const candidate=CHARACTER_CANDIDATES[latest.current.candidate];
         const url=kind==="traveler"?candidate.travelerUrl:candidate.residentUrl;
-        const gltf=await loader.loadAsync(url);root=gltf.scene;
+        const gltf=await loader.loadAsync(publicAssetUrl(url));root=gltf.scene;
         if(disposed){disposeModel(root);return;}
         const model=new CharacterActor(gltf,manifest.heightMetres,kind==="traveler");
         if(kind==="traveler"){actor=model;traveler.add(model.root);element.dataset.characterReady="true";latest.current.onAvailability(true);}

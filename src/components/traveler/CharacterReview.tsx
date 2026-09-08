@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { publicAssetUrl } from "@/lib/assets/url";
 import { CHARACTER_CANDIDATES, REVIEW_ACTIONS, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, type SceneCue } from "@/lib/characters/timeline";
 import type { CharacterPlayback } from "./CharacterStage3D";
@@ -22,7 +23,7 @@ export function CharacterReview() {
   return <main className={styles.review}>
     {background === "almaty" &&
       // eslint-disable-next-line @next/next/no-img-element
-      <img className={styles.backdrop} src="/scenes/almaty/v1/zones/arbat-arrival/fallback.webp" alt="" />}
+      <img className={styles.backdrop} src={publicAssetUrl("/scenes/almaty/v1/zones/arbat-arrival/fallback.webp")} crossOrigin="anonymous" alt="" />}
     {!available&&
       // eslint-disable-next-line @next/next/no-img-element
       <img className={styles.fallback} src="/traveler/temporary/v1/idle.webp" alt="Original traveler reference" />}
@@ -60,7 +61,7 @@ export function CharacterReview() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/traveler/temporary/v1/idle.webp" alt="Approved original traveler" className={styles.reference} />
       </details>
-      <a href={`/characters/${candidate}/CREDITS.md`} target="_blank" rel="noreferrer">Character asset credits</a>
+      <a href={publicAssetUrl(`/characters/${candidate}/CREDITS.md`)} target="_blank" rel="noreferrer">Character asset credits</a>
       {progress.cue?.dialogue&&<p className={styles.dialogue}><strong>{progress.cue.dialogue.speaker}</strong><br />{progress.cue.dialogue.text}</p>}
     </aside>
     <output className={styles.phase}>{progress.cue?.phase??"Standing"}</output>

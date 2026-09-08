@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { validateAssetBaseUrl } from "./src/lib/assets/url";
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -15,6 +16,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: {
+    NEXT_PUBLIC_ASSET_BASE_URL: validateAssetBaseUrl(process.env.ASSET_BASE_URL),
+  },
   experimental: {
     // Next 16's CLI parser can intermittently reject valid `tsc --showConfig`
     // output in constrained build environments. The compiler API performs the

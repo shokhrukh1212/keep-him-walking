@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { publicAssetUrl } from "@/lib/assets/url";
 import { trackVisitorEvent } from "@/lib/analytics/client";
 import type {
   BootstrapSnapshot,
@@ -355,8 +356,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       ? next.preloadGroups.find((group) => group.timing === "critical")?.assets ?? next.preload
       : next.preload) {
       const image = new Image();
+      image.crossOrigin = "anonymous";
       image.decoding = "async";
-      image.src = url;
+      image.src = publicAssetUrl(url);
     }
   }, [routePosition.zoneIndex, routePosition.zoneProgress, snapshot.assets]);
 
