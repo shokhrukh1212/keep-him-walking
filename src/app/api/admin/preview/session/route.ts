@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success || !validatePreviewCredential(parsed.data.secret)) return NextResponse.json({ error: "Preview access denied." }, { status: 403 });
   const response = NextResponse.json({ authenticated: true, path: parsed.data.packId ? `/preview/${parsed.data.packId}` : "/preview" });
-  response.cookies.set("khw_preview", issuePreviewSession(), { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: "/preview", maxAge: 4 * 60 * 60 });
+  // The same session protects the editor and its /api/admin/preview entry point.
+  response.cookies.set("khw_preview", issuePreviewSession(), { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 4 * 60 * 60 });
   return response;
 }

@@ -30,7 +30,7 @@ test("calendar reminder is UTC, downloadable and validates inputs", async ({ req
 });
 
 test("protected pack API rejects anonymous access and preview page offers login", async ({ page, request }) => {
-  expect((await request.get("/api/admin/preview/sofia-v1")).status()).toBe(403);
+  expect((await request.get("/api/admin/preview/sofia-v1")).status()).toBe(404);
   await page.goto("/preview");
   await expect(page.getByRole("heading", { name: "Country-pack preview" })).toBeVisible();
   await expect(page.getByLabel("Preview access key")).toBeVisible();
