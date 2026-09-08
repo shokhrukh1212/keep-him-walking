@@ -183,7 +183,30 @@ export const routePropSchema = z.object({
   message: "maxGap must be greater than or equal to minGap",
 });
 
+export const stageSchema = z.object({
+  groundLineY: z.number().min(0).max(1).default(0.82),
+  horizonY: z.number().min(0).max(1).default(0.55),
+  personHeightFrac: z.number().positive().max(1).default(0.28),
+  walkableX: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)])
+    .refine(([left, right]) => left < right, "walkableX must be ordered")
+    .default([0.15, 0.85]),
+  palette: z.tuple([
+    z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  ]).default(["#b9a27a", "#6f7a5a", "#2e3a4f"]),
+  lightDir: z.enum(["left", "right", "top"]).default("left"),
+  parallax: z.object({
+    far: z.number().nonnegative().max(3).default(0.35),
+    mid: z.number().nonnegative().max(3).default(0.7),
+    near: z.number().nonnegative().max(3).default(1.25),
+  }).prefault({}),
+});
+
+export type ZoneStage = z.infer<typeof stageSchema>;
+
 export const routeZoneSchema = z.object({
+  stage: stageSchema.prefault({}),
   id: z.string().min(1),
   label: z.string().min(1),
   durationActiveSeconds: z.number().int().min(45).max(21_600),

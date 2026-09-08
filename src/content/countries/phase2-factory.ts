@@ -1,5 +1,6 @@
 import {
   countryPackV3Schema,
+  stageSchema,
   type CountryPackV3,
   type RouteProp,
   type RouteZone,
@@ -127,6 +128,7 @@ function provisional(title: string, url: string, secondTitle?: string, secondUrl
 }
 
 type ZoneDefinition = {
+  stage?: Partial<RouteZone["stage"]>;
   id: string;
   label: string;
   weather: RouteZone["weather"];
@@ -178,6 +180,7 @@ function routeProps(city: string, version: string, zoneId: string): RouteProp[] 
 function routeZone(city: string, version: string, zone: ZoneDefinition, index: number): RouteZone {
   const root = `/scenes/${city}/${version}/zones/${zone.id}`;
   return {
+    stage: stageSchema.parse(zone.stage ?? {}),
     id: zone.id,
     label: zone.label,
     durationActiveSeconds: 150,

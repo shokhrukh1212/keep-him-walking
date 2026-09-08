@@ -31,7 +31,9 @@ async function processZone(city, zone) {
   await Promise.all([
     sharp(normalized).extract({ left: 0, top: 0, width: 2400, height: 450 }).resize(2400, 900).blur(0.35).webp({ quality: 70, effort: 6 }).toFile(path.join(destination, "distant.webp")),
     sharp(normalized).extract({ left: 0, top: 162, width: 2400, height: 522 }).webp({ quality: 74, effort: 6 }).toFile(path.join(destination, "architecture.webp")),
-    sharp(normalized).resize(1600, 900, { fit: "cover" }).webp({ quality: 78, effort: 6 }).toFile(path.join(destination, "fallback.webp")),
+    // Stage fractions refer to the complete master. Preserve its pavement and
+    // aspect ratio instead of cropping it twice through the legacy layer format.
+    sharp(sourceMaster(city, zone)).resize({ width: 1600 }).webp({ quality: 78, effort: 6 }).toFile(path.join(destination, "fallback.webp")),
   ]);
   const ground = sharp(normalized).extract({ left: 0, top: 684, width: 2400, height: 216 });
   const groundBuffer = await ground.png().toBuffer();
