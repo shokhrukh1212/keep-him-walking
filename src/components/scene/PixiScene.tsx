@@ -72,13 +72,15 @@ export function PixiScene({
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const diagnosticsCallback = useRef(onDiagnostics);
+  const captureCallback = useRef(onCaptureReady);
 
   useEffect(() => {
     runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     diagnosticsCallback.current = onDiagnostics;
-  }, [command, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, weather, onMotionSample]);
+    captureCallback.current = onCaptureReady;
+  }, [command, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, weather, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -125,6 +127,11 @@ export function PixiScene({
         const stormFlash = new Graphics();
         let precipitation: InstanceType<typeof Graphics>[] = [];
         let precipitationKind: "none" | "rain" | "snow" = "none";
+        // The local hour and the weather move on the scale of minutes. Deriving
+        // them every frame cost an Intl lookup and five DOM attribute writes per
+        // frame for values that had not changed.
+        let effect = weatherEffect(0, 0);
+        let lastSkySampleAt = Number.NEGATIVE_INFINITY;
         // Pixi owns the grade; P10 will animate this same object in the world loop.
         gradeRef.current = { exposure: 1, tint: { r: 1, g: 1, b: 1 } };
         const worldGrade = new ColorMatrixFilter();
@@ -432,7 +439,7 @@ export function PixiScene({
         const frameSamples: number[] = [];
         // Pixi's extract re-renders into a texture, so it returns a correct
         // frame whether or not the drawing buffer was preserved.
-        onCaptureReady?.(async () => {
+        captureCallback.current?.(async () => {
           try {
             return app.renderer.extract.canvas(app.stage) as HTMLCanvasElement;
           } catch {
@@ -444,17 +451,21 @@ export function PixiScene({
           const state = runtime.current;
           // The city's own clock drives the grade; the server's reading drives
           // the sky. Both are shared with the character through gradeRef.
-          const localHour = localHourFraction(new Date(), pack.timeZone);
-          const effect = weatherEffect(
-            state.weather?.code ?? 0,
-            state.weather?.windKmh ?? 0,
-          );
-          gradeRef.current = combineGrade(gradeForHour(localHour), effect.contrastScale);
-          worldGrade.matrix = gradeMatrix(gradeRef.current);
-          element.dataset.grade = JSON.stringify(gradeRef.current);
-          element.dataset.localHour = localHour.toFixed(3);
-          element.dataset.nightMix = nightMix(localHour).toFixed(3);
-          element.dataset.weatherKind = effect.precipitation;
+          const sampleAt = performance.now();
+          if (sampleAt - lastSkySampleAt >= 1_000) {
+            lastSkySampleAt = sampleAt;
+            const localHour = localHourFraction(new Date(), pack.timeZone);
+            effect = weatherEffect(state.weather?.code ?? 0, state.weather?.windKmh ?? 0);
+            gradeRef.current = combineGrade(gradeForHour(localHour), effect.contrastScale);
+            worldGrade.matrix = gradeMatrix(gradeRef.current);
+            element.dataset.grade = JSON.stringify(gradeRef.current);
+            element.dataset.localHour = localHour.toFixed(3);
+            element.dataset.nightMix = nightMix(localHour).toFixed(3);
+            element.dataset.weatherKind = effect.precipitation;
+            element.dataset.weatherParticles = String(
+              effect.precipitation === "none" ? 0 : precipitation.length,
+            );
+          }
           const tickAt = performance.now();
           const wallDeltaMs = Math.min(500, Math.max(0, tickAt - lastTickAt));
           lastTickAt = tickAt;
@@ -697,9 +708,7 @@ export function PixiScene({
                 % (width + 60)) - 30;
             }
           }
-          element.dataset.weatherParticles = String(
-            precipitationKind === "none" ? 0 : precipitation.length,
-          );
+
 
           // A fog band sits on the horizon line the zone declares.
           fogBand.clear();
@@ -788,10 +797,10 @@ export function PixiScene({
     void mount();
     return () => {
       disposed = true;
-      onCaptureReady?.(null);
+      captureCallback.current?.(null);
       cleanup();
     };
-  }, [onFailure, onReady, onStageFrame, pack, qualityTier, contacts, gradeRef, onCaptureReady]);
+  }, [onFailure, onReady, onStageFrame, pack, qualityTier, contacts, gradeRef]);
 
   return <div className="pixi-scene" ref={host} aria-hidden="true" />;
 }

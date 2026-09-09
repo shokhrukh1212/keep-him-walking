@@ -25,25 +25,45 @@ export function normalizeHour(hour: number): number {
   return wrapped < 0 ? wrapped + 24 : wrapped;
 }
 
-/** The city's local hour as a fraction, e.g. 13.87 for 13:52. */
-export function localHourFraction(instant: Date, timeZone: string): number {
-  if (!Number.isFinite(instant.getTime())) return 12;
+/**
+ * Constructing an Intl.DateTimeFormat is expensive, and the render loop asks for
+ * the local hour constantly, so formatters are built once per zone and reused.
+ * A zone Intl rejects is remembered as null so it is not retried on every frame.
+ */
+const HOUR_FORMATTERS = new Map<string, Intl.DateTimeFormat | null>();
+
+function hourFormatter(timeZone: string): Intl.DateTimeFormat | null {
+  const cached = HOUR_FORMATTERS.get(timeZone);
+  if (cached !== undefined) return cached;
+  let formatter: Intl.DateTimeFormat | null = null;
   try {
-    const parts = new Intl.DateTimeFormat("en", {
+    formatter = new Intl.DateTimeFormat("en", {
       timeZone,
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
       hourCycle: "h23",
-    }).formatToParts(instant);
-    const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
-    return normalizeHour(value("hour") + value("minute") / 60 + value("second") / 3_600);
+    });
   } catch {
-    // An unknown zone must not blank the world; fall back to UTC.
+    formatter = null;
+  }
+  HOUR_FORMATTERS.set(timeZone, formatter);
+  return formatter;
+}
+
+/** The city's local hour as a fraction, e.g. 13.87 for 13:52. */
+export function localHourFraction(instant: Date, timeZone: string): number {
+  if (!Number.isFinite(instant.getTime())) return 12;
+  const formatter = hourFormatter(timeZone);
+  // An unknown zone must not blank the world; fall back to UTC.
+  if (!formatter) {
     return normalizeHour(
       instant.getUTCHours() + instant.getUTCMinutes() / 60 + instant.getUTCSeconds() / 3_600,
     );
   }
+  const parts = formatter.formatToParts(instant);
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+  return normalizeHour(value("hour") + value("minute") / 60 + value("second") / 3_600);
 }
 
 /** The colour grade for a local hour, interpolated between the keyframes. */

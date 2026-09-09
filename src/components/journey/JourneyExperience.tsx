@@ -347,6 +347,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const worldCapture = useRef<CanvasCapture | null>(null);
   const characterCapture = useRef<CanvasCapture | null>(null);
   const ownedPhotoSecond = useRef<number | null>(null);
+  // Stable identities: an inline callback here re-runs the scene's mount effect,
+  // which tears down and rebuilds the entire Pixi application.
+  const registerWorldCapture = useCallback((capture: CanvasCapture | null) => {
+    worldCapture.current = capture;
+  }, []);
+  const registerCharacterCapture = useCallback((capture: CanvasCapture | null) => {
+    characterCapture.current = capture;
+  }, []);
   const uploadedPhotoSecond = useRef<number | null>(null);
   const {
     runtime: routeRuntime,
@@ -650,8 +658,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       <SceneStage
         scheduledActions={scheduledActions}
         weather={weather}
-        onWorldCaptureReady={(capture) => { worldCapture.current = capture; }}
-        onCharacterCaptureReady={(capture) => { characterCapture.current = capture; }}
+        onWorldCaptureReady={registerWorldCapture}
+        onCharacterCaptureReady={registerCharacterCapture}
         pack={snapshot.assets}
         routeSeconds={routeSeconds}
         routeDistanceMetres={distanceMetres}

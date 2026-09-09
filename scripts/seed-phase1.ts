@@ -3,7 +3,11 @@ import {
   PHASE1_COUNTRY_DAY_ID,
   PHASE1_ENCOUNTER_ID,
 } from "../src/content/countries/tashkent.v1";
-import { tashkentCountryPackV3 } from "../src/content/countries/tashkent.v3";
+// tashkent-v3 is schemaVersion 2: the legacy layered renderer kept only as a
+// rollback target. Every Season 1 feature — the panorama, the metre-driven
+// route, the bundle bootstrap — requires a schemaVersion 3 pack, so the seed
+// uses the current one.
+import { tashkentCountryPackV4 } from "../src/content/countries/tashkent.v4";
 
 const JOURNEY_ID = "00000000-0000-4000-8000-000000000001";
 const VOTE_ID = "30000000-0000-4000-8000-000000000001";
@@ -44,7 +48,7 @@ const supabase = createClient(url, key, {
 });
 const endsAt = new Date(startsAt.getTime() + 24 * 60 * 60 * 1_000);
 const encounterStartsAt = new Date(startsAt.getTime() + 15 * 60 * 1_000);
-const encounter = tashkentCountryPackV3.encounters[0];
+const encounter = tashkentCountryPackV4.encounters[0];
 if (!encounter) throw new Error("Tashkent content pack has no encounter");
 
 const { data: existingJourney, error: existingJourneyError } = await supabase
@@ -91,7 +95,7 @@ const writes = [
     time_zone: "Asia/Tashkent",
     starts_at: startsAt.toISOString(),
     ends_at: endsAt.toISOString(),
-    scene_pack_id: tashkentCountryPackV3.assetVersion,
+    scene_pack_id: tashkentCountryPackV4.assetVersion,
     status: "live",
     story_summary: "A first morning in Tashkent—and a serious invitation to try plov.",
     updated_at: new Date().toISOString(),
