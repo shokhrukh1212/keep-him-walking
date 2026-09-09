@@ -162,7 +162,7 @@ export function ProductCharacterStage3D(props: Props) {
       lastRender = now;
       clock.accept(state.routeRuntime, state.command?.presenceTtlMs ?? 50_000, now);
       const sample = clock.sample(now);
-      const motion = travelerMotionAt(state.pack, sample.rawSeconds);
+      const motion = travelerMotionAt(state.pack, sample.rawSeconds, sample.distanceMetres);
       const cue = productCharacterSceneAt(state.pack, motion, sample.traveling, state.command?.actionReview, now);
       const snap = firstSample || cue.conversation !== previousConversation;
       firstSample = false;

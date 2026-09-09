@@ -50,7 +50,7 @@ export type TravelerMotionSnapshot = {
 };
 
 type ScheduledAction = {
-  atLocomotionSeconds: number;
+  atMetres: number;
   kind: RouteActionKind;
   durationSeconds: number;
   label: string;
@@ -66,12 +66,12 @@ export function actionTravel(elapsed: number, duration: number) {
     speed: elapsed < 1.2 ? 1 - entry : elapsed > duration - 1.2 ? exit : 0 };
 }
 
-function routeDuration(pack: CountryPack) {
-  return pack.route.zones.reduce((total, zone) => total + zone.durationActiveSeconds, 0);
-}
-
 function alignedStep(seconds: number) {
   return Math.round(seconds / STEP_DURATION_SECONDS) * STEP_DURATION_SECONDS;
+}
+
+function alignedMetres(metres: number) {
+  return alignedStep(metres / METRES_PER_SECOND) * METRES_PER_SECOND;
 }
 
 function dialogueDuration(lines: DialogueLine[]) {
@@ -80,18 +80,17 @@ function dialogueDuration(lines: DialogueLine[]) {
 
 function actionsForPack(pack: CountryPack): ScheduledAction[] {
   if (pack.schemaVersion !== 3) return [];
-  const duration = routeDuration(pack);
   const encounter = pack.encounters[0];
   const byKind: Partial<Record<string, ScheduledAction>> = {
     arrival: {
-      atLocomotionSeconds: 0,
+      atMetres: 0,
       kind: "wave",
       durationSeconds: ACTION_DURATIONS.wave,
       label: "Waving hello",
     },
     encounter: encounter
       ? {
-          atLocomotionSeconds: 0,
+          atMetres: 0,
           kind: "encounter",
           durationSeconds: 11.1 + dialogueDuration(encounter.lines),
           label: `Talking · ${encounter.locationLabel}`,
@@ -99,19 +98,19 @@ function actionsForPack(pack: CountryPack): ScheduledAction[] {
         }
       : undefined,
     food: {
-      atLocomotionSeconds: 0,
+      atMetres: 0,
       kind: "drink",
       durationSeconds: ACTION_DURATIONS.drink,
       label: "Taking a short drink",
     },
     landmark: {
-      atLocomotionSeconds: 0,
+      atMetres: 0,
       kind: "photo",
       durationSeconds: ACTION_DURATIONS.photo,
       label: "Taking a photograph",
     },
     departure: {
-      atLocomotionSeconds: 0,
+      atMetres: 0,
       kind: "phone",
       durationSeconds: ACTION_DURATIONS.phone,
       label: "Checking tomorrow’s route",
@@ -120,9 +119,13 @@ function actionsForPack(pack: CountryPack): ScheduledAction[] {
 
   return pack.storyBeats.flatMap((beat) => {
     const action = byKind[beat.kind];
-    if (!action) return [];
-    return [{ ...action, atLocomotionSeconds: alignedStep(beat.atFraction * duration) }];
-  }).sort((left, right) => left.atLocomotionSeconds - right.atLocomotionSeconds);
+    // Departure is deliberately absent: it remains the one rollover-time event.
+    if (!action || beat.atMetres === null) return [];
+    return [{
+      ...action,
+      atMetres: alignedMetres(beat.atMetres),
+    }];
+  }).sort((left, right) => left.atMetres - right.atMetres);
 }
 
 function actionState(action: ScheduledAction, elapsedSeconds: number): TravelerMotionAction {
@@ -185,52 +188,37 @@ function gaitFrameAt(cyclePhase: number) {
 }
 
 /**
- * Converts server-owned watcher time into the canonical locomotion timeline.
- * Route actions consume watcher time while deliberately holding locomotion at
- * a planted-foot boundary, so reloads and concurrent viewers see the same
- * frame, public step count, and world distance.
+ * Converts server-owned watcher time and distance into the canonical motion
+ * timeline. Metre beats are rounded onto a planted-foot boundary; distance
+ * remains the authoritative world track while the gait holds for an action.
  */
 export function travelerMotionAt(
   pack: CountryPack,
   rawActiveSeconds: number,
+  distanceMetres = rawActiveSeconds * METRES_PER_SECOND,
 ): TravelerMotionSnapshot {
   const raw = Math.max(0, Number.isFinite(rawActiveSeconds) ? rawActiveSeconds : 0);
-  const duration = routeDuration(pack);
+  const distance = Math.max(0, Number.isFinite(distanceMetres) ? distanceMetres : 0);
   const actions = actionsForPack(pack);
-  const pausedPerLoop = actions.reduce((total, action) => total + action.durationSeconds, 0);
-  const extendedLoopDuration = duration + pausedPerLoop;
-  const completedLoops = extendedLoopDuration > 0 ? Math.floor(raw / extendedLoopDuration) : 0;
-  const localRaw = extendedLoopDuration > 0 ? raw - completedLoops * extendedLoopDuration : 0;
-  let rawCursor = 0;
-  let locomotionCursor = 0;
+  let pausedSeconds = 0;
   let activeAction: TravelerMotionAction | null = null;
-  let actionSeconds = completedLoops * actions.length * 1.2;
+  let actionSeconds = 0;
 
   for (const action of actions) {
-    const walkingSeconds = Math.max(0, action.atLocomotionSeconds - locomotionCursor);
-    if (localRaw < rawCursor + walkingSeconds) {
-      locomotionCursor += localRaw - rawCursor;
-      rawCursor = localRaw;
+    if (distance < action.atMetres) break;
+    const elapsed = (distance - action.atMetres) / METRES_PER_SECOND;
+    if (elapsed < action.durationSeconds) {
+      activeAction = actionState(action, elapsed);
+      pausedSeconds += elapsed;
+      actionSeconds += actionTravel(elapsed, action.durationSeconds).seconds;
       break;
     }
-    rawCursor += walkingSeconds;
-    locomotionCursor = action.atLocomotionSeconds;
-    if (localRaw < rawCursor + action.durationSeconds) {
-      activeAction = actionState(action, localRaw - rawCursor);
-      actionSeconds += actionTravel(localRaw - rawCursor, action.durationSeconds).seconds;
-      rawCursor = localRaw;
-      break;
-    }
-    rawCursor += action.durationSeconds;
+    pausedSeconds += action.durationSeconds;
     actionSeconds += 1.2;
   }
 
-  if (!activeAction && localRaw > rawCursor) {
-    locomotionCursor += localRaw - rawCursor;
-  }
-
-  const routeSeconds = completedLoops * duration + Math.min(duration, locomotionCursor);
-  const locomotionSeconds = routeSeconds + actionSeconds;
+  const routeSeconds = distance / METRES_PER_SECOND;
+  const locomotionSeconds = Math.max(0, raw - pausedSeconds + actionSeconds);
   const plantIndex = Math.floor((locomotionSeconds + 1e-7) / STEP_DURATION_SECONDS);
   const cyclePhase = (locomotionSeconds % GAIT_CYCLE_SECONDS) / GAIT_CYCLE_SECONDS;
   const stepPhase = (locomotionSeconds % STEP_DURATION_SECONDS) / STEP_DURATION_SECONDS;
@@ -238,7 +226,7 @@ export function travelerMotionAt(
     rawActiveSeconds: raw,
     locomotionSeconds,
     routeSeconds,
-    distanceMetres: plantIndex * METRES_PER_STEP + stepPhase * METRES_PER_STEP,
+    distanceMetres: distance,
     plantIndex,
     plantedFoot: plantIndex % 2 === 0 ? "left" : "right",
     cyclePhase,

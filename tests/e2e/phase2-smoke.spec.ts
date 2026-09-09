@@ -21,7 +21,7 @@ function snapshot(routeIndex = 0): BootstrapSnapshot {
     activeEvent: null, nextEvent: null, vote: null,
     presence: { activeViewers: 1, status: "live", ttlSeconds: 50 },
     steps: { global: 120, updatedAt: now.toISOString(), stale: false },
-    route: { globalActiveSeconds: 30, authoritativeAt: now.toISOString(), walking: true },
+    route: { globalActiveSeconds: 30, globalDistanceMetres: 37.5, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },
     postcard: { eligible: true, unlockSeconds: 60, contributedSeconds: 75, url: null },
     assets: { ...pack, traveler: { ...pack.traveler, riveUrl: null } },
@@ -32,7 +32,7 @@ async function install(page: Page, getSnapshot: () => BootstrapSnapshot = () => 
   await page.route("**/api/bootstrap", (route) => route.fulfill({ json: getSnapshot() }));
   await page.route("**/api/presence/heartbeat", (route) => {
     const now = new Date().toISOString();
-    return route.fulfill({ json: { serverNow: now, realServerNow: now, activeViewers: 1, walking: true, globalSteps: 120, visitorActiveSeconds: 75, ttlSeconds: 50, nextHeartbeatInMs: 30_000, globalActiveSeconds: 30, routeAuthoritativeAt: now } });
+    return route.fulfill({ json: { serverNow: now, realServerNow: now, activeViewers: 1, walking: true, globalSteps: 120, visitorActiveSeconds: 75, ttlSeconds: 50, nextHeartbeatInMs: 30_000, globalActiveSeconds: 30, globalDistanceMetres: 37.5, paceRate: 1, routeAuthoritativeAt: now } });
   });
   await page.route("**/api/postcards", (route) => route.fulfill({ json: { token: "x".repeat(43), url: "https://example.test/p/postcard", imageUrl: "https://example.test/card.webp", idempotent: false } }));
 }

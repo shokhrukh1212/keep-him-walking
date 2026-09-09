@@ -37,6 +37,8 @@ function makeSnapshot(server: MotionServer): BootstrapSnapshot {
     steps: { global: Math.floor(server.routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
     route: {
       globalActiveSeconds: server.routeSeconds,
+      globalDistanceMetres: server.routeSeconds * 1.25,
+      paceRate: 1,
       authoritativeAt: now.toISOString(),
       walking: false,
     },
@@ -64,6 +66,8 @@ async function installMotionApi(page: Page, server: MotionServer) {
         ttlSeconds: 1,
         nextHeartbeatInMs: 300,
         globalActiveSeconds: server.routeSeconds,
+        globalDistanceMetres: server.routeSeconds * 1.25,
+        paceRate: 1,
         routeAuthoritativeAt: now,
       },
     });
@@ -73,7 +77,7 @@ async function installMotionApi(page: Page, server: MotionServer) {
 test("streams the route, collapses onboarding, and eases stop/resume", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "Motion sequencing runs once on desktop Chromium");
   test.setTimeout(60_000);
-  const server: MotionServer = { active: true, routeSeconds: 118, activeEvent: null, heartbeatCalls: 0 };
+  const server: MotionServer = { active: true, routeSeconds: 1_000, activeEvent: null, heartbeatCalls: 0 };
   await installMotionApi(page, server);
   await page.goto("/?debug=world&quality=low");
 
@@ -106,7 +110,7 @@ test("runs the canonical NPC encounter through focus, dialogue and resume", asyn
   const encounter = tashkentCountryPackV2.encounters[0];
   const server: MotionServer = {
     active: true,
-    routeSeconds: 245,
+    routeSeconds: 1_520,
     activeEvent: {
       id: encounter.id,
       type: "encounter",

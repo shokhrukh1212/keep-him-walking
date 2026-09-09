@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { tashkentCountryPackV3 } from "@/content/countries/tashkent.v3";
 import { phase3EditorialBufferOrder, registeredCountryPacks } from "@/content/countries/registry";
-import { countryPackV3Schema } from "./schema";
+import {
+  countryPackV3Schema,
+  DEFAULT_DAY_ROUTE_METRES,
+  DEFAULT_MARATHON_METRES,
+  DEFAULT_ZONE_LENGTH_METRES,
+} from "./schema";
 import { countryPackSchema } from "./schema";
 import type { CountryPackV3 } from "./schema";
 
@@ -43,6 +48,26 @@ describe("Phase 2 country packs", () => {
     expect(packs[0]?.culturalReview.status).toBe("approved");
     expect(packs.slice(1).every((pack) => pack.culturalReview.status === "provisional_preview")).toBe(true);
     expect(new Set(packs.map((pack) => pack.npcSystem.baseType))).toEqual(new Set(["resident-a", "resident-b"]));
+  });
+
+  it("upgrades legacy packs with the canonical distance defaults", () => {
+    const legacy = structuredClone(packs[0]) as unknown as Record<string, unknown>;
+    delete legacy.dayRouteMetres;
+    delete legacy.marathonMetres;
+    const route = legacy.route as { zones: Array<Record<string, unknown>> };
+    route.zones.forEach((zone) => delete zone.lengthMetres);
+    const beats = legacy.storyBeats as Array<Record<string, unknown>>;
+    beats.forEach((beat, index) => {
+      delete beat.atMetres;
+      beat.atFraction = index / Math.max(1, beats.length - 1);
+    });
+
+    const parsed = countryPackV3Schema.parse(legacy);
+    expect(parsed.dayRouteMetres).toBe(DEFAULT_DAY_ROUTE_METRES);
+    expect(parsed.marathonMetres).toBe(DEFAULT_MARATHON_METRES);
+    expect(parsed.route.zones.map((zone) => zone.lengthMetres)).toEqual(DEFAULT_ZONE_LENGTH_METRES);
+    expect(parsed.storyBeats.map((beat) => beat.atMetres)).toEqual([150, 1_900, 4_800, 7_900, null]);
+    expect(parsed.route.zones.every((zone) => zone.durationActiveSeconds > 0)).toBe(true);
   });
 });
 

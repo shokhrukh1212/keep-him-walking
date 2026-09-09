@@ -4,11 +4,12 @@ import type { BootstrapSnapshot, ScheduledEventView } from "../../src/lib/contra
 
 const recordingPack = {
   ...tashkentCountryPackV4,
+  dayRouteMetres: 125,
   route: {
     ...tashkentCountryPackV4.route,
     zones: tashkentCountryPackV4.route.zones.map((zone) => ({
       ...zone,
-      durationActiveSeconds: 20,
+      lengthMetres: 25,
     })),
   },
 };
@@ -42,7 +43,7 @@ function snapshot(routeSeconds: number, event: ScheduledEventView): BootstrapSna
     vote: null,
     presence: { activeViewers: 1, status: "live", ttlSeconds: 2 },
     steps: { global: Math.floor(routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
-    route: { globalActiveSeconds: routeSeconds, authoritativeAt: now.toISOString(), walking: true },
+    route: { globalActiveSeconds: routeSeconds, globalDistanceMetres: routeSeconds * 1.25, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: {
       status: "sponsored",
       publicId: "phase2-recording-fixture",
@@ -89,6 +90,8 @@ async function installRecordingApi(page: Page) {
       ttlSeconds: 2,
       nextHeartbeatInMs: 500,
       globalActiveSeconds: routeSeconds,
+      globalDistanceMetres: routeSeconds * 1.25,
+      paceRate: 1,
       routeAuthoritativeAt: now,
     } });
   });

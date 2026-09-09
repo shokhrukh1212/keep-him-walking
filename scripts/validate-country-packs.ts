@@ -38,9 +38,11 @@ for (const candidate of packs) {
     if (layerKinds.some((kinds) => !kinds.has("distant") || !kinds.has("architecture") || !kinds.has("ground"))) {
       throw new Error(`${pack.assetVersion} requires distant, architecture, and ground layers in every zone`);
     }
-    const fractions = pack.storyBeats.map((beat) => beat.atFraction);
-    if (fractions.some((fraction, index) => index > 0 && fraction <= fractions[index - 1])) {
-      throw new Error(`${pack.assetVersion} story beats must be strictly ordered`);
+    const metres = pack.storyBeats
+      .filter((beat) => beat.kind !== "departure")
+      .map((beat) => beat.atMetres ?? 0);
+    if (metres.some((atMetres, index) => index > 0 && atMetres <= metres[index - 1])) {
+      throw new Error(`${pack.assetVersion} route story beats must be strictly ordered by metres`);
     }
     if (!['approved', 'provisional_preview'].includes(pack.culturalReview.status)) {
       throw new Error(`${pack.assetVersion} is not eligible for private preview`);

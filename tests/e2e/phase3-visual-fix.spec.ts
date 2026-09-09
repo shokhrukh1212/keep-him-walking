@@ -4,11 +4,12 @@ import type { BootstrapSnapshot } from "../../src/lib/contracts";
 
 const recordingPack = {
   ...dushanbeCountryPackV1,
+  dayRouteMetres: 90,
   route: {
     ...dushanbeCountryPackV1.route,
     zones: dushanbeCountryPackV1.route.zones.map((zone) => ({
       ...zone,
-      durationActiveSeconds: 18,
+      lengthMetres: 18,
     })),
   },
 };
@@ -40,7 +41,7 @@ function snapshot(routeSeconds: number): BootstrapSnapshot {
     vote: null,
     presence: { activeViewers: 1, status: "live", ttlSeconds: 2 },
     steps: { global: Math.floor(routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
-    route: { globalActiveSeconds: routeSeconds, authoritativeAt: now.toISOString(), walking: true },
+    route: { globalActiveSeconds: routeSeconds, globalDistanceMetres: routeSeconds * 1.25, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },
     postcard: { eligible: true, unlockSeconds: 60, contributedSeconds: 75, url: null },
     assets: recordingPack,
@@ -64,6 +65,8 @@ async function installApi(page: Page) {
       ttlSeconds: 2,
       nextHeartbeatInMs: 400,
       globalActiveSeconds: routeSeconds,
+      globalDistanceMetres: routeSeconds * 1.25,
+      paceRate: 1,
       routeAuthoritativeAt: now,
     } });
   });

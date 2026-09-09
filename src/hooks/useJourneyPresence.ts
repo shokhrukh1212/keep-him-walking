@@ -52,7 +52,10 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
         throw new Error("Country changed during heartbeat");
       }
       if (!Number.isFinite(result.activeViewers) || typeof result.walking !== "boolean"
-        || !Number.isFinite(result.globalActiveSeconds) || !Number.isFinite(Date.parse(result.routeAuthoritativeAt))) {
+        || !Number.isFinite(result.globalActiveSeconds)
+        || !Number.isFinite(result.globalDistanceMetres)
+        || !Number.isFinite(result.paceRate)
+        || !Number.isFinite(Date.parse(result.routeAuthoritativeAt))) {
         throw new Error("Invalid presence confirmation");
       }
       onHeartbeat(result);

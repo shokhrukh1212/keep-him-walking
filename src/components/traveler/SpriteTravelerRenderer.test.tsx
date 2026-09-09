@@ -15,6 +15,8 @@ const command = {
   walking: true,
   routeRuntime: {
     globalActiveSeconds: 20,
+    globalDistanceMetres: 25,
+    paceRate: 1,
     authoritativeAt: new Date().toISOString(),
     walking: true,
   },

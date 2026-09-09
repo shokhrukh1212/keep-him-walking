@@ -26,6 +26,8 @@ export const DEFAULT_TRAVELER_COMMAND: TravelerCommand = {
   walking: false,
   routeRuntime: {
     globalActiveSeconds: 0,
+    globalDistanceMetres: 0,
+    paceRate: 1,
     authoritativeAt: new Date(0).toISOString(),
     walking: false,
   },

@@ -7,7 +7,7 @@ import transitionSheetAsset from "../../../art/phase2/traveler/production-v2/tra
 import type { CountryPack, SpriteManifest, TravelerState } from "@/lib/content/schema";
 import { travelerMotionAt } from "@/lib/traveler/motion-clock";
 import type { TravelerCommand } from "@/lib/traveler/types";
-import { extrapolatedRouteSeconds } from "@/lib/world/route-clock";
+import { extrapolatedRouteDistance, extrapolatedRouteSeconds } from "@/lib/world/route-clock";
 
 type Props = {
   command: TravelerCommand;
@@ -214,11 +214,10 @@ export function SpriteTravelerRenderer({ command, pack, onReady }: Props) {
 
     const render = () => {
       const current = commandRef.current;
-      const rawSeconds = extrapolatedRouteSeconds(
-        current.routeRuntime,
-        Math.min(Date.now(), current.motionSampleUntilMs),
-      );
-      const motion = travelerMotionAt(pack, rawSeconds);
+      const sampleAt = Math.min(Date.now(), current.motionSampleUntilMs);
+      const rawSeconds = extrapolatedRouteSeconds(current.routeRuntime, sampleAt);
+      const distanceMetres = extrapolatedRouteDistance(current.routeRuntime, sampleAt);
+      const motion = travelerMotionAt(pack, rawSeconds, distanceMetres);
       const state = current.walking && motion.action ? motion.action.state : current.state;
       const clip = manifest.clips[state] ?? manifest.clips.idle;
       if (clip) {

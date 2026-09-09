@@ -31,7 +31,7 @@ function snapshot(routeSeconds: number): BootstrapSnapshot {
     vote: null,
     presence: { activeViewers: 1, status: "live", ttlSeconds: 1 },
     steps: { global: Math.floor(routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
-    route: { globalActiveSeconds: routeSeconds, authoritativeAt: now.toISOString(), walking: true },
+    route: { globalActiveSeconds: routeSeconds, globalDistanceMetres: routeSeconds * 1.25, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     assets: tashkentCountryPackV3,
@@ -52,6 +52,8 @@ async function installApi(page: Page, getRouteSeconds: () => number) {
       ttlSeconds: 1,
       nextHeartbeatInMs: 500,
       globalActiveSeconds: routeSeconds,
+      globalDistanceMetres: routeSeconds * 1.25,
+      paceRate: 1,
       routeAuthoritativeAt: now,
     } });
   });
@@ -76,11 +78,11 @@ test("captures coherent full-motion zones and the complete reduced-motion fallba
   };
 
   await captureZone(36, "arrival-boulevard", "arrival-full-motion");
-  await captureZone(156, "mahalla-street", "mahalla-full-motion");
-  await captureZone(276, "chorsu-market", "chorsu-full-motion");
+  await captureZone(1_000, "mahalla-street", "mahalla-full-motion");
+  await captureZone(2_300, "chorsu-market", "chorsu-full-motion");
 
   await page.emulateMedia({ reducedMotion: "reduce" });
-  routeSeconds = 276;
+  routeSeconds = 2_300;
   await page.goto("/");
   await expect(page.locator(".scene-stage")).toHaveAttribute("data-renderer", "static");
   await expect(page.locator("main.journey-shell")).toHaveAttribute("data-motion", "reduced");

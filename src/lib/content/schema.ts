@@ -205,10 +205,16 @@ export const stageSchema = z.object({
 
 export type ZoneStage = z.infer<typeof stageSchema>;
 
+export const DEFAULT_ZONE_LENGTH_METRES = [1_200, 1_600, 1_600, 1_400, 2_200] as const;
+export const DEFAULT_DAY_ROUTE_METRES = 8_000;
+export const DEFAULT_MARATHON_METRES = 42_195;
+
 export const routeZoneSchema = z.object({
   stage: stageSchema.prefault({}),
   id: z.string().min(1),
   label: z.string().min(1),
+  lengthMetres: z.number().positive().max(100_000).default(DEFAULT_ZONE_LENGTH_METRES[0]),
+  /** @deprecated Kept so older packs validate; route progress no longer reads it. */
   durationActiveSeconds: z.number().int().min(45).max(21_600),
   layers: z.array(routeLayerSchema).min(2),
   props: z.array(routePropSchema).min(3),
@@ -230,13 +236,36 @@ export const routeZoneSchema = z.object({
   fallbackUrl: z.string().startsWith("/"),
 });
 
-export const countryPackSchema = baseCountryPackSchema.extend({
-  schemaVersion: z.literal(2),
-  route: z.object({
+function routeSchemaWithDistanceDefaults() {
+  return z.preprocess((candidate) => {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return candidate;
+    const route = candidate as Record<string, unknown>;
+    if (!Array.isArray(route.zones)) return candidate;
+    return {
+      ...route,
+      zones: route.zones.map((zone, index) => {
+        if (!zone || typeof zone !== "object" || Array.isArray(zone)) return zone;
+        const value = zone as Record<string, unknown>;
+        return {
+          ...value,
+          lengthMetres: value.lengthMetres
+            ?? DEFAULT_ZONE_LENGTH_METRES[index]
+            ?? DEFAULT_ZONE_LENGTH_METRES[DEFAULT_ZONE_LENGTH_METRES.length - 1],
+        };
+      }),
+    };
+  }, z.object({
     worldUnitsPerSecond: z.number().positive().max(300),
     travelerViewportAnchor: z.number().min(0.55).max(0.65),
     zones: z.array(routeZoneSchema).min(4).max(6),
-  }),
+  }));
+}
+
+export const countryPackSchema = baseCountryPackSchema.extend({
+  schemaVersion: z.literal(2),
+  dayRouteMetres: z.number().positive().max(100_000).default(DEFAULT_DAY_ROUTE_METRES),
+  marathonMetres: z.number().positive().max(1_000_000).default(DEFAULT_MARATHON_METRES),
+  route: routeSchemaWithDistanceDefaults(),
   postcardBackgroundUrl: z.string().startsWith("/"),
 });
 
@@ -269,16 +298,34 @@ export const localPhraseSchema = z.object({
   pronunciation: z.string().min(1),
 });
 
-export const storyBeatSchema = z.object({
+const DEFAULT_STORY_BEAT_METRES = {
+  arrival: 150,
+  encounter: 1_900,
+  food: 4_800,
+  landmark: 7_900,
+} as const;
+
+export const storyBeatSchema = z.preprocess((candidate) => {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return candidate;
+  const beat = candidate as Record<string, unknown>;
+  const kind = beat.kind as keyof typeof DEFAULT_STORY_BEAT_METRES | "departure" | undefined;
+  return {
+    ...beat,
+    atMetres: beat.atMetres
+      ?? (kind === "departure" ? null : kind ? DEFAULT_STORY_BEAT_METRES[kind] : undefined),
+  };
+}, z.object({
   id: z.string().min(1),
   kind: z.enum(["arrival", "encounter", "food", "landmark", "departure"]),
-  atFraction: z.number().min(0).max(1),
+  atMetres: z.number().nonnegative().max(1_000_000).nullable(),
   durationSeconds: z.number().int().min(15).max(1_800),
   title: z.string().min(1),
   summary: z.string().min(1).max(360),
   encounterId: z.string().optional(),
-}).refine((beat) => beat.kind !== "encounter" || Boolean(beat.encounterId), {
+})).refine((beat) => beat.kind !== "encounter" || Boolean(beat.encounterId), {
   message: "Encounter story beats require an encounterId",
+}).refine((beat) => beat.kind === "departure" ? beat.atMetres === null : beat.atMetres !== null, {
+  message: "Only departure remains time-based; all other story beats require atMetres",
 });
 
 export const preloadGroupSchema = z.object({
@@ -294,11 +341,9 @@ export const countryPackV3Schema = baseCountryPackSchema
     schemaVersion: z.literal(3),
     packId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*-v\d+$/),
     revision: z.number().int().positive(),
-    route: z.object({
-      worldUnitsPerSecond: z.number().positive().max(300),
-      travelerViewportAnchor: z.number().min(0.55).max(0.65),
-      zones: z.array(routeZoneSchema).min(4).max(6),
-    }),
+    dayRouteMetres: z.number().positive().max(100_000).default(DEFAULT_DAY_ROUTE_METRES),
+    marathonMetres: z.number().positive().max(1_000_000).default(DEFAULT_MARATHON_METRES),
+    route: routeSchemaWithDistanceDefaults(),
     postcardBackgroundUrl: z.string().startsWith("/"),
     postcard: z.object({
       title: z.string().min(1).max(80),

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     country: pack.countryName,
     city: pack.cityName,
     schemaVersion: pack.schemaVersion,
-    zone: activeZone ? { id: activeZone.id, label: activeZone.label, fallbackUrl: activeZone.fallbackUrl, durationActiveSeconds: activeZone.durationActiveSeconds, stage: activeZone.stage } : null,
+    zone: activeZone ? { id: activeZone.id, label: activeZone.label, fallbackUrl: activeZone.fallbackUrl, lengthMetres: activeZone.lengthMetres, stage: activeZone.stage } : null,
     calibrationUrl: `${editor.pathname}${editor.search}`,
     zoneCount: pack.route.zones.length,
   }, { headers: { "Cache-Control": "private, no-store", Vary: "Accept, Cookie, Authorization" } });

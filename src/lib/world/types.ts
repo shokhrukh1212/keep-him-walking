@@ -2,18 +2,19 @@ import type { TravelerState } from "@/lib/content/schema";
 
 export type RouteRuntime = {
   globalActiveSeconds: number;
+  globalDistanceMetres: number;
+  paceRate: number;
   authoritativeAt: string;
   walking: boolean;
 };
 
 export type RoutePosition = {
-  globalActiveSeconds: number;
-  distance: number;
+  phase: "route" | "evening";
   zoneIndex: number;
-  zoneId: string;
-  zoneLabel: string;
-  zoneElapsedSeconds: number;
   zoneProgress: number;
+  metresIntoZone: number;
+  remainingToLandmark: number;
+  marathonProgress: number;
 };
 
 export type MotionPhase = Extract<

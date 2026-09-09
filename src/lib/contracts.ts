@@ -104,5 +104,7 @@ export type HeartbeatResponse = {
   ttlSeconds: number;
   nextHeartbeatInMs: number;
   globalActiveSeconds: number;
+  globalDistanceMetres: number;
+  paceRate: number;
   routeAuthoritativeAt: string;
 };

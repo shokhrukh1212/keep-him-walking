@@ -53,6 +53,8 @@ type BootstrapBundleRow = {
     out_visitor_active_seconds: number;
     out_accounted_at: string;
     out_global_active_seconds: number;
+    out_global_distance_metres: number;
+    out_pace_rate: number;
   };
   events: EventRow[];
   vote: null | {
@@ -244,6 +246,8 @@ function bootstrapFromBundle(
     },
     route: {
       globalActiveSeconds: Number(bundle.runtime.out_global_active_seconds ?? 0),
+      globalDistanceMetres: Number(bundle.runtime.out_global_distance_metres ?? 0),
+      paceRate: Number(bundle.runtime.out_pace_rate ?? 1),
       authoritativeAt: String(bundle.runtime.out_accounted_at),
       walking: Number(bundle.runtime.out_active_viewers ?? 0) > 0,
     },
@@ -359,7 +363,7 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v4", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v5", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -382,8 +386,8 @@ export async function liveBootstrapSnapshot(
     throw new Error(`No matching country pack for ${countryDay.scene_pack_id}`);
   }
   const storyNow = new Date(countryDay.story_now ?? now.toISOString());
-  const runtimeRequest = countryPack.schemaVersion === 3
-    ? supabase.rpc("read_journey_runtime_v3", {
+  const runtimeRequest = countryPack.schemaVersion === 2 || countryPack.schemaVersion === 3
+    ? supabase.rpc("read_journey_runtime_v4", {
       p_country_day_id: countryDay.id,
       p_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -481,6 +485,8 @@ export async function liveBootstrapSnapshot(
     },
     route: {
       globalActiveSeconds: Number(row?.out_global_active_seconds ?? 0),
+      globalDistanceMetres: Number(row?.out_global_distance_metres ?? 0),
+      paceRate: Number(row?.out_pace_rate ?? 1),
       authoritativeAt: String(row?.out_accounted_at ?? now.toISOString()),
       walking: Number(row?.out_active_viewers ?? 0) > 0,
     },

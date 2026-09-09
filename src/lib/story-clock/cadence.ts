@@ -10,12 +10,15 @@ export function scheduleStoryBeats(
   dayStartsAt: Date,
   dayEndsAt: Date,
 ): ScheduledBeat[] {
-  const durationMs = dayEndsAt.getTime() - dayStartsAt.getTime();
-  if (durationMs <= 0) throw new Error("Country-day window must be positive");
-  return [...pack.storyBeats]
-    .sort((left, right) => left.atFraction - right.atFraction)
+  if (dayEndsAt.getTime() <= dayStartsAt.getTime()) {
+    throw new Error("Country-day window must be positive");
+  }
+  // Route beats are distance-owned by the motion clock. Departure is the sole
+  // wall-clock beat and begins exactly at rollover even if nobody watched.
+  return pack.storyBeats
+    .filter((beat) => beat.kind === "departure")
     .map((beat) => {
-      const startsAt = new Date(dayStartsAt.getTime() + durationMs * beat.atFraction);
+      const startsAt = dayEndsAt;
       return {
         ...beat,
         startsAt: startsAt.toISOString(),

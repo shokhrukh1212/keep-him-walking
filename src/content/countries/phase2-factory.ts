@@ -183,6 +183,7 @@ function routeZone(city: string, version: string, zone: ZoneDefinition, index: n
     stage: stageSchema.parse(zone.stage ?? {}),
     id: zone.id,
     label: zone.label,
+    lengthMetres: [1_200, 1_600, 1_600, 1_400, 2_200][index] ?? 2_200,
     durationActiveSeconds: 150,
     layers: [
       {
@@ -349,11 +350,11 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
       })),
     ],
     storyBeats: [
-      { id: `${city}-arrival`, kind: "arrival", atFraction: 0.02, durationSeconds: 90, title: `Arrival in ${definition.cityName}`, summary: `The first steps through ${definition.zones[0].label}.` },
-      { id: `${city}-encounter`, kind: "encounter", atFraction: 0.23, durationSeconds: 120, title: "A local welcome", summary: definition.encounter.phrase.gloss, encounterId },
-      { id: `${city}-food`, kind: "food", atFraction: 0.48, durationSeconds: 120, title: definition.zones[3].label, summary: `A pause for the tastes and rituals of ${definition.cityName}.` },
-      { id: `${city}-landmark`, kind: "landmark", atFraction: 0.72, durationSeconds: 150, title: definition.zones[4].label, summary: `The route opens onto one of ${definition.cityName}'s defining views.` },
-      { id: `${city}-departure`, kind: "departure", atFraction: 0.94, durationSeconds: 90, title: "Until tomorrow", summary: `The road turns toward the next country.` },
+      { id: `${city}-arrival`, kind: "arrival", atMetres: 150, durationSeconds: 90, title: `Arrival in ${definition.cityName}`, summary: `The first steps through ${definition.zones[0].label}.` },
+      { id: `${city}-encounter`, kind: "encounter", atMetres: 1_900, durationSeconds: 120, title: "A local welcome", summary: definition.encounter.phrase.gloss, encounterId },
+      { id: `${city}-food`, kind: "food", atMetres: 4_800, durationSeconds: 120, title: definition.zones[3].label, summary: `A pause for the tastes and rituals of ${definition.cityName}.` },
+      { id: `${city}-landmark`, kind: "landmark", atMetres: 7_900, durationSeconds: 150, title: definition.zones[4].label, summary: `The route opens onto one of ${definition.cityName}'s defining views.` },
+      { id: `${city}-departure`, kind: "departure", atMetres: null, durationSeconds: 90, title: "Until tomorrow", summary: `The road turns toward the next country.` },
     ],
     localPhrases: [definition.encounter.phrase],
     culturalReview: definition.culturalReview ?? CULTURAL_REVIEWS[city as keyof typeof CULTURAL_REVIEWS],

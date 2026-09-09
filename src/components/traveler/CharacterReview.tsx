@@ -17,7 +17,13 @@ import type { QualityTier } from "@/lib/world/types";
 const CharacterStage3D = dynamic(() => import("./CharacterStage3D").then(m => m.CharacterStage3D), { ssr: false });
 const PixiScene = dynamic(() => import("@/components/scene/PixiScene").then(m => m.PixiScene), { ssr: false });
 const noOp = () => {};
-const reviewRuntime = { globalActiveSeconds: 0, authoritativeAt: "2026-09-09T00:00:00Z", walking: false };
+const reviewRuntime = {
+  globalActiveSeconds: 0,
+  globalDistanceMetres: 0,
+  paceRate: 1,
+  authoritativeAt: "2026-09-09T00:00:00Z",
+  walking: false,
+};
 const reviewCommand = { walking: false, speedFactor: 0, encounterPhase: "none" as const,
   cameraZoom: 1, cameraPan: 0, backgroundLife: 1 };
 

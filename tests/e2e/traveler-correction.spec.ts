@@ -17,9 +17,9 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
         countryDay:{...snapshot.countryDay,id:"test-day",cityName:"Bishkek",scenePackId:bishkekCountryPack.assetVersion},
         sponsor:{status:"sponsored",publicId:"local-fixture-only",name:"Demo fixture",disclosure:"Local automated fixture",patchUrl:DEMO_LOGO,ctaLabel:"Explore sponsorship",clickUrl:"/sponsor"},
         refresh:{nextAt:null,afterMs:300_000,reason:"none"},presence:{status:"live",activeViewers:walking?1:0,ttlSeconds:50},
-        route:{globalActiveSeconds:seconds,walking,authoritativeAt:new Date(time).toISOString()}}});
+        route:{globalActiveSeconds:seconds,globalDistanceMetres:seconds*1.25,paceRate:1,walking,authoritativeAt:new Date(time).toISOString()}}});
     } else if(route.request().url().includes("/presence/heartbeat")) {
-      await route.fulfill({json:{countryDayId:"test-day",serverNow:new Date(time).toISOString(),realServerNow:new Date(time).toISOString(),activeViewers:walking?1:0,walking,globalSteps:0,visitorActiveSeconds:5,ttlSeconds:50,nextHeartbeatInMs:20_000,globalActiveSeconds:seconds,routeAuthoritativeAt:new Date(time).toISOString()}});
+      await route.fulfill({json:{countryDayId:"test-day",serverNow:new Date(time).toISOString(),realServerNow:new Date(time).toISOString(),activeViewers:walking?1:0,walking,globalSteps:0,visitorActiveSeconds:5,ttlSeconds:50,nextHeartbeatInMs:20_000,globalActiveSeconds:seconds,globalDistanceMetres:seconds*1.25,paceRate:1,routeAuthoritativeAt:new Date(time).toISOString()}});
     } else await route.fulfill({json:{ok:true}});
   });
   await page.goto("/");
@@ -42,8 +42,8 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
   await expect(stage).toHaveAttribute("data-character-state","walk");
   for(const kind of ["photo","drink","phone"]) {
     let at=0;
-    while(at<1800&&travelerMotionAt(bishkekCountryPack,at).action?.kind!==kind)at+=0.1;
-    expect(at).toBeLessThan(1800);
+    while(at<6_500&&travelerMotionAt(bishkekCountryPack,at).action?.kind!==kind)at+=0.1;
+    expect(at).toBeLessThan(6_500);
     raw=at+1.25;anchoredAt=Date.now();
     await page.evaluate(()=>window.dispatchEvent(new Event("online")));
     await expect(stage).toHaveAttribute("data-character-state",kind);

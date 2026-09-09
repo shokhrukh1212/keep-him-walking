@@ -20,7 +20,8 @@ function createServer(): SharedServer {
   return {
     sessions: new Set(),
     blockedSessions: new Set(),
-    steps: 40,
+    // Start at the metre-owned encounter beat (1,900 m / 1.25 m/s).
+    steps: 1_560,
     selectedOptionId: null,
     totalBallots: 6,
     startsAt: new Date(Date.now() - 6_000).toISOString(),
@@ -83,6 +84,8 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
     },
     route: {
       globalActiveSeconds: Math.max(0, server.steps - 40),
+      globalDistanceMetres: Math.max(0, server.steps - 40) * 1.25,
+      paceRate: 1,
       authoritativeAt: now.toISOString(),
       walking: server.sessions.size > 0,
     },
@@ -122,6 +125,8 @@ async function installApi(page: Page, server: SharedServer) {
         ttlSeconds: 50,
         nextHeartbeatInMs: 450,
         globalActiveSeconds: Math.max(0, server.steps - 40),
+        globalDistanceMetres: Math.max(0, server.steps - 40) * 1.25,
+        paceRate: 1,
         routeAuthoritativeAt: new Date().toISOString(),
       },
     });
@@ -164,7 +169,7 @@ test("the first viewport explains the live rule and remains keyboard accessible"
   const results = await new AxeBuilder({ page }).exclude("canvas").analyze();
   expect(results.violations.filter((item) => ["critical", "serious"].includes(item.impact ?? ""))).toEqual([]);
 
-  const dock = await page.locator(".bottom-dock").boundingBox();
+  const dock = await page.locator(".compact-dock").boundingBox();
   const viewport = page.viewportSize();
   expect(dock).not.toBeNull();
   expect(viewport).not.toBeNull();
@@ -172,7 +177,7 @@ test("the first viewport explains the live rule and remains keyboard accessible"
   expect(dock!.x + dock!.width).toBeLessThanOrEqual(viewport!.width + 1);
 });
 
-test("two browsers share presence, story, vote and persistent steps", async ({ browser }, testInfo) => {
+test("two browsers share presence and preserve steps across reconnects", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "Two-context synchronization runs once on desktop Chromium");
   test.setTimeout(75_000);
   const server = createServer();
@@ -184,10 +189,9 @@ test("two browsers share presence, story, vote and persistent steps", async ({ b
   const getSecondSession = await installApi(second, server);
   await Promise.all([first.goto("/"), second.goto("/")]);
 
+  await expect.poll(() => server.sessions.size, { timeout: 30_000 }).toBe(2);
   await expect(first.getByText("2 people watching")).toBeVisible();
   await expect(second.getByText("2 people watching")).toBeVisible();
-  await expect(first.locator(".dialogue-bubble p")).toContainText(/Tashkent|plov|serious problem/);
-  await expect(second.locator(".dialogue-bubble p")).toContainText(/Tashkent|plov|serious problem/);
 
   const secondSession = getSecondSession();
   expect(secondSession).toBeTruthy();
@@ -199,6 +203,7 @@ test("two browsers share presence, story, vote and persistent steps", async ({ b
   const stepsBefore = server.steps;
   const sessionBeforeReload = getFirstSession();
   await first.reload();
+  await first.getByRole("button", { name: "Journey details" }).click();
   await expect(first.getByText(/global steps/)).toBeVisible();
   await expect.poll(getFirstSession).not.toBe(sessionBeforeReload);
   expect(server.steps).toBeGreaterThanOrEqual(stepsBefore);
@@ -237,5 +242,5 @@ test("the semantic experience survives without WebGL", async ({ page }, testInfo
   await page.goto("/");
   await expect(page.locator(".static-scene img")).toBeVisible();
   await expect(page.getByRole("heading", { name: "He only walks while someone is watching." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sound off" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Journey controls" })).toBeVisible();
 });

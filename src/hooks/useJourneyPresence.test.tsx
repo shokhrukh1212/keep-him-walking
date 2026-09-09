@@ -18,6 +18,8 @@ const heartbeatResponse: HeartbeatResponse = {
   ttlSeconds: 50,
   nextHeartbeatInMs: 60_000,
   globalActiveSeconds: 1,
+  globalDistanceMetres: 1.25,
+  paceRate: 1,
   routeAuthoritativeAt: "2026-09-03T00:00:00.000Z",
 };
 

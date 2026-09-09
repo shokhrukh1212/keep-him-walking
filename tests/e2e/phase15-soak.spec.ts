@@ -23,7 +23,7 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
       activeEvent: null, nextEvent: null, vote: null,
       presence: { activeViewers: 0, status: "live", ttlSeconds: 1 },
       steps: { global: 0, updatedAt: now.toISOString(), stale: false },
-      route: { globalActiveSeconds: routeSeconds, authoritativeAt: now.toISOString(), walking: false },
+      route: { globalActiveSeconds: routeSeconds, globalDistanceMetres: routeSeconds * 1.25, paceRate: 1, authoritativeAt: now.toISOString(), walking: false },
       sponsor: { status: "unsponsored" },
       postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
       assets: tashkentCountryPackV2,
@@ -41,6 +41,7 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
       globalSteps: Math.floor(routeSeconds * 1.8), visitorActiveSeconds: routeSeconds,
       ttlSeconds: 1, nextHeartbeatInMs: 1_000,
       globalActiveSeconds: routeSeconds, routeAuthoritativeAt: now,
+      globalDistanceMetres: routeSeconds * 1.25, paceRate: 1,
     } });
   });
   await page.goto("/?debug=world&quality=low");

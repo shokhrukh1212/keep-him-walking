@@ -34,7 +34,9 @@ async function handlePost(request: NextRequest) {
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds, "Presence updates are arriving too quickly.");
   const config = serverRuntimeConfig();
   const pack = getCountryPack(countryDay.scene_pack_id);
-  const { data, error } = await supabase.rpc(pack?.schemaVersion === 3 ? "record_presence_heartbeat_v3" : "record_presence_heartbeat_v2", {
+  const { data, error } = await supabase.rpc(pack?.schemaVersion === 2 || pack?.schemaVersion === 3
+    ? "record_presence_heartbeat_v4"
+    : "record_presence_heartbeat_v2", {
     p_country_day_id: countryDay.id,
     p_visitor_hash: visitorHash,
     p_session_hash: hashOpaqueValue(parsed.data.sessionId),
@@ -64,6 +66,8 @@ async function handlePost(request: NextRequest) {
     ttlSeconds: config.presenceTtlSeconds,
     nextHeartbeatInMs: nextHeartbeatDelay(),
     globalActiveSeconds: Number(row?.out_global_active_seconds ?? 0),
+    globalDistanceMetres: Number(row?.out_global_distance_metres ?? 0),
+    paceRate: Number(row?.out_pace_rate ?? 1),
     routeAuthoritativeAt: String(row?.out_accounted_at ?? now.toISOString()),
   });
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);

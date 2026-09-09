@@ -32,11 +32,12 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
               countryName: pack.countryName, cityName: pack.cityName, timeZone: pack.timeZone, scenePackId: pack.assetVersion},
             refresh: {nextAt: null, afterMs: 300_000, reason: "none"},
             presence: {status: "live", activeViewers: 1, ttlSeconds: 50},
-            route: {globalActiveSeconds: rawSeconds, walking: true, authoritativeAt: now}}});
+            route: {globalActiveSeconds: rawSeconds, globalDistanceMetres: rawSeconds*1.25, paceRate:1, walking: true, authoritativeAt: now}}});
         } else if (route.request().url().includes("/presence/heartbeat")) {
           await route.fulfill({json: {countryDayId: "stage-test-day", serverNow: now, realServerNow: now,
             activeViewers: 1, walking: true, globalSteps: 0, visitorActiveSeconds: 5,
-            ttlSeconds: 50, nextHeartbeatInMs: 1000, globalActiveSeconds: rawSeconds, routeAuthoritativeAt: now}});
+            ttlSeconds: 50, nextHeartbeatInMs: 1000, globalActiveSeconds: rawSeconds,
+            globalDistanceMetres: rawSeconds*1.25, paceRate:1, routeAuthoritativeAt: now}});
         } else await route.fulfill({json: {ok: true}});
       });
       await page.goto("/");
@@ -46,10 +47,10 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
       await expect(page.locator(".scene-stage")).toHaveAttribute("data-renderer", "pixi", {timeout: 30_000});
       for (const [index, zone] of pack.route.zones.entries()) {
         // Locate a raw authoritative time in this zone without changing pure motion semantics.
-        for (let seconds = 60; seconds < 1400; seconds += 1) {
+        for (let seconds = 60; seconds < 7_000; seconds += 1) {
           const motion = travelerMotionAt(pack, seconds);
-          const route = routePositionAt(pack, motion.routeSeconds);
-          if (route.zoneIndex === index && route.zoneElapsedSeconds > 10 && !motion.action) { rawSeconds = seconds; break; }
+          const route = routePositionAt(pack, motion.distanceMetres);
+          if (route.zoneIndex === index && route.metresIntoZone > 10 && !motion.action) { rawSeconds = seconds; break; }
         }
         await expect(world).toHaveAttribute("data-zone-id", zone.id, {timeout: 30_000});
         await expect(actor).toHaveAttribute("data-zone-id", zone.id);

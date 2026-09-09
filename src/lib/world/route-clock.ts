@@ -3,18 +3,31 @@ import type { RoutePosition, RouteRuntime } from "./types";
 
 export function routePositionAt(
   pack: CountryPack,
-  activeSeconds: number,
+  distanceMetres: number,
 ): RoutePosition {
-  const seconds = Math.max(0, Number.isFinite(activeSeconds) ? activeSeconds : 0);
+  const distance = Math.max(0, Number.isFinite(distanceMetres) ? distanceMetres : 0);
   const zones = pack.route.zones;
-  const routeDuration = zones.reduce((total, zone) => total + zone.durationActiveSeconds, 0);
-  const loopedSeconds = routeDuration > 0 ? seconds % routeDuration : 0;
+  const routeMetres = pack.dayRouteMetres;
+  if (distance >= routeMetres) {
+    const zoneIndex = zones.length - 1;
+    const zoneLength = zones[zoneIndex]?.lengthMetres ?? 1;
+    const metresIntoZone = zoneLength > 0 ? (distance - routeMetres) % zoneLength : 0;
+    return {
+      phase: "evening",
+      zoneIndex,
+      zoneProgress: Math.min(1, metresIntoZone / zoneLength),
+      metresIntoZone,
+      remainingToLandmark: 0,
+      marathonProgress: Math.min(1, distance / pack.marathonMetres),
+    };
+  }
+
   let boundary = 0;
   let zoneIndex = zones.length - 1;
 
   for (let index = 0; index < zones.length; index += 1) {
-    const end = boundary + zones[index].durationActiveSeconds;
-    if (loopedSeconds < end) {
+    const end = boundary + zones[index].lengthMetres;
+    if (distance < end) {
       zoneIndex = index;
       break;
     }
@@ -22,15 +35,14 @@ export function routePositionAt(
   }
 
   const zone = zones[zoneIndex];
-  const zoneElapsedSeconds = loopedSeconds - boundary;
+  const metresIntoZone = Math.max(0, distance - boundary);
   return {
-    globalActiveSeconds: seconds,
-    distance: seconds * pack.route.worldUnitsPerSecond,
+    phase: "route",
     zoneIndex,
-    zoneId: zone.id,
-    zoneLabel: zone.label,
-    zoneElapsedSeconds,
-    zoneProgress: Math.min(1, zoneElapsedSeconds / zone.durationActiveSeconds),
+    zoneProgress: Math.min(1, metresIntoZone / zone.lengthMetres),
+    metresIntoZone,
+    remainingToLandmark: Math.max(0, routeMetres - distance),
+    marathonProgress: Math.min(1, distance / pack.marathonMetres),
   };
 }
 
@@ -42,6 +54,14 @@ export function extrapolatedRouteSeconds(runtime: RouteRuntime, nowMs: number): 
   // from inventing route progress indefinitely.
   const elapsed = Math.min(60, Math.max(0, (nowMs - authoritativeMs) / 1_000));
   return runtime.globalActiveSeconds + elapsed;
+}
+
+export function extrapolatedRouteDistance(runtime: RouteRuntime, nowMs: number): number {
+  if (!runtime.walking) return runtime.globalDistanceMetres;
+  const authoritativeMs = new Date(runtime.authoritativeAt).getTime();
+  if (!Number.isFinite(authoritativeMs)) return runtime.globalDistanceMetres;
+  const elapsed = Math.min(60, Math.max(0, (nowMs - authoritativeMs) / 1_000));
+  return runtime.globalDistanceMetres + elapsed * 1.25 * runtime.paceRate;
 }
 
 export function deterministicVariant(seed: string, index: number, count: number): number {
