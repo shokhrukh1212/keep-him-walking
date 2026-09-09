@@ -38,6 +38,7 @@ import { DailyVote } from "@/components/vote/DailyVote";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
 import { IntroHeadline } from "@/components/hud/IntroHeadline";
 import { WalkingRuleStatus } from "@/components/hud/WalkingRuleStatus";
+import { GoalBar } from "@/components/hud/GoalBar";
 import { PostcardButton } from "@/components/postcard/PostcardButton";
 import { PASSPORT_KEY } from "@/components/archive/PassportArchive";
 import Link from "next/link";
@@ -215,6 +216,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           ...current,
           route: {
             globalActiveSeconds: next.globalActiveSeconds,
+            globalDistanceMetres: next.globalDistanceMetres,
+            paceRate: next.paceRate,
             authoritativeAt: next.routeAuthoritativeAt,
             walking: next.walking,
           },
@@ -244,10 +247,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     && walkingLeaseIsActive(walkingLease, realNowMs);
   const initialRoutePosition = routePositionAt(
     snapshot.assets,
-    travelerMotionAt(
-      snapshot.assets,
-      heartbeat?.globalActiveSeconds ?? snapshot.route.globalActiveSeconds,
-    ).routeSeconds,
+    heartbeat?.globalDistanceMetres ?? snapshot.route.globalDistanceMetres,
   );
   const zoneAudioId = snapshot.assets.route.zones[initialRoutePosition.zoneIndex]?.audioIds[0];
   const ambientAudioUrl = snapshot.assets.audio.find((asset) => asset.id === zoneAudioId)?.url;
@@ -291,6 +291,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     runtime: routeRuntime,
     motion: estimatedMotion,
     seconds: routeSeconds,
+    distanceMetres,
     position: routePosition,
   } =
     useRouteRuntime(
@@ -325,7 +326,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
                 : "dialogue";
   const introHeadline = useIntroHeadline(walking, welcomeOriginMs, serverNowMs);
   const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
-  const eventStage = snapshot.assets.route.zones[routePosition.zoneIndex]?.eventStage;
+  const activeRouteZone = snapshot.assets.route.zones[routePosition.zoneIndex];
+  const eventStage = activeRouteZone?.eventStage;
   const worldCommand = {
     ...baseWorldCommand,
     speedFactor: motion.action ? 0 : locomotionSpeed,
@@ -338,13 +340,13 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   };
 
   useEffect(() => {
-    if (lastZone.current === routePosition.zoneId) return;
-    lastZone.current = routePosition.zoneId;
+    if (!activeRouteZone || lastZone.current === activeRouteZone.id) return;
+    lastZone.current = activeRouteZone.id;
     trackVisitorEvent("route_zone_entered", {
-      zone: routePosition.zoneId,
-      route_seconds: Math.round(routeSeconds),
+      zone: activeRouteZone.id,
+      distance_metres: Math.round(distanceMetres),
     });
-  }, [routePosition.zoneId, routeSeconds]);
+  }, [activeRouteZone, distanceMetres]);
 
   useEffect(() => {
     if (snapshot.assets.schemaVersion !== 3) return;
@@ -538,6 +540,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       <SceneStage
         pack={snapshot.assets}
         routeSeconds={routeSeconds}
+        routeDistanceMetres={distanceMetres}
         routeRuntime={routeRuntime}
         command={worldCommand}
         qualityTier={qualityTier}
@@ -575,6 +578,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : walking && motion.action
           ? motion.action.label
           : walking ? `Walking · ${displayedZoneLabel}` : "Waiting for the internet"}
+      />
+      <GoalBar
+        distanceMetres={distanceMetres}
+        landmarkMetres={snapshot.assets.dayRouteMetres}
+        marathonMetres={snapshot.assets.marathonMetres}
+        freshness={distanceMetres > routeRuntime.globalDistanceMetres + 0.001
+          ? "extrapolated"
+          : "last confirmed"}
       />
       {detailsOpen ? <div className="route-status" aria-label={`Current route zone: ${displayedZoneLabel}`}>
         <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>

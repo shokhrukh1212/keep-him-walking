@@ -487,6 +487,51 @@ body {
   color: #ffdb83;
 }
 
+.goal-bar {
+  position: absolute;
+  z-index: 9;
+  right: clamp(1rem, 5vw, 5rem);
+  bottom: calc(1.05rem + env(safe-area-inset-bottom));
+  left: clamp(15rem, 27vw, 29rem);
+  display: grid;
+  gap: 0.32rem;
+  color: #fff7e5;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgb(3 16 21 / 70%);
+  pointer-events: none;
+}
+
+.goal-track {
+  height: 0.38rem;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 999px;
+  background: rgb(7 26 34 / 65%);
+  box-shadow: 0 2px 10px rgb(4 18 25 / 25%);
+}
+
+.goal-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #70c6b1, #b9e0bd);
+  transition: width 450ms ease-out, background 350ms ease;
+}
+
+.goal-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  color: rgb(255 247 229 / 78%);
+}
+
+.goal-copy strong { color: #fff7e5; }
+.goal-copy small { color: rgb(255 247 229 / 58%); font-size: 0.58rem; font-weight: 650; }
+.goal-bar[data-marathon="true"] .goal-track span { background: linear-gradient(90deg, #c99b38, #ffe091); }
+.goal-bar[data-marathon="true"] .goal-copy strong,
+.goal-bar[data-marathon="true"] .goal-copy span:last-child { color: #ffe091; }
+
 .npc-wrap {
   position: absolute;
   z-index: 6;
@@ -1376,6 +1421,9 @@ button:focus-visible,
   .traveler-wrap {bottom:var(--stage-bottom,20vh);height:var(--stage-person-height,0px);width:auto;}
   .npc-wrap {bottom:var(--stage-bottom,20vh);right:0;height:calc(var(--stage-person-height,0px) * 1.68 / 1.78);width:auto;}
   .traveler-state {bottom:98px;font-size:9px;}
+  .goal-bar {right:10px;bottom:58px;left:10px;font-size:9px;}
+  .goal-copy {gap:5px;}
+  .goal-copy small {font-size:8px;}
   .dialogue-bubble,.dialogue-traveler,.dialogue-npc {top:64px;left:10px;right:10px;bottom:auto;width:auto;max-height:18svh;padding:9px 12px;}
   .dialogue-bubble p {font-size:14px;}.dialogue-bubble small {display:none;}
   .journey-details {bottom:106px;}

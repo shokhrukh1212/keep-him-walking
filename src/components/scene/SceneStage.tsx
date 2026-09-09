@@ -23,6 +23,7 @@ const ProductCharacterStage3D = dynamic(
 type Props = {
   pack: CountryPack;
   routeSeconds: number;
+  routeDistanceMetres: number;
   routeRuntime: RouteRuntime;
   command: WorldCommand;
   qualityTier: QualityTier;
@@ -40,6 +41,7 @@ type Props = {
 export function SceneStage({
   pack,
   routeSeconds,
+  routeDistanceMetres,
   routeRuntime,
   command,
   qualityTier,
@@ -100,7 +102,7 @@ export function SceneStage({
     }, 0);
     return () => window.clearTimeout(update);
   }, [onReady, pixiFailed]);
-  const route = routePositionAt(pack, routeSeconds);
+  const route = routePositionAt(pack, routeDistanceMetres);
   const fallbackUrl = pack.route.zones[route.zoneIndex]?.fallbackUrl ?? pack.scene.fallbackUrl;
 
   return (

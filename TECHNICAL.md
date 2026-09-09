@@ -23,7 +23,7 @@
 | Validation | Zod 4 for every content pack and every API body |
 | Payments | Lemon Squeezy (hosted checkout + signed webhooks), plus a deterministic no-money fixture adapter for rehearsals |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest (39 test files, 127 tests) + Playwright (15 spec files across 8 config profiles) + pgTAP (61 assertions) |
+| Testing | Vitest (47 test files, 182 tests) + Playwright (17 spec files across 8 config profiles) + pgTAP (61 baseline + 15 P4 assertions) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
@@ -99,25 +99,26 @@ through a ref (§8.4), so their scale and ground plane agree without merging ren
 
 ## 3. Authority and the clock chain
 
-This is the most important mechanism in the codebase. One number flows from Postgres to
-every animated frame.
+This is the most important mechanism in the codebase. Two authority tracks flow from
+Postgres to every animated frame: watched seconds for animation and metres for route
+progress.
 
 ```
 presence_leases (per browser session, 50 s TTL, requires visible && scene_ready)
-      │  record_presence_heartbeat  → v2 → v3   (security definer, SELECT … FOR UPDATE)
+      │  record_presence_heartbeat_v4 → v3   (security definer, SELECT … FOR UPDATE)
       ▼
-journey_runtime.global_active_seconds     ← the single source of truth
+journey_runtime { global_active_seconds, global_distance_metres, pace_rate }
       │  /api/bootstrap  (full snapshot)  +  /api/presence/heartbeat (~20 s)
       ▼
-RouteRuntime { globalActiveSeconds, authoritativeAt, walking }
+RouteRuntime { globalActiveSeconds, globalDistanceMetres, paceRate, authoritativeAt, walking }
       │
       ▼
-PresentationClock        one monotonic client clock, drift-corrected
+PresentationClock        two monotonic client tracks, drift-corrected
       │
       ▼
-travelerMotionAt(pack, rawSeconds)   pure function → TravelerMotionSnapshot
+travelerMotionAt(pack, rawSeconds, distanceMetres) → TravelerMotionSnapshot
       │
-      ├──► routePositionAt()          which zone, how far into it
+      ├──► routePositionAt(pack, distanceMetres)   route/evening position
       ├──► PixiScene                  panorama offset, ground scroll
       ├──► productCharacterSceneAt()  which clip, at which second
       └──► HUD                        status label, step counts
@@ -138,24 +139,27 @@ travelerMotionAt(pack, rawSeconds)   pure function → TravelerMotionSnapshot
 `_v2` additionally returns `global_active_seconds` to the client. `_v3` additionally
 records a durable per-visitor contribution as `max(active_seconds)` across that
 visitor's leases — never the sum, so multiple tabs cannot inflate a contribution.
+`_v4` keeps the v3 contract intact, takes the same authority-row lock, and adds the
+newly confirmed active interval to `global_distance_metres` at
+`1.25 m/s × pace_rate`. P4 fixes `pace_rate` at its default `1`; P5 owns changing it.
+The response includes both distance and pace. `_v3` remains callable for rollback.
 
 `walking` is returned to the client as simply `activeViewers > 0`.
 
 ### The client side
 
-`PresentationClock` (`src/lib/traveler/presentation-clock.ts`, 33 lines) is deliberately
-tiny and is the only clock the scene and rig share:
+`PresentationClock` is the only clock the scene and rig share:
 
 - `accept(runtime, ttlMs)` ignores any update whose `authoritativeAt` is not newer than
   the newest already seen, so out-of-order responses cannot rewind the world.
 - Network updates change the clock's **target**, never its origin.
-- `sample()` eases toward the target at up to 1.05× real time, and hard-snaps only when
-  divergence exceeds 2 seconds or the presence lease has expired. Result: no visible
-  jump on every heartbeat, and no invented progress after a disconnect.
+- `sample()` exposes `rawSeconds` and `distanceMetres`. Seconds ease at up to 1.05× real
+  time; distance eases at `1.25 × paceRate`, with the equivalent two-second snap
+  threshold. Both snap to their target when authority expires.
 - It reports `traveling` only while `walking && now < leaseExpiry`.
 
-`extrapolatedRouteSeconds` caps client-side extrapolation at 60 seconds, so a
-disconnected tab cannot manufacture progress indefinitely.
+Both extrapolation helpers and the presentation clock cap invention at 60 seconds,
+even if a future lease TTL is longer.
 
 ### The locomotion constants
 
@@ -164,23 +168,27 @@ STEP_DURATION_SECONDS = 0.6     one footfall
 GAIT_CYCLE_SECONDS    = 1.2     two steps
 METRES_PER_STEP       = 0.75
 METRES_PER_SECOND     = 1.25
-worldUnitsPerSecond   = 92      per pack
-durationActiveSeconds = 150     per zone (5 zones = 750 s per city loop)
+zone.lengthMetres     = 1200 / 1600 / 1600 / 1400 / 2200
+dayRouteMetres        = 8000
+marathonMetres        = 42195
 ```
+
+`durationActiveSeconds` remains in the Zod pack schema only for compatibility and is
+ignored by route progress.
 
 ### Why actions do not break determinism
 
-`travelerMotionAt` separates **raw watched seconds** from **locomotion seconds**. A
-scheduled action consumes raw seconds while locomotion is held at a planted-foot
-boundary (`alignedStep` rounds every action's trigger to a multiple of 0.6 s). It then
-adds a small fixed `actionTravel` contribution for the entry/exit weight shift. Because
-the whole thing is a pure function of one number:
+`travelerMotionAt` separates **raw watched seconds**, authoritative distance and
+**locomotion seconds**. Route actions are selected by `atMetres`; each metre trigger is
+rounded to the distance corresponding to a 0.6 s planted-foot boundary. The gait holds
+for the action while the independently authoritative distance track continues. Because
+the whole computation is pure in its explicit inputs:
 
 - Two viewers on different devices compute the identical frame.
 - Reload recomputes the same position instead of restarting.
 - Seeking backwards (in review tooling) is exact.
-- `plantIndex`, `plantedFoot`, `cyclePhase` and `distanceMetres` are all derived, so the
-  public step count and the visible foot can never disagree.
+- `plantIndex`, `plantedFoot` and `cyclePhase` remain deterministic while route distance
+  comes only from the confirmed/extrapolated distance authority.
 
 **One divergence worth knowing:** the database's `global_steps` uses the configurable
 `STEPS_PER_ACTIVE_SECOND` (default **1.8**/s), while every displayed step count uses
@@ -209,7 +217,8 @@ Three layers produce it:
    factors 0.62 / 1 / 0.38 / 0.
 2. **`motion-clock.ts` — scheduled actions.** Story beats map to action kinds:
    arrival → `wave` (2.5 s), encounter → the full exchange, food → `drink` (5.5 s),
-   landmark → `photo` (4 s), departure → `phone` (4.5 s). Non-encounter actions get a
+   landmark → `photo` (4 s). Departure remains a wall-clock event beginning at rollover;
+   it is not placed on the distance motion track. Non-encounter actions get a
    0.45 s `stop` entry and a 0.65 s `resume_walk` exit around the held pose.
 3. **Encounter sequencing.** Fixed prologue `notice` 0.6 s → `slow_walk` 0.6 s →
    `approach` 1.2 s → `greet` 2.5 s, then one segment per dialogue line using that
@@ -605,7 +614,7 @@ Both pipelines then derive the **same six files per zone**. Measured on
 
 | File | Phase 2 derivation | Dimensions | Size |
 |---|---|---|---|
-| `fallback.webp` | full original master, proportional resize to width 1600 | 1600×1067 for Rustaveli | see current asset report |
+| `fallback.webp` | full master at width 1600, offset and edge-blended for horizontal tiling | 1600×1067 for Rustaveli | see current asset report |
 | `distant.webp` | rows 0–450, stretched to 900, blur 0.35 | 2400×900 | 158 KB |
 | `architecture.webp` | rows 162–684 | 2400×522 | 186 KB |
 | `ground-1.webp` | rows 684–900, x 0–1200 | 1200×216 | 31 KB |
@@ -615,10 +624,11 @@ Both pipelines then derive the **same six files per zone**. Measured on
 (Phase 3 retains its old fallback pipeline and uses rows 0–500 blur 0.4 for `distant`
 and rows 150–710 for `architecture`.)
 
-The Phase 2 fallback pipeline now preserves the full original composition. Its old
-2400×900 normalization followed by a second 1600×900 cover crop discarded pavement.
-Only Tbilisi and Tashkent fallbacks have been rebuilt in this change; other checked-in
-Phase 2 fallbacks retain the previous crop until rebuilt. Legacy layer crops are unchanged.
+The Phase 2 fallback pipeline preserves the full original composition, offsets the
+original edge to the middle, and uses Sharp raw pixels to cross-fade the final 8% into
+the first 8%. The output therefore wraps horizontally. Tbilisi and Tashkent's ten
+fallbacks were regenerated with this step; other checked-in Phase 2 fallbacks retain
+their earlier output until rebuilt. Legacy layer crops are unchanged.
 See `docs/stage-calibration.md` for master dimensions and calibration estimates.
 
 Plus a per-zone `.wav` ambience and a postcard background.
@@ -637,7 +647,7 @@ what any visitor currently sees.
 
 On the v3 panorama branch:
 
-- **One** panorama sprite, textured with `zone.fallbackUrl`, scaled from the stable
+- A six-sprite bounded panorama pool, all textured with `zone.fallbackUrl`, scaled from the stable
   viewport-relative character target:
   ```
   targetCharacterPx = viewportHeight * (width <= 600 ? 0.20 : 0.24)
@@ -646,11 +656,13 @@ On the v3 panorama branch:
   imageX = (viewportWidth - imageWidth * imageScale) / 2
   imageY = groundY - zone.stage.groundLineY * imageHeight * imageScale
   ```
-  There is no vertical centering. The painting is static;
-  distance-driven wrapping/tileable panoramas and 60 m dissolves remain P4 work.
+  There is no vertical centering. The repeated painting scrolls by
+  `metresIntoZone × pxPerMetre × 0.7`. Its horizontal position is reduced modulo one
+  scaled texture width. The legacy distant layer uses 0.35×, architecture uses 0.7×,
+  and ground/foreground use the 1× near track.
 - **Props are disabled entirely** (`props = []`).
 - `groundLifeRoot`: 7 (low tier) or 12 translucent ellipses/rounded-rects below the shared
-  ground line, scrolled by `motion.distanceMetres * layout.pxPerMetre`.
+  ground line, scrolled by `distanceMetres * layout.pxPerMetre` (the 1× near track).
 - P3 adds two pooled contact-shadow sprites under this root, one per visible actor,
   sharing one generated 128×128 radial-alpha texture. Three publishes `{footX, footY,
   scale}` every rendered frame through `SceneStage` refs; coordinates are screen pixels,
@@ -664,8 +676,9 @@ On the v3 panorama branch:
   Alpha is unchanged. This is constant in P3; hourly grading/weather and a dusk rim
   are deferred to the time-of-day work. Existing composite CSS grade/vignette remain.
 - `weatherRoot`: 0/14/22 drifting motes by tier.
-- A sky `Graphics` fill behind everything, per-zone 0.4 s fade-in, background preload of
-  the next zone, and a once-per-second diagnostics snapshot (fps, p95 frame ms, live and
+- A sky `Graphics` fill behind everything, next-zone preload beginning in the final
+  200 m, and a cross-dissolve between complete panoramas over the final 60 m. A
+  once-per-second diagnostics snapshot reports fps, p95 frame ms, live and
   pooled object counts, estimated decoded texture bytes, and a `data-scene-textures`
   inventory of every texture the stage holds).
 
@@ -798,57 +811,20 @@ bottom band.)
 #### How the fix is verified
 
 `tests/e2e/scene-ground-strip.spec.ts`, pinned to 1440×900, drives Tbilisi's
-`rustaveli-arrival` zone with a mocked bootstrap/heartbeat pair at 60 raw active seconds
-(inside zone 0, clear of the `wave` action scheduled at locomotion second 15) and asserts
-two independent things.
+`rustaveli-arrival` zone with a mocked bootstrap/heartbeat pair and asserts two
+independent renderer contracts.
 
-**1. Structural.** `data-scene-textures` must contain the zone panorama and (since P3)
-the named `character-contact-shadow` texture — no URL containing `ground-`, and no
-unnamed `generated:` entry. The pixel sampling remains clear of the character shadow.
+**1. Texture inventory.** `data-scene-textures` must contain the zone panorama and the
+named `character-contact-shadow` texture, with no URL containing `ground-` and no
+unnamed `generated:` strip. This keeps the P3 ground-strip regression covered without
+depending on timing-sensitive screenshot pixels.
 
-**2. Pixel.** Two rows are sampled from screenshots of the isolated world layer, taken
-1.6 s apart. Row choice is derived from the strip's own geometry at 900 px:
-
-```
-stripHeight = max(100, 900 × 0.19)              = 171 px
-y           = (900 − 90) − 171 × 0.7            = 690.3 px      → band 690.3 … 861.3
-                                                                 = 0.767H … 0.957H
-```
-
-The mask ramped alpha from 0 at the band's top edge to 1 at 45 % of its height, so:
-
-| Sample row | y at 900 px | Pre-fix ghost alpha there |
-|---|---|---|
-| `0.79H` | 711 | ≈ 0.27 — ghost blended over the panorama |
-| `0.95H` | 855 | 1.00 — ghost fully replacing the panorama |
-
-Both rows are clear of the ground-life blobs (y 760–793) and of the motes (y < 630).
-Only x ∈ [0.05W, 0.45W) is sampled, away from the character anchored at 0.61W; the
-character canvas, colour grade and vignette are hidden and `.scene-stage` is re-stacked
-above the HUD so the screenshot contains Pixi output alone.
-
-A plain same-pixel difference does **not** discriminate — an 8 px slide of a photograph
-already yields a mean absolute difference of 20–50, pre-fix and post-fix alike. So each
-row is matched against itself in the later frame over a ±80 px shift search. One coherent
-panorama is a rigid translation of itself: the search finds a near-zero residual and every
-row agrees on the same shift. A composited strip does not — at alpha 1 it has translated
-far outside the search window, and at alpha 0.27 no single shift can fit two images moving
-at once.
-
-Measured over two runs of the pre-fix renderer and four of the fixed one (`residual` =
-mean absolute channel difference at the best in-window shift):
-
-| Row | Before `98e1c77` | After `98e1c77` |
-|---|---|---|
-| `y = 0.79H` residual | 14.99 – 16.51 | 1.83 – 6.16 |
-| `y = 0.95H` residual | 51.04 – 53.28 | 0.69 – 2.37 |
-| Agreement of the two rows' best shift | disagree by 87–91 px | identical, −7 to −12 px |
-| `data-scene-textures` | `generated:1200x216` + `fallback.webp` | `fallback.webp` only |
-
-The thresholds follow: residual < 10, the two rows' shifts equal within 1 px, and
-|shift| ≤ 40 px so the walking-rate scroll cannot pass. The spec was run against the
-pre-fix renderer and **fails on each of the two assertions independently**, so neither
-half is vacuous.
+**2. Distance motion and wrapping.** The test reads `data-ground-pixels`,
+`data-panorama-offset` and `data-panorama-span` from the Pixi stage, waits for the
+presentation clock to advance, and verifies that both offsets move. The panorama offset
+must remain in `[0, span)` before and after the sample, which directly covers the P4
+horizontal tile wrap while the near ground continues to move at its separate parallax
+rate.
 
 
 ### 8.4 Shared ground and person scale — repaired 2026-09-08
@@ -921,7 +897,7 @@ into the pack.
 Tbilisi and Tashkent's ten zones are calibrated from pavement and doorway estimates in
 their original masters (`docs/stage-calibration.md`). Other packs use defaults. This fixes
 the independent scale/ground contract; character anatomy and animation quality remain
-separate review work, and later P4 still owns distance-driven panorama wrapping.
+separate review work; P4 now owns the distance-driven panorama wrapping described above.
 
 ### 8.5 Shipped-but-never-drawn assets
 
@@ -933,7 +909,7 @@ Measured on Tbilisi (`public/scenes/tbilisi/v1/`), five zones:
 
 | Category | Size | Status |
 |---|---:|---|
-| `fallback.webp` × 5 | **0.99 MiB** | rendered |
+| `fallback.webp` × 5 | **1.33 MiB** | rendered |
 | `distant.webp`, `architecture.webp` × 5 | 1.45 MiB | never drawn, **still listed in `preload` / `preloadGroups`** |
 | `ground-1/2/3.webp` × 5 | 0.43 MiB | never drawn, no longer preloaded |
 | 15 prop WebP files | 1.36 MiB | never drawn (props are disabled on this branch), never preloaded |
@@ -956,8 +932,10 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ### 8.6 Zone clock, budgets and quality tiers
 
-- `routePositionAt(pack, seconds)` → `{ zoneIndex, zoneId, zoneElapsedSeconds,
-  zoneProgress, distance }`, looping over the summed zone durations.
+- `routePositionAt(pack, distanceMetres)` → `{ phase, zoneIndex, zoneProgress,
+  metresIntoZone, remainingToLandmark, marathonProgress }`. The first 8,000 m traverse
+  the five zones once; later distance returns `phase: "evening"` and loops the 2,200 m
+  landmark zone while marathon progress continues to 42,195 m.
 - `deterministicVariant(seed, index, count)` is an FNV-1a hash used for every "random"
   placement so that jitter and variant selection are identical for all viewers;
   `segmentVariant` / `composedSegmentSignature` build a reproducible signature the soak
@@ -974,7 +952,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (10 forward migrations)
+### Tables (11 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -989,14 +967,19 @@ enforcing legal state transitions), `payment_webhook_events`, `sponsor_metric_ev
 **Phase 3:** `country_notification_opt_ins`, `experiment_exposures`,
 `operational_incidents`, `webhook_replay_audit`.
 
+**Season 1 migration 0011, part 1:** `journey_runtime` adds non-negative
+`global_distance_metres` and positive `pace_rate`; `day_outcomes` stores the immutable
+distance/landmark/marathon and audience summary contract for the later rollover work.
+
 ### Key RPCs
 
-`record_presence_heartbeat` → `_v2` → `_v3` (the walking rule),
+`record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule plus distance),
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `cleanup_phase2_retention`, `journey_story_now`,
-`read_journey_runtime_v3`, `read_bootstrap_bundle_v3` / `_v4` (one-call bootstrap with
-atomic admission control), `set_country_notification_opt_in`.
+`read_journey_runtime_v3` / `_v4`, `read_bootstrap_bundle_v3` / `_v4` / `_v5`
+(one-call bootstrap with atomic admission control and the distance projection),
+`set_country_notification_opt_in`.
 
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
@@ -1061,9 +1044,11 @@ Recorded results (`docs/phase-3-results.md`, 2026-09-06):
 - **61 pgTAP assertions** pass (Phase 1: 10, Phase 1.5: 4, Phase 2: 24, Phase 3: 23),
   covering RLS, grants and storage policies.
 - **Unit tests:** 27 files / 66 tests were recorded at the Phase 3 gate with 84.1 %
-  statements, 71.7 % branches and 93.9 % functions on the scoped coverage set. On the
-  current `traveler-finalization-v2` branch the suite has grown to **39 files / 127
-  tests, all passing** (verified by running `pnpm test`).
+  statements, 71.7 % branches and 93.9 % functions on the scoped coverage set. The
+  current suite is **47 files / 182 tests, all passing** (verified by `pnpm verify`).
+- P4 adds 15 pgTAP assertions for columns, RLS/grants, v4 accrual/persistence and the
+  v5 bootstrap projection. They require a migrated Postgres instance; this workspace
+  has no Docker/Podman runtime, so they were not executed locally in this change.
 - Production build emits 31 routes on Next 16.3.3.
 - `content:validate`: 16 registered packs, 717 uniquely owned scene assets.
 - Playwright: 30 active desktop/320 px tests plus opt-in rehearsal/soak/recording specs.
@@ -1164,10 +1149,10 @@ provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or
 
 ## Appendix — the ten-second orientation
 
-- **One number** (`journey_runtime.global_active_seconds`) drives everything, and it only
-  grows while someone is watching.
-- **One pure function** (`travelerMotionAt`) turns that number into a pose, a distance
-  and a zone — which is why every viewer sees the same frame and reloads are free.
+- **Two authority tracks** (`global_active_seconds`, `global_distance_metres`) only grow
+  while someone is watching. Seconds animate; metres select route progress.
+- **Pure functions** (`travelerMotionAt`, `routePositionAt`) turn explicit authority
+  inputs into a pose and route position, so every viewer agrees and reloads are free.
 - **One skeleton** (`traveler.glb`, 52 joints, 15 clips, 6 face morphs) performs every
   action; only clip weights, face weights and hand-socket props change.
 - **Two art pipelines.** Phase 2 cities (including Tbilisi) have five separate master

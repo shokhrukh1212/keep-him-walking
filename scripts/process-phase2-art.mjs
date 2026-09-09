@@ -24,6 +24,49 @@ async function normalizeMaster(file) {
   return sharp(file).resize(2400, 900, { fit: "cover", position: "centre" }).png().toBuffer();
 }
 
+// Move the original edge into the middle, then cross-fade the final 8% of the
+// painting into its first 8%. The exported outer edges meet at the untouched
+// midpoint, so Pixi can repeat the panorama without a visible join.
+async function tileablePanorama(file) {
+  const { data, info } = await sharp(file)
+    .resize({ width: 1600 })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const output = Buffer.allocUnsafe(data.length);
+  const shift = Math.floor(info.width / 2);
+  const seam = info.width - shift;
+  const edgeWidth = Math.max(1, Math.round(info.width * 0.08));
+  const bandStart = seam - edgeWidth;
+  const bandLength = edgeWidth * 2;
+
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      const shiftedX = (x + shift) % info.width;
+      const outputOffset = (y * info.width + x) * info.channels;
+      if (x < bandStart || x >= bandStart + bandLength) {
+        const sourceOffset = (y * info.width + shiftedX) * info.channels;
+        data.copy(output, outputOffset, sourceOffset, sourceOffset + info.channels);
+        continue;
+      }
+      const local = x - bandStart;
+      const edgeIndex = Math.min(edgeWidth - 1, Math.floor(local / 2));
+      const lastX = info.width - edgeWidth + edgeIndex;
+      const firstX = edgeIndex;
+      const mix = local / Math.max(1, bandLength - 1);
+      const lastOffset = (y * info.width + lastX) * info.channels;
+      const firstOffset = (y * info.width + firstX) * info.channels;
+      for (let channel = 0; channel < info.channels; channel += 1) {
+        output[outputOffset + channel] = Math.round(
+          data[lastOffset + channel] * (1 - mix) + data[firstOffset + channel] * mix,
+        );
+      }
+    }
+  }
+
+  return sharp(output, { raw: info });
+}
+
 async function processZone(city, zone) {
   const destination = path.join(root, "public", "scenes", city, versionFor(city), "zones", zone);
   await mkdir(destination, { recursive: true });
@@ -33,7 +76,7 @@ async function processZone(city, zone) {
     sharp(normalized).extract({ left: 0, top: 162, width: 2400, height: 522 }).webp({ quality: 74, effort: 6 }).toFile(path.join(destination, "architecture.webp")),
     // Stage fractions refer to the complete master. Preserve its pavement and
     // aspect ratio instead of cropping it twice through the legacy layer format.
-    sharp(sourceMaster(city, zone)).resize({ width: 1600 }).webp({ quality: 78, effort: 6 }).toFile(path.join(destination, "fallback.webp")),
+    (await tileablePanorama(sourceMaster(city, zone))).webp({ quality: 78, effort: 6 }).toFile(path.join(destination, "fallback.webp")),
   ]);
   const ground = sharp(normalized).extract({ left: 0, top: 684, width: 2400, height: 216 });
   const groundBuffer = await ground.png().toBuffer();
@@ -132,7 +175,10 @@ async function processPostcard(city) {
   await sharp(source).resize(1600, 1000, { fit: "cover" }).webp({ quality: 82, effort: 6 }).toFile(path.join(destination, "background.webp"));
 }
 
-for (const city of Object.keys(cityZones)) {
+const requestedCities = process.argv.slice(2);
+const cities = requestedCities.length > 0 ? requestedCities : Object.keys(cityZones);
+for (const city of cities) {
+  if (!cityZones[city]) throw new Error(`Unknown city ${city}`);
   for (const zone of cityZones[city]) await processZone(city, zone);
   await Promise.all([processPropSheet(city), processNpc(city), processAudio(city), processPostcard(city)]);
   process.stdout.write(`Processed ${city} (${cityZones[city].length} zones)\n`);
