@@ -241,6 +241,11 @@ export const routeZoneSchema = z.object({
     backgroundLife: z.number().min(0).max(1),
   }),
   fallbackUrl: z.string().startsWith("/"),
+  /**
+   * The night master for this zone, when one has been painted. Present zones
+   * cross-fade to it across dusk; absent ones are graded to night instead.
+   */
+  nightUrl: z.string().startsWith("/").optional(),
 });
 
 function routeSchemaWithDistanceDefaults() {

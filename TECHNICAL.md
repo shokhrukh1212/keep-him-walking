@@ -1029,7 +1029,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (16 forward migrations)
+### Tables (17 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1082,21 +1082,27 @@ to `journeys.traveler_name` when the ballot was the name vote.
 `(journey_id, day_number)`. Bootstrap v8 adds the ballot's kind, its pack ids, the live
 tally and his name.
 
+**Season 1 migration 0017, weather:** `journey_runtime.weather` caches one
+Open-Meteo reading per city. `write_journey_weather` refuses a reading older than the
+one already stored, so a slow request cannot overwrite a fresher one. Heartbeat v7 and
+bootstrap v9 carry it.
+
 ### Key RPCs
 
 `record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule, distinct-watcher
 pace and pace-weighted distance) → `_v5` (per-country watch aggregation) → `_v6`
-(reaction buckets and scheduled crowd actions),
+(reaction buckets and scheduled crowd actions) → `_v7` (weather),
 `normalize_country_code`, `read_country_day_watch`, `reaction_threshold`,
 `close_and_pick_vote_winner`, `create_next_country_day`, `read_traveler_name`,
+`write_journey_weather`, `read_journey_weather`,
 `submit_reaction`, `read_day_reactions`, `record_day_photo`,
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `cleanup_phase2_retention`, `journey_story_now`,
 `read_journey_runtime_v3` / `_v4` / `_v5`,
-`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8`
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9`
 (one-call bootstrap with atomic admission control, the distance projection, the
-country aggregate, the reaction board and the ballot),
+country aggregate, the reaction board, the ballot and the weather),
 `set_country_notification_opt_in`.
 
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
@@ -1142,6 +1148,24 @@ Every number on it is a stored aggregate; nothing is extrapolated.
 - Correlation IDs and redaction in structured logs; missing vendor credentials are an
   intentional no-op rather than a crash.
 - The pack-preview route hard-denies Production regardless of any other flag.
+
+### Time of day and weather
+
+`localHourFraction(instant, timeZone)` reads the city's own clock and
+`gradeForHour` interpolates the 02 §6 keyframes into the `VisualGrade` that Pixi's
+world filter and the character's material already share, so the man and the painting
+change together. `nightMix` ramps 0→1 across dusk (19–21) and back across dawn (05–07);
+zones that ship a `nightUrl` master cross-fade to it, and zones that do not are graded
+to night instead.
+
+`weatherEffect(code, windKmh)` is the WMO table from 02 §7: overcast dims contrast, fog
+paints a band on the zone's `horizonY`, rain and snow drive the particle field, wind
+above 30 km/h scales particle velocity up to 2×, and thunderstorms add an 80 ms white
+flash derived from the authoritative watched second — so every viewer sees the same
+lightning, and nobody with `prefers-reduced-motion` sees any. The reading itself is
+fetched server-side from Open-Meteo (no key, no paid service) at most once per city per
+ten minutes: the bootstrap route claims the ten-minute window in `operation_ledger` and
+refreshes inside `after()`, so no visitor ever waits on the request.
 
 ### The destination vote
 
@@ -1225,6 +1249,18 @@ representative field data.
 ---
 
 ## 11. Configuration and gating
+
+Season 1 additions (all optional, all with safe defaults):
+
+```
+ROLLOVER_UTC_HOUR=16                     # when the day ends and the ballot closes
+SUPABASE_DAY_PHOTOS_BUCKET=khw-day-photos # public bucket for crowd photographs
+```
+
+`ROLLOVER_UTC_HOUR` is clamped to 0–23. The day-photo bucket must exist and be public
+before `/api/day-photos` can store anything; until then the route fails closed and the
+rest of the photo reaction still works. Open-Meteo needs no key and no configuration.
+
 
 `phase2DeploymentAllowed()` is the master switch. It returns false unless
 `PHASE2_ENABLED === "true"`, **always** returns false when `VERCEL_ENV === "production"`,

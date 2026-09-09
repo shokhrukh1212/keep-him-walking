@@ -19,6 +19,8 @@ type Props = {
   onShare: () => void;
   wakeCountdown?: number | null;
   waitingSinceLocalTime?: string | null;
+  /** Real weather for the city, or null when nothing is confirmed. */
+  weatherLabel?: string | null;
   liveCountries?: LiveCountryView[];
   todayTopCountries?: CountryWatchView[];
 };
@@ -33,6 +35,7 @@ export function JourneyHud({
   onShare,
   wakeCountdown,
   waitingSinceLocalTime,
+  weatherLabel = null,
   liveCountries = [],
   todayTopCountries = [],
 }: Props) {
@@ -42,7 +45,10 @@ export function JourneyHud({
       <div className="day-mark">
         <span className="eyebrow">DAY {day.dayNumber} / {day.totalDays}</span>
         <strong>{day.cityName}</strong>
-        <span>{day.countryName} · {localTime}</span>
+        <span>
+          {day.countryName} · {localTime}
+          {weatherLabel ? <> · <span className="hud-weather">{weatherLabel}</span></> : null}
+        </span>
       </div>
       <div className="journey-hud-audience">
         <CountryFlags live={liveCountries} onOpen={() => setLeaderboardOpen(true)} />

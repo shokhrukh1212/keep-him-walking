@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { BootstrapRateLimitError, liveBootstrapSnapshot } from "@/lib/bootstrap/server";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { attachVisitorCookie, visitorFromRequest } from "@/lib/identity/cookie";
 import { hashOpaqueValue } from "@/lib/identity/server";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
 import { withRouteTelemetry } from "@/lib/observability/route";
+import { refreshWeatherIfStale } from "@/lib/weather/refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,13 @@ async function handleGet(request: NextRequest) {
       attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
       return response;
     }
+    // The reading the visitor just received is the one already stored. If it has
+    // aged out, refresh it after the response so nobody waits on Open-Meteo.
+    after(() => refreshWeatherIfStale(
+      snapshot.countryDay.id,
+      snapshot.countryDay.scenePackId,
+      snapshot.weather,
+    ));
     const response = NextResponse.json(snapshot, {
       headers: { "Cache-Control": "no-store" },
     });

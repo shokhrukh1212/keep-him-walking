@@ -1871,3 +1871,8 @@ button:focus-visible,
     display: none;
   }
 }
+
+.hud-weather {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

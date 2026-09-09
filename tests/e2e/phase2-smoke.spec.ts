@@ -24,6 +24,7 @@ function snapshot(routeIndex = 0): BootstrapSnapshot {
     countries: { live: [], todayTop: [] },
     reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
     dayPhotos: [],
+    weather: null,
     steps: { global: 120, updatedAt: now.toISOString(), stale: false },
     route: { globalActiveSeconds: 30, globalDistanceMetres: 37.5, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },

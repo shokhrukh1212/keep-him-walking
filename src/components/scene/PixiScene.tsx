@@ -16,6 +16,9 @@ import { composedSegmentSignature } from "@/lib/world/segment-sequencer";
 import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import { contactShadowLayout, gradeMatrix, type CharacterContacts, type VisualGrade } from "@/lib/world/visual-grade";
 import type { ScheduledActionView } from "@/lib/contracts";
+import type { JourneyWeather } from "@/lib/weather/open-meteo";
+import { weatherEffect } from "@/lib/weather/effects";
+import { combineGrade, gradeForHour, localHourFraction, nightMix } from "@/lib/world/time-grade";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 
 const EMPTY_SCHEDULED_ACTIONS: readonly ScheduledActionView[] = [];
@@ -28,6 +31,7 @@ type Props = {
   routeSeconds: number;
   routeRuntime: RouteRuntime;
   scheduledActions?: readonly ScheduledActionView[];
+  weather?: JourneyWeather | null;
   onCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
   reducedMotion: boolean;
@@ -41,7 +45,7 @@ type Props = {
 };
 
 type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">
-  & { scheduledActions: readonly ScheduledActionView[] };
+  & { scheduledActions: readonly ScheduledActionView[]; weather: JourneyWeather | null };
 
 export function PixiScene({
   pack,
@@ -51,6 +55,7 @@ export function PixiScene({
   routeSeconds,
   routeRuntime,
   scheduledActions = EMPTY_SCHEDULED_ACTIONS,
+  weather = null,
   onCaptureReady,
   command,
   reducedMotion,
@@ -63,17 +68,17 @@ export function PixiScene({
   onFailure,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions });
+  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather });
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const diagnosticsCallback = useRef(onDiagnostics);
 
   useEffect(() => {
-    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions };
+    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     diagnosticsCallback.current = onDiagnostics;
-  }, [command, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, onMotionSample]);
+  }, [command, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, weather, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -113,6 +118,11 @@ export function PixiScene({
         const groundLifeRoot = new Container();
         const groundDetailsRoot = new Container();
         const weatherRoot = new Container();
+        // Precipitation, the horizon fog band and the storm flash all live here.
+        const fogBand = new Graphics();
+        const stormFlash = new Graphics();
+        let precipitation: InstanceType<typeof Graphics>[] = [];
+        let precipitationKind: "none" | "rain" | "snow" = "none";
         // Pixi owns the grade; P10 will animate this same object in the world loop.
         gradeRef.current = { exposure: 1, tint: { r: 1, g: 1, b: 1 } };
         const worldGrade = new ColorMatrixFilter();
@@ -136,6 +146,8 @@ export function PixiScene({
         // layers), props, ground life, weather. Nothing composites over the
         // painting itself.
         camera.addChild(sky, layerRoot, transitionRoot, propRoot, groundLifeRoot, weatherRoot);
+        weatherRoot.addChild(fogBand);
+        app.stage.addChild(stormFlash);
         app.stage.addChild(camera);
         const clock = new PresentationClock();
 
@@ -362,6 +374,16 @@ export function PixiScene({
             weatherRoot.addChild(mote);
             return mote;
           });
+          // Rain and snow are a real signal, not decoration, so even the low
+          // tier gets enough particles to read as weather.
+          const precipitationCount = qualityTier === "high" ? 42 : qualityTier === "medium" ? 28 : 14;
+          precipitation = Array.from({ length: precipitationCount }, () => {
+            const drop = new Graphics();
+            drop.visible = false;
+            weatherRoot.addChild(drop);
+            return drop;
+          });
+          precipitationKind = "none";
           activeZone = zone;
           activeZoneIndex = zoneIndex;
           pendingZoneIndex = -1;
@@ -414,8 +436,19 @@ export function PixiScene({
         app.ticker.add(() => {
           if (document.hidden) return;
           const state = runtime.current;
+          // The city's own clock drives the grade; the server's reading drives
+          // the sky. Both are shared with the character through gradeRef.
+          const localHour = localHourFraction(new Date(), pack.timeZone);
+          const effect = weatherEffect(
+            state.weather?.code ?? 0,
+            state.weather?.windKmh ?? 0,
+          );
+          gradeRef.current = combineGrade(gradeForHour(localHour), effect.contrastScale);
           worldGrade.matrix = gradeMatrix(gradeRef.current);
           element.dataset.grade = JSON.stringify(gradeRef.current);
+          element.dataset.localHour = localHour.toFixed(3);
+          element.dataset.nightMix = nightMix(localHour).toFixed(3);
+          element.dataset.weatherKind = effect.precipitation;
           const tickAt = performance.now();
           const wallDeltaMs = Math.min(500, Math.max(0, tickAt - lastTickAt));
           lastTickAt = tickAt;
@@ -623,11 +656,62 @@ export function PixiScene({
 
           for (let index = 0; index < motes.length; index += 1) {
             const mote = motes[index];
-            mote.x = ((index * 173 + elapsed * (0.006 + (index % 4) * 0.002)) % (width + 80)) - 40;
+            // Wind carries the drifting motes faster, as it does the leaves.
+            mote.x = ((index * 173 + elapsed * (0.006 + (index % 4) * 0.002) * effect.windScale)
+              % (width + 80)) - 40;
             mote.y =
               70 +
               ((index * 97 + Math.sin(elapsed * 0.0007 + index) * 18) %
                 Math.max(100, height * 0.62));
+          }
+
+          // Redraw only when the sky itself changes, not every frame.
+          if (precipitationKind !== effect.precipitation) {
+            precipitationKind = effect.precipitation;
+            for (const drop of precipitation) {
+              drop.clear();
+              if (precipitationKind === "rain") {
+                drop.rect(0, 0, 1.2, 9).fill({ color: 0xcfe4f2, alpha: 0.5 });
+              } else if (precipitationKind === "snow") {
+                drop.circle(0, 0, 1.6).fill({ color: 0xffffff, alpha: 0.72 });
+              }
+              drop.visible = precipitationKind !== "none";
+            }
+          }
+
+          if (precipitationKind !== "none") {
+            const fallSpeed = precipitationKind === "rain" ? 0.62 : 0.11;
+            const drift = precipitationKind === "rain" ? 0.05 : 0.03;
+            for (let index = 0; index < precipitation.length; index += 1) {
+              const drop = precipitation[index]!;
+              const lane = index * 149;
+              drop.y = ((lane + elapsed * fallSpeed * effect.windScale) % (height + 60)) - 30;
+              drop.x = ((lane * 3 + elapsed * drift * effect.windScale
+                + Math.sin(elapsed * 0.0012 + index) * (precipitationKind === "snow" ? 22 : 4))
+                % (width + 60)) - 30;
+            }
+          }
+          element.dataset.weatherParticles = String(
+            precipitationKind === "none" ? 0 : precipitation.length,
+          );
+
+          // A fog band sits on the horizon line the zone declares.
+          fogBand.clear();
+          if (effect.fog) {
+            const horizon = height * (activeZone?.stage.horizonY ?? 0.55);
+            fogBand
+              .rect(0, horizon - height * 0.06, width, height * 0.18)
+              .fill({ color: 0xdfe7ea, alpha: 0.34 });
+          }
+
+          // One shared 80 ms flash, derived from the authoritative second so
+          // every viewer sees the same lightning. Never under reduced motion.
+          stormFlash.clear();
+          if (effect.flash && !state.reducedMotion) {
+            const phase = displayedSeconds % 23;
+            if (phase < 0.08) {
+              stormFlash.rect(0, 0, width, height).fill({ color: 0xffffff, alpha: 0.5 });
+            }
           }
           if (elapsed - lastDiagnosticAt >= 1_000 && frameSamples.length > 0) {
             lastDiagnosticAt = elapsed;

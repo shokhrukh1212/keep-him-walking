@@ -25,6 +25,7 @@ const heartbeatResponse: HeartbeatResponse = {
   wokeHim: false,
   countryCode: "ZZ",
   reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
+  weather: null,
 };
 
 function snapshot(countryDayId: string): BootstrapSnapshot {

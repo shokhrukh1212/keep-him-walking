@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { existsSync } from "node:fs";
 
 const root = process.cwd();
 const cities = {
@@ -35,7 +36,24 @@ async function processZone(city, zone, index) {
     sharp(master).resize(1600, 900, { fit: "cover" }).webp({ quality: 78, effort: 6 }).toFile(path.join(destination, "fallback.webp")),
     ...[0, 1, 2].map((variant) => sharp(master).extract({ left: variant * 600, top: 684, width: 1200, height: 216 }).webp({ quality: 70, effort: 6 }).toFile(path.join(destination, `ground-${variant + 1}.webp`))),
   ]);
+  await deriveNightMaster(city, zone, destination);
   return master;
+}
+
+/**
+ * Derives night.webp when the owner has painted a night master for this zone.
+ * Zones without one are graded to night at runtime instead, so this is optional
+ * and never fabricates a night painting from the day one.
+ */
+async function deriveNightMaster(city, zone, destination) {
+  const nightSource = path.join(root, "art", "phase3", city, `${zone}-night.png`);
+  if (!existsSync(nightSource)) return false;
+  await sharp(nightSource)
+    .resize(1600, 900, { fit: "cover" })
+    .webp({ quality: 78, effort: 6 })
+    .toFile(path.join(destination, "night.webp"));
+  process.stdout.write(`Derived night master for ${city}/${zone}\n`);
+  return true;
 }
 
 async function processProps(city, zones, masters) {

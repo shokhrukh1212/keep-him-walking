@@ -41,6 +41,7 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     countries: { live: [], todayTop: [] },
     reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
     dayPhotos: [],
+    weather: null,
     steps: { global: 0, updatedAt: now.toISOString(), stale: true },
     route: {
       globalActiveSeconds: 0,

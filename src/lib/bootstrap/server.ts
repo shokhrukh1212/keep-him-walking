@@ -15,6 +15,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { scaledStoryNow } from "@/lib/story-clock/schedule";
 import { RATE_LIMITS } from "@/lib/security/rate-limit";
 import { reactionsFromRow, type RawReactionsPayload } from "@/lib/reactions/payload";
+import { weatherFromRow } from "@/lib/weather/payload";
 
 const eventPayloadSchema = z.object({
   travelerState: travelerStateSchema.optional(),
@@ -86,6 +87,7 @@ type BootstrapBundleRow = {
     nextScheduledAction: null | { kind: string; atActiveSecond: number };
     photos: Array<{ atActiveSecond: number; storagePath: string }>;
   };
+  weather: unknown;
   contribution_seconds: number | null;
   postcard: null | { public_token: string; status: string; expires_at: string };
   sponsor: null | {
@@ -321,6 +323,7 @@ function bootstrapFromBundle(
     countries: countriesView(bundle.countries),
     reactions: reactionsFromRow(bundle.reactions),
     dayPhotos: dayPhotosView(bundle.reactions, config, supabase),
+    weather: weatherFromRow(bundle.weather),
     steps: {
       global: Number(bundle.runtime.out_global_steps ?? 0),
       updatedAt: String(bundle.runtime.out_accounted_at),
@@ -448,7 +451,7 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v8", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v9", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -497,6 +500,7 @@ export async function liveBootstrapSnapshot(
     { data: countries },
     { data: reactions },
     { data: travelerName },
+    { data: weather },
   ] = await Promise.all([
     runtimeRequest,
     loadEvents(countryDay.id, storyNow),
@@ -512,6 +516,7 @@ export async function liveBootstrapSnapshot(
       p_global_active_seconds: 0,
     }),
     supabase.rpc("read_traveler_name"),
+    supabase.rpc("read_journey_weather", { p_country_day_id: countryDay.id }),
   ]);
   if (runtimeError) throw runtimeError;
   const row = Array.isArray(runtime) ? runtime[0] : runtime;
@@ -591,6 +596,7 @@ export async function liveBootstrapSnapshot(
     countries: countriesView(countries as BootstrapBundleRow["countries"]),
     reactions: reactionsFromRow(reactions as RawReactionsPayload),
     dayPhotos: dayPhotosView(reactions as BootstrapBundleRow["reactions"], config, supabase),
+    weather: weatherFromRow(weather),
     steps: {
       global: Number(row?.out_global_steps ?? 0),
       updatedAt: String(row?.out_accounted_at ?? now.toISOString()),

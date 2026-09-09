@@ -12,6 +12,7 @@ import { stageScaleWarning, type StageFrame } from "@/lib/world/stage-layout";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 import type { ScheduledActionView } from "@/lib/contracts";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
+import type { JourneyWeather } from "@/lib/weather/open-meteo";
 
 const PixiScene = dynamic(
   () => import("./PixiScene").then((module) => module.PixiScene),
@@ -28,6 +29,7 @@ type Props = {
   routeDistanceMetres: number;
   routeRuntime: RouteRuntime;
   scheduledActions?: readonly ScheduledActionView[];
+  weather?: JourneyWeather | null;
   onWorldCaptureReady?: (capture: CanvasCapture | null) => void;
   onCharacterCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
@@ -49,6 +51,7 @@ export function SceneStage({
   routeDistanceMetres,
   routeRuntime,
   scheduledActions,
+  weather,
   onWorldCaptureReady,
   onCharacterCaptureReady,
   command,
@@ -126,6 +129,7 @@ export function SceneStage({
           routeSeconds={routeSeconds}
           routeRuntime={routeRuntime}
           scheduledActions={scheduledActions}
+          weather={weather}
           onCaptureReady={onWorldCaptureReady}
           command={command}
           qualityTier={qualityTier}

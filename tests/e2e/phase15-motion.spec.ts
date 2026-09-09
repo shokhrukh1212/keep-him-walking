@@ -46,6 +46,7 @@ function makeSnapshot(server: MotionServer): BootstrapSnapshot {
     countries: { live: [], todayTop: [] },
     reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
     dayPhotos: [],
+    weather: null,
     sponsor: { status: "unsponsored" },
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     assets: tashkentCountryPackV2,

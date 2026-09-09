@@ -5,6 +5,7 @@ import type {
 } from "@/lib/content/schema";
 import type { RouteRuntime } from "@/lib/world/types";
 import type { CrowdActionKind } from "@/lib/traveler/motion-clock";
+import type { JourneyWeather } from "@/lib/weather/open-meteo";
 
 export type ConnectionStatus = "live" | "reconnecting" | "offline";
 
@@ -119,6 +120,8 @@ export type BootstrapSnapshot = {
   reactions: ReactionsView;
   /** The day's last six crowd photographs, newest first. */
   dayPhotos: DayPhotoView[];
+  /** The city's real weather, or null when no reading has been confirmed. */
+  weather: JourneyWeather | null;
   steps: {
     global: number;
     updatedAt: string;
@@ -166,4 +169,5 @@ export type HeartbeatResponse = {
   /** The edge-derived country the server credited this heartbeat to. */
   countryCode: string;
   reactions: ReactionsView;
+  weather: JourneyWeather | null;
 };

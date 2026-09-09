@@ -12,6 +12,7 @@ import { hasTrustedOrigin } from "@/lib/validation/origin";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
 import { withRouteTelemetry } from "@/lib/observability/route";
 import { reactionsFromRow } from "@/lib/reactions/payload";
+import { weatherFromRow } from "@/lib/weather/payload";
 
 async function handlePost(request: NextRequest) {
   if (!hasTrustedOrigin(request)) {
@@ -50,7 +51,7 @@ async function handlePost(request: NextRequest) {
     p_steps_per_second: config.stepsPerActiveSecond,
   };
   const { data, error } = await supabase.rpc(
-    paceEnabled ? "record_presence_heartbeat_v6" : "record_presence_heartbeat_v2",
+    paceEnabled ? "record_presence_heartbeat_v7" : "record_presence_heartbeat_v2",
     paceEnabled
       ? {
           ...heartbeatArguments,
@@ -87,6 +88,7 @@ async function handlePost(request: NextRequest) {
     wokeHim: row?.out_woke_him === true,
     countryCode: String(row?.out_country_code ?? countryCode),
     reactions: reactionsFromRow(row?.out_reactions),
+    weather: weatherFromRow(row?.out_weather),
   });
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
   return response;

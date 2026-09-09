@@ -15,6 +15,8 @@ import {
 } from "@/lib/story-clock";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { crowdActionKindOf, travelerMotionAt, visibleStepsBetween, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { weatherEffect } from "@/lib/weather/effects";
+import { formatTemperature, weatherGlyph } from "@/lib/weather/format";
 import { sponsorPresentation } from "@/lib/traveler/demo-sponsor";
 import { useJourneyAudio } from "@/hooks/useJourneyAudio";
 import { useJourneyPresence } from "@/hooks/useJourneyPresence";
@@ -390,6 +392,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const eventStage = activeRouteZone?.eventStage;
   // When the crowd's photograph actually fires, the visitor who triggered it
   // composes the live frame and posts it. Everyone else just sees the flash.
+  const weather = heartbeat?.weather ?? snapshot.weather;
+  const weatherSky = weather ? weatherEffect(weather.code, weather.windKmh) : null;
   const crowdKind = crowdActionKindOf(motion.action);
   useEffect(() => {
     const owned = ownedPhotoSecond.current;
@@ -645,6 +649,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     <main className="journey-shell" data-motion={reducedMotion ? "reduced" : "full"}>
       <SceneStage
         scheduledActions={scheduledActions}
+        weather={weather}
         onWorldCaptureReady={(capture) => { worldCapture.current = capture; }}
         onCharacterCaptureReady={(capture) => { characterCapture.current = capture; }}
         pack={snapshot.assets}
@@ -678,6 +683,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       <JourneyHud
         day={snapshot.countryDay}
         localTime={localTime}
+        weatherLabel={weather
+          ? `${formatTemperature(weather.tempC)} ${weatherGlyph(weather.code, weather.isDay)}`
+          : null}
         activeViewers={activeViewers}
         paceRate={routeRuntime.paceRate}
         walking={walking}
@@ -702,7 +710,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           ? `Waking up · starts walking in ${wakeCountdown}…`
           : walking && motion.action
           ? motion.action.label
-          : walking ? `Walking · ${displayedZoneLabel}`
+          : walking
+            ? `Walking${weatherSky?.pillFragment ? ` ${weatherSky.pillFragment}` : ""} · ${displayedZoneLabel}`
             : waitingLocalTime
               ? `Waiting for the internet · since ${waitingLocalTime}`
               : "Waiting for the internet"}
