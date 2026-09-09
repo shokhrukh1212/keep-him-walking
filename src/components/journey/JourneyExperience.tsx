@@ -47,6 +47,7 @@ import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
 import { IntroHeadline } from "@/components/hud/IntroHeadline";
 import { WalkingRuleStatus } from "@/components/hud/WalkingRuleStatus";
 import { GoalBar } from "@/components/hud/GoalBar";
+import { JourneyMapEmbed } from "@/components/map/JourneyMapEmbed";
 import { PostcardButton } from "@/components/postcard/PostcardButton";
 import { PASSPORT_KEY } from "@/components/archive/PassportArchive";
 import Link from "next/link";
@@ -813,6 +814,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         <button type="button" disabled={!soundAvailable} onClick={() => void toggleSound()} aria-label={soundEnabled ? "Mute ambient sound" : "Play ambient sound"}>{soundEnabled ? "🔊" : "🔇"}</button>
       </section>
       <section id="journey-details" className="journey-details" hidden={!detailsOpen} aria-label="Journey details">
+        <JourneyMapEmbed />
         {wakeCard?.countryDayId === snapshot.countryDay.id ? (
           <WakeCard
             cityName={snapshot.countryDay.cityName}
@@ -852,7 +854,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           onToggleSound={() => void toggleSound()}
         />
         {tomorrowPack ? <TomorrowPreview cityName={tomorrowPack.cityName} countryName={tomorrowPack.countryName} packId={tomorrowPack.assetVersion} startsAt={snapshot.countryDay.endsAt} /> : null}
-        <nav aria-label="Journey links"><Link href="/archive">Passport</Link><Link href="/sponsor">Sponsor a day</Link><Link href="/privacy">Privacy</Link></nav>
+        <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsor">Sponsor a day</Link><Link href="/privacy">Privacy</Link></nav>
       </section>
 
       <DailyVote

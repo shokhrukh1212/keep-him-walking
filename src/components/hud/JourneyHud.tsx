@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Link from "next/link";
 import { CountryFlags } from "./CountryFlags";
 import { CountryLeaderboardSheet } from "./CountryLeaderboardSheet";
 import { LiveStatus } from "./LiveStatus";
@@ -44,14 +45,14 @@ export function JourneyHud({
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   return (
     <header className="journey-hud" data-hud-region="header">
-      <div className="day-mark" data-hud-region="where-when">
+      <Link className="day-mark" data-hud-region="where-when" href="/map" aria-label={`Open journey map from ${day.cityName}`}>
         <span className="eyebrow">DAY {day.dayNumber} · SEASON 1</span>
         <strong>{day.cityName}</strong>
         <span>
           {day.countryName} · {localTime}
           {weatherLabel ? <> · <span className="hud-weather">{weatherLabel}</span></> : null}
         </span>
-      </div>
+      </Link>
       <div className="journey-hud-audience" data-hud-region="who">
         <CountryFlags live={liveCountries} onOpen={() => setLeaderboardOpen(true)} />
         <LiveStatus

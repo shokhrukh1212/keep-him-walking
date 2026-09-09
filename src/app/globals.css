@@ -136,7 +136,11 @@ body {
 .day-mark {
   display: grid;
   gap: 0.12rem;
+  color: inherit;
+  text-decoration: none;
 }
+
+.day-mark:focus-visible { border-radius: 0.4rem; outline: 2px solid #ffd777; outline-offset: 4px; }
 
 .day-mark strong {
   font-family: Georgia, "Times New Roman", serif;
@@ -1817,9 +1821,53 @@ button:focus-visible,
 .postkit-list li { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
 .postkit-list li a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.map-page { max-width: 76rem; }
+.journey-map { display: grid; gap: 1rem; }
+.journey-map header h1 { max-width: 18ch; margin: 0.45rem 0 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2rem, 5vw, 4.4rem); line-height: 0.95; }
+.journey-map > h2 { margin: 0; font-size: 1rem; }
+.journey-map-frame { overflow: hidden; border: 1px solid rgb(255 255 255 / 18%); border-radius: 1rem; background: #102a32; box-shadow: 0 18px 50px rgb(0 0 0 / 20%); }
+.journey-map svg { display: block; width: 100%; height: auto; min-height: 15rem; }
+.season-route { fill: none; stroke: rgb(255 247 226 / 45%); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.route-segment { stroke: #ffd777; stroke-width: 2.2; stroke-linecap: round; }
+.route-segment.flight { stroke-dasharray: 7 6; }
+.map-city-stamp { fill: #aeb7b8; stroke: #102a32; stroke-width: 3; transition: r 180ms ease; }
+.map-city[data-outcome="landmark"] .map-city-stamp { fill: #91d5b1; }
+.map-city[data-outcome="marathon"] .map-city-stamp { fill: #ffe091; }
+.map-city[data-outcome="current"] .map-city-stamp { fill: #fff7e5; }
+.map-city-pulse { fill: transparent; stroke: transparent; stroke-width: 2; }
+.map-city[data-current="true"] .map-city-pulse { stroke: #ffd777; animation: map-current-pulse 1.8s ease-out infinite; }
+.map-city text,
+.map-candidate text { fill: #fff7e5; stroke: #102a32; stroke-width: 2.5px; paint-order: stroke fill; font: 700 13px/1 sans-serif; pointer-events: none; }
+.map-city:hover .map-city-stamp,
+.map-city:focus .map-city-stamp { r: 12; }
+.map-candidate line { stroke: #ffd777; stroke-width: 2; stroke-dasharray: 7 7; }
+.map-candidate[data-transfer="flight"] line { stroke: #e7a4c1; stroke-dasharray: 3 8; }
+.map-candidate circle { fill: #102a32; stroke: #ffd777; stroke-width: 2; }
+.map-candidate .candidate-name { fill: #d9e5df; font-size: 11px; }
+.map-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+.map-stats > div { display: grid; gap: 0.2rem; border: 1px solid rgb(255 255 255 / 16%); border-radius: 0.8rem; padding: 0.8rem; background: rgb(9 26 35 / 42%); }
+.map-stats strong { font-family: Georgia, "Times New Roman", serif; font-size: 1.4rem; }
+.map-stats small { color: rgb(247 240 223 / 62%); }
+.map-legend { display: flex; flex-wrap: wrap; gap: 1rem; color: rgb(247 240 223 / 70%); font-size: 0.75rem; }
+.map-legend .landmark { color: #91d5b1; }
+.map-legend .marathon { color: #ffe091; }
+.map-legend .unfinished { color: #aeb7b8; }
+.map-attribution { color: rgb(247 240 223 / 45%); font-size: 0.65rem; }
+.journey-map[data-compact="true"] { gap: 0.55rem; }
+.journey-map[data-compact="true"] .journey-map-frame { border-radius: 0.7rem; }
+.journey-map[data-compact="true"] svg { min-height: 0; }
+.map-loading { margin: 0; color: rgb(247 240 223 / 60%); font-size: 0.75rem; }
+
+@keyframes map-current-pulse {
+  from { opacity: 0.9; r: 10; }
+  to { opacity: 0; r: 22; }
+}
+
 @media (max-width: 600px) {
   .recap-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .recap-countries span { min-width: 0; }
+  .map-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .journey-map svg { min-height: 10rem; }
 }
 
 .reaction-buttons {
