@@ -28,6 +28,12 @@ try {
     if (failures.length > 0) {
       throw new Error(`${file} failed:\n${failures.join("\n")}`);
     }
+    // A plan mismatch is how a suite that died halfway is detected. pgTAP
+    // reports it as a diagnostic, not as a failure, so it must be caught here.
+    const planMismatch = tapLines.find((line) => /Looks like you planned/i.test(line));
+    if (planMismatch) {
+      throw new Error(`${file} plan mismatch:\n${planMismatch.trim()}`);
+    }
     const passed = tapLines.filter((line) => /^ok\b/i.test(line.trim())).length;
     process.stdout.write(`${file}: ${passed} assertions passed\n`);
   }

@@ -1029,7 +1029,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (17 forward migrations)
+### Tables (18 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1081,6 +1081,10 @@ to `journeys.traveler_name` when the ballot was the name vote.
 `create_next_country_day` writes tomorrow and its ballot, idempotent on
 `(journey_id, day_number)`. Bootstrap v8 adds the ballot's kind, its pack ids, the live
 tally and his name.
+
+**Season 1 migration 0018, vote clock:** redefines `create_next_country_day` to stamp
+the rows it writes from the `p_real_now` it is given rather than the database clock,
+matching every other write in the schema and clearing a `db lint` warning.
 
 **Season 1 migration 0017, weather:** `journey_runtime.weather` caches one
 Open-Meteo reading per city. `write_journey_weather` refuses a reading older than the
