@@ -413,6 +413,12 @@ presence heartbeats: the HUD and 3D actor retain the same confirmed walking wind
 the animation clock continues monotonically and remains bounded to 60 seconds of
 extrapolation. Older timestamps are still ignored.
 
+During ordinary locomotion the GLB actor follows a bounded eight-second camera drift of
+±3.2% of the viewport, clamped to the stage's declared `walkableX`. The panorama still
+carries route distance, while this local displacement makes the walk visibly spatial
+instead of pinning the actor to one screen coordinate. Waiting and scripted actions do
+not receive the drift, and the shared contact point follows the displaced actor.
+
 ### 5.3 Animation authoring
 
 `scripts/characters/animation.py` — **analytic two-bone IK** with constant segment

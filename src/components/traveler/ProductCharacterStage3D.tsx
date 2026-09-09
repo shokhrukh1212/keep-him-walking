@@ -245,7 +245,9 @@ export function ProductCharacterStage3D(props: Props) {
       const defaultAnchor = state.pack.schemaVersion === 3 ? state.pack.route.travelerViewportAnchor : 0.61;
       const mobile = width <= 600;
       const [left, right] = frame.stage.walkableX;
-      const travelerAnchor = Math.min(right, Math.max(left, cue.conversation ? (mobile ? 0.34 : 0.43) : defaultAnchor));
+      const travelerAnchor = Math.min(right, Math.max(left,
+        cue.conversation ? (mobile ? 0.34 : 0.43) : defaultAnchor + (cue.travelerViewportOffset ?? 0),
+      ));
       const residentAnchor = Math.min(right, Math.max(left, mobile ? 0.76 : 0.72));
       travelerRoot.position.x = (travelerAnchor - 0.5) * horizontal;
       residentRoot.position.x = (residentAnchor - 0.5) * horizontal;
@@ -263,6 +265,8 @@ export function ProductCharacterStage3D(props: Props) {
         traveler.gazeAt(camera.position.clone(), .6);
       }
       element.dataset.characterState = traveler?.resolvedClip(cue.traveler.clip) ?? cue.traveler.clip;
+      element.dataset.characterSeconds = String(cue.traveler.seconds);
+      element.dataset.characterViewportOffset = String(cue.travelerViewportOffset ?? 0);
       element.dataset.walkTimeScale = String(cue.traveler.timeScale ?? 1);
       element.dataset.forwardLeanDegrees = String((cue.travelerLeanRadians ?? 0) * 180 / Math.PI);
       element.dataset.residentVisible = String(residentRoot.visible);

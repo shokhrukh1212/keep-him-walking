@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { almatyCountryPackV1 } from "@/content/countries/almaty.v1";
 import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
-import { productCharacterSceneAt } from "./product-timeline";
+import { productCharacterSceneAt, walkingViewportOffset } from "./product-timeline";
 
 const baseMotion: TravelerMotionSnapshot = {
   rawActiveSeconds: 12,
@@ -21,6 +21,16 @@ describe("product character timeline", () => {
   it("uses the GLB walk while traveling and a deterministic wait take when stopped", () => {
     expect(productCharacterSceneAt(almatyCountryPackV1, baseMotion, true, undefined, 0).traveler.clip).toBe("walk");
     expect(productCharacterSceneAt(almatyCountryPackV1, baseMotion, false, undefined, 0).traveler.clip).toBe("wait_pockets");
+  });
+
+  it("moves a walking actor around the camera-follow anchor without leaving the stage", () => {
+    expect(walkingViewportOffset(0)).toBeCloseTo(0);
+    expect(walkingViewportOffset(2)).toBeCloseTo(.032);
+    expect(walkingViewportOffset(4)).toBeCloseTo(0);
+    expect(walkingViewportOffset(6)).toBeCloseTo(-.032);
+    expect(productCharacterSceneAt(
+      almatyCountryPackV1, { ...baseMotion, locomotionSeconds: 2 }, false, undefined, 0,
+    ).travelerViewportOffset).toBeUndefined();
   });
 
   it("cycles extended waiting clips before sitting after ten minutes", () => {
