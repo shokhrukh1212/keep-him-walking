@@ -16,6 +16,7 @@ export function serverRuntimeConfig() {
       numericEnv("PRESENCE_TTL_SECONDS", DEFAULT_PRESENCE_TTL_SECONDS),
     ),
     stepsPerActiveSecond: numericEnv("STEPS_PER_ACTIVE_SECOND", 1.8),
+    paceCap: Math.min(5, Math.max(1, numericEnv("PACE_CAP", 5))),
     phase2Enabled: phase2DeploymentAllowed(),
     phase2PreviewStartAt: process.env.PHASE2_PREVIEW_START_AT || null,
     phase2RehearsalScale: numericEnv("PHASE2_REHEARSAL_SCALE", 144),

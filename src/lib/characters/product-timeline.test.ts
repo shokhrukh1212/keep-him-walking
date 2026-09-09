@@ -23,6 +23,40 @@ describe("product character timeline", () => {
     expect(productCharacterSceneAt(almatyCountryPackV1, baseMotion, false, undefined, 0).traveler.clip).toBe("idle");
   });
 
+  it("uses a brisk planted-foot sample and two-degree lean from pace three", () => {
+    const ordinary = productCharacterSceneAt(
+      almatyCountryPackV1,
+      { ...baseMotion, locomotionSeconds: 12.3, stepPhase: 0.5 },
+      true,
+      undefined,
+      0,
+      2,
+    );
+    const brisk = productCharacterSceneAt(
+      almatyCountryPackV1,
+      { ...baseMotion, locomotionSeconds: 12.3, stepPhase: 0.5 },
+      true,
+      undefined,
+      0,
+      3,
+    );
+
+    expect(ordinary.traveler.timeScale).toBe(1);
+    expect(brisk.traveler.timeScale).toBe(1.25);
+    expect(brisk.traveler.seconds).toBeCloseTo(0.375, 5);
+    expect(brisk.travelerLeanRadians).toBeCloseTo(2 * Math.PI / 180, 8);
+
+    const atPlant = productCharacterSceneAt(
+      almatyCountryPackV1,
+      { ...baseMotion, locomotionSeconds: 12.6, plantIndex: 21, plantedFoot: "right" },
+      true,
+      undefined,
+      0,
+      3,
+    );
+    expect(atPlant.traveler.seconds).toBeCloseTo(0.6, 5);
+  });
+
   it("plays a full prop animation between the stop and resume transitions", () => {
     const motion = {
       ...baseMotion,

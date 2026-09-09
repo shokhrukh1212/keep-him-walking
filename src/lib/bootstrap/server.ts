@@ -370,6 +370,7 @@ export async function liveBootstrapSnapshot(
       p_steps_per_second: config.stepsPerActiveSecond,
       p_rate_limit: RATE_LIMITS.bootstrap.limit,
       p_rate_window_seconds: RATE_LIMITS.bootstrap.windowSeconds,
+      p_pace_cap: config.paceCap,
     });
     if (bundleError) throw bundleError;
     const result = atomic as AtomicBootstrapRow | null;
@@ -392,6 +393,7 @@ export async function liveBootstrapSnapshot(
       p_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
       p_steps_per_second: config.stepsPerActiveSecond,
+      p_pace_cap: config.paceCap,
     })
     : supabase.rpc("record_presence_heartbeat_v2", {
       p_country_day_id: countryDay.id,

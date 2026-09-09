@@ -23,7 +23,7 @@
 | Validation | Zod 4 for every content pack and every API body |
 | Payments | Lemon Squeezy (hosted checkout + signed webhooks), plus a deterministic no-money fixture adapter for rehearsals |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest (47 test files, 182 tests) + Playwright (17 spec files across 8 config profiles) + pgTAP (61 baseline + 15 P4 assertions) |
+| Testing | Vitest (47 test files, 185 tests) + Playwright (17 spec files across 8 config profiles) + pgTAP (61 baseline + 15 P4 + 17 P5 assertions) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
@@ -54,7 +54,7 @@ scripts/
   characters/             Blender/MPFB build pipeline (Python) + browser checks (mjs)
   process-phase*-art.mjs  sharp-based image derivation
   phase2/ phase3/         preflight, seeding, scheduling, rehearsal, reporting
-supabase/migrations/      10 forward migrations, 61 pgTAP assertions
+supabase/migrations/      12 forward migrations, 61 baseline pgTAP assertions
 ```
 
 ---
@@ -139,10 +139,26 @@ travelerMotionAt(pack, rawSeconds, distanceMetres) → TravelerMotionSnapshot
 `_v2` additionally returns `global_active_seconds` to the client. `_v3` additionally
 records a durable per-visitor contribution as `max(active_seconds)` across that
 visitor's leases — never the sum, so multiple tabs cannot inflate a contribution.
-`_v4` keeps the v3 contract intact, takes the same authority-row lock, and adds the
-newly confirmed active interval to `global_distance_metres` at
-`1.25 m/s × pace_rate`. P4 fixes `pace_rate` at its default `1`; P5 owns changing it.
-The response includes both distance and pace. `_v3` remains callable for rollback.
+`_v4` keeps the v3 contract intact and takes the same authority-row lock. Before it
+mutates the caller's lease, it accrues the interval owned by the previously persisted
+pace. The interval is split at every lease expiry, so an expired visitor stops affecting
+distance exactly at the TTL boundary. It then delegates the lease/contribution mutation
+to v3 and computes the post-mutation pace from its confirmed watcher count:
+
+```
+n = count(distinct visitor_hash) of live visible + scene-ready leases
+pace = min(1 + log2(max(n, 1)), PACE_CAP)
+distance += interval_seconds × 1.25 m/s × interval_pace
+```
+
+An active caller is therefore included in `n`, but its new pace is never applied
+retroactively to time before it arrived. The new pace is persisted to
+`journey_runtime.pace_rate`; the response carries both `out_active_viewers` and
+`out_pace_rate`. The read-only v4 projection uses the same expiry splitting without
+mutating authority, and bootstrap v5 returns that projected distance, watcher count and
+pace in one admitted bundle. The old v4/v5 signatures remain as 5×-cap rollback
+wrappers; server routes pass the configured cap explicitly. `_v3` remains callable for
+rollback.
 
 `walking` is returned to the client as simply `activeViewers > 0`.
 
@@ -189,6 +205,14 @@ the whole computation is pure in its explicit inputs:
 - Seeking backwards (in review tooling) is exact.
 - `plantIndex`, `plantedFoot` and `cyclePhase` remain deterministic while route distance
   comes only from the confirmed/extrapolated distance authority.
+
+At `paceRate >= 3`, `productCharacterSceneAt` makes only the visual walk clip brisk:
+it samples that clip at 1.25× within each canonical 0.6 s step and clamps just before the
+next plant, holding there until the authoritative step boundary. `CharacterActor` also
+sets the active walk action's effective time scale to 1.25, while deterministic
+`cue.seconds` seeking remains the pose authority. The traveler leans 2° forward. The
+underlying `travelerMotionAt` sample is untouched, so `plantIndex`, `plantedFoot`, HUD
+footfalls, route actions and distance all retain their original derivation.
 
 **One divergence worth knowing:** the database's `global_steps` uses the configurable
 `STEPS_PER_ACTIVE_SECOND` (default **1.8**/s), while every displayed step count uses
@@ -412,6 +436,9 @@ change.
   then `mixer.update(0)`. There is no accumulated delta, so the same input second always
   produces the same pose — this is what lets two viewers, a reload, and a scrubbed review
   timeline all agree.
+- **Pace is an explicit cue input.** The active action receives its cue time scale via
+  `setEffectiveTimeScale`; the brisk walk still seeks the pure, step-bounded sampled
+  second described in §3 rather than accumulating frame delta.
 - **Face is driven procedurally**, not baked (no clip carries morph tracks): a 3.7 s
   blink cycle with a 0.28 s sine closure, a 0.17 smile bias with `react`/`greet`
   accents, a `sin²(9t)` speaking envelope active only on `talk`, and small brow accents.
@@ -472,6 +499,9 @@ are read through a ref so the renderer is never torn down mid-journey.
   with `snap = true` on the first frame and on every conversation boundary so a cut is a
   cut, not a 0.28 s smear. The resident is sampled with a 1.8 s face offset so the two
   characters do not blink in unison.
+- The confirmed/projected `routeRuntime.paceRate` is passed into that pure timeline.
+  At 3× and above the host applies its returned 2° forward lean; actions and encounters
+  are not retimed or leaned.
 - Staging: in conversation the traveler moves to viewport anchor 0.43 (0.34 on mobile)
   and both actors yaw ±π/2 to face each other; otherwise the traveler sits at the pack's
   `travelerViewportAnchor` (0.61) with a slight ±0.68 rad turn toward travel.
@@ -479,8 +509,9 @@ are read through a ref so the renderer is never torn down mid-journey.
   canvas and re-reporting availability, and on unmount walks the whole scene disposing
   geometries, materials, textures and skeletons. Contact publications are cleared on
   context loss, invalid layout and unmount so Pixi cannot retain an orphan shadow.
-- Writes `data-character-state`, `data-resident-visible`, `data-character-ready` to the
-  host element — these are what the Playwright suites assert against.
+- Writes `data-character-state`, `data-walk-time-scale`, `data-forward-lean-degrees`,
+  `data-resident-visible`, `data-character-ready` to the host element — these are what
+  the Playwright suites assert against.
 
 `CharacterStage3D` uses the same toon and lighting implementation on
 `/preview/characters`. Setting includes the studio, Almaty promenade and all five
@@ -491,8 +522,8 @@ controls remain available; Quality makes the low-tier outline difference reviewa
 
 ### 6.3 `product-timeline.ts` — journey → skeleton
 
-`productCharacterSceneAt(pack, motion, traveling, review, now)` returns
-`{ traveler, resident, showResident, conversation }`:
+`productCharacterSceneAt(pack, motion, traveling, review, now, paceRate)` returns
+`{ traveler, resident, showResident, conversation, travelerLeanRadians }`:
 
 - `clipForState` maps all 20 semantic states onto the 15 available clips
   (`wave → greet`, `sit → rest`, `approach → walk`, `slow_walk → stop`, …).
@@ -502,6 +533,8 @@ controls remain available; Quality makes the low-tier outline difference reviewa
   `listen`, and vice versa; `greet`/`goodbye` are mirrored; everything else is `idle`.
 - The encounter path walks the same fixed prologue and per-line segmentation as the
   motion clock, so dialogue text and character pose are driven from one source.
+- The ordinary walking path applies the 3× brisk threshold described in §3. Pace is an
+  explicit argument; no runtime singleton or module state participates.
 - `reviewCue` handles the Preview-only local action rehearsal (see §11) and is the only
   path that can override the server-derived pose. It never touches presence, route
   authority or accounting.
@@ -971,9 +1004,14 @@ enforcing legal state transitions), `payment_webhook_events`, `sponsor_metric_ev
 `global_distance_metres` and positive `pace_rate`; `day_outcomes` stores the immutable
 distance/landmark/marathon and audience summary contract for the later rollover work.
 
+**Season 1 migration 0012, pace:** overloads heartbeat v4, runtime read v4 and bootstrap
+v5 with the configured pace cap; persists logarithmic distinct-watcher pace and accrues
+distance across exact lease-expiry segments.
+
 ### Key RPCs
 
-`record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule plus distance),
+`record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule, distinct-watcher
+pace and pace-weighted distance),
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `cleanup_phase2_retention`, `journey_story_now`,
@@ -1045,10 +1083,14 @@ Recorded results (`docs/phase-3-results.md`, 2026-09-06):
   covering RLS, grants and storage policies.
 - **Unit tests:** 27 files / 66 tests were recorded at the Phase 3 gate with 84.1 %
   statements, 71.7 % branches and 93.9 % functions on the scoped coverage set. The
-  current suite is **47 files / 182 tests, all passing** (verified by `pnpm verify`).
+  current suite is **47 files / 185 tests**.
 - P4 adds 15 pgTAP assertions for columns, RLS/grants, v4 accrual/persistence and the
   v5 bootstrap projection. They require a migrated Postgres instance; this workspace
   has no Docker/Podman runtime, so they were not executed locally in this change.
+- P5 adds 17 pgTAP assertions, including the `n = 1, 2, 4, 8, 16, 40` pace table,
+  multi-tab visitor deduplication, non-retroactive arrivals, 2× accrual and lease-expiry
+  projection. The two-context Playwright flow asserts that both browsers render the
+  confirmed `The internet is keeping him moving · ×2` HUD line.
 - Production build emits 31 routes on Next 16.3.3.
 - `content:validate`: 16 registered packs, 717 uniquely owned scene assets.
 - Playwright: 30 active desktop/320 px tests plus opt-in rehearsal/soak/recording specs.
@@ -1104,6 +1146,7 @@ Runtime configuration (`serverRuntimeConfig()`):
 |---|---|---|
 | `PRESENCE_TTL_SECONDS` | 50 | Lease lifetime |
 | `STEPS_PER_ACTIVE_SECOND` | 1.8 | Database step rate (see §3) |
+| `PACE_CAP` | 5 | Maximum logarithmic watcher pace (clamped to 1…5) |
 | `POSTCARD_UNLOCK_SECONDS` | 60 | Contribution needed for a postcard |
 | `POSTCARD_RETENTION_DAYS` | 365 | Postcard expiry |
 | `SPONSOR_RESERVATION_MINUTES` | 30 | Slot hold during checkout |

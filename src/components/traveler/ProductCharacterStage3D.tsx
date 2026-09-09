@@ -163,7 +163,14 @@ export function ProductCharacterStage3D(props: Props) {
       clock.accept(state.routeRuntime, state.command?.presenceTtlMs ?? 50_000, now);
       const sample = clock.sample(now);
       const motion = travelerMotionAt(state.pack, sample.rawSeconds, sample.distanceMetres);
-      const cue = productCharacterSceneAt(state.pack, motion, sample.traveling, state.command?.actionReview, now);
+      const cue = productCharacterSceneAt(
+        state.pack,
+        motion,
+        sample.traveling,
+        state.command?.actionReview,
+        now,
+        state.routeRuntime.paceRate,
+      );
       const snap = firstSample || cue.conversation !== previousConversation;
       firstSample = false;
       previousConversation = cue.conversation;
@@ -193,10 +200,13 @@ export function ProductCharacterStage3D(props: Props) {
       const residentAnchor = Math.min(right, Math.max(left, mobile ? 0.76 : 0.72));
       travelerRoot.position.x = (travelerAnchor - 0.5) * horizontal;
       residentRoot.position.x = (residentAnchor - 0.5) * horizontal;
+      travelerRoot.rotation.x = cue.travelerLeanRadians ?? 0;
       travelerRoot.rotation.y = cue.conversation ? Math.PI / 2 : state.command?.facing === "left" ? -0.68 : 0.68;
       residentRoot.rotation.y = -Math.PI / 2;
       residentRoot.visible = cue.showResident && Boolean(resident);
       element.dataset.characterState = cue.traveler.clip;
+      element.dataset.walkTimeScale = String(cue.traveler.timeScale ?? 1);
+      element.dataset.forwardLeanDegrees = String((cue.travelerLeanRadians ?? 0) * 180 / Math.PI);
       element.dataset.residentVisible = String(residentRoot.visible);
       // Measured through the actual camera, not just echoed from the input metadata.
       camera.updateMatrixWorld();

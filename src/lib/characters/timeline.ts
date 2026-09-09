@@ -2,7 +2,7 @@ import { CLIP_DURATIONS, type CharacterClip, type ReviewAction } from "./manifes
 
 const smooth=(value:number)=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
 
-export type CharacterCue = { clip: CharacterClip; seconds: number };
+export type CharacterCue = { clip: CharacterClip; seconds: number; timeScale?: number };
 export type SceneCue = {
   traveler: CharacterCue; resident: CharacterCue; phase: string;
   travelerX: number; travelerYaw: number; residentYaw: number;

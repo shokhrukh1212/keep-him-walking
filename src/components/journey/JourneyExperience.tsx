@@ -519,6 +519,15 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       // Dismissed share sheets and blocked clipboard access are non-fatal.
     }
   };
+  const shareUrl = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) await navigator.share({ url });
+      else await navigator.clipboard.writeText(url);
+    } catch {
+      // Dismissed share sheets and blocked clipboard access are non-fatal.
+    }
+  };
   const displayedZoneLabel = renderedZone.label;
   const displayedZoneIndex = Math.max(
     0,
@@ -562,8 +571,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         day={snapshot.countryDay}
         localTime={localTime}
         activeViewers={activeViewers}
+        paceRate={routeRuntime.paceRate}
         walking={walking}
         status={connectionStatus}
+        onShare={() => void shareUrl()}
       />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (

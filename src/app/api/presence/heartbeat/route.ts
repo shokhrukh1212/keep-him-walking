@@ -34,9 +34,8 @@ async function handlePost(request: NextRequest) {
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds, "Presence updates are arriving too quickly.");
   const config = serverRuntimeConfig();
   const pack = getCountryPack(countryDay.scene_pack_id);
-  const { data, error } = await supabase.rpc(pack?.schemaVersion === 2 || pack?.schemaVersion === 3
-    ? "record_presence_heartbeat_v4"
-    : "record_presence_heartbeat_v2", {
+  const paceEnabled = pack?.schemaVersion === 2 || pack?.schemaVersion === 3;
+  const heartbeatArguments = {
     p_country_day_id: countryDay.id,
     p_visitor_hash: visitorHash,
     p_session_hash: hashOpaqueValue(parsed.data.sessionId),
@@ -45,7 +44,11 @@ async function handlePost(request: NextRequest) {
     p_now: now.toISOString(),
     p_ttl_seconds: config.presenceTtlSeconds,
     p_steps_per_second: config.stepsPerActiveSecond,
-  });
+  };
+  const { data, error } = await supabase.rpc(
+    paceEnabled ? "record_presence_heartbeat_v4" : "record_presence_heartbeat_v2",
+    paceEnabled ? { ...heartbeatArguments, p_pace_cap: config.paceCap } : heartbeatArguments,
+  );
   if (error) {
     return NextResponse.json({ error: "Presence update failed." }, { status: 503 });
   }

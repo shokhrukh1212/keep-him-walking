@@ -12,3 +12,9 @@ export function isLeaseActive(
 ): boolean {
   return lastSeenAtMs + ttlSeconds * 1_000 > nowMs;
 }
+
+export function formatPaceRate(paceRate: number): string {
+  const safeRate = Number.isFinite(paceRate) ? Math.max(1, paceRate) : 1;
+  const rounded = Math.round(safeRate * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}

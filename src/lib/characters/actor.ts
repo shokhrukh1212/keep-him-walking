@@ -134,6 +134,7 @@ export class CharacterActor {
       const current=name===this.active;
       action.enabled=current||(name===this.previous&&this.blend<1);
       action.setEffectiveWeight(current?smooth(this.blend):name===this.previous?1-smooth(this.blend):0);
+      action.setEffectiveTimeScale(current ? cue.timeScale ?? 1 : 1);
       if(current)action.time=Math.min(cue.seconds,action.getClip().duration-1e-5);
     }
     this.mixer.update(0);

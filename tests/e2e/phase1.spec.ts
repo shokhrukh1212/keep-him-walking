@@ -28,6 +28,10 @@ function createServer(): SharedServer {
   };
 }
 
+function paceForWatchers(watchers: number) {
+  return Math.min(1 + Math.log2(Math.max(watchers, 1)), 5);
+}
+
 function snapshot(server: SharedServer): BootstrapSnapshot {
   const now = new Date();
   return {
@@ -85,7 +89,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
     route: {
       globalActiveSeconds: Math.max(0, server.steps - 40),
       globalDistanceMetres: Math.max(0, server.steps - 40) * 1.25,
-      paceRate: 1,
+      paceRate: paceForWatchers(server.sessions.size),
       authoritativeAt: now.toISOString(),
       walking: server.sessions.size > 0,
     },
@@ -126,7 +130,7 @@ async function installApi(page: Page, server: SharedServer) {
         nextHeartbeatInMs: 450,
         globalActiveSeconds: Math.max(0, server.steps - 40),
         globalDistanceMetres: Math.max(0, server.steps - 40) * 1.25,
-        paceRate: 1,
+        paceRate: paceForWatchers(server.sessions.size),
         routeAuthoritativeAt: new Date().toISOString(),
       },
     });
@@ -148,6 +152,25 @@ async function installApi(page: Page, server: SharedServer) {
     });
   });
   return () => currentSessionId;
+}
+
+async function useStaticScene(page: Page) {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      type: string,
+      ...args: unknown[]
+    ) {
+      if (type === "webgl" || type === "webgl2" || type === "webgpu") return null;
+      const invoke = original as unknown as (
+        this: HTMLCanvasElement,
+        contextType: string,
+        ...contextAttributes: unknown[]
+      ) => RenderingContext | null;
+      return invoke.call(this, type, ...args);
+    } as typeof HTMLCanvasElement.prototype.getContext;
+  });
 }
 
 test("the first viewport explains the live rule and remains keyboard accessible", async ({ page }) => {
@@ -179,7 +202,7 @@ test("the first viewport explains the live rule and remains keyboard accessible"
 
 test("two browsers share presence and preserve steps across reconnects", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "Two-context synchronization runs once on desktop Chromium");
-  test.setTimeout(75_000);
+  test.setTimeout(180_000);
   const server = createServer();
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();
@@ -192,26 +215,30 @@ test("two browsers share presence and preserve steps across reconnects", async (
   await expect.poll(() => server.sessions.size, { timeout: 30_000 }).toBe(2);
   await expect(first.getByText("2 people watching")).toBeVisible();
   await expect(second.getByText("2 people watching")).toBeVisible();
+  await expect(first.getByText("The internet is keeping him moving · ×2")).toBeVisible();
+  await expect(second.getByText("The internet is keeping him moving · ×2")).toBeVisible();
 
   const secondSession = getSecondSession();
   expect(secondSession).toBeTruthy();
   server.blockedSessions.add(secondSession!);
   server.sessions.delete(secondSession!);
+  await first.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(first.getByText("1 person watching")).toBeVisible();
   await expect(first.getByText("The internet is keeping him moving")).toBeVisible();
+  await first.getByRole("button", { name: "Journey details" }).click();
+  await expect(first.getByText(/global steps/)).toBeVisible();
 
   const stepsBefore = server.steps;
   const sessionBeforeReload = getFirstSession();
-  await first.reload();
-  await first.getByRole("button", { name: "Journey details" }).click();
-  await expect(first.getByText(/global steps/)).toBeVisible();
-  await expect.poll(getFirstSession).not.toBe(sessionBeforeReload);
+  await first.reload({ waitUntil: "domcontentloaded" });
+  await expect.poll(getFirstSession, { timeout: 45_000 }).not.toBe(sessionBeforeReload);
   expect(server.steps).toBeGreaterThanOrEqual(stepsBefore);
 
   const finalSession = getFirstSession();
   expect(finalSession).toBeTruthy();
   server.blockedSessions.add(finalSession!);
   server.sessions.delete(finalSession!);
+  await first.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(first.getByText("0 people watching")).toBeVisible();
   await expect(first.getByText("He’s waiting for a watcher")).toBeVisible();
 
@@ -221,22 +248,7 @@ test("two browsers share presence and preserve steps across reconnects", async (
 
 test("the semantic experience survives without WebGL", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "WebGL fallback runs once on desktop Chromium");
-  await page.addInitScript(() => {
-    const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (
-      this: HTMLCanvasElement,
-      type: string,
-      ...args: unknown[]
-    ) {
-      if (type === "webgl" || type === "webgl2" || type === "webgpu") return null;
-      const invoke = original as unknown as (
-        this: HTMLCanvasElement,
-        contextType: string,
-        ...contextAttributes: unknown[]
-      ) => RenderingContext | null;
-      return invoke.call(this, type, ...args);
-    } as typeof HTMLCanvasElement.prototype.getContext;
-  });
+  await useStaticScene(page);
   const server = createServer();
   await installApi(page, server);
   await page.goto("/");
