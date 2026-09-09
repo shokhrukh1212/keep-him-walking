@@ -71,8 +71,7 @@ describe("toon material ownership", () => {
     appearance.update(stage, grade, "high"); root.updateMatrixWorld(true); source.skeleton.update();
     const original = source.getVertexPosition(0, new THREE.Vector3()).applyMatrix4(source.matrixWorld);
     const expanded = outline.getVertexPosition(0, new THREE.Vector3()).applyMatrix4(outline.matrixWorld);
-    const local = root.worldToLocal(original.clone()).multiplyScalar(1.018);
-    expect(expanded.distanceTo(root.localToWorld(local))).toBeLessThan(1e-6);
+    expect(expanded.distanceTo(original)).toBeLessThan(1e-6);
     const material = appearance.outlines[0].materials[0];
     expect(material.side).toBe(THREE.BackSide);
     expect(material.opacity).toBe(0.7);
@@ -82,6 +81,18 @@ describe("toon material ownership", () => {
     appearance.update(stage, grade, "medium"); expect(outline.visible).toBe(true);
     const disposed = vi.fn(); material.addEventListener("dispose", disposed);
     appearance.dispose(); expect(disposed).toHaveBeenCalledOnce(); expect(outline.parent).toBeNull();
+  });
+
+  it("expands outlines in screen pixels after skinning without scaling the rig", () => {
+    const appearance = new CharacterToon();
+    const source = new THREE.Mesh(new THREE.BoxGeometry(), appearance.convert(new THREE.MeshStandardMaterial()));
+    appearance.addOutline(source);
+    const shader = { uniforms: {}, vertexShader: THREE.ShaderLib.basic.vertexShader, fragmentShader: THREE.ShaderLib.basic.fragmentShader } as unknown as Parameters<THREE.Material["onBeforeCompile"]>[0];
+    appearance.outlines[0].materials[0].onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+    expect(shader.uniforms.outlineViewport).toBe(appearance.viewport);
+    expect(shader.vertexShader.indexOf("pixelNormal / normalLength")).toBeGreaterThan(shader.vertexShader.indexOf("#include <skinning_vertex>"));
+    expect(appearance.outlines[0].mesh.scale.toArray()).toEqual(source.scale.toArray());
+    appearance.dispose();
   });
 
   it("preserves actor hair/lash cutouts, eye depth, sponsor patch and original resources on disposal", async () => {
@@ -131,4 +142,15 @@ it("uses the zone palette and named light side without shadow maps", () => {
     expect(lights.key.intensity).toBe(0.9);
     expect(lights.key.castShadow).toBe(false);
   }
+});
+
+it("adds warm face and rim lighting in dark scenes while retaining the shared grade", () => {
+  const lights = new CharacterLights();
+  lights.update(stage, { exposure: 1, tint: { r: 1, g: 1, b: 1 } });
+  expect(lights.lamp.intensity).toBe(0);
+  lights.update(stage, { exposure: 0.62, tint: { r: 0.72, g: 0.8, b: 1 } });
+  expect(lights.lamp.intensity).toBeCloseTo(2.2);
+  expect(lights.rim.intensity).toBeCloseTo(2.8);
+  expect(lights.lamp.position.z).toBeGreaterThan(0);
+  expect(lights.rim.position.z).toBeLessThan(0);
 });

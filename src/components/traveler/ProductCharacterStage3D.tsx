@@ -235,7 +235,9 @@ export function ProductCharacterStage3D(props: Props) {
         return;
       }
       updateCamera(width, height, frame);
-      lights.update(frame.stage);
+      lights.update(frame.stage, state.grade.current);
+      traveler?.toon.viewport.value.set(element.clientWidth, element.clientHeight);
+      resident?.toon.viewport.value.set(element.clientWidth, element.clientHeight);
       traveler?.setAppearance(frame.stage, state.grade.current, state.qualityTier);
       resident?.setAppearance(frame.stage, state.grade.current, state.qualityTier);
       const vertical = CHARACTER_MANIFEST.traveler.heightMetres * height / frame.layout.personHeightPx;

@@ -8,6 +8,7 @@ export class CharacterToon {
   readonly gradient = new THREE.DataTexture(new Uint8Array([72, 160, 255]), 3, 1, THREE.RedFormat);
   readonly exposure = { value: 1 };
   readonly tint = { value: new THREE.Vector3(1, 1, 1) };
+  readonly viewport = { value: new THREE.Vector2(1, 1) };
   readonly materials = new Map<THREE.Material, THREE.MeshToonMaterial>();
   readonly outlines: { source: THREE.Mesh; mesh: THREE.Mesh; materials: THREE.MeshBasicMaterial[] }[] = [];
 
@@ -60,26 +61,34 @@ export class CharacterToon {
       });
       // Sample the map's alpha for hair/lashes, but keep the palette outline colour.
       material.onBeforeCompile = (shader) => {
+        shader.uniforms.outlineViewport = this.viewport;
+        shader.vertexShader = `uniform vec2 outlineViewport;\n${shader.vertexShader}`
+          .replace("#if defined ( USE_ENVMAP ) || defined ( USE_SKINNING )", "#if 1")
+          .replace("#include <project_vertex>", `#include <project_vertex>
+            // Expand the deformed silhouette by 1.5 CSS pixels, never about the rig origin.
+            vec3 hullNormal = transformedNormal;
+            #ifdef FLIP_SIDED
+              hullNormal = -hullNormal;
+            #endif
+            vec2 projectedNormal = (projectionMatrix * vec4(hullNormal, 0.0)).xy;
+            vec2 pixelNormal = projectedNormal * outlineViewport;
+            float normalLength = length(pixelNormal);
+            if (normalLength > 0.0001) {
+              gl_Position.xy += (pixelNormal / normalLength) * (3.0 / outlineViewport) * gl_Position.w;
+            }
+          `);
         shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>",
           "#include <map_fragment>\ndiffuseColor.rgb = diffuse;");
       };
-      material.customProgramCacheKey = () => "character-outline-cutout-v1";
+      material.customProgramCacheKey = () => "character-outline-screen-normal-v2";
       return material;
     });
     const mesh = source.clone(false);
     mesh.name = `${source.name}:outline`;
     mesh.material = Array.isArray(source.material) ? materials : materials[0];
-    mesh.scale.copy(source.scale).multiplyScalar(1.018);
+    mesh.scale.copy(source.scale);
     mesh.morphTargetInfluences = source.morphTargetInfluences;
     mesh.frustumCulled = false;
-    // Attached skinning normally cancels mesh scale. Use the source's unexpanded
-    // inverse so the shared skeleton deforms both passes and the hull stays 1.018x.
-    if (mesh instanceof THREE.SkinnedMesh) {
-      mesh.updateMatrixWorld = function (force) {
-        THREE.SkinnedMesh.prototype.updateMatrixWorld.call(this, force);
-        this.bindMatrixInverse.copy(source.matrixWorld).invert();
-      };
-    }
     source.parent?.add(mesh);
     this.outlines.push({ source, mesh, materials });
   }
@@ -91,7 +100,7 @@ export class CharacterToon {
       mesh.visible = quality !== "low" && source.visible;
       mesh.position.copy(source.position);
       mesh.quaternion.copy(source.quaternion);
-      mesh.scale.copy(source.scale).multiplyScalar(1.018);
+      mesh.scale.copy(source.scale);
       for (const material of materials) material.color.set(stage.palette[2]);
     }
   }
@@ -112,17 +121,25 @@ export class CharacterLights extends THREE.Group {
   readonly hemisphere = new THREE.HemisphereLight(0xffffff, 0x2e3a4f, 1.55);
   readonly key = new THREE.DirectionalLight(0xffffff, 0.9);
   readonly fill = new THREE.DirectionalLight(0x2e3a4f, 0.35);
+  readonly lamp = new THREE.DirectionalLight(0xffd8a0, 0);
+  readonly rim = new THREE.DirectionalLight(0xffd8a0, 0);
   constructor() {
     super();
     this.fill.position.set(4, 2, 3);
-    this.add(this.hemisphere, this.key, this.fill);
+    this.add(this.hemisphere, this.key, this.fill, this.lamp, this.rim);
   }
-  update(stage: ZoneStage) {
+  update(stage: ZoneStage, grade?: VisualGrade) {
     this.hemisphere.color.set(stage.palette[0]);
     this.hemisphere.groundColor.set(stage.palette[2]);
     this.key.color.set(stage.palette[0]);
     this.key.position.set(stage.lightDir === "left" ? -3 : stage.lightDir === "right" ? 3 : 0, 5, 4);
     this.fill.color.set(stage.palette[2]);
     this.fill.position.x = stage.lightDir === "right" ? -4 : 4;
+    const darkness = THREE.MathUtils.clamp((1 - (grade?.exposure ?? 1)) / 0.38, 0, 1);
+    const side = stage.lightDir === "right" ? 1 : -1;
+    this.lamp.position.set(side * 2, 3, 4);
+    this.rim.position.set(side * 3, 2, -3);
+    this.lamp.intensity = darkness * 2.2;
+    this.rim.intensity = darkness * 2.8;
   }
 }

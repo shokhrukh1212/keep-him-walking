@@ -116,7 +116,9 @@ export function CharacterStage3D(props:Props) {
         return;
       }
       const stage=frame?.stage??studioStage;
-      lights.update(stage);
+      lights.update(stage,state.grade.current);
+      actor?.toon.viewport.value.set(element.clientWidth,element.clientHeight);
+      npc?.toon.viewport.value.set(element.clientWidth,element.clientHeight);
       actor?.setAppearance(stage,state.grade.current,state.qualityTier);
       npc?.setAppearance(stage,state.grade.current,state.qualityTier);
       camera.zoom=frame?1:cue.cameraZoom;

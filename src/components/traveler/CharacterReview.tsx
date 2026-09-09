@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import { CHARACTER_CANDIDATES, CLIP_SPECS, REVIEW_ACTIONS, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, type SceneCue } from "@/lib/characters/timeline";
@@ -13,6 +13,7 @@ import { StaticScene } from "@/components/scene/StaticScene";
 import type { StageFrame } from "@/lib/world/stage-layout";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 import type { QualityTier } from "@/lib/world/types";
+import { gradeForHour } from "@/lib/world/time-grade";
 
 const CharacterStage3D = dynamic(() => import("./CharacterStage3D").then(m => m.CharacterStage3D), { ssr: false });
 const PixiScene = dynamic(() => import("@/components/scene/PixiScene").then(m => m.PixiScene), { ssr: false });
@@ -37,11 +38,13 @@ export function CharacterReview() {
   const [available,setAvailable]=useState(false);
   const [availableClips,setAvailableClips]=useState<ReadonlySet<string>>(()=>new Set());
   const [quality,setQuality]=useState<QualityTier>("high");
+  const [studioHour,setStudioHour]=useState(12);
   const [pixiReady,setPixiReady]=useState(false);
   const [pixiFailed,setPixiFailed]=useState(false);
   const stageFrame=useRef<StageFrame | null>(null);
   const contacts=useRef<CharacterContacts>({traveler:null,resident:null});
   const grade=useRef<VisualGrade>({exposure:1,tint:{r:1,g:1,b:1}});
+  useEffect(()=>{ if(background==="studio") grade.current=gradeForHour(studioHour); },[background,studioHour]);
   const worldReady=useRef(false);
   const reviewPack=useMemo(()=>{
     if(background==="studio")return null;
@@ -101,6 +104,9 @@ export function CharacterReview() {
         <option value="studio">Neutral studio</option><option value="almaty">Almaty promenade</option>
         {tbilisiCountryPackV1.route.zones.map(zone=><option key={zone.id} value={zone.id}>Tbilisi · {zone.label}</option>)}
       </select></label>
+      {background==="studio"&&<label>Studio lighting <select aria-label="Studio lighting" value={studioHour} onChange={e=>setStudioHour(Number(e.target.value))}>
+        <option value={12}>Daylight</option><option value={19}>Dusk</option><option value={23}>Night · warm lamp</option>
+      </select></label>}
       <label>Quality <select aria-label="Review quality" value={quality} onChange={e=>setQuality(e.target.value as QualityTier)}>
         <option value="high">High · outline</option><option value="medium">Medium · outline</option><option value="low">Low · no outline</option>
       </select></label>
