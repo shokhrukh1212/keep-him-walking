@@ -1758,6 +1758,70 @@ button:focus-visible,
   font-size: 0.86rem;
 }
 
+.recap-page {
+  max-width: 64rem;
+}
+
+.outcome-stamp {
+  display: inline-flex;
+  margin: 0.4rem 0 1.2rem;
+  border: 3px double currentColor;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  color: #b6bec0;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  transform: rotate(-2deg);
+}
+
+.outcome-stamp[data-outcome="landmark"] { color: #9bd8b6; }
+.outcome-stamp[data-outcome="marathon"] { color: #ffe091; box-shadow: 0 0 30px rgb(255 224 145 / 18%); }
+
+.recap-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1rem 0 2rem;
+}
+
+.recap-stats > div,
+.postkit-list section {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 0.85rem;
+  padding: 1rem;
+  background: rgb(9 26 35 / 42%);
+}
+
+.recap-stats strong { font-family: Georgia, "Times New Roman", serif; font-size: 1.5rem; }
+.recap-stats small { color: rgb(247 240 223 / 66%); }
+.recap-countries { display: grid; gap: 0.5rem; padding-left: 1.5rem; }
+.recap-countries li { padding-left: 0.4rem; }
+.recap-countries li::marker { color: #ffd777; font-weight: 800; }
+.recap-countries span { display: inline-flex; min-width: 14rem; }
+.recap-phrase { border-left: 3px solid #ffd777; padding-left: 1rem; }
+.recap-phrase h2 { margin-bottom: 0.2rem; font-family: Georgia, "Times New Roman", serif; font-size: 2rem; }
+.recap-phrase p { margin: 0.2rem 0; }
+.recap-phrase small { color: rgb(247 240 223 / 66%); }
+.recap-sponsor { border-top: 1px solid rgb(255 255 255 / 15%); padding-top: 1rem; color: rgb(247 240 223 / 68%); }
+
+.admin-page { max-width: 52rem; }
+.postkit-list button { justify-self: start; border: 0; border-radius: 999px; padding: 0.6rem 0.9rem; color: #10202a; background: #ffd777; font-weight: 800; cursor: pointer; }
+.admin-day-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.admin-day-links a { border: 1px solid rgb(255 255 255 / 20%); border-radius: 999px; padding: 0.45rem 0.65rem; }
+.postkit-list { display: grid; gap: 1rem; }
+.postkit-list h2,
+.postkit-list p { margin: 0; }
+.postkit-list ul { display: grid; gap: 0.65rem; padding: 0; list-style: none; }
+.postkit-list li { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.postkit-list li a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .recap-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recap-countries span { min-width: 0; }
+}
+
 .reaction-buttons {
   position: relative;
   z-index: 16;

@@ -52,7 +52,7 @@ async function handlePost(request: NextRequest) {
     p_steps_per_second: config.stepsPerActiveSecond,
   };
   const { data, error } = await supabase.rpc(
-    paceEnabled ? "record_presence_heartbeat_v7" : "record_presence_heartbeat_v2",
+    paceEnabled ? "record_presence_heartbeat_v8" : "record_presence_heartbeat_v2",
     paceEnabled
       ? {
           ...heartbeatArguments,

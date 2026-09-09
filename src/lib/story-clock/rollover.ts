@@ -1,5 +1,7 @@
 import "server-only";
+import { serverRuntimeConfig } from "@/lib/config/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { storePendingRecaps, type PendingRecap } from "@/lib/recap/store";
 import { planNextDay, type VoteWinner } from "@/lib/story-clock/next-day";
 import { writeOperationalLog } from "@/lib/observability/logger";
 
@@ -13,6 +15,7 @@ export async function reconcilePhase2(now = new Date()) {
   if (claimError) throw claimError;
   if (!claimed) return { duplicate: true, operationKey };
   try {
+    const config = serverRuntimeConfig();
     // Close today's ballot first: tomorrow's country is whatever it chose.
     const { data: winnerRow, error: winnerError } = await supabase.rpc(
       "close_and_pick_vote_winner",
@@ -25,15 +28,22 @@ export async function reconcilePhase2(now = new Date()) {
       : null;
 
     const [{ data: state, error: stateError }, { data: cleanup, error: cleanupError }] = await Promise.all([
-      supabase.rpc("reconcile_phase2_state", { p_real_now: now.toISOString() }),
+      supabase.rpc("reconcile_phase2_state_v2", {
+        p_real_now: now.toISOString(),
+        p_ttl_seconds: config.presenceTtlSeconds,
+        p_steps_per_second: config.stepsPerActiveSecond,
+        p_pace_cap: config.paceCap,
+      }),
       supabase.rpc("cleanup_phase2_retention", { p_now: now.toISOString() }),
     ]);
     if (stateError || cleanupError) throw stateError ?? cleanupError;
+    const recapDays = Array.isArray(state?.recapDays) ? state.recapDays as PendingRecap[] : [];
+    const recapImages = await storePendingRecaps(recapDays);
     const yesterday = new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10);
     const { error: metricsError } = await supabase.rpc("aggregate_sponsor_metrics", { p_metric_date: yesterday, p_now: now.toISOString() });
     if (metricsError) throw metricsError;
-    await supabase.from("operation_ledger").update({ status: "completed", completed_at: now.toISOString(), payload_json: { state, cleanup, winner, nextDay } }).eq("operation_key", operationKey);
-    return { duplicate: false, operationKey, state, cleanup, winner, nextDay };
+    await supabase.from("operation_ledger").update({ status: "completed", completed_at: now.toISOString(), payload_json: { state, cleanup, winner, nextDay, recapImages } }).eq("operation_key", operationKey);
+    return { duplicate: false, operationKey, state, cleanup, winner, nextDay, recapImages };
   } catch (error) {
     await supabase.from("operation_ledger").update({ status: "failed", completed_at: now.toISOString(), error_code: "RECONCILIATION_FAILED" }).eq("operation_key", operationKey);
     throw error;

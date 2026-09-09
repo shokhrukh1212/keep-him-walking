@@ -36,6 +36,7 @@ export function serverRuntimeConfig() {
     sponsorPrivateBucket: process.env.SUPABASE_SPONSOR_PRIVATE_BUCKET || "khw-sponsor-private",
     sponsorPublicBucket: process.env.SUPABASE_SPONSOR_PUBLIC_BUCKET || "khw-sponsor-public",
     dayPhotoBucket: process.env.SUPABASE_DAY_PHOTOS_BUCKET || "khw-day-photos",
+    recapBucket: process.env.SUPABASE_RECAPS_BUCKET || "khw-recaps",
     sponsorReservationMinutes: Math.round(numericEnv("SPONSOR_RESERVATION_MINUTES", 30)),
     sponsorPaymentProvider: process.env.SPONSOR_PAYMENT_PROVIDER === "fixture" ? "fixture" as const : "lemonsqueezy" as const,
   };

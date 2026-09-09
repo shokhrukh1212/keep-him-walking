@@ -19,6 +19,7 @@ export const RATE_LIMITS = {
   notification: { action: "notification", limit: 8, windowSeconds: 300 },
   reaction: { action: "reaction", limit: 12, windowSeconds: 60 },
   dayPhoto: { action: "day_photo", limit: 4, windowSeconds: 300 },
+  adminAccess: { action: "admin_access", limit: 5, windowSeconds: 3_600 },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 export async function consumeRateLimit(keyHash: string, policy: RateLimitPolicy, now = new Date()) {
