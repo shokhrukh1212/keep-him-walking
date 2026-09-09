@@ -4,6 +4,7 @@ import { reviewPoseAt } from "@/lib/traveler/action-preview";
 import { STEP_DURATION_SECONDS, type TravelerMotionAction, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { CLIP_DURATIONS, type CharacterClip } from "./manifest";
 import type { CharacterCue } from "./timeline";
+import { waitingBehaviorAt } from "@/lib/presence/waiting";
 
 export type ProductCharacterScene = {
   traveler: CharacterCue;
@@ -137,12 +138,18 @@ export function productCharacterSceneAt(
   review: ActionReview | undefined,
   now: number,
   paceRate = 1,
+  waitedSeconds = 0,
 ): ProductCharacterScene {
   const localReview = review ? reviewCue(review, now) : null;
   if (localReview) return localReview;
   if (!traveling) {
+    const waiting = waitingBehaviorAt(waitedSeconds);
+    const clip = clipForState(waiting.state);
     return {
-      traveler: { clip: "idle", seconds: motion.rawActiveSeconds % CLIP_DURATIONS.idle },
+      traveler: {
+        clip,
+        seconds: Math.min(CLIP_DURATIONS[clip] - 1e-5, waiting.clipSeconds),
+      },
       resident: { clip: "idle", seconds: 0 },
       showResident: false,
       conversation: false,

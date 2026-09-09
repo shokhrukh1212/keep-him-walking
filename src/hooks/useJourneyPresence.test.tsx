@@ -21,12 +21,14 @@ const heartbeatResponse: HeartbeatResponse = {
   globalDistanceMetres: 1.25,
   paceRate: 1,
   routeAuthoritativeAt: "2026-09-03T00:00:00.000Z",
+  waitingSince: null,
+  wokeHim: false,
 };
 
 function snapshot(countryDayId: string): BootstrapSnapshot {
   return {
     mode: "live",
-    presence: { status: "live", activeViewers: 1, ttlSeconds: 50 },
+    presence: { status: "live", activeViewers: 1, ttlSeconds: 50, waitingSince: null },
     countryDay: { id: countryDayId },
   } as unknown as BootstrapSnapshot;
 }

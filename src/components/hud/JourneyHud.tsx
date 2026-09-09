@@ -9,9 +9,21 @@ type Props = {
   walking: boolean;
   status: ConnectionStatus;
   onShare: () => void;
+  wakeCountdown?: number | null;
+  waitingSinceLocalTime?: string | null;
 };
 
-export function JourneyHud({ day, localTime, activeViewers, paceRate, walking, status, onShare }: Props) {
+export function JourneyHud({
+  day,
+  localTime,
+  activeViewers,
+  paceRate,
+  walking,
+  status,
+  onShare,
+  wakeCountdown,
+  waitingSinceLocalTime,
+}: Props) {
   return (
     <header className="journey-hud">
       <div className="day-mark">
@@ -25,6 +37,8 @@ export function JourneyHud({ day, localTime, activeViewers, paceRate, walking, s
         walking={walking}
         status={status}
         onShare={onShare}
+        wakeCountdown={wakeCountdown}
+        waitingSinceLocalTime={waitingSinceLocalTime}
       />
     </header>
   );

@@ -23,7 +23,7 @@
 | Validation | Zod 4 for every content pack and every API body |
 | Payments | Lemon Squeezy (hosted checkout + signed webhooks), plus a deterministic no-money fixture adapter for rehearsals |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest (47 test files, 185 tests) + Playwright (17 spec files across 8 config profiles) + pgTAP (61 baseline + 15 P4 + 17 P5 assertions) |
+| Testing | Vitest (50 test files, 192 tests) + Playwright (18 spec files across 8 config profiles) + pgTAP (61 baseline + 15 P4 + 17 P5 + 26 P6 assertions) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
@@ -54,7 +54,7 @@ scripts/
   characters/             Blender/MPFB build pipeline (Python) + browser checks (mjs)
   process-phase*-art.mjs  sharp-based image derivation
   phase2/ phase3/         preflight, seeding, scheduling, rehearsal, reporting
-supabase/migrations/      12 forward migrations, 61 baseline pgTAP assertions
+supabase/migrations/      13 forward migrations, 61 baseline pgTAP assertions
 ```
 
 ---
@@ -107,7 +107,8 @@ progress.
 presence_leases (per browser session, 50 s TTL, requires visible && scene_ready)
       │  record_presence_heartbeat_v4 → v3   (security definer, SELECT … FOR UPDATE)
       ▼
-journey_runtime { global_active_seconds, global_distance_metres, pace_rate }
+journey_runtime { global_active_seconds, global_distance_metres, pace_rate,
+                  waiting_since, last_watcher_left_at }
       │  /api/bootstrap  (full snapshot)  +  /api/presence/heartbeat (~20 s)
       ▼
 RouteRuntime { globalActiveSeconds, globalDistanceMetres, paceRate, authoritativeAt, walking }
@@ -161,6 +162,18 @@ wrappers; server routes pass the configured cap explicitly. `_v3` remains callab
 rollback.
 
 `walking` is returned to the client as simply `activeViewers > 0`.
+
+P6 adds a configured v4 overload under the same authority-row lock. It counts the live
+crowd before mutating the caller and compares that to the post-mutation v3 result. An
+explicit final inactive heartbeat starts `waiting_since` at that heartbeat. When leases
+silently expire, the next read or heartbeat derives the zero-watcher boundary from the
+last lease expiry rather than from the later request time. The first serialized arrival
+receives that ended wait as `out_waiting_since`; the stored live wait is cleared and its
+origin is retained in `last_watcher_left_at`. `out_woke_him` is true only when the ended
+gap is at least `FIRST_WATCHER_GAP_SECONDS` (600 seconds by default). Because the row is
+locked, simultaneous arrivals cannot both receive the award. Bootstrap uses the
+read-only v5 runtime projection so the public waiting timestamp is available before a
+new lease exists; wake-card eligibility is never present in bootstrap.
 
 ### The client side
 
@@ -252,6 +265,14 @@ Three layers produce it:
 
 `worldCommandForEncounter` separately drives the world: camera zoom 1.08, a small pan,
 and background life dropped to 0.22 during the focused phases.
+
+While the traveler is waiting, the existing clips now form a deterministic 12-second
+cycle: four seconds of `idle`, four seconds of `notice` as the look-around fallback,
+then four seconds of `idle`. At 600 waited seconds the cue switches to the existing
+`rest` clip. The waited duration is an explicit presentation input; authoritative route
+seconds remain unchanged. Reduced-motion presentation holds the grounded idle pose.
+The first arrival remains in that waiting cue for a three-second wake beat, with status
+copy naming the wake, before the normal `start_walk` transition begins.
 
 ---
 
@@ -535,6 +556,9 @@ controls remain available; Quality makes the low-tier outline difference reviewa
   motion clock, so dialogue text and character pose are driven from one source.
 - The ordinary walking path applies the 3× brisk threshold described in §3. Pace is an
   explicit argument; no runtime singleton or module state participates.
+- The non-traveling path accepts explicit waited seconds, deterministically selects the
+  idle/look-around/rest fallback described in §4, and never reads wall-clock module
+  state.
 - `reviewCue` handles the Preview-only local action rehearsal (see §11) and is the only
   path that can override the server-derived pose. It never touches presence, route
   authority or accounting.
@@ -985,7 +1009,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (11 forward migrations)
+### Tables (13 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1008,6 +1032,11 @@ distance/landmark/marathon and audience summary contract for the later rollover 
 v5 with the configured pace cap; persists logarithmic distinct-watcher pace and accrues
 distance across exact lease-expiry segments.
 
+**Season 1 migration 0013, waiting:** adds `waiting_since` and
+`last_watcher_left_at`, the configured first-watcher heartbeat overload, and read-only
+runtime v5 waiting projection. The heartbeat returns both the wait origin and the
+recipient-only `woke_him` result.
+
 ### Key RPCs
 
 `record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule, distinct-watcher
@@ -1015,7 +1044,7 @@ pace and pace-weighted distance),
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `cleanup_phase2_retention`, `journey_story_now`,
-`read_journey_runtime_v3` / `_v4`, `read_bootstrap_bundle_v3` / `_v4` / `_v5`
+`read_journey_runtime_v3` / `_v4` / `_v5`, `read_bootstrap_bundle_v3` / `_v4` / `_v5`
 (one-call bootstrap with atomic admission control and the distance projection),
 `set_country_notification_opt_in`.
 
@@ -1091,6 +1120,13 @@ Recorded results (`docs/phase-3-results.md`, 2026-09-06):
   multi-tab visitor deduplication, non-retroactive arrivals, 2× accrual and lease-expiry
   projection. The two-context Playwright flow asserts that both browsers render the
   confirmed `The internet is keeping him moving · ×2` HUD line.
+- P6 adds 26 pgTAP assertions for explicit departure, silent expiry, the 600-second
+  boundary, exactly-once serialized arrival, wait clearing/preservation, grants and the
+  bootstrap projection. They require a migrated Postgres instance and were not executed
+  locally because this workspace has no Docker/Podman runtime. The focused Chromium
+  two-context scenario passed: context A closed, the fixture clock crossed TTL plus the
+  qualifying gap, and context B saw both the three-second first-watcher headline and its
+  private details card.
 - Production build emits 31 routes on Next 16.3.3.
 - `content:validate`: 16 registered packs, 717 uniquely owned scene assets.
 - Playwright: 30 active desktop/320 px tests plus opt-in rehearsal/soak/recording specs.
@@ -1147,6 +1183,7 @@ Runtime configuration (`serverRuntimeConfig()`):
 | `PRESENCE_TTL_SECONDS` | 50 | Lease lifetime |
 | `STEPS_PER_ACTIVE_SECOND` | 1.8 | Database step rate (see §3) |
 | `PACE_CAP` | 5 | Maximum logarithmic watcher pace (clamped to 1…5) |
+| `FIRST_WATCHER_GAP_SECONDS` | 600 | Minimum zero-watcher gap that earns the wake card |
 | `POSTCARD_UNLOCK_SECONDS` | 60 | Contribution needed for a postcard |
 | `POSTCARD_RETENTION_DAYS` | 365 | Postcard expiry |
 | `SPONSOR_RESERVATION_MINUTES` | 30 | Slot hold during checkout |

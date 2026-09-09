@@ -33,7 +33,7 @@ function makeSnapshot(server: MotionServer): BootstrapSnapshot {
     activeEvent: server.activeEvent,
     nextEvent: null,
     vote: null,
-    presence: { activeViewers: 0, status: "live", ttlSeconds: 1 },
+    presence: { activeViewers: 0, status: "live", ttlSeconds: 1, waitingSince: null },
     steps: { global: Math.floor(server.routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
     route: {
       globalActiveSeconds: server.routeSeconds,

@@ -23,6 +23,21 @@ describe("product character timeline", () => {
     expect(productCharacterSceneAt(almatyCountryPackV1, baseMotion, false, undefined, 0).traveler.clip).toBe("idle");
   });
 
+  it("cycles the existing idle and notice clips before sitting after ten minutes", () => {
+    expect(productCharacterSceneAt(
+      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 2,
+    ).traveler.clip).toBe("idle");
+    expect(productCharacterSceneAt(
+      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 6,
+    ).traveler.clip).toBe("notice");
+    expect(productCharacterSceneAt(
+      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 10,
+    ).traveler.clip).toBe("idle");
+    expect(productCharacterSceneAt(
+      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 600,
+    ).traveler.clip).toBe("rest");
+  });
+
   it("uses a brisk planted-foot sample and two-degree lean from pace three", () => {
     const ordinary = productCharacterSceneAt(
       almatyCountryPackV1,

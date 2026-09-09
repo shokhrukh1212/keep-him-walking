@@ -64,6 +64,7 @@ export type BootstrapSnapshot = {
     activeViewers: number | null;
     status: ConnectionStatus;
     ttlSeconds: number;
+    waitingSince: string | null;
   };
   steps: {
     global: number;
@@ -107,4 +108,6 @@ export type HeartbeatResponse = {
   globalDistanceMetres: number;
   paceRate: number;
   routeAuthoritativeAt: string;
+  waitingSince: string | null;
+  wokeHim: boolean;
 };

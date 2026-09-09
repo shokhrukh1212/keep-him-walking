@@ -55,6 +55,8 @@ type BootstrapBundleRow = {
     out_global_active_seconds: number;
     out_global_distance_metres: number;
     out_pace_rate: number;
+    out_waiting_since: string | null;
+    out_last_watcher_left_at: string | null;
   };
   events: EventRow[];
   vote: null | {
@@ -238,6 +240,9 @@ function bootstrapFromBundle(
       activeViewers: Number(bundle.runtime.out_active_viewers ?? 0),
       status: "live",
       ttlSeconds: config.presenceTtlSeconds,
+      waitingSince: bundle.runtime.out_waiting_since
+        ? String(bundle.runtime.out_waiting_since)
+        : null,
     },
     steps: {
       global: Number(bundle.runtime.out_global_steps ?? 0),
@@ -388,7 +393,7 @@ export async function liveBootstrapSnapshot(
   }
   const storyNow = new Date(countryDay.story_now ?? now.toISOString());
   const runtimeRequest = countryPack.schemaVersion === 2 || countryPack.schemaVersion === 3
-    ? supabase.rpc("read_journey_runtime_v4", {
+    ? supabase.rpc("read_journey_runtime_v5", {
       p_country_day_id: countryDay.id,
       p_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -479,6 +484,7 @@ export async function liveBootstrapSnapshot(
       activeViewers: Number(row?.out_active_viewers ?? 0),
       status: "live",
       ttlSeconds: config.presenceTtlSeconds,
+      waitingSince: row?.out_waiting_since ? String(row.out_waiting_since) : null,
     },
     steps: {
       global: Number(row?.out_global_steps ?? 0),

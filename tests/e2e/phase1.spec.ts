@@ -80,6 +80,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       activeViewers: server.sessions.size,
       status: "live",
       ttlSeconds: 50,
+      waitingSince: null,
     },
     steps: {
       global: server.steps,

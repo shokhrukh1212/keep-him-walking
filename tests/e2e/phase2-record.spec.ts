@@ -41,7 +41,7 @@ function snapshot(routeSeconds: number, event: ScheduledEventView): BootstrapSna
     activeEvent: event,
     nextEvent: null,
     vote: null,
-    presence: { activeViewers: 1, status: "live", ttlSeconds: 2 },
+    presence: { activeViewers: 1, status: "live", ttlSeconds: 2, waitingSince: null },
     steps: { global: Math.floor(routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
     route: { globalActiveSeconds: routeSeconds, globalDistanceMetres: routeSeconds * 1.25, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: {

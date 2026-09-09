@@ -34,6 +34,7 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
       activeViewers: null,
       status: "offline",
       ttlSeconds: DEFAULT_PRESENCE_TTL_SECONDS,
+      waitingSince: null,
     },
     steps: { global: 0, updatedAt: now.toISOString(), stale: true },
     route: {

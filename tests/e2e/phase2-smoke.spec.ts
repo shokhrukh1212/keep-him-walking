@@ -19,7 +19,7 @@ function snapshot(routeIndex = 0): BootstrapSnapshot {
       endsAt: new Date(now.getTime() + 86_400_000).toISOString(), storySummary: pack.postcard.safeCopy, scenePackId: scheduled.scenePackId,
     },
     activeEvent: null, nextEvent: null, vote: null,
-    presence: { activeViewers: 1, status: "live", ttlSeconds: 50 },
+    presence: { activeViewers: 1, status: "live", ttlSeconds: 50, waitingSince: null },
     steps: { global: 120, updatedAt: now.toISOString(), stale: false },
     route: { globalActiveSeconds: 30, globalDistanceMetres: 37.5, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },

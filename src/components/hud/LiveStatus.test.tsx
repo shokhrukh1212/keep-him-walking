@@ -22,4 +22,30 @@ describe("LiveStatus", () => {
     render(<LiveStatus activeViewers={3} paceRate={2.584_962_5} walking status="live" onShare={vi.fn()} />);
     expect(screen.getByRole("status")).toHaveTextContent("×2.6");
   });
+
+  it("names both the wake beat and a confirmed waiting timestamp", () => {
+    const { rerender } = render(
+      <LiveStatus
+        activeViewers={1}
+        paceRate={1}
+        walking={false}
+        status="live"
+        onShare={vi.fn()}
+        wakeCountdown={3}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("You’re here · he starts walking in 3…");
+
+    rerender(
+      <LiveStatus
+        activeViewers={0}
+        paceRate={1}
+        walking={false}
+        status="live"
+        onShare={vi.fn()}
+        waitingSinceLocalTime="03:12"
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the internet · since 03:12");
+  });
 });

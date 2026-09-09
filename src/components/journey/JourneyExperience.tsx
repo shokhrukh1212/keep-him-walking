@@ -45,10 +45,24 @@ import Link from "next/link";
 import { getNextCountryPack } from "@/content/countries/registry";
 import { TomorrowPreview } from "@/components/hud/TomorrowPreview";
 import {REVIEW_ACTIONS,reviewPoseAt,type ActionReview,type ReviewAction} from "@/lib/traveler/action-preview";
+import {
+  formatWaitDuration,
+  formatWaitingLocalTime,
+  waitedSecondsSince,
+  waitingBehaviorAt,
+} from "@/lib/presence/waiting";
+import { WakeCard } from "@/components/journey/WakeCard";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
   previewDemoSponsor?: boolean;
+};
+
+type WakeMoment = {
+  countryDayId: string;
+  waitingSince: string;
+  wokeAt: string;
+  waitedSeconds: number;
 };
 
 function currentlyActiveEvent(
@@ -84,6 +98,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const [residentReady, setResidentReady] = useState(false);
   const [presentationFrame,setPresentationFrame]=useState<{assetVersion:string;motion:TravelerMotionSnapshot}|null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [wakeBeat, setWakeBeat] = useState<WakeMoment | null>(null);
+  const [wakeCard, setWakeCard] = useState<WakeMoment | null>(null);
   const [actionReview,setActionReview]=useState<ActionReview>({action:"auto",startedAt:0});
   const [reviewNow,setReviewNow]=useState(0);
   useEffect(()=>{
@@ -144,9 +160,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       setSnapshot(current=> next.mode !== "live" && current.mode === "live"
         ? {...current,presence:{...current.presence,status:"reconnecting"},steps:{...current.steps,stale:true}}
         : {...next,assets:current.assets.assetVersion === next.assets.assetVersion ? current.assets : next.assets});
-      if (next.mode === "live" && (next.presence.activeViewers ?? 0) > 0) {
+      if (next.mode === "live") {
         setWalkingLease(confirmedWalkingLease(
-          true,
+          (next.presence.activeViewers ?? 0) > 0,
           next.presence.ttlSeconds,
           new Date(next.realServerNow ?? next.serverNow).getTime(),
         ));
@@ -207,6 +223,21 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         Math.max(sameDay?previous.raw:next.globalActiveSeconds,next.globalActiveSeconds-contributed),next.globalActiveSeconds)};
     setVisitorSteps(confirmedContribution.current.steps);
     setHeartbeat({ countryDayId: snapshot.countryDay.id, response: next });
+    const waitingSinceMs = next.waitingSince ? Date.parse(next.waitingSince) : Number.NaN;
+    const wokeAtMs = Date.parse(next.realServerNow ?? next.serverNow);
+    if (next.walking && next.activeViewers === 1
+      && Number.isFinite(waitingSinceMs) && Number.isFinite(wokeAtMs)) {
+      const moment: WakeMoment = {
+        countryDayId: snapshot.countryDay.id,
+        waitingSince: next.waitingSince!,
+        wokeAt: new Date(wokeAtMs).toISOString(),
+        waitedSeconds: Math.max(0, (wokeAtMs - waitingSinceMs) / 1_000),
+      };
+      setWakeBeat((current) => current?.waitingSince === moment.waitingSince
+        ? current
+        : moment);
+      if (next.wokeHim) setWakeCard(moment);
+    }
     setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
     setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
     setServerNowMs(new Date(next.serverNow).getTime());
@@ -228,12 +259,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       next.ttlSeconds,
       new Date(next.realServerNow ?? next.serverNow).getTime(),
     ));
-    setMotionTransition((current) => current.desiredWalking === next.walking
-      ? current
-      : {
-          desiredWalking: next.walking,
-          changedAtMs: new Date(next.realServerNow ?? next.serverNow).getTime(),
-        });
   }, [snapshot.countryDay.id,snapshot.assets]);
 
   const experienceReady = sceneRenderer !== null && travelerReady;
@@ -243,8 +268,32 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     onHeartbeat: handleHeartbeat,
   });
   const activeViewers = heartbeat?.activeViewers ?? snapshot.presence.activeViewers;
-  const walking = snapshot.mode === "live"
+  const authoritativeWalking = snapshot.mode === "live"
     && walkingLeaseIsActive(walkingLease, realNowMs);
+  const wakeBeatEndsAtMs = wakeBeat ? Date.parse(wakeBeat.wokeAt) + 3_000 : 0;
+  const waking = Boolean(authoritativeWalking
+    && wakeBeat?.countryDayId === snapshot.countryDay.id
+    && realNowMs < wakeBeatEndsAtMs);
+  const walking = authoritativeWalking && !waking;
+  const wakeCountdown = waking
+    ? Math.max(1, Math.ceil((wakeBeatEndsAtMs - realNowMs) / 1_000))
+    : null;
+  const heartbeatOwnsWaiting = Boolean(heartbeat
+    && Date.parse(heartbeat.routeAuthoritativeAt) >= Date.parse(snapshot.route.authoritativeAt));
+  const confirmedWaitingSince = heartbeatOwnsWaiting
+    ? heartbeat?.walking === false ? heartbeat.waitingSince : null
+    : snapshot.route.walking === false ? snapshot.presence.waitingSince : null;
+  const currentWaitingSince = waking
+    ? wakeBeat?.waitingSince ?? null
+    : !walking
+      ? confirmedWaitingSince
+      : null;
+  const waitedSeconds = waking && wakeBeat
+    ? wakeBeat.waitedSeconds
+    : waitedSecondsSince(currentWaitingSince, realNowMs);
+  const waitingLocalTime = currentWaitingSince
+    ? formatWaitingLocalTime(currentWaitingSince, snapshot.countryDay.timeZone)
+    : null;
   const initialRoutePosition = routePositionAt(
     snapshot.assets,
     heartbeat?.globalDistanceMetres ?? snapshot.route.globalDistanceMetres,
@@ -432,9 +481,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     }
   }, [snapshot.countryDay.dayNumber, visitorSeconds]);
 
+  const waitingBehavior = waitingBehaviorAt(reducedMotion ? 0 : waitedSeconds);
   const travelerState: TravelerState = walking && motion.action
     ? motion.action.state
-    : locomotionPhase;
+    : !walking && locomotionPhase !== "slow_walk" && locomotionPhase !== "stop"
+      ? waitingBehavior.state
+      : locomotionPhase;
   const command: TravelerCommand = {
     state: travelerState,
     mood: activeLine?.mood ?? "neutral",
@@ -445,6 +497,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     motionSampleUntilMs: walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
     reducedMotion,
     presenceTtlMs:snapshot.presence.ttlSeconds*1000,
+    waitedSeconds: reducedMotion ? 0 : waitedSeconds,
     sponsorPatchUrl: sponsor?.logo ?? undefined,
     actionReview: previewDemoSponsor?actionReview:undefined,
   };
@@ -566,7 +619,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         onWorldFailure={worldDidFail}
         onReady={sceneDidReady}
       />
-      <IntroHeadline collapsed={introHeadline.collapsed} />
+      <IntroHeadline
+        collapsed={waking ? false : introHeadline.collapsed}
+        firstArrival={waking && waitingLocalTime && wakeCountdown ? {
+          waitingLocalTime,
+          waitedDuration: formatWaitDuration(waitedSeconds),
+          countdown: wakeCountdown,
+        } : null}
+      />
       <JourneyHud
         day={snapshot.countryDay}
         localTime={localTime}
@@ -575,6 +635,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         walking={walking}
         status={connectionStatus}
         onShare={() => void shareUrl()}
+        wakeCountdown={wakeCountdown}
+        waitingSinceLocalTime={waitingLocalTime}
       />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
@@ -586,9 +648,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       {!puppetReady ? <Traveler pack={snapshot.assets} command={command} onReady={() => setTravelerReady(true)} /> : null}
       <WalkingRuleStatus
         walking={review?review.moving:walking}
-        label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : walking && motion.action
+        label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : waking && wakeCountdown
+          ? `Waking up · starts walking in ${wakeCountdown}…`
+          : walking && motion.action
           ? motion.action.label
-          : walking ? `Walking · ${displayedZoneLabel}` : "Waiting for the internet"}
+          : walking ? `Walking · ${displayedZoneLabel}`
+            : waitingLocalTime
+              ? `Waiting for the internet · since ${waitingLocalTime}`
+              : "Waiting for the internet"}
       />
       <GoalBar
         distanceMetres={distanceMetres}
@@ -633,6 +700,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         <button type="button" aria-expanded={detailsOpen} aria-controls="journey-details" onClick={()=>setDetailsOpen(!detailsOpen)}> {detailsOpen ? "Close details" : "Journey details"}</button>
       </section>
       <section id="journey-details" className="journey-details" hidden={!detailsOpen} aria-label="Journey details">
+        {wakeCard?.countryDayId === snapshot.countryDay.id ? (
+          <WakeCard
+            cityName={snapshot.countryDay.cityName}
+            localTime={formatWaitingLocalTime(wakeCard.wokeAt, snapshot.countryDay.timeZone)}
+            waitedDuration={formatWaitDuration(wakeCard.waitedSeconds)}
+            onShare={() => void shareUrl()}
+          />
+        ) : null}
         <ContributionMeter
           seconds={visitorSeconds}
           steps={visitorSteps}

@@ -55,7 +55,10 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
         || !Number.isFinite(result.globalActiveSeconds)
         || !Number.isFinite(result.globalDistanceMetres)
         || !Number.isFinite(result.paceRate)
-        || !Number.isFinite(Date.parse(result.routeAuthoritativeAt))) {
+        || !Number.isFinite(Date.parse(result.routeAuthoritativeAt))
+        || (result.waitingSince !== undefined && result.waitingSince !== null
+          && !Number.isFinite(Date.parse(result.waitingSince)))
+        || (result.wokeHim !== undefined && typeof result.wokeHim !== "boolean")) {
         throw new Error("Invalid presence confirmation");
       }
       onHeartbeat(result);

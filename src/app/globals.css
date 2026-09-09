@@ -255,6 +255,36 @@ body {
   text-wrap: balance;
 }
 
+.premise-lockup[data-first-arrival="true"] {
+  width: min(38rem, 52vw);
+}
+
+.premise-lockup[data-first-arrival="true"] h1 {
+  max-width: 18ch;
+  font-size: clamp(2rem, 4vw, 4.4rem);
+  line-height: 0.98;
+}
+
+.premise-lockup .waiting-detail {
+  margin: 1rem 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.15rem, 2.1vw, 1.65rem);
+  font-weight: 700;
+}
+
+.premise-lockup .waiting-countdown {
+  display: inline-flex;
+  margin: 0.8rem 0 0;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 999px;
+  padding: 0.48rem 0.78rem;
+  background: rgb(9 27 35 / 68%);
+  color: #fff2bd;
+  font-size: 0.75rem;
+  font-weight: 750;
+  backdrop-filter: blur(12px);
+}
+
 .premise-lockup[data-collapsed="true"] {
   width: min(18rem, 48vw);
   opacity: 0.78;
@@ -317,6 +347,12 @@ body {
 .journey-details .utility-controls {display:flex;}
 .journey-details .tomorrow-preview {position:static;transform:none;}
 .journey-details .primary-controls {flex-wrap:wrap;}
+.wake-card {display:grid;gap:6px;padding:16px;border:1px solid #ffd77766;border-radius:14px;background:linear-gradient(135deg,#76542155,#173239);}
+.wake-card .eyebrow {color:#ffd777;font-size:10px;}
+.wake-card h2 {margin:0;font-family:Georgia,"Times New Roman",serif;font-size:22px;}
+.wake-card p {margin:0;color:#fff3d9cc;font-size:13px;}
+.wake-card button {justify-self:start;margin-top:8px;border:1px solid #ffd77770;border-radius:999px;padding:9px 14px;background:#fff3d9;color:#173239;font-weight:750;cursor:pointer;}
+.wake-card button:focus-visible {outline:3px solid #ffd777;outline-offset:3px;}
 
 .traveler-sprite,
 .traveler-wrap > div {
@@ -1161,6 +1197,25 @@ body:has(.content-page) {
     margin: 0.35rem auto 0;
     font-size: clamp(1.72rem, 8.8vw, 2.35rem);
     line-height: 0.96;
+  }
+
+  .premise-lockup[data-first-arrival="true"] {
+    width: calc(100% - 2rem);
+  }
+
+  .premise-lockup[data-first-arrival="true"] h1 {
+    max-width: 20ch;
+    font-size: clamp(1.5rem, 7.4vw, 2.05rem);
+  }
+
+  .premise-lockup .waiting-detail {
+    margin-top: 0.65rem;
+    font-size: 1rem;
+  }
+
+  .premise-lockup .waiting-countdown {
+    margin-top: 0.55rem;
+    font-size: 0.66rem;
   }
 
   .premise-lockup[data-collapsed="true"] {

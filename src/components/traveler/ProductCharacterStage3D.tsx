@@ -166,10 +166,11 @@ export function ProductCharacterStage3D(props: Props) {
       const cue = productCharacterSceneAt(
         state.pack,
         motion,
-        sample.traveling,
+        sample.traveling && (state.command?.walking ?? true),
         state.command?.actionReview,
         now,
         state.routeRuntime.paceRate,
+        state.command?.waitedSeconds,
       );
       const snap = firstSample || cue.conversation !== previousConversation;
       firstSample = false;

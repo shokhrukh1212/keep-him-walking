@@ -7,9 +7,19 @@ type Props = {
   walking: boolean;
   status: ConnectionStatus;
   onShare: () => void;
+  wakeCountdown?: number | null;
+  waitingSinceLocalTime?: string | null;
 };
 
-export function LiveStatus({ activeViewers, paceRate, walking, status, onShare }: Props) {
+export function LiveStatus({
+  activeViewers,
+  paceRate,
+  walking,
+  status,
+  onShare,
+  wakeCountdown,
+  waitingSinceLocalTime,
+}: Props) {
   const label = status === "live"
     ? `${activeViewers ?? 0} ${activeViewers === 1 ? "person" : "people"} watching`
     : status === "offline"
@@ -22,7 +32,11 @@ export function LiveStatus({ activeViewers, paceRate, walking, status, onShare }
         <strong>{label}</strong>
         <small>{walking
           ? `The internet is keeping him moving · ×${formatPaceRate(paceRate)}`
-          : "He’s waiting for a watcher"}</small>
+          : wakeCountdown
+            ? `You’re here · he starts walking in ${wakeCountdown}…`
+            : waitingSinceLocalTime
+              ? `Waiting for the internet · since ${waitingSinceLocalTime}`
+              : "He’s waiting for a watcher"}</small>
         {walking && status === "live" ? (
           <button className="live-status-share" type="button" onClick={onShare}>
             bring a friend → faster

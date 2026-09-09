@@ -13,6 +13,7 @@ export type TravelerCommand = {
   routeRuntime: RouteRuntime;
   motionSampleUntilMs: number;
   presenceTtlMs?: number;
+  waitedSeconds?: number;
   reducedMotion: boolean;
   sponsorPatchUrl?: string;
   actionReview?: ActionReview;
@@ -33,4 +34,5 @@ export const DEFAULT_TRAVELER_COMMAND: TravelerCommand = {
   },
   motionSampleUntilMs: Number.POSITIVE_INFINITY,
   reducedMotion: false,
+  waitedSeconds: 0,
 };

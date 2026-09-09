@@ -47,7 +47,13 @@ async function handlePost(request: NextRequest) {
   };
   const { data, error } = await supabase.rpc(
     paceEnabled ? "record_presence_heartbeat_v4" : "record_presence_heartbeat_v2",
-    paceEnabled ? { ...heartbeatArguments, p_pace_cap: config.paceCap } : heartbeatArguments,
+    paceEnabled
+      ? {
+          ...heartbeatArguments,
+          p_pace_cap: config.paceCap,
+          p_first_watcher_gap_seconds: config.firstWatcherGapSeconds,
+        }
+      : heartbeatArguments,
   );
   if (error) {
     return NextResponse.json({ error: "Presence update failed." }, { status: 503 });
@@ -72,6 +78,8 @@ async function handlePost(request: NextRequest) {
     globalDistanceMetres: Number(row?.out_global_distance_metres ?? 0),
     paceRate: Number(row?.out_pace_rate ?? 1),
     routeAuthoritativeAt: String(row?.out_accounted_at ?? now.toISOString()),
+    waitingSince: row?.out_waiting_since ? String(row.out_waiting_since) : null,
+    wokeHim: row?.out_woke_him === true,
   });
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
   return response;
