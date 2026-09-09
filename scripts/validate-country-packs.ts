@@ -44,7 +44,7 @@ for (const candidate of packs) {
     if (metres.some((atMetres, index) => index > 0 && atMetres <= metres[index - 1])) {
       throw new Error(`${pack.assetVersion} route story beats must be strictly ordered by metres`);
     }
-    if (!['approved', 'provisional_preview'].includes(pack.culturalReview.status)) {
+    if (!['approved', 'creator_reviewed', 'provisional_preview'].includes(pack.culturalReview.status)) {
       throw new Error(`${pack.assetVersion} is not eligible for private preview`);
     }
     if (pack.culturalReview.status === "provisional_preview") {

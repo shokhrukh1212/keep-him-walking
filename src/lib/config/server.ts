@@ -10,8 +10,14 @@ function numericEnv(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/** The hour, in UTC, at which a country-day ends and the vote closes. */
+export function rolloverUtcHour(): number {
+  return Math.min(23, Math.max(0, Math.round(numericEnv("ROLLOVER_UTC_HOUR", 16))));
+}
+
 export function serverRuntimeConfig() {
   return {
+    rolloverUtcHour: rolloverUtcHour(),
     presenceTtlSeconds: Math.round(
       numericEnv("PRESENCE_TTL_SECONDS", DEFAULT_PRESENCE_TTL_SECONDS),
     ),

@@ -1029,7 +1029,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (15 forward migrations)
+### Tables (16 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1073,20 +1073,30 @@ same-kind action inside the last 120 active seconds — schedules the action at
 `global_active_seconds + 2` and resets the bucket. Heartbeat v6 and bootstrap v7 carry
 the bucket counts, the recent/next scheduled actions and the day's last six photographs.
 
+**Season 1 migration 0016, vote 2.0:** `votes.kind` ('destination' | 'name'),
+`vote_options.pack_id` and `journeys.traveler_name`. `close_and_pick_vote_winner`
+closes the ballot past its close time and names the winner — most ballots, then fewest
+previous visits for that pack, then alphabetical pack id — and writes the winning label
+to `journeys.traveler_name` when the ballot was the name vote.
+`create_next_country_day` writes tomorrow and its ballot, idempotent on
+`(journey_id, day_number)`. Bootstrap v8 adds the ballot's kind, its pack ids, the live
+tally and his name.
+
 ### Key RPCs
 
 `record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule, distinct-watcher
 pace and pace-weighted distance) → `_v5` (per-country watch aggregation) → `_v6`
 (reaction buckets and scheduled crowd actions),
 `normalize_country_code`, `read_country_day_watch`, `reaction_threshold`,
+`close_and_pick_vote_winner`, `create_next_country_day`, `read_traveler_name`,
 `submit_reaction`, `read_day_reactions`, `record_day_photo`,
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `cleanup_phase2_retention`, `journey_story_now`,
 `read_journey_runtime_v3` / `_v4` / `_v5`,
-`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7`
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8`
 (one-call bootstrap with atomic admission control, the distance projection, the
-country aggregate and the reaction board),
+country aggregate, the reaction board and the ballot),
 `set_country_notification_opt_in`.
 
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
@@ -1133,10 +1143,24 @@ Every number on it is a stored aggregate; nothing is extrapolated.
   intentional no-op rather than a crash.
 - The pack-preview route hard-denies Production regardless of any other flag.
 
+### The destination vote
+
+Candidates come from `buildDestinationCandidates` (`src/lib/vote/candidates.ts`), a pure
+function over the pack registry: the current pack's `neighbours` — real land borders,
+listed in `src/content/countries/geography.ts` — intersected with packs whose
+`culturalReview.status` is `approved` or `creator_reviewed`, minus every country already
+visited this season, capped at three and at one pack per country. If fewer than two
+survive, the nearest unvisited ready packs by great-circle distance fill the ballot and
+the rollover logs `vote_candidates_fallback`; that is an explicit transfer, never a
+pretended border. The whole ballot then passes the Season-1 pair policy from
+DECISIONS Q16 (AM–AZ, AM–TR, RS–XK, GR–TR, and any pair involving IL or RU).
+
 ### Daily rollover
 
 `GET /api/cron/rollover` claims an idempotent `rollover:<YYYY-MM-DD>` operation in
-`operation_ledger`, then runs `reconcile_phase2_state` (advance the country-day, close
+`operation_ledger`, then calls `close_and_pick_vote_winner`, builds tomorrow's day and
+ballot from the registry (`planNextDay`) and writes them through
+`create_next_country_day`, then runs `reconcile_phase2_state` (advance the country-day, close
 and publish the vote, move sponsorships through `scheduled → live → completed`),
 `cleanup_phase2_retention`, and `aggregate_sponsor_metrics` for the previous day. A
 duplicate invocation returns `duplicate: true` and changes nothing.

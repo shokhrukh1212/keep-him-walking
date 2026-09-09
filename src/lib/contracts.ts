@@ -36,15 +36,23 @@ export type ScheduledEventView = {
 export type VoteView = {
   id: string;
   question: string;
+  /** 'name' is the Day-1 ballot that names him; every other day is a destination. */
+  kind: "destination" | "name";
   opensAt: string;
   closesAt: string;
   status: "open" | "closed";
   totalBallots: number;
   selectedOptionId: string | null;
+  /** The published winner, set only once the ballot has closed. */
+  resultOptionId: string | null;
   options: Array<{
     id: string;
     label: string;
     displayOrder: number;
+    /** Set on destination ballots so the chip can show a flag and a blurb. */
+    packId: string | null;
+    countryCode: string | null;
+    blurb: string | null;
     votes?: number;
   }>;
 };
@@ -92,6 +100,8 @@ export type BootstrapSnapshot = {
   journeyState: "prelaunch" | "live" | "intermission" | "completed";
   refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "none" };
   countryDay: CountryDayView;
+  /** Season-level facts. travelerName is null until the Day-1 vote names him. */
+  journey: { travelerName: string | null; rolloverUtcHour: number };
   activeEvent: ScheduledEventView | null;
   nextEvent: ScheduledEventView | null;
   vote: VoteView | null;

@@ -46,7 +46,7 @@ describe("Phase 2 country packs", () => {
     expect(new Set(sceneUrls).size).toBe(175);
     expect(packs.every((pack) => pack.storyBeats.length >= 4)).toBe(true);
     expect(packs[0]?.culturalReview.status).toBe("approved");
-    expect(packs.slice(1).every((pack) => pack.culturalReview.status === "provisional_preview")).toBe(true);
+    expect(packs.slice(1).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
     expect(new Set(packs.map((pack) => pack.npcSystem.baseType))).toEqual(new Set(["resident-a", "resident-b"]));
   });
 
@@ -78,7 +78,7 @@ describe("Phase 3 editorial buffer", () => {
     expect(packs.every((pack) => pack?.schemaVersion === 3)).toBe(true);
     const typed = packs.filter((pack): pack is NonNullable<typeof pack> => Boolean(pack));
     expect(typed.map((pack) => pack.assetVersion)).toEqual(phase3EditorialBufferOrder);
-    expect(typed.every((pack) => pack.schemaVersion === 3 && pack.route.zones.length === 5 && pack.culturalReview.status === "provisional_preview")).toBe(true);
+    expect(typed.every((pack) => pack.schemaVersion === 3 && pack.route.zones.length === 5 && pack.culturalReview.status === "creator_reviewed")).toBe(true);
     expect(new Set(typed.map((pack) => pack.countryCode)).size).toBe(7);
   });
 });

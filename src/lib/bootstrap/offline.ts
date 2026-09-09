@@ -1,6 +1,7 @@
 import { tashkentCountryPackV3 } from "@/content/countries/tashkent.v3";
 import type { BootstrapSnapshot } from "@/lib/contracts";
 import { DEFAULT_PRESENCE_TTL_SECONDS } from "@/lib/presence";
+import { DEFAULT_ROLLOVER_UTC_HOUR } from "@/lib/story-clock/rollover-hour";
 
 export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
   const startsAt = new Date(now);
@@ -14,6 +15,7 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     mode: "offline_preview",
     journeyState: "live",
     refresh: { nextAt: endsAt.toISOString(), afterMs: 5 * 60_000, reason: "country_rollover" },
+    journey: { travelerName: null, rolloverUtcHour: DEFAULT_ROLLOVER_UTC_HOUR },
     countryDay: {
       id: tashkentCountryPackV3.countryDayId,
       dayNumber: 1,

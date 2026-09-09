@@ -136,6 +136,13 @@ const baseCountryPackSchema = z.object({
   countryName: z.string().min(1),
   cityName: z.string().min(1),
   timeZone: z.string().min(1),
+  /** Where the city is, used for the vote's distance fallback and the map. */
+  lat: z.number().min(-90).max(90).default(0),
+  lon: z.number().min(-180).max(180).default(0),
+  /** Pack ids this country shares a land border with, for vote candidates. */
+  neighbours: z.array(z.string().min(1)).default([]),
+  /** One line on the ballot. Never visitor-authored. */
+  voteBlurb: z.string().max(140).default(""),
   scene: z.object({
     fallbackUrl: z.string().startsWith("/"),
     layers: z.array(sceneLayerSchema).min(3),
@@ -272,7 +279,13 @@ export const countryPackSchema = baseCountryPackSchema.extend({
 export const culturalReviewSchema = z.object({
   reviewerName: z.string().min(2).nullable(),
   reviewedAt: z.string().datetime().nullable(),
-  status: z.enum(["pending", "approved", "provisional_preview", "changes_requested"]),
+  status: z.enum([
+    "pending",
+    "approved",
+    "creator_reviewed",
+    "provisional_preview",
+    "changes_requested",
+  ]),
   qualification: z.string().min(2).nullable().default(null),
   disposition: z.string().min(2).nullable().default(null),
   publicLaunchRequirement: z.string().min(2).nullable().default(null),
@@ -282,9 +295,9 @@ export const culturalReviewSchema = z.object({
   })).default([]),
   notes: z.string().max(1_000),
 }).refine(
-  (review) => !["approved", "provisional_preview"].includes(review.status)
+  (review) => !["approved", "creator_reviewed", "provisional_preview"].includes(review.status)
     || Boolean(review.reviewerName && review.reviewedAt && review.qualification && review.disposition),
-  { message: "Approved and provisional reviews require reviewer, qualification, disposition and timestamp" },
+  { message: "Reviewed packs require reviewer, qualification, disposition and timestamp" },
 ).refine(
   (review) => review.status !== "provisional_preview"
     || Boolean(review.publicLaunchRequirement && review.citations.length >= 1),
@@ -425,3 +438,12 @@ export type RouteProp = z.infer<typeof routePropSchema>;
 export type RouteZone = z.infer<typeof routeZoneSchema>;
 export type TravelerState = z.infer<typeof travelerStateSchema>;
 export type SpriteManifest = z.infer<typeof spriteManifestSchema>;
+
+/** Packs a destination vote may offer: reviewed by the creator or a qualified local. */
+export const VOTE_READY_REVIEW_STATUSES = ["approved", "creator_reviewed"] as const;
+
+export function isVoteReadyPack(pack: CountryPack): boolean {
+  if (pack.schemaVersion !== 3) return false;
+  return (VOTE_READY_REVIEW_STATUSES as readonly string[])
+    .includes(pack.culturalReview.status);
+}

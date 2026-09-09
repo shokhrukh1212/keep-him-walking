@@ -13,6 +13,7 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
     return {
       serverNow: now.toISOString(), realServerNow: now.toISOString(), mode: "live",
       journeyState: "live", refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
+      journey: { travelerName: null, rolloverUtcHour: 16 },
       countryDay: {
         id: tashkentCountryPackV2.countryDayId, dayNumber: 1, totalDays: 195,
         countryCode: "UZ", countryName: "Uzbekistan", cityName: "Tashkent",

@@ -22,6 +22,7 @@ function snapshot(routeSeconds: number, event: ScheduledEventView): BootstrapSna
     mode: "live",
     journeyState: "live",
     refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
+    journey: { travelerName: null, rolloverUtcHour: 16 },
     countryDay: {
       id: tashkentCountryPackV2.countryDayId,
       dayNumber: 1,

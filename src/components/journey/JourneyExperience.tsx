@@ -39,6 +39,7 @@ import { composeDayPhoto } from "@/lib/photos/capture";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 import { SoundMotionControls } from "@/components/hud/SoundMotionControls";
 import { DailyVote } from "@/components/vote/DailyVote";
+import { VoteChip } from "@/components/hud/VoteChip";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
 import { IntroHeadline } from "@/components/hud/IntroHeadline";
 import { WalkingRuleStatus } from "@/components/hud/WalkingRuleStatus";
@@ -666,6 +667,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         onReady={sceneDidReady}
       />
       <IntroHeadline
+        travelerName={snapshot.journey.travelerName}
         collapsed={waking ? false : introHeadline.collapsed}
         firstArrival={waking && waitingLocalTime && wakeCountdown ? {
           waitingLocalTime,
@@ -753,6 +755,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
             setActionReview({action:event.target.value as ReviewAction,startedAt:now});
           }}>{REVIEW_ACTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
         </label> : null}
+        <VoteChip
+          vote={snapshot.vote}
+          rolloverUtcHour={snapshot.journey.rolloverUtcHour}
+          onOpen={() => setVoteOpen(true)}
+        />
         <button type="button" onClick={()=>setVoteOpen(true)}>Daily vote</button>
         <button type="button" aria-expanded={detailsOpen} aria-controls="journey-details" onClick={()=>setDetailsOpen(!detailsOpen)}> {detailsOpen ? "Close details" : "Journey details"}</button>
       </section>

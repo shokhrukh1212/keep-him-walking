@@ -17,7 +17,7 @@ const scheduledPacks = schedule.map((scheduled) => {
   if (!pack || pack.schemaVersion !== 3) throw new Error(`Missing Phase 2 pack ${scheduled.scenePackId}`);
   return pack;
 });
-const pendingReviews = scheduledPacks.filter((pack) => !["approved", "provisional_preview"].includes(pack.culturalReview.status)).map((pack) => pack.assetVersion);
+const pendingReviews = scheduledPacks.filter((pack) => !["approved", "creator_reviewed", "provisional_preview"].includes(pack.culturalReview.status)).map((pack) => pack.assetVersion);
 requireApply({
   slug,
   realStart: realStart.toISOString(),

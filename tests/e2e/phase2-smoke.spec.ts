@@ -13,6 +13,7 @@ function snapshot(routeIndex = 0): BootstrapSnapshot {
   return {
     serverNow: now.toISOString(), realServerNow: now.toISOString(), mode: "live",
     journeyState: "live", refresh: { nextAt: new Date(now.getTime() + 60_000).toISOString(), afterMs: 60_000, reason: "country_rollover" },
+    journey: { travelerName: null, rolloverUtcHour: 16 },
     countryDay: {
       id: dayId, dayNumber: scheduled.dayNumber, totalDays: 7, countryCode: scheduled.countryCode, countryName: scheduled.countryName,
       cityName: scheduled.cityName, timeZone: scheduled.timeZone, startsAt: now.toISOString(),
@@ -117,14 +118,16 @@ test("a closed daily vote presents deterministic result counts", async ({ page }
   closed.vote = {
     id: "20000000-0000-4000-8000-000000000001",
     question: "Which Tashkent moment should he remember?",
+    kind: "destination" as const,
     opensAt: new Date(Date.now() - 60_000).toISOString(),
     closesAt: new Date(Date.now() - 1_000).toISOString(),
     status: "closed",
     totalBallots: 7,
     selectedOptionId: null,
+    resultOptionId: null,
     options: [
-      { id: "20000000-0000-4000-8000-000000000002", label: "Chorsu market", displayOrder: 0, votes: 5 },
-      { id: "20000000-0000-4000-8000-000000000003", label: "Hazrati Imam", displayOrder: 1, votes: 2 },
+      { id: "20000000-0000-4000-8000-000000000002", label: "Chorsu market", displayOrder: 0, packId: null, countryCode: null, blurb: null, votes: 5 },
+      { id: "20000000-0000-4000-8000-000000000003", label: "Hazrati Imam", displayOrder: 1, packId: null, countryCode: null, blurb: null, votes: 2 },
     ],
   };
   await install(page, () => closed);

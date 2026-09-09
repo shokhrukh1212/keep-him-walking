@@ -1805,3 +1805,69 @@ button:focus-visible,
     display: none;
   }
 }
+
+.vote-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 999px;
+  padding: 0.36rem 0.75rem;
+  color: inherit;
+  background: rgb(9 26 35 / 72%);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+  backdrop-filter: blur(16px) saturate(125%);
+}
+
+.vote-chip:hover {
+  border-color: rgb(255 215 119 / 55%);
+}
+
+.vote-chip:focus-visible {
+  outline: 2px solid #ffd777;
+  outline-offset: 3px;
+}
+
+.vote-chip-options {
+  display: inline-flex;
+  gap: 0.55rem;
+}
+
+.vote-chip-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.vote-chip-percent {
+  color: rgb(247 240 223 / 82%);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.vote-chip-countdown {
+  color: #ffd777;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.vote-blurb {
+  display: block;
+  color: rgb(247 240 223 / 66%);
+  font-size: 0.66rem;
+}
+
+.vote-result {
+  margin: 0.4rem 0 0;
+  border-left: 2px solid rgb(255 215 119 / 55%);
+  padding-left: 0.7rem;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 600px) {
+  .vote-chip-label {
+    display: none;
+  }
+}

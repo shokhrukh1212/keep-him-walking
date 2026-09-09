@@ -67,9 +67,15 @@ type BootstrapBundleRow = {
     opens_at: string;
     closes_at: string;
     status: string;
+    result_option_id: string | null;
     vote_options: Array<{ id: string; label: string; display_order: number }>;
     ballots: Array<{ option_id: string; voter_hash: string }>;
   };
+  vote_meta: null | {
+    kind: string;
+    options: Array<{ id: string; pack_id: string | null; ballots: number }>;
+  };
+  journey: null | { travelerName: string | null };
   countries: null | {
     live: Array<{ code: string; watchers: number }>;
     top: Array<{ code: string; watchSeconds: number }>;
@@ -211,6 +217,19 @@ function dayPhotosView(
     }));
 }
 
+/**
+ * Turns a ballot option's pack id into the flag and blurb the chip renders.
+ * A name ballot has no pack, so every field stays null rather than guessed.
+ */
+function votePackFields(packId: string | null) {
+  const pack = packId ? getCountryPack(packId) : null;
+  return {
+    packId,
+    countryCode: pack?.countryCode ?? null,
+    blurb: pack?.voteBlurb ? pack.voteBlurb : null,
+  };
+}
+
 function bootstrapFromBundle(
   bundle: BootstrapBundleRow,
   visitorHash: string,
@@ -238,22 +257,29 @@ function bootstrapFromBundle(
       return start + event.durationSeconds * 1_000 <= nowMs;
     })
     ?? null;
-  const vote = bundle.vote ? (() => {
+  const vote: VoteView | null = bundle.vote ? (() => {
     const closed = nowMs >= new Date(bundle.vote.closes_at).getTime();
     const selected = bundle.vote.ballots.find((ballot) => ballot.voter_hash === visitorHash);
+    const meta = new Map(
+      (bundle.vote_meta?.options ?? []).map((option) => [option.id, option]),
+    );
     return {
       id: bundle.vote.id,
       question: bundle.vote.question,
+      kind: bundle.vote_meta?.kind === "name" ? "name" as const : "destination" as const,
       opensAt: bundle.vote.opens_at,
       closesAt: bundle.vote.closes_at,
       status: closed ? "closed" as const : "open" as const,
       totalBallots: bundle.vote.ballots.length,
       selectedOptionId: selected?.option_id ?? null,
+      resultOptionId: bundle.vote.result_option_id ?? null,
       options: bundle.vote.vote_options.map((option) => ({
         id: option.id,
         label: option.label,
         displayOrder: option.display_order,
-        ...(closed ? { votes: bundle.vote!.ballots.filter((ballot) => ballot.option_id === option.id).length } : {}),
+        ...votePackFields(meta.get(option.id)?.pack_id ?? null),
+        // Destination ballots show a live tally; the count is server-confirmed.
+        votes: bundle.vote!.ballots.filter((ballot) => ballot.option_id === option.id).length,
       })),
     };
   })() : null;
@@ -277,6 +303,10 @@ function bootstrapFromBundle(
       reason: nextAt === countryDay.ends_at ? "country_rollover" : "event",
     },
     countryDay: countryDayView(countryDay),
+    journey: {
+      travelerName: bundle.journey?.travelerName ?? null,
+      rolloverUtcHour: config.rolloverUtcHour,
+    },
     activeEvent,
     nextEvent,
     vote,
@@ -364,7 +394,7 @@ async function loadVote(
   if (!supabase) return null;
   const { data: vote, error } = await supabase
     .from("votes")
-    .select("id,question,opens_at,closes_at,status,vote_options!vote_options_vote_id_fkey(id,label,display_order)")
+    .select("id,question,kind,opens_at,closes_at,status,result_option_id,vote_options!vote_options_vote_id_fkey(id,label,display_order,pack_id)")
     .eq("country_day_id", countryDayId)
     .lte("opens_at", now.toISOString())
     .order("opens_at", { ascending: false })
@@ -383,26 +413,29 @@ async function loadVote(
   const selected = ballotRows.find((ballot) => ballot.voter_hash === visitorHash);
   const closed = now.getTime() >= new Date(vote.closes_at).getTime();
   const options = (
-    vote.vote_options as Array<{ id: string; label: string; display_order: number }>
+    vote.vote_options as Array<{
+      id: string; label: string; display_order: number; pack_id: string | null;
+    }>
   )
     .sort((a, b) => a.display_order - b.display_order)
     .map((option) => ({
       id: option.id,
       label: option.label,
       displayOrder: option.display_order,
-      ...(closed
-        ? { votes: ballotRows.filter((ballot) => ballot.option_id === option.id).length }
-        : {}),
+      ...votePackFields(option.pack_id ?? null),
+      votes: ballotRows.filter((ballot) => ballot.option_id === option.id).length,
     }));
 
   return {
     id: vote.id,
     question: vote.question,
+    kind: vote.kind === "name" ? "name" : "destination",
     opensAt: vote.opens_at,
     closesAt: vote.closes_at,
     status: closed ? "closed" : "open",
     totalBallots: ballotRows.length,
     selectedOptionId: selected?.option_id ?? null,
+    resultOptionId: vote.result_option_id ?? null,
     options,
   };
 }
@@ -415,7 +448,7 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v7", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v8", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -463,6 +496,7 @@ export async function liveBootstrapSnapshot(
     vote,
     { data: countries },
     { data: reactions },
+    { data: travelerName },
   ] = await Promise.all([
     runtimeRequest,
     loadEvents(countryDay.id, storyNow),
@@ -477,6 +511,7 @@ export async function liveBootstrapSnapshot(
       p_now: now.toISOString(),
       p_global_active_seconds: 0,
     }),
+    supabase.rpc("read_traveler_name"),
   ]);
   if (runtimeError) throw runtimeError;
   const row = Array.isArray(runtime) ? runtime[0] : runtime;
@@ -540,6 +575,10 @@ export async function liveBootstrapSnapshot(
       };
     })(),
     countryDay: countryDayView(countryDay),
+    journey: {
+      travelerName: (travelerName as string | null) ?? null,
+      rolloverUtcHour: config.rolloverUtcHour,
+    },
     activeEvent: events.activeEvent,
     nextEvent: events.nextEvent,
     vote,

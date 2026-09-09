@@ -5,6 +5,7 @@ import {
   type RouteProp,
   type RouteZone,
 } from "@/lib/content/schema";
+import { packGeography } from "./geography";
 
 export const PHASE2_RIVE_CONTRACT = {
   riveUrl: "/rive/traveler/v1/traveler.riv",
@@ -115,9 +116,9 @@ function provisional(title: string, url: string, secondTitle?: string, secondUrl
   return {
     reviewerName: "Solo founder research review",
     reviewedAt: "2026-09-01T19:00:00.000Z",
-    status: "provisional_preview" as const,
+    status: "creator_reviewed" as const,
     qualification: "Desk research using official tourism, city, museum and cultural-institution sources",
-    disposition: "provisionally approved for private preview",
+    disposition: "creator-reviewed and cleared for the destination vote",
     publicLaunchRequirement: "Qualified local review required before public launch",
     citations: [
       { title, url },
@@ -239,6 +240,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     countryName: definition.countryName,
     cityName: definition.cityName,
     timeZone: definition.timeZone,
+    ...packGeography(definition.packId),
     scene: {
       fallbackUrl: firstZone.fallbackUrl,
       layers: [

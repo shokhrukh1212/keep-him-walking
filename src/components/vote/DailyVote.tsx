@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ballotPercentages } from "@/components/hud/VoteChip";
+import { flagEmoji } from "@/lib/countries/flags";
 import type { VoteView } from "@/lib/contracts";
 
 type Props = {
@@ -14,6 +16,11 @@ export function DailyVote({ vote, open, onClose, onAccepted }: Props) {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!open) return null;
+  const percentages = vote ? ballotPercentages(vote) : new Map<string, number>();
+  // Named only once the ballot has closed; before that nothing is decided.
+  const winner = vote && vote.status === "closed" && vote.resultOptionId
+    ? vote.options.find((option) => option.id === vote.resultOptionId) ?? null
+    : null;
 
   const submit = async (optionId: string) => {
     if (!vote || vote.status !== "open") return;
@@ -54,14 +61,29 @@ export function DailyVote({ vote, open, onClose, onAccepted }: Props) {
               aria-pressed={vote.selectedOptionId === option.id}
               onClick={() => void submit(option.id)}
             >
-              <span>{option.label}</span>
-              {option.votes === undefined ? null : <small>{option.votes} votes</small>}
+              <span>
+                {option.countryCode ? (
+                  <span aria-hidden="true">{flagEmoji(option.countryCode)} </span>
+                ) : null}
+                {option.label}
+              </span>
+              {option.blurb ? <small className="vote-blurb">{option.blurb}</small> : null}
+              {option.votes === undefined ? null : (
+                <small>{option.votes} votes · {percentages.get(option.id) ?? 0}%</small>
+              )}
             </button>
           ))}
         </div>
       ) : (
         <p>The live server is not connected, so no vote or result is being invented.</p>
       )}
+      {winner ? (
+        <p className="vote-result">
+          {vote?.kind === "name" ? "His name: " : "Tomorrow: "}
+          {winner.countryCode ? <span aria-hidden="true">{flagEmoji(winner.countryCode)} </span> : null}
+          <strong>{winner.label}</strong> ({percentages.get(winner.id) ?? 0}%)
+        </p>
+      ) : null}
       {vote ? <small>{vote.totalBallots} people have voted</small> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </section>

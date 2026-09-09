@@ -7,16 +7,18 @@ import { DailyVote } from "./DailyVote";
 const vote: VoteView = {
   id: "30000000-0000-4000-8000-000000000001",
   question: "Where should he pause next?",
+  kind: "destination" as const,
   opensAt: "2026-09-01T00:00:00Z",
   closesAt: "2026-09-02T00:00:00Z",
   status: "open",
   totalBallots: 4,
   selectedOptionId: null,
+  resultOptionId: null,
   options: [
     {
       id: "40000000-0000-4000-8000-000000000001",
       label: "Find the best plov",
-      displayOrder: 0,
+      displayOrder: 0, packId: null, countryCode: null, blurb: null,
     },
   ],
 };
@@ -33,6 +35,7 @@ describe("DailyVote", () => {
         json: () => Promise.resolve({
           accepted: true,
           selectedOptionId: vote.options[0]?.id,
+          resultOptionId: null,
           totalBallots: 5,
         }),
       }),

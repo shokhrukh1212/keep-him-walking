@@ -40,6 +40,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
     mode: "live",
     journeyState: "live",
     refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
+    journey: { travelerName: null, rolloverUtcHour: 16 },
     countryDay: {
       id: tashkentCountryPackV2.countryDayId,
       dayNumber: 1,
@@ -66,14 +67,16 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
     vote: {
       id: voteId,
       question: "Where should he pause next?",
+      kind: "destination" as const,
       opensAt: new Date(now.getTime() - 60_000).toISOString(),
       closesAt: new Date(now.getTime() + 86_340_000).toISOString(),
       status: "open",
       totalBallots: server.totalBallots,
       selectedOptionId: server.selectedOptionId,
+      resultOptionId: null,
       options: [
-        { id: optionOne, label: "Find the best plov", displayOrder: 0 },
-        { id: optionTwo, label: "Explore Chorsu Bazaar", displayOrder: 1 },
+        { id: optionOne, label: "Find the best plov", displayOrder: 0, packId: null, countryCode: null, blurb: null },
+        { id: optionTwo, label: "Explore Chorsu Bazaar", displayOrder: 1, packId: null, countryCode: null, blurb: null },
       ],
     },
     presence: {
@@ -151,6 +154,7 @@ async function installApi(page: Page, server: SharedServer) {
         accepted: true,
         idempotent: !isNewBallot,
         selectedOptionId: server.selectedOptionId,
+        resultOptionId: null,
         totalBallots: server.totalBallots,
       },
     });
