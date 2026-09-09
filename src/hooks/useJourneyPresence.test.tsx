@@ -23,6 +23,7 @@ const heartbeatResponse: HeartbeatResponse = {
   routeAuthoritativeAt: "2026-09-03T00:00:00.000Z",
   waitingSince: null,
   wokeHim: false,
+  countryCode: "ZZ",
 };
 
 function snapshot(countryDayId: string): BootstrapSnapshot {

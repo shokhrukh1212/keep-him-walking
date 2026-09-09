@@ -48,6 +48,16 @@ export type VoteView = {
   }>;
 };
 
+export type LiveCountryView = {
+  code: string;
+  watchers: number;
+};
+
+export type CountryWatchView = {
+  code: string;
+  watchSeconds: number;
+};
+
 export type BootstrapSnapshot = {
   serverNow: string;
   realServerNow: string;
@@ -65,6 +75,11 @@ export type BootstrapSnapshot = {
     status: ConnectionStatus;
     ttlSeconds: number;
     waitingSince: string | null;
+  };
+  /** Server-confirmed audience by country. Live counts expire with the leases. */
+  countries: {
+    live: LiveCountryView[];
+    todayTop: CountryWatchView[];
   };
   steps: {
     global: number;
@@ -110,4 +125,6 @@ export type HeartbeatResponse = {
   routeAuthoritativeAt: string;
   waitingSince: string | null;
   wokeHim: boolean;
+  /** The edge-derived country the server credited this heartbeat to. */
+  countryCode: string;
 };

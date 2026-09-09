@@ -637,6 +637,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         onShare={() => void shareUrl()}
         wakeCountdown={wakeCountdown}
         waitingSinceLocalTime={waitingLocalTime}
+        liveCountries={snapshot.countries.live}
+        todayTopCountries={snapshot.countries.todayTop}
       />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (

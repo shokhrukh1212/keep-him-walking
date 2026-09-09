@@ -6,6 +6,7 @@ import { nextHeartbeatDelay } from "@/lib/presence";
 import { findCurrentCountryDay } from "@/lib/bootstrap/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getCountryPack } from "@/content/countries/registry";
+import { COUNTRY_HEADER, countryFromHeader } from "@/lib/countries/header";
 import { heartbeatBodySchema } from "@/lib/validation/api";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
@@ -35,6 +36,8 @@ async function handlePost(request: NextRequest) {
   const config = serverRuntimeConfig();
   const pack = getCountryPack(countryDay.scene_pack_id);
   const paceEnabled = pack?.schemaVersion === 2 || pack?.schemaVersion === 3;
+  // The edge tells us the country. The IP behind it is never read or stored.
+  const countryCode = countryFromHeader(request.headers.get(COUNTRY_HEADER));
   const heartbeatArguments = {
     p_country_day_id: countryDay.id,
     p_visitor_hash: visitorHash,
@@ -46,12 +49,13 @@ async function handlePost(request: NextRequest) {
     p_steps_per_second: config.stepsPerActiveSecond,
   };
   const { data, error } = await supabase.rpc(
-    paceEnabled ? "record_presence_heartbeat_v4" : "record_presence_heartbeat_v2",
+    paceEnabled ? "record_presence_heartbeat_v5" : "record_presence_heartbeat_v2",
     paceEnabled
       ? {
           ...heartbeatArguments,
           p_pace_cap: config.paceCap,
           p_first_watcher_gap_seconds: config.firstWatcherGapSeconds,
+          p_country_code: countryCode,
         }
       : heartbeatArguments,
   );
@@ -80,6 +84,7 @@ async function handlePost(request: NextRequest) {
     routeAuthoritativeAt: String(row?.out_accounted_at ?? now.toISOString()),
     waitingSince: row?.out_waiting_since ? String(row.out_waiting_since) : null,
     wokeHim: row?.out_woke_him === true,
+    countryCode: String(row?.out_country_code ?? countryCode),
   });
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
   return response;

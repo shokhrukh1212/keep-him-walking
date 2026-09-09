@@ -1,5 +1,13 @@
+import { useState } from "react";
+import { CountryFlags } from "./CountryFlags";
+import { CountryLeaderboardSheet } from "./CountryLeaderboardSheet";
 import { LiveStatus } from "./LiveStatus";
-import type { ConnectionStatus, CountryDayView } from "@/lib/contracts";
+import type {
+  ConnectionStatus,
+  CountryDayView,
+  CountryWatchView,
+  LiveCountryView,
+} from "@/lib/contracts";
 
 type Props = {
   day: CountryDayView;
@@ -11,6 +19,8 @@ type Props = {
   onShare: () => void;
   wakeCountdown?: number | null;
   waitingSinceLocalTime?: string | null;
+  liveCountries?: LiveCountryView[];
+  todayTopCountries?: CountryWatchView[];
 };
 
 export function JourneyHud({
@@ -23,7 +33,10 @@ export function JourneyHud({
   onShare,
   wakeCountdown,
   waitingSinceLocalTime,
+  liveCountries = [],
+  todayTopCountries = [],
 }: Props) {
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   return (
     <header className="journey-hud">
       <div className="day-mark">
@@ -31,14 +44,22 @@ export function JourneyHud({
         <strong>{day.cityName}</strong>
         <span>{day.countryName} · {localTime}</span>
       </div>
-      <LiveStatus
-        activeViewers={activeViewers}
-        paceRate={paceRate}
-        walking={walking}
-        status={status}
-        onShare={onShare}
-        wakeCountdown={wakeCountdown}
-        waitingSinceLocalTime={waitingSinceLocalTime}
+      <div className="journey-hud-audience">
+        <CountryFlags live={liveCountries} onOpen={() => setLeaderboardOpen(true)} />
+        <LiveStatus
+          activeViewers={activeViewers}
+          paceRate={paceRate}
+          walking={walking}
+          status={status}
+          onShare={onShare}
+          wakeCountdown={wakeCountdown}
+          waitingSinceLocalTime={waitingSinceLocalTime}
+        />
+      </div>
+      <CountryLeaderboardSheet
+        open={leaderboardOpen}
+        todayTop={todayTopCountries}
+        onClose={() => setLeaderboardOpen(false)}
       />
     </header>
   );

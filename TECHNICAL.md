@@ -161,6 +161,15 @@ pace in one admitted bundle. The old v4/v5 signatures remain as 5×-cap rollback
 wrappers; server routes pass the configured cap explicitly. `_v3` remains callable for
 rollback.
 
+`_v5` wraps v4 to credit watch time by country. It reads the caller's own lease
+`active_seconds` before delegating and again after, so only that visitor's confirmed
+visible delta (capped at the TTL) is added to its `country_day_watch` row, and
+`peak_watchers` rises to the live distinct count for that country. v4 already holds the
+authority row lock for the rest of the transaction, so the aggregate write is
+serialized with every other heartbeat for the day. The country itself comes from the
+`x-vercel-ip-country` edge header, normalized to `^[A-Z]{2}$` or the explicit unknown
+code `ZZ`; the request IP is never read.
+
 `walking` is returned to the client as simply `activeViewers > 0`.
 
 P6 adds a configured v4 overload under the same authority-row lock. It counts the live
@@ -1009,7 +1018,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (13 forward migrations)
+### Tables (14 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1037,15 +1046,25 @@ distance across exact lease-expiry segments.
 runtime v5 waiting projection. The heartbeat returns both the wait origin and the
 recipient-only `woke_him` result.
 
+**Season 1 migration 0014, countries:** `presence_leases` gains a validated
+`country_code char(2)`; `country_day_watch` aggregates confirmed watch seconds and the
+per-country peak per day. The heartbeat v5 overload credits only the caller's own
+visible delta to its own country row, and bootstrap v6 carries the live/leaderboard
+projection. **No IP is read, stored or logged anywhere on this path** — the two-letter
+edge header is the whole of the location signal.
+
 ### Key RPCs
 
 `record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule, distinct-watcher
-pace and pace-weighted distance),
+pace and pace-weighted distance) → `_v5` (per-country watch aggregation),
+`normalize_country_code`, `read_country_day_watch`,
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `cleanup_phase2_retention`, `journey_story_now`,
-`read_journey_runtime_v3` / `_v4` / `_v5`, `read_bootstrap_bundle_v3` / `_v4` / `_v5`
-(one-call bootstrap with atomic admission control and the distance projection),
+`read_journey_runtime_v3` / `_v4` / `_v5`,
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6`
+(one-call bootstrap with atomic admission control, the distance projection and the
+country aggregate),
 `set_country_notification_opt_in`.
 
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
@@ -1073,6 +1092,10 @@ POST /api/observability/vitals
 GET  /api/admin/preview/[packId]    protected non-production pack preview
 POST /api/admin/preview/session     expiring signed HTTP-only preview session
 ```
+
+Public pages added in Season 1: `/country/<cc>` renders a watching country's rank and
+carried time for today, its confirmed season total, and the days it hosted the walk.
+Every number on it is a stored aggregate; nothing is extrapolated.
 
 ### Identity, security, limits
 

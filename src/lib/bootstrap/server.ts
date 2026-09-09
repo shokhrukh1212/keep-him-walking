@@ -68,6 +68,10 @@ type BootstrapBundleRow = {
     vote_options: Array<{ id: string; label: string; display_order: number }>;
     ballots: Array<{ option_id: string; voter_hash: string }>;
   };
+  countries: null | {
+    live: Array<{ code: string; watchers: number }>;
+    top: Array<{ code: string; watchSeconds: number }>;
+  };
   contribution_seconds: number | null;
   postcard: null | { public_token: string; status: string; expires_at: string };
   sponsor: null | {
@@ -167,6 +171,25 @@ function eventView(row: EventRow): ScheduledEventView {
   };
 }
 
+/**
+ * Countries are rendered only from server-confirmed rows. A missing or malformed
+ * payload becomes an empty audience rather than an invented one.
+ */
+function countriesView(
+  payload: BootstrapBundleRow["countries"] | null | undefined,
+): BootstrapSnapshot["countries"] {
+  const live = Array.isArray(payload?.live) ? payload.live : [];
+  const top = Array.isArray(payload?.top) ? payload.top : [];
+  return {
+    live: live
+      .filter((row) => typeof row?.code === "string" && Number.isFinite(Number(row.watchers)))
+      .map((row) => ({ code: String(row.code), watchers: Number(row.watchers) })),
+    todayTop: top
+      .filter((row) => typeof row?.code === "string" && Number.isFinite(Number(row.watchSeconds)))
+      .map((row) => ({ code: String(row.code), watchSeconds: Number(row.watchSeconds) })),
+  };
+}
+
 function bootstrapFromBundle(
   bundle: BootstrapBundleRow,
   visitorHash: string,
@@ -244,6 +267,7 @@ function bootstrapFromBundle(
         ? String(bundle.runtime.out_waiting_since)
         : null,
     },
+    countries: countriesView(bundle.countries),
     steps: {
       global: Number(bundle.runtime.out_global_steps ?? 0),
       updatedAt: String(bundle.runtime.out_accounted_at),
@@ -368,7 +392,7 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v5", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v6", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -410,10 +434,15 @@ export async function liveBootstrapSnapshot(
       p_ttl_seconds: config.presenceTtlSeconds,
       p_steps_per_second: config.stepsPerActiveSecond,
     });
-  const [{ data: runtime, error: runtimeError }, events, vote] = await Promise.all([
+  const [{ data: runtime, error: runtimeError }, events, vote, { data: countries }] = await Promise.all([
     runtimeRequest,
     loadEvents(countryDay.id, storyNow),
     loadVote(countryDay.id, visitorHash, storyNow),
+    supabase.rpc("read_country_day_watch", {
+      p_country_day_id: countryDay.id,
+      p_now: now.toISOString(),
+      p_ttl_seconds: config.presenceTtlSeconds,
+    }),
   ]);
   if (runtimeError) throw runtimeError;
   const row = Array.isArray(runtime) ? runtime[0] : runtime;
@@ -486,6 +515,7 @@ export async function liveBootstrapSnapshot(
       ttlSeconds: config.presenceTtlSeconds,
       waitingSince: row?.out_waiting_since ? String(row.out_waiting_since) : null,
     },
+    countries: countriesView(countries as BootstrapBundleRow["countries"]),
     steps: {
       global: Number(row?.out_global_steps ?? 0),
       updatedAt: String(row?.out_accounted_at ?? now.toISOString()),

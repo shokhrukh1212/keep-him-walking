@@ -20,6 +20,7 @@ function snapshot(routeIndex = 0): BootstrapSnapshot {
     },
     activeEvent: null, nextEvent: null, vote: null,
     presence: { activeViewers: 1, status: "live", ttlSeconds: 50, waitingSince: null },
+    countries: { live: [], todayTop: [] },
     steps: { global: 120, updatedAt: now.toISOString(), stale: false },
     route: { globalActiveSeconds: 30, globalDistanceMetres: 37.5, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },

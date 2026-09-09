@@ -82,6 +82,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       ttlSeconds: 50,
       waitingSince: null,
     },
+    countries: { live: [], todayTop: [] },
     steps: {
       global: server.steps,
       updatedAt: now.toISOString(),

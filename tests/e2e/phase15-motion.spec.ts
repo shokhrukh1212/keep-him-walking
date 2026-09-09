@@ -42,6 +42,7 @@ function makeSnapshot(server: MotionServer): BootstrapSnapshot {
       authoritativeAt: now.toISOString(),
       walking: false,
     },
+    countries: { live: [], todayTop: [] },
     sponsor: { status: "unsponsored" },
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     assets: tashkentCountryPackV2,

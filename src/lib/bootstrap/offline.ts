@@ -36,6 +36,7 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
       ttlSeconds: DEFAULT_PRESENCE_TTL_SECONDS,
       waitingSince: null,
     },
+    countries: { live: [], todayTop: [] },
     steps: { global: 0, updatedAt: now.toISOString(), stale: true },
     route: {
       globalActiveSeconds: 0,

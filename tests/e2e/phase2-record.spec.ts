@@ -53,6 +53,7 @@ function snapshot(routeSeconds: number, event: ScheduledEventView): BootstrapSna
       ctaLabel: null,
       clickUrl: null,
     },
+    countries: { live: [], todayTop: [] },
     postcard: { eligible: true, unlockSeconds: 60, contributedSeconds: 75, url: null },
     assets: recordingPack,
   };
