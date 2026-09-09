@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:prepare": "node --import tsx --env-file=.env.local scripts/prepare-local-review.ts",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",

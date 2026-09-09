@@ -70,7 +70,7 @@ export async function loadRecapDay(dayNumber: number): Promise<RecapDay | null> 
       ? supabase.from("sponsorships").select("sponsor_name,public_id").eq("slot_id", slot.id).in("status", ["approved", "scheduled", "live", "completed"]).order("created_at", { ascending: false }).limit(1).maybeSingle()
       : Promise.resolve({ data: null }),
     vote?.result_option_id
-      ? supabase.from("vote_options").select("label,country_code").eq("id", vote.result_option_id).maybeSingle()
+      ? supabase.from("vote_options").select("label,pack_id").eq("id", vote.result_option_id).maybeSingle()
       : Promise.resolve({ data: null }),
     vote
       ? supabase.from("ballots").select("option_id").eq("vote_id", vote.id)
@@ -114,7 +114,7 @@ export async function loadRecapDay(dayNumber: number): Promise<RecapDay | null> 
     sponsor: sponsorship ? { name: sponsorship.sponsor_name, publicId: sponsorship.public_id } : null,
     voteResult: resultOption && vote ? {
       label: resultOption.label,
-      countryCode: resultOption.country_code ? resultOption.country_code.trim() : null,
+      countryCode: resultOption.pack_id ? getCountryPack(resultOption.pack_id)?.countryCode ?? null : null,
       votes: winnerVotes,
       totalBallots,
       percent: totalBallots > 0 ? Math.round(winnerVotes / totalBallots * 100) : 0,

@@ -21,6 +21,8 @@ describe("admin auth", () => {
     const session = issueAdminSession();
     const replacement = session.endsWith("0") ? "1" : "0";
     expect(validateAdminSession(`${session.slice(0, -1)}${replacement}`)).toBe(false);
+    expect(validateAdminSession(`${session.split(".").slice(0, 2).join(".")}.${"é".repeat(64)}`)).toBe(false);
+    expect(validateAdminCredential("é".repeat(secret.length))).toBe(false);
     process.env.ADMIN_ACCESS_SECRET = "short";
     expect(validateAdminCredential("short")).toBe(false);
   });

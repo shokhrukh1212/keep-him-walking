@@ -20,6 +20,10 @@ body {
   width: 100%;
   min-height: 100%;
   margin: 0;
+  overflow-x: clip;
+}
+
+body:has(.journey-shell) {
   overflow: hidden;
 }
 
@@ -1067,6 +1071,10 @@ body:has(.content-page) {
   padding: clamp(2rem, 7vw, 6rem) 0;
   color: var(--paper);
 }
+
+.admin-sign-in { display: grid; gap: .8rem; max-width: 32rem; margin-top: 2rem; }
+.admin-sign-in input { width: 100%; padding: .8rem; border: 1px solid #8fb7a5; border-radius: .5rem; background: #10232d; color: #fff3df; }
+.admin-sign-in button { justify-self: start; padding: .8rem 1.4rem; border-radius: 2rem; background: #f7f0df; color: #10232d; cursor: pointer; }
 
 .content-page > h1 {
   max-width: 14ch;

@@ -62,18 +62,20 @@ async function createNextDay(
 ) {
   const { data: days, error } = await supabase
     .from("country_days")
-    .select("day_number,country_code")
+    .select("day_number,country_code,ends_at")
     .eq("journey_id", winner.journeyId!)
     .order("day_number", { ascending: true });
   if (error) throw error;
-  const rows = (days ?? []) as Array<{ day_number: number; country_code: string }>;
+  const rows = (days ?? []) as Array<{ day_number: number; country_code: string; ends_at: string }>;
   const dayNumber = rows.reduce((highest, row) => Math.max(highest, row.day_number), 0) + 1;
+  const previous = rows.at(-1);
+  if (!previous) return null;
 
   const plan = planNextDay({
     winnerPackId: winner.winnerPackId!,
     dayNumber,
     visitedCountryCodes: rows.map((row) => row.country_code),
-    now,
+    startsAt: new Date(previous.ends_at),
   });
   if (!plan) return null;
   if (plan.usedFallback) {

@@ -17,8 +17,9 @@ function signature(expiresAt: string, secret: string) {
 
 export function validateAdminCredential(received: string | null) {
   const expected = configuredSecret();
-  if (!expected || !received || received.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+  if (!expected || !received) return false;
+  const left = Buffer.from(received), right = Buffer.from(expected);
+  return left.length === right.length && timingSafeEqual(left, right);
 }
 
 export function issueAdminSession(now = new Date(), durationSeconds = MAX_SESSION_SECONDS) {
@@ -39,6 +40,6 @@ export function validateAdminSession(value: string | undefined, now = new Date()
     || !Number.isInteger(expiry) || expiry <= nowSeconds
     || expiry > nowSeconds + MAX_SESSION_SECONDS) return false;
   const expected = signature(expiresAt, secret);
-  return received.length === expected.length
+  return /^[a-f0-9]{64}$/.test(received)
     && timingSafeEqual(Buffer.from(received), Buffer.from(expected));
 }

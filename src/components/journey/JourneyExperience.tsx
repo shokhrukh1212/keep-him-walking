@@ -128,6 +128,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const [voteOpen, setVoteOpen] = useState(false);
   const [replayOpen, setReplayOpen] = useState(false);
   const [loadingLive, setLoadingLive] = useState(true);
+  const [bootstrapIssue, setBootstrapIssue] = useState("The live journey is temporarily unavailable. Retrying…");
   const [renderedZone, setRenderedZone] = useState(() => ({
     id: initialSnapshot.assets.route.zones[0]?.id ?? "arrival",
     label: initialSnapshot.assets.route.zones[0]?.label ?? initialSnapshot.countryDay.cityName,
@@ -169,7 +170,13 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const refreshBootstrap = useCallback(async (): Promise<number> => {
     try {
       const response = await fetch("/api/bootstrap", { cache: "no-store" });
-      if (!response.ok) throw new Error("Bootstrap unavailable");
+      if (!response.ok) {
+        const failure = await response.json().catch(() => ({}));
+        setBootstrapIssue(failure.code === "NO_ACTIVE_DAY"
+          ? "No journey day is active right now. Retrying…"
+          : "The live journey is temporarily unavailable. Retrying…");
+        throw new Error("Bootstrap unavailable");
+      }
       const next = (await response.json()) as BootstrapSnapshot;
       setSnapshot(current=> next.mode !== "live" && current.mode === "live"
         ? {...current,presence:{...current.presence,status:"reconnecting"},steps:{...current.steps,stale:true}}
@@ -185,6 +192,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
       return Math.max(1_000, Math.min(5 * 60_000, next.refresh.afterMs));
     } catch {
+      if (!navigator.onLine) setBootstrapIssue("Your browser is offline. Waiting to reconnect…");
       setSnapshot((current) => current.mode === "live"
         ? {
             ...current,
@@ -738,14 +746,16 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
         <div className="connection-banner offline" role="status">
-          Offline preview · live counts, steps and voting are unavailable
+          {bootstrapIssue} Preview only · live counts, steps and voting are unavailable.
         </div>
       ) : null}
 
       {!puppetReady ? <Traveler pack={snapshot.assets} command={command} onReady={() => setTravelerReady(true)} /> : null}
       <WalkingRuleStatus
         walking={review?review.moving:walking}
-        label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : waking && wakeCountdown
+        label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : snapshot.mode === "offline_preview"
+          ? "Preview only · waiting for the live journey"
+          : waking && wakeCountdown
           ? `Waking up · starts walking in ${wakeCountdown}…`
           : walking && motion.action
           ? motion.action.label

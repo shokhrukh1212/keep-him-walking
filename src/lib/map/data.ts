@@ -78,7 +78,7 @@ export async function loadJourneyMap(): Promise<JourneyMapData | null> {
     const { data: vote } = await supabase.from("votes").select("id").eq("country_day_id", current.countryDayId).eq("status", "open").order("opens_at", { ascending: false }).limit(1).maybeSingle();
     if (vote) {
       const [{ data: options }, { data: ballots }] = await Promise.all([
-        supabase.from("vote_options").select("id,label,pack_id,country_code,display_order").eq("vote_id", vote.id).order("display_order", { ascending: true }),
+        supabase.from("vote_options").select("id,label,pack_id,display_order").eq("vote_id", vote.id).order("display_order", { ascending: true }),
         supabase.from("ballots").select("option_id").eq("vote_id", vote.id),
       ]);
       const total = (ballots ?? []).length;
@@ -90,7 +90,7 @@ export async function loadJourneyMap(): Promise<JourneyMapData | null> {
         return [{
           optionId: option.id,
           label: option.label,
-          countryCode: option.country_code?.trim() || pack.countryCode,
+          countryCode: pack.countryCode,
           lat: pack.lat,
           lon: pack.lon,
           percent: total > 0 ? Math.round(votes / total * 100) : 0,

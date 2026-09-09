@@ -1,8 +1,6 @@
 import "server-only";
 import { getCountryPack, registeredCountryPacks } from "@/content/countries/registry";
 import { buildDestinationCandidates } from "@/lib/vote/candidates";
-import { rolloverUtcHour } from "@/lib/config/server";
-import { nextRolloverAt } from "@/lib/story-clock/rollover-hour";
 import type { CountryPack } from "@/lib/content/schema";
 
 export type VoteWinner = {
@@ -46,13 +44,13 @@ export function planNextDay(input: {
   winnerPackId: string;
   dayNumber: number;
   visitedCountryCodes: readonly string[];
-  now: Date;
+  startsAt: Date;
   packs?: readonly CountryPack[];
 }): NextDayPlan | null {
   const pack = getCountryPack(input.winnerPackId);
   if (!pack) return null;
   const packs = input.packs ?? registeredCountryPacks();
-  const startsAt = nextRolloverAt(input.now, rolloverUtcHour());
+  const startsAt = input.startsAt;
   const endsAt = new Date(startsAt.getTime() + 86_400_000);
 
   const { candidates, usedFallback } = buildDestinationCandidates({

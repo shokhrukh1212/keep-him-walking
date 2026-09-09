@@ -8,6 +8,10 @@ import { hasTrustedOrigin } from "@/lib/validation/origin";
 
 const bodySchema = z.object({ secret: z.string().min(1).max(512) });
 
+export function GET(request: NextRequest) {
+  return NextResponse.redirect(new URL("/admin-login", request.url), 303);
+}
+
 function protectedClientKey(request: NextRequest) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const address = forwarded || request.headers.get("x-real-ip")?.trim() || "unknown";

@@ -20,8 +20,8 @@ async function handleGet(request: NextRequest) {
     const snapshot = await liveBootstrapSnapshot(visitorHash);
     if (!snapshot) {
       const response = NextResponse.json(
-        { error: "Live journey is not configured or no country-day is active." },
-        { status: 503 },
+        { code: "NO_ACTIVE_DAY", error: "Live journey is not configured or no country-day is active." },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
       );
       attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
       return response;
@@ -46,8 +46,8 @@ async function handleGet(request: NextRequest) {
       console.error("Live bootstrap failed", cause);
     }
     const response = NextResponse.json(
-      { error: "The live snapshot is temporarily unavailable." },
-      { status: 503 },
+      { code: "LIVE_UNAVAILABLE", error: "The live snapshot is temporarily unavailable." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
     );
     attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
     return response;
