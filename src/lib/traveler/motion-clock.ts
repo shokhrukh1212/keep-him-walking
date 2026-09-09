@@ -15,6 +15,21 @@ export const ACTION_DURATIONS = {
 
 type RouteActionKind = keyof typeof ACTION_DURATIONS | "encounter";
 
+/** The three things the crowd can ask for. Server-side these are enums. */
+export type CrowdActionKind = "wave" | "drink" | "photo";
+
+/** One crowd action the server has already committed to, on the raw-second clock. */
+export type ScheduledCrowdAction = {
+  kind: CrowdActionKind;
+  atActiveSecond: number;
+};
+
+const CROWD_ACTION_LABELS: Record<CrowdActionKind, string> = {
+  wave: "Waving back",
+  drink: "Taking a drink",
+  photo: "Taking a photograph",
+};
+
 export type TravelerMotionAction = {
   kind: RouteActionKind;
   state: TravelerState;
@@ -22,6 +37,8 @@ export type TravelerMotionAction = {
   elapsedSeconds: number;
   durationSeconds: number;
   progress: number;
+  /** Route beats come from the pack; crowd actions come from the watchers. */
+  source: "route" | "crowd";
   encounterPhase?:
     | "notice"
     | "slow_walk"
@@ -128,7 +145,11 @@ function actionsForPack(pack: CountryPack): ScheduledAction[] {
   }).sort((left, right) => left.atMetres - right.atMetres);
 }
 
-function actionState(action: ScheduledAction, elapsedSeconds: number): TravelerMotionAction {
+function actionState(
+  action: ScheduledAction,
+  elapsedSeconds: number,
+  source: TravelerMotionAction["source"] = "route",
+): TravelerMotionAction {
   const progress = Math.min(1, Math.max(0, elapsedSeconds / action.durationSeconds));
   if (action.kind !== "encounter") {
     const transitionIn = 0.45;
@@ -138,7 +159,7 @@ function actionState(action: ScheduledAction, elapsedSeconds: number): TravelerM
       : elapsedSeconds >= action.durationSeconds - transitionOut
         ? "resume_walk"
         : action.kind;
-    return { ...action, state, elapsedSeconds, progress };
+    return { ...action, source, state, elapsedSeconds, progress };
   }
 
   const lines = action.lines ?? [];
@@ -152,7 +173,7 @@ function actionState(action: ScheduledAction, elapsedSeconds: number): TravelerM
   for (const [duration, phase] of fixed) {
     cursor += duration;
     if (elapsedSeconds < cursor) {
-      return { ...action, state: phase!, encounterPhase: phase, elapsedSeconds, progress };
+      return { ...action, source, state: phase!, encounterPhase: phase, elapsedSeconds, progress };
     }
   }
   for (let index = 0; index < lines.length; index += 1) {
@@ -161,6 +182,7 @@ function actionState(action: ScheduledAction, elapsedSeconds: number): TravelerM
       const phase = lines[index]?.speaker === "traveler" ? "talk" : "listen";
       return {
         ...action,
+        source,
         state: phase,
         encounterPhase: phase,
         dialogueLineIndex: index,
@@ -171,13 +193,13 @@ function actionState(action: ScheduledAction, elapsedSeconds: number): TravelerM
   }
   cursor += 2.5;
   if (elapsedSeconds < cursor) {
-    return { ...action, state: "react", encounterPhase: "react", elapsedSeconds, progress };
+    return { ...action, source, state: "react", encounterPhase: "react", elapsedSeconds, progress };
   }
   cursor += 2.5;
   if (elapsedSeconds < cursor) {
-    return { ...action, state: "goodbye", encounterPhase: "goodbye", elapsedSeconds, progress };
+    return { ...action, source, state: "goodbye", encounterPhase: "goodbye", elapsedSeconds, progress };
   }
-  return { ...action, state: "resume_walk", encounterPhase: "resume_walk", elapsedSeconds, progress };
+  return { ...action, source, state: "resume_walk", encounterPhase: "resume_walk", elapsedSeconds, progress };
 }
 
 function gaitFrameAt(cyclePhase: number) {
@@ -188,14 +210,72 @@ function gaitFrameAt(cyclePhase: number) {
 }
 
 /**
+ * Resolves which crowd action, if any, the traveler is performing right now.
+ *
+ * Crowd actions are scheduled by the server on the raw watched-second clock and
+ * are pinned to the same 0.6 s planted-foot grid the route beats use, so every
+ * viewer performs them on the same footfall.
+ *
+ * A crowd action never interrupts a route beat: the beat always wins. To make
+ * that a deferral rather than a silent drop, the elapsed time is the smaller of
+ * the time since the action was scheduled and the time since the last route beat
+ * finished. Both are derived from the authoritative inputs alone — the second
+ * from distance, which is why it works without any history — so an action that
+ * was scheduled mid-encounter starts cleanly the moment the goodbye ends.
+ */
+function crowdActionAt(
+  rawActiveSeconds: number,
+  distanceMetres: number,
+  scheduled: readonly ScheduledCrowdAction[],
+  routeBeatActive: boolean,
+  lastCompletedBeatEndMetres: number,
+): TravelerMotionAction | null {
+  if (routeBeatActive || scheduled.length === 0) return null;
+  const sinceLastBeat = Number.isFinite(lastCompletedBeatEndMetres)
+    ? Math.max(0, (distanceMetres - lastCompletedBeatEndMetres) / METRES_PER_SECOND)
+    : Number.POSITIVE_INFINITY;
+
+  const ordered = [...scheduled]
+    .filter((entry) => Number.isFinite(entry.atActiveSecond) && entry.kind in CROWD_ACTION_LABELS)
+    .sort((left, right) => left.atActiveSecond - right.atActiveSecond
+      || left.kind.localeCompare(right.kind));
+
+  let best: { entry: ScheduledCrowdAction; elapsed: number } | null = null;
+  for (const entry of ordered) {
+    const sinceScheduled = rawActiveSeconds - alignedStep(entry.atActiveSecond);
+    if (sinceScheduled < 0) continue;
+    const elapsed = Math.min(sinceScheduled, sinceLastBeat);
+    if (elapsed >= ACTION_DURATIONS[entry.kind]) continue;
+    if (best === null || elapsed < best.elapsed) best = { entry, elapsed };
+  }
+  if (best === null) return null;
+
+  return actionState(
+    {
+      atMetres: distanceMetres,
+      kind: best.entry.kind,
+      durationSeconds: ACTION_DURATIONS[best.entry.kind],
+      label: CROWD_ACTION_LABELS[best.entry.kind],
+    },
+    best.elapsed,
+    "crowd",
+  );
+}
+
+/**
  * Converts server-owned watcher time and distance into the canonical motion
  * timeline. Metre beats are rounded onto a planted-foot boundary; distance
  * remains the authoritative world track while the gait holds for an action.
+ *
+ * Crowd actions the server has already scheduled are merged in as a fourth
+ * authoritative input. They never displace a route beat and never alter the
+ * locomotion clock, so step counts and the gait stay exactly as they were.
  */
 export function travelerMotionAt(
   pack: CountryPack,
   rawActiveSeconds: number,
   distanceMetres = rawActiveSeconds * METRES_PER_SECOND,
+  scheduledActions: readonly ScheduledCrowdAction[] = [],
 ): TravelerMotionSnapshot {
   const raw = Math.max(0, Number.isFinite(rawActiveSeconds) ? rawActiveSeconds : 0);
   const distance = Math.max(0, Number.isFinite(distanceMetres) ? distanceMetres : 0);
@@ -203,6 +283,7 @@ export function travelerMotionAt(
   let pausedSeconds = 0;
   let activeAction: TravelerMotionAction | null = null;
   let actionSeconds = 0;
+  let lastCompletedBeatEndMetres = Number.NEGATIVE_INFINITY;
 
   for (const action of actions) {
     if (distance < action.atMetres) break;
@@ -215,7 +296,18 @@ export function travelerMotionAt(
     }
     pausedSeconds += action.durationSeconds;
     actionSeconds += 1.2;
+    lastCompletedBeatEndMetres = action.atMetres
+      + action.durationSeconds * METRES_PER_SECOND;
   }
+
+  const crowdAction = crowdActionAt(
+    raw,
+    distance,
+    scheduledActions,
+    activeAction !== null,
+    lastCompletedBeatEndMetres,
+  );
+  const resolvedAction = activeAction ?? crowdAction;
 
   const routeSeconds = distance / METRES_PER_SECOND;
   const locomotionSeconds = Math.max(0, raw - pausedSeconds + actionSeconds);
@@ -232,9 +324,22 @@ export function travelerMotionAt(
     cyclePhase,
     stepPhase,
     gaitFrameIndex: gaitFrameAt(cyclePhase),
-    speedFactor: activeAction ? actionTravel(activeAction.elapsedSeconds,activeAction.durationSeconds).speed : 1,
-    action: activeAction,
+    speedFactor: resolvedAction
+      ? actionTravel(resolvedAction.elapsedSeconds, resolvedAction.durationSeconds).speed
+      : 1,
+    action: resolvedAction,
   };
+}
+
+/**
+ * The crowd action he is performing right now, if the current action came from
+ * the watchers rather than from the pack's own story beats.
+ */
+export function crowdActionKindOf(
+  action: TravelerMotionAction | null | undefined,
+): CrowdActionKind | null {
+  if (!action || action.source !== "crowd") return null;
+  return action.kind in CROWD_ACTION_LABELS ? (action.kind as CrowdActionKind) : null;
 }
 
 export function visibleStepsBetween(

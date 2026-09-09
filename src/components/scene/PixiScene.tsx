@@ -15,6 +15,10 @@ import { segmentVariant } from "@/lib/world/segment-sequencer";
 import { composedSegmentSignature } from "@/lib/world/segment-sequencer";
 import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import { contactShadowLayout, gradeMatrix, type CharacterContacts, type VisualGrade } from "@/lib/world/visual-grade";
+import type { ScheduledActionView } from "@/lib/contracts";
+import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
+
+const EMPTY_SCHEDULED_ACTIONS: readonly ScheduledActionView[] = [];
 
 type Props = {
   pack: CountryPack;
@@ -23,6 +27,8 @@ type Props = {
   onStageFrame: (frame: StageFrame, source: "static" | "pixi") => void;
   routeSeconds: number;
   routeRuntime: RouteRuntime;
+  scheduledActions?: readonly ScheduledActionView[];
+  onCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
   reducedMotion: boolean;
   qualityTier: QualityTier;
@@ -34,7 +40,8 @@ type Props = {
   onFailure: () => void;
 };
 
-type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">;
+type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">
+  & { scheduledActions: readonly ScheduledActionView[] };
 
 export function PixiScene({
   pack,
@@ -43,6 +50,8 @@ export function PixiScene({
   onStageFrame,
   routeSeconds,
   routeRuntime,
+  scheduledActions = EMPTY_SCHEDULED_ACTIONS,
+  onCaptureReady,
   command,
   reducedMotion,
   qualityTier,
@@ -54,17 +63,17 @@ export function PixiScene({
   onFailure,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand });
+  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions });
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const diagnosticsCallback = useRef(onDiagnostics);
 
   useEffect(() => {
-    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand };
+    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     diagnosticsCallback.current = onDiagnostics;
-  }, [command, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, travelerCommand, onMotionSample]);
+  }, [command, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -393,6 +402,15 @@ export function PixiScene({
         let lastDiagnosticAt = 0;
         let lastMotionAt=0;
         const frameSamples: number[] = [];
+        // Pixi's extract re-renders into a texture, so it returns a correct
+        // frame whether or not the drawing buffer was preserved.
+        onCaptureReady?.(async () => {
+          try {
+            return app.renderer.extract.canvas(app.stage) as HTMLCanvasElement;
+          } catch {
+            return null;
+          }
+        });
         app.ticker.add(() => {
           if (document.hidden) return;
           const state = runtime.current;
@@ -406,7 +424,7 @@ export function PixiScene({
           if (frameSamples.length > 180) frameSamples.shift();
           clock.accept(state.routeRuntime, state.travelerCommand?.presenceTtlMs ?? 50_000, tickAt);
           const sample = clock.sample(tickAt);
-          const motion = travelerMotionAt(pack, sample.rawSeconds, sample.distanceMetres);
+          const motion = travelerMotionAt(pack, sample.rawSeconds, sample.distanceMetres, state.scheduledActions);
           if(tickAt-lastMotionAt>=100) {lastMotionAt=tickAt;motionCallback.current?.({assetVersion:pack.assetVersion,motion});}
           displayedSeconds = sample.rawSeconds;
           displayedDistance = sample.distanceMetres;
@@ -680,9 +698,10 @@ export function PixiScene({
     void mount();
     return () => {
       disposed = true;
+      onCaptureReady?.(null);
       cleanup();
     };
-  }, [onFailure, onReady, onStageFrame, pack, qualityTier, contacts, gradeRef]);
+  }, [onFailure, onReady, onStageFrame, pack, qualityTier, contacts, gradeRef, onCaptureReady]);
 
   return <div className="pixi-scene" ref={host} aria-hidden="true" />;
 }

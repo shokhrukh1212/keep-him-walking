@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { BootstrapSnapshot, HeartbeatResponse } from "@/lib/contracts";
 import { travelerMotionAt } from "@/lib/traveler/motion-clock";
+import { mergeScheduledActions } from "@/lib/reactions/payload";
 import {
   extrapolatedRouteDistance,
   extrapolatedRouteSeconds,
@@ -26,14 +27,26 @@ export function useRouteRuntime(
       : snapshot.route;
     const rawSeconds = extrapolatedRouteSeconds(runtime, serverNowMs);
     const distanceMetres = extrapolatedRouteDistance(runtime, serverNowMs);
-    const motion = travelerMotionAt(snapshot.assets, rawSeconds, distanceMetres);
+    // Crowd actions the server has already committed to, from whichever of the
+    // two authoritative payloads carried them.
+    const scheduledActions = mergeScheduledActions(
+      snapshot.reactions.scheduled,
+      heartbeat?.reactions.scheduled,
+    );
+    const motion = travelerMotionAt(
+      snapshot.assets,
+      rawSeconds,
+      distanceMetres,
+      scheduledActions,
+    );
     return {
       runtime,
       rawSeconds,
       distanceMetres,
+      scheduledActions,
       motion,
       seconds: rawSeconds,
       position: routePositionAt(snapshot.assets, distanceMetres),
     };
-  }, [heartbeat, serverNowMs, snapshot.assets, snapshot.route]);
+  }, [heartbeat, serverNowMs, snapshot.assets, snapshot.reactions.scheduled, snapshot.route]);
 }

@@ -4,6 +4,7 @@ import type {
   TravelerState,
 } from "@/lib/content/schema";
 import type { RouteRuntime } from "@/lib/world/types";
+import type { CrowdActionKind } from "@/lib/traveler/motion-clock";
 
 export type ConnectionStatus = "live" | "reconnecting" | "offline";
 
@@ -58,6 +59,30 @@ export type CountryWatchView = {
   watchSeconds: number;
 };
 
+/** Live 30-second bucket counts for the three reaction enums. */
+export type ReactionCounts = {
+  wave: number;
+  water: number;
+  photo: number;
+};
+
+export type ScheduledActionView = {
+  kind: CrowdActionKind;
+  atActiveSecond: number;
+};
+
+export type DayPhotoView = {
+  atActiveSecond: number;
+  url: string;
+};
+
+export type ReactionsView = {
+  counts: ReactionCounts;
+  /** Recent and upcoming crowd actions, fed straight into travelerMotionAt. */
+  scheduled: ScheduledActionView[];
+  nextScheduledAction: ScheduledActionView | null;
+};
+
 export type BootstrapSnapshot = {
   serverNow: string;
   realServerNow: string;
@@ -81,6 +106,9 @@ export type BootstrapSnapshot = {
     live: LiveCountryView[];
     todayTop: CountryWatchView[];
   };
+  reactions: ReactionsView;
+  /** The day's last six crowd photographs, newest first. */
+  dayPhotos: DayPhotoView[];
   steps: {
     global: number;
     updatedAt: string;
@@ -127,4 +155,5 @@ export type HeartbeatResponse = {
   wokeHim: boolean;
   /** The edge-derived country the server credited this heartbeat to. */
   countryCode: string;
+  reactions: ReactionsView;
 };

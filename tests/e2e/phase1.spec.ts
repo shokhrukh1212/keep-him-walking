@@ -83,6 +83,8 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       waitingSince: null,
     },
     countries: { live: [], todayTop: [] },
+    reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
+    dayPhotos: [],
     steps: {
       global: server.steps,
       updatedAt: now.toISOString(),

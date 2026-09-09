@@ -17,6 +17,8 @@ export const RATE_LIMITS = {
   sponsorMetric: { action: "sponsor_metric", limit: 60, windowSeconds: 300 },
   sponsorClick: { action: "sponsor_click", limit: 20, windowSeconds: 300 },
   notification: { action: "notification", limit: 8, windowSeconds: 300 },
+  reaction: { action: "reaction", limit: 12, windowSeconds: 60 },
+  dayPhoto: { action: "day_photo", limit: 4, windowSeconds: 300 },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 export async function consumeRateLimit(keyHash: string, policy: RateLimitPolicy, now = new Date()) {

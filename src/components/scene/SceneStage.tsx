@@ -10,6 +10,8 @@ import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { StaticScene } from "./StaticScene";
 import { stageScaleWarning, type StageFrame } from "@/lib/world/stage-layout";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
+import type { ScheduledActionView } from "@/lib/contracts";
+import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 
 const PixiScene = dynamic(
   () => import("./PixiScene").then((module) => module.PixiScene),
@@ -25,6 +27,9 @@ type Props = {
   routeSeconds: number;
   routeDistanceMetres: number;
   routeRuntime: RouteRuntime;
+  scheduledActions?: readonly ScheduledActionView[];
+  onWorldCaptureReady?: (capture: CanvasCapture | null) => void;
+  onCharacterCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
   qualityTier: QualityTier;
   reducedMotion: boolean;
@@ -43,6 +48,9 @@ export function SceneStage({
   routeSeconds,
   routeDistanceMetres,
   routeRuntime,
+  scheduledActions,
+  onWorldCaptureReady,
+  onCharacterCaptureReady,
   command,
   qualityTier,
   reducedMotion,
@@ -117,6 +125,8 @@ export function SceneStage({
           onStageFrame={publishStage}
           routeSeconds={routeSeconds}
           routeRuntime={routeRuntime}
+          scheduledActions={scheduledActions}
+          onCaptureReady={onWorldCaptureReady}
           command={command}
           qualityTier={qualityTier}
           reducedMotion={reducedMotion}
@@ -134,6 +144,8 @@ export function SceneStage({
         pack={pack}
         stageFrame={stageFrame}
         routeRuntime={routeRuntime}
+        scheduledActions={scheduledActions}
+        onCaptureReady={onCharacterCaptureReady}
         command={travelerCommand}
         qualityTier={qualityTier}
         onTravelerAvailability={onTravelerReady}

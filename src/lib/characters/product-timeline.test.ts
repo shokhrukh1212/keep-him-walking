@@ -78,6 +78,7 @@ describe("product character timeline", () => {
       action: {
         kind: "drink" as const,
         state: "drink" as const,
+        source: "route" as const,
         label: "Taking a short drink",
         elapsedSeconds: 2.75,
         durationSeconds: 5.5,
@@ -96,6 +97,7 @@ describe("product character timeline", () => {
       action: {
         kind: "encounter" as const,
         state: "talk" as const,
+        source: "route" as const,
         label: "Talking",
         elapsedSeconds: 5.5,
         durationSeconds: 30,

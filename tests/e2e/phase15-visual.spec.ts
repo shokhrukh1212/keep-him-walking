@@ -31,6 +31,8 @@ function snapshot(routeSeconds: number): BootstrapSnapshot {
     vote: null,
     presence: { activeViewers: 1, status: "live", ttlSeconds: 1, waitingSince: null },
     countries: { live: [], todayTop: [] },
+    reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
+    dayPhotos: [],
     steps: { global: Math.floor(routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
     route: { globalActiveSeconds: routeSeconds, globalDistanceMetres: routeSeconds * 1.25, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },

@@ -6,6 +6,7 @@ import { serverRuntimeConfig } from "@/lib/config/server";
 import type {
   BootstrapSnapshot,
   CountryDayView,
+  DayPhotoView,
   ScheduledEventView,
   VoteView,
 } from "@/lib/contracts";
@@ -13,6 +14,7 @@ import { dialogueLineSchema, travelerStateSchema } from "@/lib/content/schema";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { scaledStoryNow } from "@/lib/story-clock/schedule";
 import { RATE_LIMITS } from "@/lib/security/rate-limit";
+import { reactionsFromRow, type RawReactionsPayload } from "@/lib/reactions/payload";
 
 const eventPayloadSchema = z.object({
   travelerState: travelerStateSchema.optional(),
@@ -71,6 +73,12 @@ type BootstrapBundleRow = {
   countries: null | {
     live: Array<{ code: string; watchers: number }>;
     top: Array<{ code: string; watchSeconds: number }>;
+  };
+  reactions: null | {
+    counts: { wave: number; water: number; photo: number };
+    scheduled: Array<{ kind: string; atActiveSecond: number }>;
+    nextScheduledAction: null | { kind: string; atActiveSecond: number };
+    photos: Array<{ atActiveSecond: number; storagePath: string }>;
   };
   contribution_seconds: number | null;
   postcard: null | { public_token: string; status: string; expires_at: string };
@@ -190,6 +198,19 @@ function countriesView(
   };
 }
 
+function dayPhotosView(
+  payload: BootstrapBundleRow["reactions"] | null | undefined,
+  config: ReturnType<typeof serverRuntimeConfig>,
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+): DayPhotoView[] {
+  return (Array.isArray(payload?.photos) ? payload.photos : [])
+    .filter((row) => typeof row?.storagePath === "string" && row.storagePath.length > 0)
+    .map((row) => ({
+      atActiveSecond: Number(row.atActiveSecond ?? 0),
+      url: supabase.storage.from(config.dayPhotoBucket).getPublicUrl(row.storagePath).data.publicUrl,
+    }));
+}
+
 function bootstrapFromBundle(
   bundle: BootstrapBundleRow,
   visitorHash: string,
@@ -268,6 +289,8 @@ function bootstrapFromBundle(
         : null,
     },
     countries: countriesView(bundle.countries),
+    reactions: reactionsFromRow(bundle.reactions),
+    dayPhotos: dayPhotosView(bundle.reactions, config, supabase),
     steps: {
       global: Number(bundle.runtime.out_global_steps ?? 0),
       updatedAt: String(bundle.runtime.out_accounted_at),
@@ -392,7 +415,7 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v6", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v7", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -434,7 +457,13 @@ export async function liveBootstrapSnapshot(
       p_ttl_seconds: config.presenceTtlSeconds,
       p_steps_per_second: config.stepsPerActiveSecond,
     });
-  const [{ data: runtime, error: runtimeError }, events, vote, { data: countries }] = await Promise.all([
+  const [
+    { data: runtime, error: runtimeError },
+    events,
+    vote,
+    { data: countries },
+    { data: reactions },
+  ] = await Promise.all([
     runtimeRequest,
     loadEvents(countryDay.id, storyNow),
     loadVote(countryDay.id, visitorHash, storyNow),
@@ -442,6 +471,11 @@ export async function liveBootstrapSnapshot(
       p_country_day_id: countryDay.id,
       p_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
+    }),
+    supabase.rpc("read_day_reactions", {
+      p_country_day_id: countryDay.id,
+      p_now: now.toISOString(),
+      p_global_active_seconds: 0,
     }),
   ]);
   if (runtimeError) throw runtimeError;
@@ -516,6 +550,8 @@ export async function liveBootstrapSnapshot(
       waitingSince: row?.out_waiting_since ? String(row.out_waiting_since) : null,
     },
     countries: countriesView(countries as BootstrapBundleRow["countries"]),
+    reactions: reactionsFromRow(reactions as RawReactionsPayload),
+    dayPhotos: dayPhotosView(reactions as BootstrapBundleRow["reactions"], config, supabase),
     steps: {
       global: Number(row?.out_global_steps ?? 0),
       updatedAt: String(row?.out_accounted_at ?? now.toISOString()),

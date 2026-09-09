@@ -54,6 +54,8 @@ function snapshot(routeSeconds: number, event: ScheduledEventView): BootstrapSna
       clickUrl: null,
     },
     countries: { live: [], todayTop: [] },
+    reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
+    dayPhotos: [],
     postcard: { eligible: true, unlockSeconds: 60, contributedSeconds: 75, url: null },
     assets: recordingPack,
   };

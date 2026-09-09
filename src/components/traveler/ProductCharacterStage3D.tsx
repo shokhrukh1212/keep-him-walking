@@ -16,6 +16,24 @@ import { travelerMotionAt } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import type { QualityTier, RouteRuntime } from "@/lib/world/types";
+import type { ScheduledActionView } from "@/lib/contracts";
+
+const EMPTY_SCHEDULED_ACTIONS: readonly ScheduledActionView[] = [];
+
+/** Hands the parent a way to copy this canvas at a point where it is intact. */
+/** Copies this canvas at a point where its drawing buffer is known to be intact. */
+export type CanvasCapture = () => Promise<HTMLCanvasElement | null>;
+
+function copyCanvas(source: HTMLCanvasElement): HTMLCanvasElement | null {
+  if (source.width === 0 || source.height === 0) return null;
+  const copy = document.createElement("canvas");
+  copy.width = source.width;
+  copy.height = source.height;
+  const context = copy.getContext("2d");
+  if (!context) return null;
+  context.drawImage(source, 0, 0);
+  return copy;
+}
 
 type Props = {
   pack: CountryPack;
@@ -23,6 +41,8 @@ type Props = {
   contacts: RefObject<CharacterContacts>;
   grade: RefObject<VisualGrade>;
   routeRuntime: RouteRuntime;
+  scheduledActions?: readonly ScheduledActionView[];
+  onCaptureReady?: (capture: CanvasCapture | null) => void;
   command?: TravelerCommand;
   qualityTier: QualityTier;
   onTravelerAvailability?: (available: boolean) => void;
@@ -50,7 +70,25 @@ function disposeModel(root: THREE.Object3D) {
 export function ProductCharacterStage3D(props: Props) {
   const host = useRef<HTMLDivElement>(null);
   const latest = useRef(props);
+  const captureWaiters = useRef<Array<(frame: HTMLCanvasElement | null) => void>>([]);
   useEffect(() => { latest.current = props; }, [props]);
+  const onCaptureReady = props.onCaptureReady;
+  useEffect(() => {
+    if (!onCaptureReady) return;
+    // Asking for a frame waits for the next draw. If the loop is paused — a
+    // hidden tab, a lost context — the request resolves empty instead of hanging.
+    onCaptureReady(() => new Promise((resolve) => {
+      let settled = false;
+      const settle = (frame: HTMLCanvasElement | null) => {
+        if (settled) return;
+        settled = true;
+        resolve(frame);
+      };
+      captureWaiters.current.push(settle);
+      window.setTimeout(() => settle(null), 1_000);
+    }));
+    return () => onCaptureReady(null);
+  }, [onCaptureReady]);
 
   useEffect(() => {
     const element = host.current;
@@ -162,7 +200,12 @@ export function ProductCharacterStage3D(props: Props) {
       lastRender = now;
       clock.accept(state.routeRuntime, state.command?.presenceTtlMs ?? 50_000, now);
       const sample = clock.sample(now);
-      const motion = travelerMotionAt(state.pack, sample.rawSeconds, sample.distanceMetres);
+      const motion = travelerMotionAt(
+        state.pack,
+        sample.rawSeconds,
+        sample.distanceMetres,
+        state.scheduledActions ?? EMPTY_SCHEDULED_ACTIONS,
+      );
       const cue = productCharacterSceneAt(
         state.pack,
         motion,
@@ -226,6 +269,14 @@ export function ProductCharacterStage3D(props: Props) {
       element.dataset.outline = String(state.qualityTier !== "low");
       element.dataset.grade = JSON.stringify(state.grade.current);
       renderer.render(scene, camera);
+      // The drawing buffer is only guaranteed here, immediately after the draw,
+      // so the copy is taken synchronously rather than with preserveDrawingBuffer.
+      if (captureWaiters.current.length > 0) {
+        const frame = copyCanvas(renderer.domElement);
+        const waiters = captureWaiters.current;
+        captureWaiters.current = [];
+        for (const waiter of waiters) waiter(frame);
+      }
     };
     raf = requestAnimationFrame(draw);
 

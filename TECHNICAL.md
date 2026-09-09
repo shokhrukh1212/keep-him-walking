@@ -236,6 +236,17 @@ sets the active walk action's effective time scale to 1.25, while deterministic
 underlying `travelerMotionAt` sample is untouched, so `plantIndex`, `plantedFoot`, HUD
 footfalls, route actions and distance all retain their original derivation.
 
+Crowd actions are the fourth authoritative input to `travelerMotionAt`. They are
+scheduled by the server on the raw watched-second clock and snapped to the same 0.6 s
+planted-foot grid the route beats use, so every viewer performs them on the same
+footfall. A route beat always wins: a crowd action never interrupts an encounter.
+Rather than dropping a swallowed action, its elapsed time is
+`min(seconds since it was scheduled, seconds since the last route beat ended)` — the
+second term is derived from distance, so it needs no history and stays pure, and a
+wave scheduled mid-encounter starts cleanly the moment the goodbye ends. Crowd actions
+deliberately do **not** feed the locomotion clock, so `plantIndex`, step counts and the
+gait are byte-identical with and without them.
+
 **One divergence worth knowing:** the database's `global_steps` uses the configurable
 `STEPS_PER_ACTIVE_SECOND` (default **1.8**/s), while every displayed step count uses
 `plantIndex` from the 0.6 s gait (**1.667**/s). The UI reads the gait-derived number, so
@@ -1018,7 +1029,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (14 forward migrations)
+### Tables (15 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1053,24 +1064,35 @@ visible delta to its own country row, and bootstrap v6 carries the live/leaderbo
 projection. **No IP is read, stored or logged anywhere on this path** — the two-letter
 edge header is the whole of the location signal.
 
+**Season 1 migration 0015, reactions:** the `reaction_kind` enum plus
+`reaction_windows` (30-second buckets), `scheduled_actions` (unique per active second
+per day) and `day_photos` (unique per active second). `submit_reaction` rate-limits one
+reaction per kind per visitor per minute through `consume_mutation_rate_limit`,
+increments the live bucket, and — at `greatest(2, ceil(0.3 × live watchers))`, with no
+same-kind action inside the last 120 active seconds — schedules the action at
+`global_active_seconds + 2` and resets the bucket. Heartbeat v6 and bootstrap v7 carry
+the bucket counts, the recent/next scheduled actions and the day's last six photographs.
+
 ### Key RPCs
 
 `record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule, distinct-watcher
-pace and pace-weighted distance) → `_v5` (per-country watch aggregation),
-`normalize_country_code`, `read_country_day_watch`,
+pace and pace-weighted distance) → `_v5` (per-country watch aggregation) → `_v6`
+(reaction buckets and scheduled crowd actions),
+`normalize_country_code`, `read_country_day_watch`, `reaction_threshold`,
+`submit_reaction`, `read_day_reactions`, `record_day_photo`,
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `cleanup_phase2_retention`, `journey_story_now`,
 `read_journey_runtime_v3` / `_v4` / `_v5`,
-`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6`
-(one-call bootstrap with atomic admission control, the distance projection and the
-country aggregate),
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7`
+(one-call bootstrap with atomic admission control, the distance projection, the
+country aggregate and the reaction board),
 `set_country_notification_opt_in`.
 
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (17)
+### Route handlers (19)
 
 ```
 GET  /api/bootstrap                 full snapshot: day, event, vote, presence, steps,
@@ -1088,6 +1110,8 @@ GET  /api/calendar                  .ics for tomorrow
 POST /api/notifications/country     revocable, provider-gated opt-in
 GET  /api/cron/rollover             daily reconciliation (authorized)
 GET  /api/health                    database + registered-pack readiness
+POST /api/reactions                 enum reaction, per-kind cooldown, crowd threshold
+POST /api/day-photos                the crowd's photograph for a scheduled moment
 POST /api/observability/vitals
 GET  /api/admin/preview/[packId]    protected non-production pack preview
 POST /api/admin/preview/session     expiring signed HTTP-only preview session

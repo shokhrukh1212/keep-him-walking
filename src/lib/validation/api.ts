@@ -25,3 +25,14 @@ export const sponsorMetricBodySchema = z.object({
   publicId: z.string().uuid(),
   eventType: z.enum(["impression", "engaged_view", "postcard_created", "postcard_shared", "session"]),
 });
+
+/** Reactions are a closed enum. No visitor free text is ever accepted here. */
+export const reactionBodySchema = z.object({
+  kind: z.enum(["wave", "water", "photo"]),
+});
+
+export const dayPhotoQuerySchema = z.object({
+  countryDayId: z.uuid(),
+  atActiveSecond: z.number().int().min(0).max(86_400 * 2),
+  atDistanceMetres: z.number().min(0).max(1_000_000),
+});

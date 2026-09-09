@@ -14,7 +14,7 @@ import {
   synchronizeClock,
 } from "@/lib/story-clock";
 import type { TravelerCommand } from "@/lib/traveler/types";
-import { travelerMotionAt, visibleStepsBetween, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { crowdActionKindOf, travelerMotionAt, visibleStepsBetween, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { sponsorPresentation } from "@/lib/traveler/demo-sponsor";
 import { useJourneyAudio } from "@/hooks/useJourneyAudio";
 import { useJourneyPresence } from "@/hooks/useJourneyPresence";
@@ -33,6 +33,10 @@ import { Traveler } from "@/components/traveler/Traveler";
 import { EncounterDialogue } from "@/components/dialogue/EncounterDialogue";
 import { JourneyHud } from "@/components/hud/JourneyHud";
 import { ContributionMeter } from "@/components/hud/ContributionMeter";
+import { ReactionButtons } from "@/components/hud/ReactionButtons";
+import { DayPhotoStrip } from "@/components/journey/DayPhotoStrip";
+import { composeDayPhoto } from "@/lib/photos/capture";
+import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 import { SoundMotionControls } from "@/components/hud/SoundMotionControls";
 import { DailyVote } from "@/components/vote/DailyVote";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
@@ -336,12 +340,18 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       if (walkedTimer) window.clearTimeout(walkedTimer);
     };
   }, [hasWalked, locomotionPhase]);
+  // Only the visitor whose reaction crossed the threshold uploads the frame.
+  const worldCapture = useRef<CanvasCapture | null>(null);
+  const characterCapture = useRef<CanvasCapture | null>(null);
+  const ownedPhotoSecond = useRef<number | null>(null);
+  const uploadedPhotoSecond = useRef<number | null>(null);
   const {
     runtime: routeRuntime,
     motion: estimatedMotion,
     seconds: routeSeconds,
     distanceMetres,
     position: routePosition,
+    scheduledActions,
   } =
     useRouteRuntime(
       snapshot,
@@ -377,6 +387,39 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
   const activeRouteZone = snapshot.assets.route.zones[routePosition.zoneIndex];
   const eventStage = activeRouteZone?.eventStage;
+  // When the crowd's photograph actually fires, the visitor who triggered it
+  // composes the live frame and posts it. Everyone else just sees the flash.
+  const crowdKind = crowdActionKindOf(motion.action);
+  useEffect(() => {
+    const owned = ownedPhotoSecond.current;
+    if (crowdKind !== "photo" || owned === null) return;
+    if (uploadedPhotoSecond.current === owned) return;
+    uploadedPhotoSecond.current = owned;
+    // He stands at the pack's viewport anchor, on the zone's ground line. Both
+    // are normalized, so the crop frames him at any canvas size.
+    const focus = {
+      x: snapshot.assets.route.travelerViewportAnchor,
+      y: snapshot.assets.route.zones[routePosition.zoneIndex]?.stage.groundLineY ?? 0.82,
+    };
+    void (async () => {
+      const [world, character] = await Promise.all([
+        worldCapture.current?.() ?? Promise.resolve(null),
+        characterCapture.current?.() ?? Promise.resolve(null),
+      ]);
+      const blob = await composeDayPhoto(world, character, focus);
+      if (!blob) return;
+      const query = new URLSearchParams({
+        atActiveSecond: String(owned),
+        atDistanceMetres: String(Math.max(0, Math.round(distanceMetres))),
+      });
+      await fetch(`/api/day-photos?${query.toString()}`, {
+        method: "POST",
+        headers: { "content-type": blob.type || "image/webp" },
+        body: blob,
+      }).catch(() => null);
+    })();
+  }, [crowdKind, distanceMetres, routePosition.zoneIndex, snapshot.assets]);
+
   const worldCommand = {
     ...baseWorldCommand,
     speedFactor: motion.action ? 0 : locomotionSpeed,
@@ -600,6 +643,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   return (
     <main className="journey-shell" data-motion={reducedMotion ? "reduced" : "full"}>
       <SceneStage
+        scheduledActions={scheduledActions}
+        onWorldCaptureReady={(capture) => { worldCapture.current = capture; }}
+        onCharacterCaptureReady={(capture) => { characterCapture.current = capture; }}
         pack={snapshot.assets}
         routeSeconds={routeSeconds}
         routeDistanceMetres={distanceMetres}
@@ -659,6 +705,15 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
               ? `Waiting for the internet · since ${waitingLocalTime}`
               : "Waiting for the internet"}
       />
+      <ReactionButtons
+        counts={heartbeat?.reactions.counts ?? snapshot.reactions.counts}
+        activeViewers={activeViewers}
+        enabled={snapshot.mode === "live" && connectionStatus === "live"}
+        activeCrowdKind={crowdKind}
+        onScheduled={(kind, atActiveSecond) => {
+          if (kind === "photo") ownedPhotoSecond.current = atActiveSecond;
+        }}
+      />
       <GoalBar
         distanceMetres={distanceMetres}
         landmarkMetres={snapshot.assets.dayRouteMetres}
@@ -710,6 +765,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
             onShare={() => void shareUrl()}
           />
         ) : null}
+        <DayPhotoStrip photos={snapshot.dayPhotos} />
         <ContributionMeter
           seconds={visitorSeconds}
           steps={visitorSteps}
