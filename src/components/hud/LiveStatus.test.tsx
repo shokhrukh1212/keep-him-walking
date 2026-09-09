@@ -44,8 +44,9 @@ describe("LiveStatus", () => {
         status="live"
         onShare={vi.fn()}
         waitingSinceLocalTime="03:12"
+        waitingDuration="2h 41m"
       />,
     );
-    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the internet · since 03:12");
+    expect(screen.getByRole("status")).toHaveTextContent("Nobody's watching. He's been waiting 2h 41m.");
   });
 });

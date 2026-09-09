@@ -13,6 +13,7 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     realServerNow: now.toISOString(),
     storyScale: 1,
     mode: "offline_preview",
+    firstVisit: false,
     journeyState: "live",
     refresh: { nextAt: endsAt.toISOString(), afterMs: 5 * 60_000, reason: "country_rollover" },
     journey: { travelerName: null, rolloverUtcHour: DEFAULT_ROLLOVER_UTC_HOUR },

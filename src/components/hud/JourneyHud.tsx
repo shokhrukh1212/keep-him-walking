@@ -19,6 +19,7 @@ type Props = {
   onShare: () => void;
   wakeCountdown?: number | null;
   waitingSinceLocalTime?: string | null;
+  waitingDuration?: string | null;
   /** Real weather for the city, or null when nothing is confirmed. */
   weatherLabel?: string | null;
   liveCountries?: LiveCountryView[];
@@ -35,22 +36,23 @@ export function JourneyHud({
   onShare,
   wakeCountdown,
   waitingSinceLocalTime,
+  waitingDuration,
   weatherLabel = null,
   liveCountries = [],
   todayTopCountries = [],
 }: Props) {
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   return (
-    <header className="journey-hud">
-      <div className="day-mark">
-        <span className="eyebrow">DAY {day.dayNumber} / {day.totalDays}</span>
+    <header className="journey-hud" data-hud-region="header">
+      <div className="day-mark" data-hud-region="where-when">
+        <span className="eyebrow">DAY {day.dayNumber} · SEASON 1</span>
         <strong>{day.cityName}</strong>
         <span>
           {day.countryName} · {localTime}
           {weatherLabel ? <> · <span className="hud-weather">{weatherLabel}</span></> : null}
         </span>
       </div>
-      <div className="journey-hud-audience">
+      <div className="journey-hud-audience" data-hud-region="who">
         <CountryFlags live={liveCountries} onOpen={() => setLeaderboardOpen(true)} />
         <LiveStatus
           activeViewers={activeViewers}
@@ -60,6 +62,7 @@ export function JourneyHud({
           onShare={onShare}
           wakeCountdown={wakeCountdown}
           waitingSinceLocalTime={waitingSinceLocalTime}
+          waitingDuration={waitingDuration}
         />
       </div>
       <CountryLeaderboardSheet

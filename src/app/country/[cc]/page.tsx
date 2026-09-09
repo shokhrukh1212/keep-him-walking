@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { countryDisplayName, flagEmoji, formatWatchDuration } from "@/lib/countries/flags";
 import { countryFromHeader, UNKNOWN_COUNTRY_CODE } from "@/lib/countries/header";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { CountryShareButton } from "@/components/country/CountryShareButton";
 
 export const dynamic = "force-dynamic";
 
@@ -110,8 +111,10 @@ export default async function CountryPage({ params }: Props) {
   const name = countryDisplayName(code);
   const season = await loadCountrySeason(code);
   const shareText = season && season.seasonWatchSeconds > 0
-    ? `${flagEmoji(code)} ${name} has kept him walking for ${formatWatchDuration(season.seasonWatchSeconds)} this season.`
-    : `${flagEmoji(code)} ${name} hasn’t kept him walking yet. Open the tab and he starts.`;
+    ? season.todayRank !== null
+      ? `${flagEmoji(code)} ${name} carried him ${formatWatchDuration(season.todayWatchSeconds)} today — #${season.todayRank} in the world. →`
+      : `${flagEmoji(code)} ${name} has kept him walking for ${formatWatchDuration(season.seasonWatchSeconds)} this season. →`
+    : `${flagEmoji(code)} ${name} hasn’t kept him walking yet. Open the tab and he starts. →`;
 
   return (
     <main className="content-page country-page">
@@ -162,6 +165,7 @@ export default async function CountryPage({ params }: Props) {
           <section>
             <h2>Share</h2>
             <p className="country-share-text">{shareText}</p>
+            <CountryShareButton code={code} text={shareText} />
           </section>
         </>
       )}

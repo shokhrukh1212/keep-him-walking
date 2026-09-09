@@ -67,6 +67,7 @@ export function VoteChip({ vote, rolloverUtcHour, onOpen }: Props) {
   return (
     <button
       className="vote-chip"
+      data-hud-region="vote"
       type="button"
       onClick={onOpen}
       aria-label={`${isNameVote ? "Name vote" : "Destination vote"}. Closes in ${formatCountdown(remainingMs)}.`}

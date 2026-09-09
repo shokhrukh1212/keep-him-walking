@@ -13,6 +13,7 @@ import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/securi
 import { withRouteTelemetry } from "@/lib/observability/route";
 import { reactionsFromRow } from "@/lib/reactions/payload";
 import { weatherFromRow } from "@/lib/weather/payload";
+import { issueShareToken } from "@/lib/share/server-token";
 
 async function handlePost(request: NextRequest) {
   if (!hasTrustedOrigin(request)) {
@@ -69,6 +70,17 @@ async function handlePost(request: NextRequest) {
     return NextResponse.json({ error: "Presence confirmation unavailable." }, {status:503});
   }
   const activeViewers = Number(row?.out_active_viewers ?? 0);
+  const waitingSinceMs = row?.out_waiting_since ? Date.parse(String(row.out_waiting_since)) : Number.NaN;
+  const accountedAtMs = Date.parse(String(row?.out_accounted_at ?? now.toISOString()));
+  const firstWatcherShareToken = row?.out_woke_him === true
+    && Number.isFinite(waitingSinceMs) && Number.isFinite(accountedAtMs)
+    ? issueShareToken({
+        purpose: "first",
+        day: countryDay.day_number,
+        foundAt: Math.floor(accountedAtMs / 1_000),
+        waited: Math.max(0, Math.floor((accountedAtMs - waitingSinceMs) / 1_000)),
+      }, new Date(accountedAtMs))
+    : null;
   const response = NextResponse.json({
     countryDayId: countryDay.id,
     serverNow: countryDay.story_now ?? now.toISOString(),
@@ -86,6 +98,7 @@ async function handlePost(request: NextRequest) {
     routeAuthoritativeAt: String(row?.out_accounted_at ?? now.toISOString()),
     waitingSince: row?.out_waiting_since ? String(row.out_waiting_since) : null,
     wokeHim: row?.out_woke_him === true,
+    firstWatcherShareToken,
     countryCode: String(row?.out_country_code ?? countryCode),
     reactions: reactionsFromRow(row?.out_reactions),
     weather: weatherFromRow(row?.out_weather),

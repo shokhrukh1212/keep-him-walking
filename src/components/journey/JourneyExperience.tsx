@@ -60,6 +60,8 @@ import {
   waitingBehaviorAt,
 } from "@/lib/presence/waiting";
 import { WakeCard } from "@/components/journey/WakeCard";
+import { FirstVisitOverlay } from "@/components/journey/FirstVisitOverlay";
+import { shareCard } from "@/lib/share/client";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -71,6 +73,7 @@ type WakeMoment = {
   waitingSince: string;
   wokeAt: string;
   waitedSeconds: number;
+  shareToken: string | null;
 };
 
 function currentlyActiveEvent(
@@ -108,6 +111,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [wakeBeat, setWakeBeat] = useState<WakeMoment | null>(null);
   const [wakeCard, setWakeCard] = useState<WakeMoment | null>(null);
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const onboardingSeen = useRef(false);
   const [actionReview,setActionReview]=useState<ActionReview>({action:"auto",startedAt:0});
   const [reviewNow,setReviewNow]=useState(0);
   useEffect(()=>{
@@ -240,6 +245,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         waitingSince: next.waitingSince!,
         wokeAt: new Date(wokeAtMs).toISOString(),
         waitedSeconds: Math.max(0, (wokeAtMs - waitingSinceMs) / 1_000),
+        shareToken: next.firstWatcherShareToken ?? null,
       };
       setWakeBeat((current) => current?.waitingSince === moment.waitingSince
         ? current
@@ -353,6 +359,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   const registerWorldCapture = useCallback((capture: CanvasCapture | null) => {
     worldCapture.current = capture;
   }, []);
+
+  useEffect(() => {
+    if (!snapshot.firstVisit || onboardingSeen.current) return;
+    onboardingSeen.current = true;
+    setOnboardingVisible(true);
+    const timer = window.setTimeout(() => setOnboardingVisible(false), 4_000);
+    return () => window.clearTimeout(timer);
+  }, [snapshot.firstVisit]);
   const registerCharacterCapture = useCallback((capture: CanvasCapture | null) => {
     characterCapture.current = capture;
   }, []);
@@ -626,26 +640,30 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
   );
 
   const share = async () => {
-    const data = {
+    await shareCard({
       title: "Keep Him Walking",
       text: `He only walks while someone is watching. I’m helping him cross ${snapshot.countryDay.cityName}.`,
       url: window.location.href,
-    };
-    try {
-      if (navigator.share) await navigator.share(data);
-      else await navigator.clipboard.writeText(data.url);
-    } catch {
-      // Dismissed share sheets and blocked clipboard access are non-fatal.
-    }
+    });
   };
   const shareUrl = async () => {
-    const url = window.location.href;
-    try {
-      if (navigator.share) await navigator.share({ url });
-      else await navigator.clipboard.writeText(url);
-    } catch {
-      // Dismissed share sheets and blocked clipboard access are non-fatal.
-    }
+    await shareCard({ title: "Keep Him Walking", text: "Bring a friend → he walks faster.", url: window.location.href });
+  };
+  const shareSteps = async () => {
+    const response = await fetch("/api/share/steps", { method: "POST" }).catch(() => null);
+    if (!response?.ok) return;
+    const card = await response.json() as { text: string; url: string; imageUrl: string };
+    await shareCard({ title: "My part of Keep Him Walking", text: card.text, url: card.url, imageUrl: card.imageUrl, fileName: "my-walking-steps.png" });
+  };
+  const shareWake = async (moment: WakeMoment) => {
+    const text = `I found him waiting alone in ${snapshot.countryDay.cityName} at ${formatWaitingLocalTime(moment.wokeAt, snapshot.countryDay.timeZone)}. He'd been standing there ${formatWaitDuration(moment.waitedSeconds)}. →`;
+    await shareCard({
+      title: "I woke him up",
+      text,
+      url: window.location.href,
+      imageUrl: moment.shareToken ? `/api/og/first?token=${encodeURIComponent(moment.shareToken)}` : undefined,
+      fileName: "first-watcher.png",
+    });
   };
   const displayedZoneLabel = renderedZone.label;
   const displayedZoneIndex = Math.max(
@@ -698,6 +716,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           countdown: wakeCountdown,
         } : null}
       />
+      <FirstVisitOverlay visible={onboardingVisible} onDismiss={() => setOnboardingVisible(false)} />
       <JourneyHud
         day={snapshot.countryDay}
         localTime={localTime}
@@ -711,6 +730,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         onShare={() => void shareUrl()}
         wakeCountdown={wakeCountdown}
         waitingSinceLocalTime={waitingLocalTime}
+        waitingDuration={formatWaitDuration(waitedSeconds)}
         liveCountries={snapshot.countries.live}
         todayTopCountries={snapshot.countries.todayTop}
       />
@@ -771,13 +791,13 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
         onCloseReplay={() => setReplayOpen(false)}
       />
 
-      <section className="compact-dock" aria-label="Journey controls">
-        {sponsor ? <aside className="sponsor-card" aria-label={sponsor.disclosure}>
+      <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
+        {sponsor ? <aside className="sponsor-card" data-hud-region="sponsor" aria-label={sponsor.disclosure}>
           {sponsor.logo ? /* eslint-disable-next-line @next/next/no-img-element */
             <img src={sponsor.logo} alt="" width={40} height={40} /> : null}
           <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
             {sponsor.href ? <a href={sponsor.href}>{sponsor.cta} ↗</a> : null}</div>
-        </aside> : <Link className="sponsor-invitation" href="/sponsor">Sponsor a day</Link>}
+        </aside> : <Link className="sponsor-invitation" data-hud-region="sponsor" title="Price rises with the audience" href="/sponsor">Sponsor a day · $49</Link>}
         {previewDemoSponsor ? <label className="action-review-select">Preview action
           <select aria-label="Preview action" value={actionReview.action} onChange={event=>{
             const now=performance.now();setReviewNow(now);
@@ -789,8 +809,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           rolloverUtcHour={snapshot.journey.rolloverUtcHour}
           onOpen={() => setVoteOpen(true)}
         />
-        <button type="button" onClick={()=>setVoteOpen(true)}>Daily vote</button>
         <button type="button" aria-expanded={detailsOpen} aria-controls="journey-details" onClick={()=>setDetailsOpen(!detailsOpen)}> {detailsOpen ? "Close details" : "Journey details"}</button>
+        <button type="button" disabled={!soundAvailable} onClick={() => void toggleSound()} aria-label={soundEnabled ? "Mute ambient sound" : "Play ambient sound"}>{soundEnabled ? "🔊" : "🔇"}</button>
       </section>
       <section id="journey-details" className="journey-details" hidden={!detailsOpen} aria-label="Journey details">
         {wakeCard?.countryDayId === snapshot.countryDay.id ? (
@@ -798,7 +818,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
             cityName={snapshot.countryDay.cityName}
             localTime={formatWaitingLocalTime(wakeCard.wokeAt, snapshot.countryDay.timeZone)}
             waitedDuration={formatWaitDuration(wakeCard.waitedSeconds)}
-            onShare={() => void shareUrl()}
+            onShare={() => void shareWake(wakeCard)}
           />
         ) : null}
         <DayPhotoStrip photos={snapshot.dayPhotos} />
@@ -807,6 +827,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           steps={visitorSteps}
           globalSteps={connectionStatus === "live" ? motion.plantIndex : travelerMotionAt(snapshot.assets,heartbeat?.globalActiveSeconds ?? snapshot.route.globalActiveSeconds).plantIndex}
           stale={connectionStatus !== "live" || snapshot.steps.stale}
+          onShare={() => void shareSteps()}
         />
         <div className="primary-controls">
           <button type="button" onClick={() => void share()}>

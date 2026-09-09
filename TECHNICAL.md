@@ -1136,7 +1136,7 @@ country aggregate, the reaction board, the ballot and the weather),
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (19)
+### Route handlers (25)
 
 ```
 GET  /api/bootstrap                 full snapshot: day, event, vote, presence, steps,
@@ -1159,11 +1159,36 @@ POST /api/day-photos                the crowd's photograph for a scheduled momen
 POST /api/observability/vitals
 GET  /api/admin/preview/[packId]    protected non-production pack preview
 POST /api/admin/preview/session     expiring signed HTTP-only preview session
+POST /api/share/steps               signed card claims from confirmed contribution rows
+GET  /api/og/day                    current city, count bucket and leading flags (PNG)
+GET  /api/og/steps?token=           signed personal contribution card (PNG)
+GET  /api/og/first?token=           recipient-only first-watcher card (PNG)
+GET  /api/og/country/[cc]           today's confirmed country contribution (PNG)
+GET  /api/og/recap/[n]              finalized day outcome card (PNG; populated by P13)
 ```
 
 Public pages added in Season 1: `/country/<cc>` renders a watching country's rank and
 carried time for today, its confirmed season total, and the days it hosted the walk.
 Every number on it is a stored aggregate; nothing is extrapolated.
+
+### Landing HUD and sharing (P12)
+
+The scene HUD is marked as the explicit `where-when`, `who`, `status`, `goal`,
+`reactions`, `vote`, `dock`, and `sponsor` regions from the product specification.
+The desktop presentation keeps those regions around the scene; the ≤600 px rules stack
+the goal and thumb-sized reactions above the compact dock. The old season-day total is
+not rendered. `firstVisit` comes only from creation of the existing HTTP-only visitor
+cookie, so the four-second onboarding line is neither local-storage authority nor a
+repeat tutorial.
+
+`src/lib/share/token.ts` signs compact, purpose-bound HMAC claims. Personal cards contain
+only a day number, expiry, and confirmed numbers: steps cards are issued after reading
+`visitor_day_contributions`; first-watcher cards are issued only to the heartbeat that
+received `out_woke_him`. Tokens live at most 24 hours and invalid claims fail closed.
+All `next/og` responses are 1200×630 PNGs cached at the edge for 60 seconds. The browser
+tries native file sharing, then native text sharing, then the clipboard; it never derives
+a personal count for a card. `/api/og/recap/[n]` intentionally returns 404 until P13 has
+written that day's immutable outcome.
 
 ### Identity, security, limits
 

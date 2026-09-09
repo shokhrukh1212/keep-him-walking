@@ -188,7 +188,7 @@ test("the first viewport explains the live rule and remains keyboard accessible"
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "He only walks while someone is watching." })).toBeVisible();
-  await expect(page.getByText("DAY 1 / 195")).toBeVisible();
+  await expect(page.getByText("DAY 1 · SEASON 1")).toBeVisible();
   await expect(page.getByText(/person watching/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Today’s choice", { exact: false })).not.toBeVisible();
 

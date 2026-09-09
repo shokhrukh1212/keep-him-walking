@@ -81,7 +81,7 @@ export function ReactionButtons({
   const threshold = reactionThreshold(activeViewers ?? 0);
 
   return (
-    <div className="reaction-buttons" data-heard={heard} role="group" aria-label="Ask him to do something">
+    <div className="reaction-buttons" data-hud-region="reactions" data-heard={heard} role="group" aria-label="Ask him to do something">
       {REACTION_KINDS.map((kind) => {
         const until = cooldowns[kind] ?? 0;
         const remaining = Math.max(0, Math.ceil((until - now) / 1_000));

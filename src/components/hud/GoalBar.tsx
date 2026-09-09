@@ -19,6 +19,7 @@ export function GoalBar({ distanceMetres, landmarkMetres, marathonMetres, freshn
   return (
     <section
       className="goal-bar"
+      data-hud-region="goal"
       data-marathon={marathon}
       aria-label={`Journey distance ${kilometres(distance)}, ${freshness}`}
     >

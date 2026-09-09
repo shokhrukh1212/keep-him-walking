@@ -98,6 +98,8 @@ export type BootstrapSnapshot = {
   /** Story-clock multiplier. It is greater than one only in an isolated rehearsal. */
   storyScale?: number;
   mode: "live" | "offline_preview";
+  /** Private response fact derived from the HttpOnly identity cookie. */
+  firstVisit?: boolean;
   journeyState: "prelaunch" | "live" | "intermission" | "completed";
   refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "none" };
   countryDay: CountryDayView;
@@ -166,6 +168,8 @@ export type HeartbeatResponse = {
   routeAuthoritativeAt: string;
   waitingSince: string | null;
   wokeHim: boolean;
+  /** Recipient-only token, present only on the heartbeat that awards the wake moment. */
+  firstWatcherShareToken?: string | null;
   /** The edge-derived country the server credited this heartbeat to. */
   countryCode: string;
   reactions: ReactionsView;

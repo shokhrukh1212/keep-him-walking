@@ -5,12 +5,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
-  title: "Keep Him Walking — one shared seven-country journey",
+  title: "Keep Him Walking — live across the world",
   description:
-    "One traveler. One shared journey. He only walks while someone is watching.",
+    "One traveler. One country a day. He only moves while someone is watching — and the more people watch, the faster he goes. Tomorrow, the internet votes where he walks next.",
   openGraph: {
     title: "Keep Him Walking",
-    description: "He only walks while someone is watching. Help one shared traveler cross seven countries.",
+    description: "One traveler. One country a day. He only moves while someone is watching — and the more people watch, the faster he goes.",
+    images: ["/api/og/day"],
     type: "website",
   },
 };

@@ -33,7 +33,7 @@ async function handleGet(request: NextRequest) {
       snapshot.countryDay.scenePackId,
       snapshot.weather,
     ));
-    const response = NextResponse.json(snapshot, {
+    const response = NextResponse.json({ ...snapshot, firstVisit: visitor.isNew }, {
       headers: { "Cache-Control": "no-store" },
     });
     attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
