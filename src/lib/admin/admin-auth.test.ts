@@ -19,7 +19,8 @@ describe("admin auth", () => {
 
   it("rejects tampering and short configuration", () => {
     const session = issueAdminSession();
-    expect(validateAdminSession(`${session.slice(0, -1)}0`)).toBe(false);
+    const replacement = session.endsWith("0") ? "1" : "0";
+    expect(validateAdminSession(`${session.slice(0, -1)}${replacement}`)).toBe(false);
     process.env.ADMIN_ACCESS_SECRET = "short";
     expect(validateAdminCredential("short")).toBe(false);
   });
