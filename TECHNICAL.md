@@ -399,6 +399,20 @@ Step by step, in the order the script performs it:
     buffers are byte-preserved, alpha stays alpha. No runtime decoder. Next serves
     the `.glb` directly by default; optional asset hosting added 2026-09-08 is described in §11.
 
+The active manifest is v3-ready without making an unfinished asset a release blocker.
+At runtime it first requests `public/characters/v3/traveler.glb` and, when present,
+optionally merges clips from `traveler-animations.glb` by bone name. Until that owner-
+approved replacement is installed, the loader falls back atomically to the reviewed v2
+GLB and does not mix v3 tracks into the older rig. Dropping those two v3 files into the
+documented paths therefore needs no source edit; the character review labels which
+candidate strategy is active and continues to expose missing-clip fallbacks.
+
+`PresentationClock` treats a repeated authoritative route timestamp as a lease renewal,
+not as a new route anchor. This matters when the route values have not changed between
+presence heartbeats: the HUD and 3D actor retain the same confirmed walking window, while
+the animation clock continues monotonically and remains bounded to 60 seconds of
+extrapolation. Older timestamps are still ignored.
+
 ### 5.3 Animation authoring
 
 `scripts/characters/animation.py` — **analytic two-bone IK** with constant segment

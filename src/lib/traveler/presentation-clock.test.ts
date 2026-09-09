@@ -34,4 +34,13 @@ describe("two-track presentation clock",()=>{
     const c=new PresentationClock();c.accept(runtime(0,0,0,true,4),90_000,0);
     expect(c.sample(70_000)).toEqual({rawSeconds:60,distanceMetres:300,traveling:false});
   });
+  it("renews an unchanged authoritative sample without rewinding its anchors",()=>{
+    const c=new PresentationClock();c.accept(runtime(10,25,0,true,2),5_000,0);
+    expect(c.sample(4_000)).toMatchObject({rawSeconds:14,distanceMetres:35,traveling:true});
+    c.accept(runtime(10,25,0,true,2),5_000,4_000);
+    const renewed=c.sample(7_000);
+    expect(renewed.traveling).toBe(true);
+    expect(renewed.rawSeconds).toBeGreaterThan(14);
+    expect(renewed.distanceMetres).toBeGreaterThan(35);
+  });
 });

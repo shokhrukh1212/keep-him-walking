@@ -15,7 +15,15 @@ export class PresentationClock {
   private initialized = false;
   accept(runtime: RouteRuntime, ttlMs: number, now = performance.now()) {
     const stamp = Date.parse(runtime.authoritativeAt);
-    if (!Number.isFinite(stamp) || stamp <= this.stamp) return;
+    if (!Number.isFinite(stamp) || stamp < this.stamp) return;
+    const leaseMs = Math.min(60_000, Math.max(0, ttlMs));
+    if (stamp === this.stamp && this.initialized) {
+      // Presence heartbeats often repeat an unchanged route authority timestamp.
+      // They still renew the confirmed walking lease; resetting receivedAt here
+      // would rewind the presentation target to the old anchor.
+      this.expiry = now + leaseMs;
+      return;
+    }
     this.stamp = stamp;
     this.secondsAnchor = runtime.globalActiveSeconds;
     this.distanceAnchor = runtime.globalDistanceMetres;
@@ -24,7 +32,7 @@ export class PresentationClock {
     this.walking = runtime.walking;
     // Lease lifetime and presentation authority are separate. Even a future
     // adaptive lease may never authorize more than sixty seconds of invention.
-    this.expiry = now + Math.min(60_000, Math.max(0, ttlMs));
+    this.expiry = now + leaseMs;
     if (!this.initialized) {
       this.seconds = this.secondsAnchor;
       this.distance = this.distanceAnchor;

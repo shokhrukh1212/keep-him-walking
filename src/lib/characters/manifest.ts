@@ -2,6 +2,8 @@
 export type CharacterDefinition = {
   url: string;
   heightMetres: number;
+  /** Known-good model used while an owner-supplied replacement has not landed yet. */
+  fallbackUrl?: string;
   /** Optional skeleton-only GLB. Tracks bind to the mesh skeleton by bone name. */
   animationUrl?: string;
 };
@@ -13,15 +15,24 @@ export const CHARACTER_MANIFEST: {
   resident: CharacterDefinition;
   combinedBudgetBytes: number;
 } = {
-  version: 2,
+  version: 3,
   approval: "visual-review-pending",
-  traveler: { url: "/characters/v2/traveler.glb?rev=interactions-1", heightMetres: 1.78 },
+  traveler: {
+    url: "/characters/v3/traveler.glb",
+    fallbackUrl: "/characters/v2/traveler.glb?rev=interactions-1",
+    animationUrl: "/characters/v3/traveler-animations.glb",
+    heightMetres: 1.78,
+  },
   resident: { url: "/characters/v2/almaty-host.glb?rev=interactions-1", heightMetres: 1.68 },
   combinedBudgetBytes: 8 * 1024 * 1024,
 };
 
 export const CHARACTER_CANDIDATES = {
-  v2: { label: "V2 — work in progress", traveler: CHARACTER_MANIFEST.traveler, resident: CHARACTER_MANIFEST.resident },
+  v2: {
+    label: "Active — v3 when installed, v2 fallback",
+    traveler: CHARACTER_MANIFEST.traveler,
+    resident: CHARACTER_MANIFEST.resident,
+  },
   v1: {
     label: "Rejected baseline v1",
     traveler: { url: "/characters/v1/traveler.glb", heightMetres: 1.78 },

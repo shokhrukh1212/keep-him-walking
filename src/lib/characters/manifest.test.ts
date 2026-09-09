@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLIP_SPECS, clipFallbackChain, normalizedClipName } from "./manifest";
+import { CHARACTER_MANIFEST, CLIP_SPECS, clipFallbackChain, normalizedClipName } from "./manifest";
 
 describe("character clip manifest", () => {
   it("normalizes source aliases independent of punctuation and case", () => {
@@ -13,5 +13,13 @@ describe("character clip manifest", () => {
       expect(new Set(chain).size).toBe(chain.length);
       expect(["idle", "walk"]).toContain(chain.at(-1));
     }
+  });
+
+  it("prefers drop-in v3 traveler assets while retaining the reviewed v2 model", () => {
+    expect(CHARACTER_MANIFEST.traveler).toMatchObject({
+      url: "/characters/v3/traveler.glb",
+      animationUrl: "/characters/v3/traveler-animations.glb",
+      fallbackUrl: "/characters/v2/traveler.glb?rev=interactions-1",
+    });
   });
 });

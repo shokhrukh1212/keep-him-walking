@@ -7,7 +7,8 @@ test("character review renders every manifest state with explicit missing badges
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   page.on("response", (response) => {
-    if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`);
+    const expectedUninstalledV3 = response.status() === 404 && response.url().includes("/characters/v3/");
+    if (response.status() >= 400 && !expectedUninstalledV3) errors.push(`${response.status()} ${response.url()}`);
   });
   // Web-vitals has its own remote-backed rate limit and is unrelated to character review.
   await page.route("**/api/observability/vitals", (route) => route.fulfill({ status: 204 }));
