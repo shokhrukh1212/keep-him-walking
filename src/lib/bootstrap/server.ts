@@ -498,7 +498,6 @@ export async function liveBootstrapSnapshot(
     events,
     vote,
     { data: countries },
-    { data: reactions },
     { data: travelerName },
     { data: weather },
   ] = await Promise.all([
@@ -510,16 +509,18 @@ export async function liveBootstrapSnapshot(
       p_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
     }),
-    supabase.rpc("read_day_reactions", {
-      p_country_day_id: countryDay.id,
-      p_now: now.toISOString(),
-      p_global_active_seconds: 0,
-    }),
     supabase.rpc("read_traveler_name"),
     supabase.rpc("read_journey_weather", { p_country_day_id: countryDay.id }),
   ]);
   if (runtimeError) throw runtimeError;
   const row = Array.isArray(runtime) ? runtime[0] : runtime;
+  // The reaction projection needs the confirmed active second to know which
+  // action comes next, so it cannot be fetched before the runtime resolves.
+  const { data: reactions } = await supabase.rpc("read_day_reactions", {
+    p_country_day_id: countryDay.id,
+    p_now: now.toISOString(),
+    p_global_active_seconds: Number(row?.out_global_active_seconds ?? 0),
+  });
   let postcard: BootstrapSnapshot["postcard"] = {
     eligible: false,
     unlockSeconds: config.postcardUnlockSeconds,

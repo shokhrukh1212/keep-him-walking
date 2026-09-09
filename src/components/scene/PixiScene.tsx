@@ -118,7 +118,9 @@ export function PixiScene({
         const groundLifeRoot = new Container();
         const groundDetailsRoot = new Container();
         const weatherRoot = new Container();
-        // Precipitation, the horizon fog band and the storm flash all live here.
+        // weatherRoot is emptied and destroyed on every zone rebuild, so the
+        // long-lived fog band needs a container of its own.
+        const weatherStaticRoot = new Container();
         const fogBand = new Graphics();
         const stormFlash = new Graphics();
         let precipitation: InstanceType<typeof Graphics>[] = [];
@@ -145,8 +147,8 @@ export function PixiScene({
         // Draw order, back to front: sky, the panorama (or the legacy parallax
         // layers), props, ground life, weather. Nothing composites over the
         // painting itself.
-        camera.addChild(sky, layerRoot, transitionRoot, propRoot, groundLifeRoot, weatherRoot);
-        weatherRoot.addChild(fogBand);
+        camera.addChild(sky, layerRoot, transitionRoot, propRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
+        weatherStaticRoot.addChild(fogBand);
         app.stage.addChild(stormFlash);
         app.stage.addChild(camera);
         const clock = new PresentationClock();
@@ -304,6 +306,10 @@ export function PixiScene({
           propRoot.removeChildren().forEach((child) => child.destroy());
           groundDetailsRoot.removeChildren().forEach((child) => child.destroy());
           weatherRoot.removeChildren().forEach((child) => child.destroy());
+          // The drops were just destroyed; the tick must not touch them again
+          // until the rebuild below replaces them.
+          precipitation = [];
+          precipitationKind = "none";
           let sequenceLayerIndex = 0;
           pools = loaded.map(({ layer, textures }, layerIndex) => {
             const container = new Container();

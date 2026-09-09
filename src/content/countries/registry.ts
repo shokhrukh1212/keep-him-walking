@@ -15,8 +15,20 @@ import { viennaCountryPackV1 } from "./vienna.v1";
 import { bratislavaCountryPackV1 } from "./bratislava.v1";
 import { pragueCountryPackV1 } from "./prague.v1";
 import type { CountryPack } from "@/lib/content/schema";
+import { PACK_GEOGRAPHY } from "./geography";
 
-const packs = new Map<string, CountryPack>([
+/**
+ * Coordinates and land borders live in one reviewable table, applied here so
+ * every registered pack carries them however it was authored. The hand-written
+ * packs never went through the factory, so applying this in the factory alone
+ * left them at 0,0 — which silently disabled the weather fetch and the vote.
+ */
+function withGeography(pack: CountryPack): CountryPack {
+  const geography = PACK_GEOGRAPHY[pack.assetVersion];
+  return geography ? { ...pack, ...geography } : pack;
+}
+
+const packs = new Map<string, CountryPack>(([
   [tashkentCountryPackV2.assetVersion, tashkentCountryPackV2],
   [tashkentCountryPackV3.assetVersion, tashkentCountryPackV3],
   [tashkentCountryPackV4.assetVersion, tashkentCountryPackV4],
@@ -33,7 +45,7 @@ const packs = new Map<string, CountryPack>([
   [viennaCountryPackV1.assetVersion, viennaCountryPackV1],
   [bratislavaCountryPackV1.assetVersion, bratislavaCountryPackV1],
   [pragueCountryPackV1.assetVersion, pragueCountryPackV1],
-]);
+] as Array<[string, CountryPack]>).map(([id, pack]) => [id, withGeography(pack)]));
 
 export function getCountryPack(scenePackId: string): CountryPack | null {
   return packs.get(scenePackId) ?? null;

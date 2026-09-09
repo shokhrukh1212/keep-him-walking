@@ -22,6 +22,7 @@
     "db:test": "supabase test db",
     "db:lint:remote": "node --import tsx --env-file=.env.local scripts/lint-remote-database.ts",
     "db:test:remote": "node --import tsx --env-file=.env.local scripts/test-database.ts",
+    "db:push:remote": "node --import tsx --env-file=.env.local scripts/push-remote-database.ts",
     "seed:phase1": "node --import tsx --env-file=.env.local scripts/seed-phase1.ts",
     "seed:season1:name-vote": "node --import tsx --env-file=.env.local scripts/seed-season1-name-vote.ts",
     "seed:phase15:preview": "node --import tsx --env-file=.env.local scripts/seed-phase1.ts --preview",

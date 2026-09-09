@@ -24,6 +24,28 @@ HOUSE RULES for this repository (Keep Him Walking):
   defaults so existing packs keep validating.
 - Keep pnpm verify green: lint, typecheck, unit tests, build. Add tests for every new
   pure function and every new RPC (pgTAP). Update TECHNICAL.md sections you change.
+- THE DATABASE IS REMOTE. There is no local Docker, Supabase CLI stack or Postgres in
+  this environment, so `pnpm db:reset` / `db:test` / `db:lint` cannot run and a
+  migration is UNVERIFIED until it has been pushed to a real project. Finishing work
+  that touches `supabase/migrations/` means, in this order:
+    1. `pnpm db:push:remote` — lists local vs remote; confirm only your files are pending.
+    2. `pnpm db:push:remote --apply` — applies them to the dev project (`.env.local`,
+       ref `tkntxptfhmjnqaaveddx`). Never push to the preview project with `.env.local`;
+       the preview project (`pqtfhkiftiubwuwxnuzd`) has its own env file and its own
+       `phase2:db:apply` / `phase3` scripts, which refuse to run against `.env.local`.
+    3. `pnpm db:test:remote` — every pgTAP suite must pass.
+    4. `pnpm db:lint:remote` — must report `{"results":[]}`. An unused parameter or a
+       shadowed name is a real finding, not noise.
+  Report the migration numbers you applied and to which project ref.
+- An applied migration is immutable. Never edit a file that has been pushed: fix it with
+  the next numbered migration and say in its header what it corrects and why.
+- Every pgTAP file's `plan(N)` must equal the number of assertions it runs. pgTAP reports
+  a plan mismatch as a diagnostic, not a failure, so a wrong plan silently stops the
+  suite from detecting a run that dies halfway. `pnpm db:test:remote` fails on it.
+- Seed data expires. When `/api/bootstrap` returns 503 and the HUD falls back to
+  "Offline preview", the usual cause is that the seeded `country_days` row has ended,
+  not a code fault. Re-seed with `reset:phase15:preview` then `seed-phase1.ts --preview
+  --starts-at <most recent 16:00Z>`; check before assuming a regression.
 - Do not add dependencies unless the prompt names them. Do not add paid services.
 - Small commits with clear messages. At the end, print: files changed, how to test
   manually, and anything you could not finish.

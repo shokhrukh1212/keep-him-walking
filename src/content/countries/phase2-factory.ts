@@ -5,7 +5,6 @@ import {
   type RouteProp,
   type RouteZone,
 } from "@/lib/content/schema";
-import { packGeography } from "./geography";
 
 export const PHASE2_RIVE_CONTRACT = {
   riveUrl: "/rive/traveler/v1/traveler.riv",
@@ -240,7 +239,6 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     countryName: definition.countryName,
     cityName: definition.cityName,
     timeZone: definition.timeZone,
-    ...packGeography(definition.packId),
     scene: {
       fallbackUrl: firstZone.fallbackUrl,
       layers: [
