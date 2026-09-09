@@ -7,12 +7,14 @@ import {
 } from "./waiting";
 
 describe("waiting presentation", () => {
-  it("cycles idle, look-around, idle from waited seconds", () => {
-    expect(waitingBehaviorAt(0)).toMatchObject({ phase: "idle", state: "idle" });
-    expect(waitingBehaviorAt(4)).toMatchObject({ phase: "look_around", state: "notice" });
-    expect(waitingBehaviorAt(8)).toMatchObject({ phase: "idle", state: "idle" });
-    expect(waitingBehaviorAt(12)).toMatchObject({ phase: "idle", state: "idle" });
-    expect(waitingBehaviorAt(604)).toMatchObject({ phase: "rest", state: "rest", clipSeconds: 4 });
+  it("cycles explicit waiting and look-up takes, then sits at ten minutes", () => {
+    expect(waitingBehaviorAt(0)).toMatchObject({ phase: "wait", state: "wait", clip: "wait_pockets" });
+    expect(waitingBehaviorAt(4)).toMatchObject({ phase: "look_up", state: "look_up", clip: "look_up" });
+    expect(waitingBehaviorAt(8)).toMatchObject({ phase: "wait", state: "wait", clip: "wait_pockets" });
+    expect(waitingBehaviorAt(12)).toMatchObject({ phase: "wait", state: "wait" });
+    expect(waitingBehaviorAt(600)).toMatchObject({ phase: "sit", state: "sit", clip: "sit_down" });
+    expect(waitingBehaviorAt(604)).toMatchObject({ phase: "sit", state: "sit", clip: "sitting" });
+    expect(waitingBehaviorAt(604, true)).toMatchObject({ phase: "sleep", state: "sleep", clip: "sleep" });
   });
 
   it("formats fixed wait facts without inventing negative time", () => {

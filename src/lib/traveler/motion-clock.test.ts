@@ -6,6 +6,7 @@ import {
   METRES_PER_STEP,
   STEP_DURATION_SECONDS,
   travelerMotionAt,
+  systemActionAt,
   visibleStepsBetween,
 } from "./motion-clock";
 
@@ -54,6 +55,26 @@ describe("traveler motion clock", () => {
         .toBeGreaterThanOrEqual(0);
       expect(travelerMotionAt(tashkentCountryPackV4, 20 + sample / 20).gaitFrameIndex)
         .toBeLessThan(6);
+    }
+  });
+});
+
+describe("deterministic system actions", () => {
+  it("chooses one daily stumble and cheers at the marathon", () => {
+    let stumble: ReturnType<typeof systemActionAt> = null;
+    for (let metres = 2_000; metres < 6_000 && !stumble; metres += .25) {
+      const action = systemActionAt(tashkentCountryPackV4, 10_000, metres);
+      if (action?.kind === "stumble") stumble = action;
+    }
+    expect(stumble).toMatchObject({ kind: "stumble", source: "system" });
+    expect(systemActionAt(tashkentCountryPackV4, 40_000, tashkentCountryPackV4.marathonMetres + 1))
+      .toMatchObject({ kind: "cheer", source: "system" });
+  });
+
+  it("is identical for repeated inputs", () => {
+    for (let seconds = 0; seconds < 2_000; seconds += 13) {
+      expect(systemActionAt(tashkentCountryPackV4, seconds, 3_000))
+        .toEqual(systemActionAt(tashkentCountryPackV4, seconds, 3_000));
     }
   });
 });

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
-import { CHARACTER_CANDIDATES, REVIEW_ACTIONS, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
+import { CHARACTER_CANDIDATES, CLIP_SPECS, REVIEW_ACTIONS, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, type SceneCue } from "@/lib/characters/timeline";
 import type { CharacterPlayback } from "./CharacterStage3D";
 import styles from "./character-review.module.css";
@@ -35,6 +35,7 @@ export function CharacterReview() {
   const [progress,setProgress]=useState<{seconds:number;cue?:SceneCue}>({seconds:0});
   const [retry,setRetry]=useState(0);
   const [available,setAvailable]=useState(false);
+  const [availableClips,setAvailableClips]=useState<ReadonlySet<string>>(()=>new Set());
   const [quality,setQuality]=useState<QualityTier>("high");
   const [pixiReady,setPixiReady]=useState(false);
   const [pixiFailed,setPixiFailed]=useState(false);
@@ -68,12 +69,13 @@ export function CharacterReview() {
       <img className={styles.fallback} src="/traveler/temporary/v1/idle.webp" alt="Original traveler reference" />}
     <CharacterStage3D candidate={candidate} stageFrame={stageFrame} contacts={contacts} grade={grade}
       composition={Boolean(reviewPack)} qualityTier={quality}
+      onClipAvailability={setAvailableClips}
       onAvailability={setAvailable} key={`${candidate}-${retry}`} view={view} showNpc={npc} playback={playback} onStatus={setStatus}
       onProgress={(seconds,cue)=>setProgress({seconds,cue})} />
     <aside className={styles.controls} aria-label="Character review controls">
       <strong>Character review · {reviewPack?.cityName??"Studio"}</strong>
       <small>Character repairs in progress — visual target not met</small>
-      <label>Candidate <select aria-label="Character candidate" value={candidate} onChange={e=>{setAvailable(false);setCandidate(e.target.value as CharacterCandidate);}}>
+      <label>Candidate <select aria-label="Character candidate" value={candidate} onChange={e=>{setAvailable(false);setAvailableClips(new Set());setCandidate(e.target.value as CharacterCandidate);}}>
         {Object.entries(CHARACTER_CANDIDATES).map(([value,item])=><option key={value} value={value}>{item.label}</option>)}
       </select></label>
       <label>Action <select aria-label="Preview action" value={playback.action} onChange={e=>selectAction(e.target.value as ReviewAction)}>
@@ -104,6 +106,14 @@ export function CharacterReview() {
       </select></label>
       <label className={styles.checkbox}><input type="checkbox" checked={npc||playback.action==="encounter"} disabled={playback.action==="encounter"} onChange={e=>setNpc(e.target.checked)} /> Show local resident</label>
       <p role="status" aria-label="Renderer status" className={styles.status}>{status}</p>
+      <details open><summary>Manifest clips</summary>
+        <ul className={styles.clipList} data-testid="manifest-clip-list">
+          {Object.keys(CLIP_SPECS).map(name=><li key={name}>
+            <code>{name}</code>
+            <span data-missing={String(!availableClips.has(name))}>{availableClips.has(name)?"ready":`missing · uses ${CLIP_SPECS[name as keyof typeof CLIP_SPECS].fallback??"none"}`}</span>
+          </li>)}
+        </ul>
+      </details>
       <button type="button" onClick={()=>{setAvailable(false);setRetry(r=>r+1);}}>Reload characters</button>
       <details><summary>Original identity reference</summary>
         {/* eslint-disable-next-line @next/next/no-img-element */}

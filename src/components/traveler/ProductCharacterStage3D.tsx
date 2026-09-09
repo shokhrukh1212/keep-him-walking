@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
-import { publicAssetUrl } from "@/lib/assets/url";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { CountryPack } from "@/lib/content/schema";
@@ -9,6 +8,7 @@ import { CharacterActor } from "@/lib/characters/actor";
 import { CharacterLights } from "@/lib/characters/toon";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 import { CHARACTER_MANIFEST } from "@/lib/characters/manifest";
+import { loadCharacterGltf } from "@/lib/characters/loader";
 import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { actorLayout } from "@/lib/traveler/actor-layout";
 import type { StageFrame } from "@/lib/world/stage-layout";
@@ -137,7 +137,7 @@ export function ProductCharacterStage3D(props: Props) {
       let loadedRoot: THREE.Group | undefined;
       try {
         const definition = CHARACTER_MANIFEST[kind];
-        const gltf = await loader.loadAsync(publicAssetUrl(definition.url));
+        const gltf = await loadCharacterGltf(loader, definition);
         loadedRoot = gltf.scene;
         if (disposed) {
           disposeModel(loadedRoot);
@@ -214,6 +214,9 @@ export function ProductCharacterStage3D(props: Props) {
         now,
         state.routeRuntime.paceRate,
         state.command?.waitedSeconds,
+        state.command?.localHour,
+        state.command?.raining,
+        state.command?.wakeElapsedSeconds,
       );
       const snap = firstSample || cue.conversation !== previousConversation;
       firstSample = false;
@@ -248,7 +251,16 @@ export function ProductCharacterStage3D(props: Props) {
       travelerRoot.rotation.y = cue.conversation ? Math.PI / 2 : state.command?.facing === "left" ? -0.68 : 0.68;
       residentRoot.rotation.y = -Math.PI / 2;
       residentRoot.visible = cue.showResident && Boolean(resident);
-      element.dataset.characterState = cue.traveler.clip;
+      if (cue.conversation && traveler && resident) {
+        traveler.gazeAt(resident.headPosition(), .6);
+        resident.gazeAt(traveler.headPosition(), .6);
+      } else if (cue.traveler.clip === "phone" && traveler) {
+        traveler.gazeAt(traveler.devicePosition(), .6);
+      } else if (motion.action?.source === "crowd" && motion.action.kind === "wave"
+        && motion.action.elapsedSeconds < .8 && traveler) {
+        traveler.gazeAt(camera.position.clone(), .6);
+      }
+      element.dataset.characterState = traveler?.resolvedClip(cue.traveler.clip) ?? cue.traveler.clip;
       element.dataset.walkTimeScale = String(cue.traveler.timeScale ?? 1);
       element.dataset.forwardLeanDegrees = String((cue.travelerLeanRadians ?? 0) * 180 / Math.PI);
       element.dataset.residentVisible = String(residentRoot.visible);

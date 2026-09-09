@@ -7,12 +7,14 @@ export const REVIEW_ACTIONS = [
   ["talk", "Talking"], ["listen", "Listening"], ["react", "Reacting / laughing"],
   ["photo", "Taking a photograph"], ["drink", "Drinking water"], ["phone", "Checking phone"],
   ["rest", "Resting"], ["sit", "Crouching / resting (no seat artwork)"],
+  ["wait", "Waiting"], ["sleep", "Sleeping"], ["look_up", "Looking up"],
+  ["tie_shoe", "Tying a shoe"], ["cheer", "Cheering"], ["stumble", "Stumbling"],
   ["goodbye", "Saying goodbye"], ["resume_walk", "Resuming walking"],
 ] as const;
 export type ReviewAction = typeof REVIEW_ACTIONS[number][0];
 export type ActionReview = { action: ReviewAction; startedAt: number };
 export type PuppetAction = { kind: string; progress: number; state?: TravelerState };
-const durations: Partial<Record<ReviewAction, number>> = {photo:4,drink:5.5,phone:4.5,wave:2.5,react:2.5,greet:2.5,goodbye:2.5,talk:6,listen:6,notice:2.5,rest:6,sit:6};
+const durations: Partial<Record<ReviewAction, number>> = {photo:4,drink:5.5,phone:4.5,wave:2.5,react:2.5,greet:2.5,goodbye:2.5,talk:6,listen:6,notice:2.5,rest:6,sit:6,wait:4,sleep:5,look_up:3,tie_shoe:4,cheer:3,stumble:2.5};
 
 /** Local visual rehearsal only. Never feeds presence, route authority or accounting. */
 export function reviewPoseAt(review: ActionReview, now: number) {

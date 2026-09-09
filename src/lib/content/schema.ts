@@ -42,6 +42,12 @@ export const travelerStateSchema = z.enum([
   "drink",
   "photo",
   "sit",
+  "wait",
+  "sleep",
+  "look_up",
+  "tie_shoe",
+  "cheer",
+  "stumble",
   "goodbye",
   "resume_walk",
 ]);

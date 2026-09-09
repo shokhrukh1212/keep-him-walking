@@ -16,6 +16,7 @@ import {
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { crowdActionKindOf, travelerMotionAt, visibleStepsBetween, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { weatherEffect } from "@/lib/weather/effects";
+import { localHourFraction } from "@/lib/world/time-grade";
 import { formatTemperature, weatherGlyph } from "@/lib/weather/format";
 import { sponsorPresentation } from "@/lib/traveler/demo-sponsor";
 import { useJourneyAudio } from "@/hooks/useJourneyAudio";
@@ -537,7 +538,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     }
   }, [snapshot.countryDay.dayNumber, visitorSeconds]);
 
-  const waitingBehavior = waitingBehaviorAt(reducedMotion ? 0 : waitedSeconds);
+  const localHour = localHourFraction(new Date(serverNowMs), snapshot.countryDay.timeZone);
+  const waitingBehavior = waitingBehaviorAt(
+    reducedMotion ? 0 : waitedSeconds,
+    localHour >= 21 || localHour < 5,
+  );
   const travelerState: TravelerState = walking && motion.action
     ? motion.action.state
     : !walking && locomotionPhase !== "slow_walk" && locomotionPhase !== "stop"
@@ -554,6 +559,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     reducedMotion,
     presenceTtlMs:snapshot.presence.ttlSeconds*1000,
     waitedSeconds: reducedMotion ? 0 : waitedSeconds,
+    localHour,
+    raining: weatherSky?.precipitation === "rain",
+    wakeElapsedSeconds: waking && wakeBeat
+      ? Math.max(0, (realNowMs - Date.parse(wakeBeat.wokeAt)) / 1_000)
+      : undefined,
     sponsorPatchUrl: sponsor?.logo ?? undefined,
     actionReview: previewDemoSponsor?actionReview:undefined,
   };
@@ -721,7 +731,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           : walking
             ? `Walking${weatherSky?.pillFragment ? ` ${weatherSky.pillFragment}` : ""} · ${displayedZoneLabel}`
             : waitingLocalTime
-              ? `Waiting for the internet · since ${waitingLocalTime}`
+              ? waitingBehavior.phase === "sleep"
+                ? `Asleep on a bench · since ${waitingLocalTime}`
+                : `Waiting for the internet · since ${waitingLocalTime}`
               : "Waiting for the internet"}
       />
       <ReactionButtons

@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
-import { CLIP_DURATIONS, type CharacterClip } from "./manifest";
+import { CLIP_DURATIONS, CLIP_SPECS, clipFallbackChain, normalizedClipName, type CharacterClip } from "./manifest";
 import type { CharacterCue } from "./timeline";
 import { sampleProp } from "./props";
 import { CharacterToon } from "./toon";
+import { clampedLookDelta } from "./gaze";
 import type { ZoneStage } from "../content/schema";
 import type { VisualGrade } from "../world/visual-grade";
 import type { QualityTier } from "../world/types";
@@ -24,6 +25,22 @@ function phone() {
   screen.position.z=.0072;lens.position.set(.023,.049,-.0075);lens.rotation.x=Math.PI/2;
   group.add(frame,screen,lens);return group;
 }
+function umbrella() {
+  const group = new THREE.Group();
+  const canopy = new THREE.Mesh(
+    new THREE.ConeGeometry(.48, .18, 24, 1, true),
+    new THREE.MeshToonMaterial({ color: 0xd8b34d, side: THREE.DoubleSide }),
+  );
+  const stick = new THREE.Mesh(
+    new THREE.CylinderGeometry(.008, .008, 1.25, 8),
+    new THREE.MeshToonMaterial({ color: 0x59422f }),
+  );
+  canopy.position.y = 1.72;
+  canopy.rotation.x = Math.PI;
+  stick.position.set(.28, 1.08, 0);
+  group.add(canopy, stick);
+  return group;
+}
 const smooth=(x:number)=>{const t=THREE.MathUtils.clamp(x,0,1);return t*t*(3-2*t);};
 
 /** One mesh/skeleton across every action; only skeletal clips and face weights change. */
@@ -37,9 +54,11 @@ export class CharacterActor {
   private faces: THREE.Mesh[]=[];
   private water=bottle();
   private device=phone();
+  private umbrella=umbrella();
   private hand?:THREE.Object3D;
   private leftGrip?:THREE.Object3D;
   private rightGrip?:THREE.Object3D;
+  private head?:THREE.Object3D;
   private propsEnabled:boolean;
   private socketPoint=new THREE.Vector3();
   private otherPoint=new THREE.Vector3();
@@ -57,13 +76,16 @@ export class CharacterActor {
     this.root=gltf.scene;
     this.propsEnabled=withProps;
     this.mixer=new THREE.AnimationMixer(this.root);
-    const core=(Object.keys(CLIP_DURATIONS) as CharacterClip[]).filter(name=>
-      !["notice","stop","turn","resume"].includes(name));
-    for(const name of Object.keys(CLIP_DURATIONS) as CharacterClip[]) {
-      const clip=gltf.animations.find(c=>c.name===name);
-      if(!clip){if(core.includes(name))throw new Error(`Character is missing the ${name} animation`);continue;}
+    const animationByName = new Map(gltf.animations.map((clip) => [normalizedClipName(clip.name), clip]));
+    for(const name of Object.keys(CLIP_SPECS) as CharacterClip[]) {
+      const aliases = [name, ...CLIP_SPECS[name].aliases];
+      const clip = aliases.map(normalizedClipName).map((alias) => animationByName.get(alias)).find(Boolean);
+      if(!clip) continue;
       const action=this.mixer.clipAction(clip);action.play();action.enabled=false;
       this.actions.set(name,action);
+    }
+    if (!this.actions.has("idle") || !this.actions.has("walk")) {
+      throw new Error("Character requires idle and walk animations");
     }
     // Calibrate standing height once, using the actual standing clip rather
     // than the wider bind pose. Never renormalize bounds during an action.
@@ -86,6 +108,7 @@ export class CharacterActor {
         }
       }
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigRightHand")this.hand=object;
+      if(object.name.replace(/[^a-z0-9]/gi,"").toLowerCase()==="mixamorighead")this.head=object;
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigLeftHandMiddle1")this.leftGrip=object;
       if(object.name.replace(/[^a-z0-9]/gi,"")==="mixamorigRightHandMiddle1")this.rightGrip=object;
       if(object instanceof THREE.Mesh) {
@@ -111,8 +134,8 @@ export class CharacterActor {
     });
     // Add siblings only after traversal so outlines cannot recursively clone themselves.
     for (const mesh of this.sourceMaterials.keys()) this.toon.addOutline(mesh);
-    this.root.add(this.water,this.device);
-    this.water.visible=this.device.visible=false;
+    this.root.add(this.water,this.device,this.umbrella);
+    this.water.visible=this.device.visible=this.umbrella.visible=false;
     if(withProps&&this.hand) {
       this.hand.add(this.water,this.device);
       this.water.position.set(0,.045,.022);this.device.position.set(0,.045,.014);
@@ -122,9 +145,32 @@ export class CharacterActor {
   setAppearance(stage: ZoneStage, grade: VisualGrade, quality: QualityTier) {
     this.toon.update(stage, grade, quality);
   }
+  hasClip(clip: CharacterClip) { return this.actions.has(clip); }
+  availableClips() { return new Set(this.actions.keys()); }
+  resolvedClip(clip: CharacterClip): CharacterClip {
+    return clipFallbackChain(clip).find((candidate) => this.actions.has(candidate)) ?? "idle";
+  }
+  headPosition(target = new THREE.Vector3()) {
+    return (this.head ?? this.root).getWorldPosition(target);
+  }
+  devicePosition(target = new THREE.Vector3()) {
+    return this.device.getWorldPosition(target);
+  }
+  gazeAt(target: THREE.Vector3, weight = .6) {
+    if (!this.head || !this.head.parent) return;
+    this.root.updateMatrixWorld(true);
+    const headPosition = this.head.getWorldPosition(new THREE.Vector3());
+    const currentWorld = this.head.getWorldQuaternion(new THREE.Quaternion());
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(currentWorld);
+    const delta = clampedLookDelta(forward, target.clone().sub(headPosition));
+    const desiredWorld = delta.multiply(currentWorld);
+    const parentWorld = this.head.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+    const desiredLocal = parentWorld.multiply(desiredWorld);
+    this.head.quaternion.slerp(desiredLocal, THREE.MathUtils.clamp(weight, 0, 1));
+    this.root.updateMatrixWorld(true);
+  }
   sample(cue:CharacterCue,dt:number,snap=false,faceOffset=0) {
-    const fallback:Partial<Record<CharacterClip,CharacterClip>>={notice:"walk",stop:"idle",turn:"idle",resume:"walk"};
-    const sampledClip=this.actions.has(cue.clip)?cue.clip:(fallback[cue.clip]??"idle");
+    const sampledClip=this.resolvedClip(cue.clip);
     if(!this.active)snap=true;
     if(this.active!==sampledClip) {
       this.previous=this.active;this.active=sampledClip;this.blend=snap?1:0;
@@ -153,6 +199,7 @@ export class CharacterActor {
     const prop=sampleProp(cue.clip,t);
     this.water.visible=this.propsEnabled&&prop.kind==="water"&&prop.visible;
     this.device.visible=this.propsEnabled&&prop.kind==="device"&&prop.visible;
+    this.umbrella.visible=this.propsEnabled&&cue.clip==="umbrella_walk"&&this.actions.has("umbrella_walk");
     this.root.updateMatrixWorld(true);
     const grip=this.grips.get(cue.clip);
     if(grip&&(this.water.visible||this.device.visible)){

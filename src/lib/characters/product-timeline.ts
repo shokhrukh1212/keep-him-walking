@@ -18,14 +18,14 @@ const BRISK_PACE_THRESHOLD = 3;
 const BRISK_WALK_TIME_SCALE = 1.25;
 const BRISK_FORWARD_LEAN_RADIANS = 2 * Math.PI / 180;
 
-const clipForState = (state: TravelerState): CharacterClip => {
+export const clipForState = (state: TravelerState): CharacterClip => {
   const clips: Partial<Record<TravelerState, CharacterClip>> = {
     loading: "idle",
     idle: "idle",
-    start_walk: "walk",
+    start_walk: "walk_start",
     walk: "walk",
     slow_walk: "stop",
-    stop: "stop",
+    stop: "walk_stop",
     notice: "notice",
     approach: "walk",
     greet: "greet",
@@ -38,6 +38,12 @@ const clipForState = (state: TravelerState): CharacterClip => {
     phone: "phone",
     rest: "rest",
     sit: "rest",
+    wait: "wait_pockets",
+    sleep: "sleep",
+    look_up: "look_up",
+    tie_shoe: "tie_shoe",
+    cheer: "cheer",
+    stumble: "stumble",
     goodbye: "goodbye",
     resume_walk: "resume",
   };
@@ -139,12 +145,22 @@ export function productCharacterSceneAt(
   now: number,
   paceRate = 1,
   waitedSeconds = 0,
+  localHour = 12,
+  raining = false,
+  wakeElapsedSeconds: number | undefined = undefined,
 ): ProductCharacterScene {
   const localReview = review ? reviewCue(review, now) : null;
   if (localReview) return localReview;
   if (!traveling) {
-    const waiting = waitingBehaviorAt(waitedSeconds);
-    const clip = clipForState(waiting.state);
+    if (wakeElapsedSeconds !== undefined) {
+      const clip: CharacterClip = wakeElapsedSeconds < .8 ? "look_up" : "stand_up";
+      return {
+        traveler: { clip, seconds: Math.min(CLIP_DURATIONS[clip] - 1e-5, Math.max(0, wakeElapsedSeconds < .8 ? wakeElapsedSeconds : wakeElapsedSeconds - .8)) },
+        resident: { clip: "idle", seconds: 0 }, showResident: false, conversation: false,
+      };
+    }
+    const waiting = waitingBehaviorAt(waitedSeconds, localHour >= 21 || localHour < 5);
+    const clip = waiting.clip;
     return {
       traveler: {
         clip,
@@ -169,7 +185,7 @@ export function productCharacterSceneAt(
     : motion.locomotionSeconds;
   return {
     traveler: {
-      clip: "walk",
+      clip: raining ? "umbrella_walk" : brisk ? "walk_brisk" : "walk",
       seconds: visualLocomotionSeconds % CLIP_DURATIONS.walk,
       timeScale: brisk ? BRISK_WALK_TIME_SCALE : 1,
     },

@@ -257,13 +257,14 @@ from it.
 
 ## 4. The traveler state machine
 
-`TravelerState` (20 values, defined in `src/lib/content/schema.ts`) is the semantic
+`TravelerState` (26 values, defined in `src/lib/content/schema.ts`) is the semantic
 contract every renderer must satisfy:
 
 ```
 loading  idle  start_walk  walk  slow_walk  stop  rest
 notice   approach  greet  talk  listen  react  wave
 phone    drink  photo  sit  goodbye  resume_walk
+wait  sleep  look_up  tie_shoe  cheer  stumble
 ```
 
 Three layers produce it:
@@ -286,13 +287,16 @@ Three layers produce it:
 `worldCommandForEncounter` separately drives the world: camera zoom 1.08, a small pan,
 and background life dropped to 0.22 during the focused phases.
 
-While the traveler is waiting, the existing clips now form a deterministic 12-second
-cycle: four seconds of `idle`, four seconds of `notice` as the look-around fallback,
-then four seconds of `idle`. At 600 waited seconds the cue switches to the existing
-`rest` clip. The waited duration is an explicit presentation input; authoritative route
-seconds remain unchanged. Reduced-motion presentation holds the grounded idle pose.
-The first arrival remains in that waiting cue for a three-second wake beat, with status
-copy naming the wake, before the normal `start_walk` transition begins.
+While the traveler is waiting, `waitingBehaviorAt(waitedSeconds, isLocalNight)` selects
+the pockets/watch/stretch/yawn/look-up cycle deterministically. At 600 seconds it uses
+`sit_down` then `sitting`; from 21:00–05:00 local time it uses `sleep`. Missing retargeted
+takes resolve through the manifest to the closest v2 pose. The waited duration and local
+hour are explicit inputs; authoritative route seconds remain unchanged. During the
+three-second first-arrival beat he looks up and stands before locomotion resumes.
+
+P11 also derives look-up, shoe-tying, one daily stumble and the marathon cheer from the
+pack id plus authoritative seconds/metres. Route beats win over crowd actions, which win
+over these system actions. No timer or module state participates.
 
 ---
 
@@ -563,11 +567,12 @@ controls remain available; Quality makes the low-tier outline difference reviewa
 
 ### 6.3 `product-timeline.ts` — journey → skeleton
 
-`productCharacterSceneAt(pack, motion, traveling, review, now, paceRate)` returns
+`productCharacterSceneAt(pack, motion, traveling, review, now, paceRate, waitedSeconds,
+localHour, raining, wakeElapsedSeconds)` returns
 `{ traveler, resident, showResident, conversation, travelerLeanRadians }`:
 
-- `clipForState` maps all 20 semantic states onto the 15 available clips
-  (`wave → greet`, `sit → rest`, `approach → walk`, `slow_walk → stop`, …).
+- `clipForState` maps all semantic states onto manifest clip names. `CharacterActor`
+  resolves absent names through the declared per-clip fallback chain.
 - `scaledCue` **retimes** a clip to fit an action's scheduled duration, so a 4.5 s
   `phone` beat and a 4.0 s `phone` clip stay in step.
 - `oppositeCue` gives the resident the complementary role: traveler `talk` → resident
@@ -582,6 +587,25 @@ controls remain available; Quality makes the low-tier outline difference reviewa
 - `reviewCue` handles the Preview-only local action rehearsal (see §11) and is the only
   path that can override the server-derived pose. It never touches presence, route
   authority or accounting.
+
+### 6.6 P11 animation extension and gaze
+
+The manifest accepts an optional skeleton-only `animationUrl` beside each mesh GLB.
+`loadCharacterGltf` loads the mesh first, appends animation tracks when that optional
+file succeeds, and keeps the embedded v2 actions when it does not. Source animation
+names are matched through normalized aliases. Only `idle` and `walk` are mandatory;
+every extended take has an acyclic fallback ending at one of those core clips.
+
+The live manifest remains v2 and visual-review-pending. `/preview/characters` lists all
+extended clips and marks direct availability versus the fallback it will use, so adding
+a review-only v3 candidate is a manifest change rather than a runtime rewrite.
+
+After each deterministic mixer seek, the actor may apply a bounded head rotation. It
+looks toward the resident during talk/listen, the phone during `phone`, and the camera
+for the first 0.8 seconds of a crowd wave. The world-space turn is clamped to 35 degrees
+and blended at 0.6; the next mixer sample restores the authored pose before recomputing
+gaze. A code-authored umbrella is visible only for confirmed rain when a direct
+`umbrella_walk` take exists; a fallback walk never displays the prop.
 
 ### 6.4 The resident and other characters
 

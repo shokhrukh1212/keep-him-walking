@@ -18,24 +18,24 @@ const baseMotion: TravelerMotionSnapshot = {
 };
 
 describe("product character timeline", () => {
-  it("uses the GLB walk while traveling and a stable idle when the journey stops", () => {
+  it("uses the GLB walk while traveling and a deterministic wait take when stopped", () => {
     expect(productCharacterSceneAt(almatyCountryPackV1, baseMotion, true, undefined, 0).traveler.clip).toBe("walk");
-    expect(productCharacterSceneAt(almatyCountryPackV1, baseMotion, false, undefined, 0).traveler.clip).toBe("idle");
+    expect(productCharacterSceneAt(almatyCountryPackV1, baseMotion, false, undefined, 0).traveler.clip).toBe("wait_pockets");
   });
 
-  it("cycles the existing idle and notice clips before sitting after ten minutes", () => {
+  it("cycles extended waiting clips before sitting after ten minutes", () => {
     expect(productCharacterSceneAt(
       almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 2,
-    ).traveler.clip).toBe("idle");
+    ).traveler.clip).toBe("wait_pockets");
     expect(productCharacterSceneAt(
       almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 6,
-    ).traveler.clip).toBe("notice");
+    ).traveler.clip).toBe("look_up");
     expect(productCharacterSceneAt(
       almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 10,
-    ).traveler.clip).toBe("idle");
+    ).traveler.clip).toBe("wait_pockets");
     expect(productCharacterSceneAt(
       almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 600,
-    ).traveler.clip).toBe("rest");
+    ).traveler.clip).toBe("sit_down");
   });
 
   it("uses a brisk planted-foot sample and two-degree lean from pace three", () => {

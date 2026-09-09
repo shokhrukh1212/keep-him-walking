@@ -14,6 +14,10 @@ export type TravelerCommand = {
   motionSampleUntilMs: number;
   presenceTtlMs?: number;
   waitedSeconds?: number;
+  /** Explicit local presentation inputs; neither affects journey authority. */
+  localHour?: number;
+  raining?: boolean;
+  wakeElapsedSeconds?: number;
   reducedMotion: boolean;
   sponsorPatchUrl?: string;
   actionReview?: ActionReview;

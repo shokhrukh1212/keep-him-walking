@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
-import { publicAssetUrl } from "@/lib/assets/url";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CharacterActor } from "@/lib/characters/actor";
 import { CHARACTER_CANDIDATES, CHARACTER_MANIFEST, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, sampleScene, type SceneCue } from "@/lib/characters/timeline";
 import { CharacterLights } from "@/lib/characters/toon";
+import { loadCharacterGltf } from "@/lib/characters/loader";
 import { stageSchema } from "@/lib/content/schema";
 import type { StageFrame } from "@/lib/world/stage-layout";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
@@ -18,7 +18,8 @@ type Props = { candidate: CharacterCandidate; view: string; showNpc: boolean; pl
   stageFrame: RefObject<StageFrame | null>; contacts: RefObject<CharacterContacts>; grade: RefObject<VisualGrade>;
   composition: boolean; qualityTier: QualityTier;
   onStatus: (status:string)=>void; onProgress:(seconds:number,cue:SceneCue)=>void;
-  onAvailability:(available:boolean)=>void };
+  onAvailability:(available:boolean)=>void;
+  onClipAvailability?:(clips: ReadonlySet<string>)=>void };
 
 function disposeModel(root: THREE.Object3D) {
   const geometries = new Set<THREE.BufferGeometry>();
@@ -70,13 +71,12 @@ export function CharacterStage3D(props:Props) {
     const load=async(kind:"traveler"|"resident")=>{
       let root:THREE.Group|undefined;
       try{
-        const manifest=CHARACTER_MANIFEST[kind];
         const candidate=CHARACTER_CANDIDATES[latest.current.candidate];
-        const url=kind==="traveler"?candidate.travelerUrl:candidate.residentUrl;
-        const gltf=await loader.loadAsync(publicAssetUrl(url));root=gltf.scene;
+        const definition=kind==="traveler"?candidate.traveler:candidate.resident;
+        const gltf=await loadCharacterGltf(loader,definition);root=gltf.scene;
         if(disposed){disposeModel(root);return;}
-        const model=new CharacterActor(gltf,manifest.heightMetres,kind==="traveler");
-        if(kind==="traveler"){actor=model;traveler.add(model.root);element.dataset.characterReady="true";latest.current.onAvailability(true);}
+        const model=new CharacterActor(gltf,definition.heightMetres,kind==="traveler");
+        if(kind==="traveler"){actor=model;traveler.add(model.root);element.dataset.characterReady="true";latest.current.onAvailability(true);latest.current.onClipAvailability?.(model.availableClips());}
         else{npc=model;resident.add(model.root);element.dataset.residentReady="true";}
         latest.current.onStatus("Model loaded. Character art and animation repairs are still in progress.");
       }catch(error){
@@ -109,7 +109,7 @@ export function CharacterStage3D(props:Props) {
       traveler.rotation.y=action==="encounter"?cue.travelerYaw:yaw;
       traveler.position.x=pair?cue.travelerX:element.clientWidth<=600?0:.25;
       resident.visible=pair;resident.position.x=.65;resident.rotation.y=action==="encounter"?cue.residentYaw:-.6;
-      seat.visible=action==="rest";seat.position.x=traveler.position.x;seat.rotation.y=traveler.rotation.y;
+      seat.visible=["rest","sit_down","sitting","sleep"].includes(cue.traveler.clip);seat.position.x=traveler.position.x;seat.rotation.y=traveler.rotation.y;
       const frame=state.composition?state.stageFrame.current:null;
       if(state.composition&&(!frame||frame.viewportW!==element.clientWidth||frame.viewportH!==element.clientHeight)) {
         state.contacts.current={traveler:null,resident:null};
@@ -135,6 +135,12 @@ export function CharacterStage3D(props:Props) {
       }
       camera.position.y=cameraY;camera.lookAt(0,cameraY,0);camera.updateProjectionMatrix();
       if(pair&&!npcRequested){npcRequested=true;void load("resident");}
+      if (pair && actor && npc) {
+        actor.gazeAt(npc.headPosition(), .6);
+        npc.gazeAt(actor.headPosition(), .6);
+      } else if (cue.traveler.clip === "phone" && actor) {
+        actor.gazeAt(actor.devicePosition(), .6);
+      }
       camera.updateMatrixWorld();
       const foot=new THREE.Vector3(traveler.position.x,0,0).project(camera);
       const residentFoot=new THREE.Vector3(resident.position.x,0,0).project(camera);

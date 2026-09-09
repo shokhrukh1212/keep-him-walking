@@ -1,4 +1,5 @@
 import type { CountryPack, DialogueLine, TravelerState } from "@/lib/content/schema";
+import { deterministicVariant, routePositionAt } from "@/lib/world/route-clock";
 
 export const STEP_DURATION_SECONDS = 0.6;
 export const GAIT_CYCLE_SECONDS = STEP_DURATION_SECONDS * 2;
@@ -11,6 +12,10 @@ export const ACTION_DURATIONS = {
   phone: 4.5,
   wave: 2.5,
   react: 2.5,
+  look_up: 3,
+  tie_shoe: 4,
+  stumble: 2.5,
+  cheer: 3,
 } as const;
 
 type RouteActionKind = keyof typeof ACTION_DURATIONS | "encounter";
@@ -38,7 +43,7 @@ export type TravelerMotionAction = {
   durationSeconds: number;
   progress: number;
   /** Route beats come from the pack; crowd actions come from the watchers. */
-  source: "route" | "crowd";
+  source: "route" | "crowd" | "system";
   encounterPhase?:
     | "notice"
     | "slow_walk"
@@ -262,6 +267,49 @@ function crowdActionAt(
   );
 }
 
+function systemAction(
+  kind: Extract<RouteActionKind, "look_up" | "tie_shoe" | "stumble" | "cheer">,
+  elapsedSeconds: number,
+  label: string,
+): TravelerMotionAction | null {
+  const durationSeconds = ACTION_DURATIONS[kind];
+  if (elapsedSeconds < 0 || elapsedSeconds >= durationSeconds) return null;
+  return actionState({ atMetres: 0, kind, durationSeconds, label }, elapsedSeconds, "system");
+}
+
+/** Deterministic ambient actions from explicit authority; no timer or module state participates. */
+export function systemActionAt(
+  pack: CountryPack,
+  rawActiveSeconds: number,
+  distanceMetres: number,
+): TravelerMotionAction | null {
+  if (pack.schemaVersion !== 3) return null;
+  const route = routePositionAt(pack, distanceMetres);
+  const zone = pack.route.zones[route.zoneIndex]?.id ?? "";
+  const seed = pack.assetVersion;
+
+  const stumbleAt = pack.dayRouteMetres * .25
+    + deterministicVariant(`${seed}:stumble`, 0, Math.max(1, Math.floor(pack.dayRouteMetres * .5)));
+  const stumble = systemAction("stumble", (distanceMetres - stumbleAt) / METRES_PER_SECOND, "Stumbling, then finding his feet");
+  if (stumble) return stumble;
+
+  const cheer = systemAction("cheer", (distanceMetres - pack.marathonMetres) / METRES_PER_SECOND, "Celebrating a marathon");
+  if (cheer) return cheer;
+
+  const tiePeriod = 15 * 60;
+  const tieOffset = deterministicVariant(`${seed}:tie-shoe`, 0, tiePeriod - ACTION_DURATIONS.tie_shoe);
+  const tie = systemAction("tie_shoe", (rawActiveSeconds - tieOffset + tiePeriod) % tiePeriod, "Tying a shoe");
+  if (rawActiveSeconds >= tieOffset && tie) return tie;
+
+  if (zone.includes("lane") || zone.includes("landmark")) {
+    const lookPeriod = 9 * 60;
+    const lookOffset = deterministicVariant(`${seed}:look-up`, 0, lookPeriod - ACTION_DURATIONS.look_up);
+    const look = systemAction("look_up", (rawActiveSeconds - lookOffset + lookPeriod) % lookPeriod, "Looking up at the city");
+    if (rawActiveSeconds >= lookOffset && look) return look;
+  }
+  return null;
+}
+
 /**
  * Converts server-owned watcher time and distance into the canonical motion
  * timeline. Metre beats are rounded onto a planted-foot boundary; distance
@@ -307,7 +355,10 @@ export function travelerMotionAt(
     activeAction !== null,
     lastCompletedBeatEndMetres,
   );
-  const resolvedAction = activeAction ?? crowdAction;
+  const ambientAction = activeAction || crowdAction
+    ? null
+    : systemActionAt(pack, raw, distance);
+  const resolvedAction = activeAction ?? crowdAction ?? ambientAction;
 
   const routeSeconds = distance / METRES_PER_SECOND;
   const locomotionSeconds = Math.max(0, raw - pausedSeconds + actionSeconds);
