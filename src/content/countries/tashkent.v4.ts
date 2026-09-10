@@ -13,6 +13,7 @@ export const tashkentCountryPackV4 = createPhase2CountryPack({
     { id: "plov-cafe", label: "Plov café", weather: "golden", palette: ["#91b9b0", "#edae64", "#995b3d"], stage: { groundLineY: 0.85, horizonY: 0.60, personHeightFrac: 0.19, palette: ["#c4a87f", "#7f8054", "#59677a"], lightDir: "left" } },
     { id: "evening-landmark", label: "Hazrati Imam at dusk", weather: "evening", palette: ["#516b8d", "#d38a66", "#243653"], stage: { groundLineY: 0.88, horizonY: 0.64, personHeightFrac: 0.20, palette: ["#ad8a76", "#7e6b61", "#444e69"], lightDir: "right" } },
   ],
+  ambient: { season: "summer", tram: true, catColor: "#c8b393" },
   encounter: {
     npcId: "tashkent-host",
     locationLabel: "A mahalla gate",

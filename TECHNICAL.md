@@ -1337,6 +1337,66 @@ exactly this trade-off and points at a `proxy` check as the only real fix. Next 
 has behaved this way since P13. Moving the check into `proxy` would mean a database read
 on every request in the edge path, so it was not done here.
 
+### The living world (P17)
+
+`src/lib/world/ambient.ts` is the whole schedule and it is pure: `birdFlights`,
+`catAppearance`, `walkerPopulation`, `steamPuffs`, `tramPass`, `buntingVisible`,
+`windowLightAlpha` and `wavingWalker` are functions of the authoritative second and a
+seed, through the existing `deterministicVariant`. Nothing calls `Math.random`, so two
+people watching at the same second see the same bird in the same place — which is what
+makes "you are watching the same thing" true rather than decorative.
+
+Birds cross in a loose skein every 40-90 s and wind carries them faster, using the same
+`effect.windScale` the rain and the motes already use. The cat sits on a wall for twenty
+seconds roughly every six minutes, and only in a `lanes` zone. Steam rises in the `cafe`
+zone; a tram crosses `arrival` for cities that opt in through `pack.ambient.tram`.
+Everything is drawn in code as simple shapes, so there are no sprite sheets to download,
+nothing to fall out of sync with a pack, and no new asset pipeline.
+
+Draw order gained two containers. `lifeRoot` sits between `propRoot` and
+`groundLifeRoot`; it is a **sibling of `weatherStaticRoot`, never a child of
+`weatherRoot`**, because `weatherRoot` is emptied and destroyed on every zone rebuild and
+would take the birds and the cat with it. `lightsRoot` sits directly above `layerRoot`
+with an additive blend, drawing a zone's optional `lightsUrl` on the same dusk ramp as
+the night grade — lit windows add light to the painting rather than covering it.
+
+**Honest gap:** no pack ships a `lightsUrl` yet, so the window-light path is code with no
+art behind it. That is the owner's to paint. The related P10 finding still stands:
+`nightUrl` is declared in the schema and no code reads it, so the night cross-fade is
+grade-only in practice.
+
+Quality tiers gained `walkers 0/1/3` and `birds 0/2/4`. Reduced motion already forces the
+low tier, so a reduced-motion viewer gets neither — the same rule the storm flash follows.
+
+Background walkers are `SkeletonUtils.clone`s of the resident GLB, which every page has
+already downloaded for the encounter, so they cost no extra bytes over the network.
+`CharacterActor` mutates `gltf.scene` in place, so each walker needs its own rig. They are
+built **one per frame**: cloning a rig and constructing an actor is the most expensive
+thing the draw loop can do, and three at once reads as a stutter. Their count follows the
+city's hour and is adjusted inside the loop, not at mount — that effect has an empty
+dependency list and the tier it captured is not the live one. They compute their own
+anchors and never inherit the traveler's eight-second viewport drift, sit at negative `z`
+so the sort is unambiguous, and walk the other way at `rotation.y = -0.68`. When a crowd
+wave fires, `wavingWalker` picks the one who waves back, so every viewer sees the same
+person answer.
+
+**Not shipped: awning flutter.** `props = coherentPanorama ? [] : …` disables foreground
+cutouts for every live pack; they were removed in Phase 3 because they rendered as a
+repeated pasted tree/lamp/planter strip (see §8.2 and `docs/phase-3-results.md`). There is
+no cutout surface to flutter, and reintroducing the pool would risk that exact regression.
+The prop assets are deliberately still on disk, so the option stays open.
+
+The bunting is the only part of this that touches the database. `journey_runtime` gained
+`hundred_watchers_at`, and `record_presence_heartbeat_v9` stamps it under the row lock the
+heartbeat already holds, `where hundred_watchers_at is null` — so it records the *first*
+time a hundred people watched at once and no later heartbeat can move it. It is never
+inferred from a client-side count.
+
+**The scene texture inventory now ignores hidden sprites.** `data-scene-textures` walks
+every Sprite reachable from the stage; a sprite waiting for a texture it may never get —
+the cafe sign with no premium sponsor, the window lights before dusk — was being reported
+as `generated:1x1`, a texture nobody can see. The walk now stops at an invisible node.
+
 ### Sponsor pricing and placements (P15)
 
 `P(day) = clamp(yesterday_unique_watchers x SPONSOR_CENTS_PER_UNIQUE, floor, cap)`, with

@@ -156,6 +156,10 @@ export type BootstrapSnapshot = {
     collectedToday: boolean;
     collectSeconds: number;
   };
+  milestones: {
+    /** When a hundred people first watched this day at once. Never guessed locally. */
+    hundredWatchersAt: string | null;
+  };
   assets: CountryPack;
 };
 
@@ -179,6 +183,8 @@ export type HeartbeatResponse = {
   wokeHim: boolean;
   /** Recipient-only token, present only on the heartbeat that awards the wake moment. */
   firstWatcherShareToken?: string | null;
+  /** When a hundred people first watched this day at once, or null if never. */
+  hundredWatchersAt?: string | null;
   /** The edge-derived country the server credited this heartbeat to. */
   countryCode: string;
   reactions: ReactionsView;

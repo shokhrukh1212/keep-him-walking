@@ -3,6 +3,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import type { CountryPack } from "@/lib/content/schema";
 import { CharacterActor } from "@/lib/characters/actor";
 import { CharacterLights } from "@/lib/characters/toon";
@@ -13,6 +14,9 @@ import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { actorLayout } from "@/lib/traveler/actor-layout";
 import type { StageFrame } from "@/lib/world/stage-layout";
 import { travelerMotionAt } from "@/lib/traveler/motion-clock";
+import { walkerPopulation, wavingWalker } from "@/lib/world/ambient";
+import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
+import { deterministicVariant } from "@/lib/world/route-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import type { QualityTier, RouteRuntime } from "@/lib/world/types";
@@ -123,11 +127,19 @@ export function ProductCharacterStage3D(props: Props) {
 
     const travelerRoot = new THREE.Group();
     const residentRoot = new THREE.Group();
-    scene.add(travelerRoot, residentRoot);
+    // Walkers live behind both of them and compute their own anchors: the
+    // traveler's eight-second viewport drift is his, and must not be inherited.
+    const walkerRoot = new THREE.Group();
+    scene.add(travelerRoot, residentRoot, walkerRoot);
     const loader = new GLTFLoader();
     const clock = new PresentationClock();
     let traveler: CharacterActor | undefined;
     let resident: CharacterActor | undefined;
+    // The resident GLB is already downloaded for the encounter, so every walker
+    // is a skeleton clone of it and costs no extra bytes over the network.
+    let residentGltf: Awaited<ReturnType<typeof loadCharacterGltf>> | undefined;
+    type Walker = { actor: CharacterActor; anchor: THREE.Group; lane: number; speed: number };
+    let walkers: Walker[] = [];
     let last = 0;
     let lastRender = 0;
     let firstSample = true;
@@ -153,6 +165,7 @@ export function ProductCharacterStage3D(props: Props) {
           latest.current.onTravelerAvailability?.(true);
         } else {
           resident = actor;
+          residentGltf = gltf;
           residentRoot.add(actor.root);
           element.dataset.residentReady = "true";
           latest.current.onResidentAvailability?.(true);
@@ -288,6 +301,71 @@ export function ProductCharacterStage3D(props: Props) {
       };
       element.dataset.outline = String(state.qualityTier !== "low");
       element.dataset.grade = JSON.stringify(state.grade.current);
+
+      // ---- Background walkers. The count follows the city's own hour and the
+      // quality tier, and is adjusted here rather than at mount: this effect has
+      // an empty dependency list, so the tier it captured is not the live one.
+      const wanted = residentGltf && !cue.conversation
+        ? walkerPopulation(state.command?.localHour ?? 12, QUALITY_LIMITS[state.qualityTier].walkers)
+        : 0;
+      while (walkers.length > wanted) {
+        const spare = walkers.pop();
+        if (!spare) break;
+        walkerRoot.remove(spare.anchor);
+        spare.actor.dispose();
+        disposeModel(spare.anchor);
+      }
+      // One per frame: cloning a rig and building an actor is the most expensive
+      // thing this loop can do, and three of them at once shows up as a stutter.
+      if (walkers.length < wanted && residentGltf) {
+        const index = walkers.length;
+        // A skeleton clone: CharacterActor mutates gltf.scene in place, so every
+        // walker needs its own rig rather than a shared one.
+        const cloned = cloneSkinned(residentGltf.scene) as THREE.Group;
+        const actor = new CharacterActor(
+          { ...residentGltf, scene: cloned } as typeof residentGltf,
+          CHARACTER_MANIFEST.resident.heightMetres,
+          false,
+        );
+        const anchor = new THREE.Group();
+        // 0.45-0.6 of his height, and behind him in z so the sort is unambiguous.
+        anchor.scale.setScalar(0.45 + deterministicVariant(`${state.pack.assetVersion}:walker-scale`, index, 4) * 0.05);
+        anchor.position.z = -0.5 - deterministicVariant(`${state.pack.assetVersion}:walker-depth`, index, 3) * 0.5;
+        // Walking the other way, so the street reads as two-directional.
+        anchor.rotation.y = -0.68;
+        anchor.add(actor.root);
+        walkerRoot.add(anchor);
+        walkers.push({
+          actor,
+          anchor,
+          lane: deterministicVariant(`${state.pack.assetVersion}:walker-lane`, index, 100) / 100,
+          speed: 0.55 + deterministicVariant(`${state.pack.assetVersion}:walker-speed`, index, 5) * 0.06,
+        });
+      }
+
+      // One of them waves back when the crowd waves, chosen deterministically so
+      // every viewer sees the same person answer.
+      const crowdWave = motion.action?.source === "crowd" && motion.action.kind === "wave"
+        && motion.action.elapsedSeconds < 0.8;
+      const waver = crowdWave ? wavingWalker(sample.rawSeconds, state.pack.assetVersion, walkers.length) : -1;
+      for (let index = 0; index < walkers.length; index += 1) {
+        const walker = walkers[index]!;
+        // Their own track across the street: seconds x speed, wrapped, so they
+        // never borrow the traveler's anchor or his viewport drift.
+        const cycle = (sample.rawSeconds * walker.speed * 0.06 + walker.lane) % 1;
+        walker.anchor.position.x = (1 - cycle - 0.5) * horizontal;
+        walker.actor.sample(
+          index === waver ? { clip: "greet", seconds: motion.action?.elapsedSeconds ?? 0 } : { clip: "walk", seconds: sample.rawSeconds * walker.speed },
+          dt,
+          false,
+          1.8,
+        );
+        walker.actor.toon.viewport.value.set(width, height);
+        walker.actor.setAppearance(frame.stage, state.grade.current, state.qualityTier);
+      }
+      element.dataset.walkers = String(walkers.length);
+      element.dataset.walkerWaving = String(waver >= 0);
+
       renderer.render(scene, camera);
       // The drawing buffer is only guaranteed here, immediately after the draw,
       // so the copy is taken synchronously rather than with preserveDrawingBuffer.
@@ -327,6 +405,8 @@ export function ProductCharacterStage3D(props: Props) {
       latest.current.onResidentAvailability?.(false);
       traveler?.dispose();
       resident?.dispose();
+      for (const walker of walkers) walker.actor.dispose();
+      walkers = [];
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       renderer.domElement.removeEventListener("webglcontextrestored", restored);
       disposeModel(scene);

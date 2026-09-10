@@ -104,6 +104,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
     sponsor: { status: "unsponsored" },
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
+    milestones: { hundredWatchersAt: null },
     assets: tashkentCountryPackV2,
   };
 }

@@ -711,6 +711,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         weather={weather}
         // Premium only, and only once the creative is approved and live.
         sponsorSignUrl={sponsor?.bottle ?? null}
+        // The latest confirmation wins: the heartbeat may have crossed the
+        // hundred since this page's bootstrap was read.
+        hundredWatchersAt={heartbeat?.hundredWatchersAt ?? snapshot.milestones.hundredWatchersAt}
         onWorldCaptureReady={registerWorldCapture}
         onCharacterCaptureReady={registerCharacterCapture}
         pack={snapshot.assets}

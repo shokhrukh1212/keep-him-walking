@@ -19,6 +19,7 @@ import type { ScheduledActionView } from "@/lib/contracts";
 import type { JourneyWeather } from "@/lib/weather/open-meteo";
 import { weatherEffect } from "@/lib/weather/effects";
 import { combineGrade, gradeForHour, localHourFraction, nightMix } from "@/lib/world/time-grade";
+import { birdFlights, buntingVisible, catAppearance, steamPuffs, tramPass } from "@/lib/world/ambient";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 
 const EMPTY_SCHEDULED_ACTIONS: readonly ScheduledActionView[] = [];
@@ -34,6 +35,8 @@ type Props = {
   weather?: JourneyWeather | null;
   /** Premium placement only: an approved sign texture drawn in the cafe zone. */
   sponsorSignUrl?: string | null;
+  /** Server-confirmed hundred-watcher moment; bunting is never guessed locally. */
+  hundredWatchersAt?: string | null;
   onCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
   reducedMotion: boolean;
@@ -47,7 +50,8 @@ type Props = {
 };
 
 type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">
-  & { scheduledActions: readonly ScheduledActionView[]; weather: JourneyWeather | null; sponsorSignUrl: string | null };
+  & { scheduledActions: readonly ScheduledActionView[]; weather: JourneyWeather | null; sponsorSignUrl: string | null;
+      hundredWatchersAt: string | null };
 
 export function PixiScene({
   pack,
@@ -59,6 +63,7 @@ export function PixiScene({
   scheduledActions = EMPTY_SCHEDULED_ACTIONS,
   weather = null,
   sponsorSignUrl = null,
+  hundredWatchersAt = null,
   onCaptureReady,
   command,
   reducedMotion,
@@ -71,19 +76,19 @@ export function PixiScene({
   onFailure,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather, sponsorSignUrl });
+  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather, sponsorSignUrl, hundredWatchersAt });
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const diagnosticsCallback = useRef(onDiagnostics);
   const captureCallback = useRef(onCaptureReady);
 
   useEffect(() => {
-    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather, sponsorSignUrl };
+    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather, sponsorSignUrl, hundredWatchersAt };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     diagnosticsCallback.current = onDiagnostics;
     captureCallback.current = onCaptureReady;
-  }, [command, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, weather, sponsorSignUrl, onMotionSample]);
+  }, [command, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -121,6 +126,11 @@ export function PixiScene({
         const transitionRoot = new Container();
         const propRoot = new Container();
         const signRoot = new Container();
+        // lifeRoot is a sibling of weatherStaticRoot, never a child of weatherRoot:
+        // weatherRoot is emptied and destroyed on every zone rebuild, which would
+        // take the birds and the cat with it.
+        const lifeRoot = new Container();
+        const lightsRoot = new Container();
         const groundLifeRoot = new Container();
         const groundDetailsRoot = new Container();
         const weatherRoot = new Container();
@@ -158,7 +168,9 @@ export function PixiScene({
         // Draw order, back to front: sky, the panorama (or the legacy parallax
         // layers), props, ground life, weather. Nothing composites over the
         // painting itself.
-        camera.addChild(sky, layerRoot, transitionRoot, propRoot, signRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
+        camera.addChild(sky, layerRoot, lightsRoot, transitionRoot, propRoot, signRoot, lifeRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
+        // Lit windows add light to the painting rather than covering it.
+        lightsRoot.blendMode = "add";
         weatherStaticRoot.addChild(fogBand);
         app.stage.addChild(stormFlash);
         app.stage.addChild(camera);
@@ -197,6 +209,36 @@ export function PixiScene({
         sign.sprite.anchor.set(0.5, 0.5);
         sign.sprite.visible = false;
         signRoot.addChild(sign.sprite);
+
+        // The ambient cast is drawn in code as simple shapes: no sprite sheets to
+        // download, nothing to fall out of sync with a pack, and every shape is a
+        // pure function of the authoritative second.
+        const ambient = pack.schemaVersion === 3 ? pack.ambient : null;
+        const birds = Array.from({ length: limits.birds }, () => {
+          const bird = new Graphics();
+          bird.visible = false;
+          lifeRoot.addChild(bird);
+          return bird;
+        });
+        const cat = new Graphics();
+        cat.visible = false;
+        lifeRoot.addChild(cat);
+        const steam = Array.from({ length: 3 }, () => {
+          const puff = new Graphics();
+          puff.visible = false;
+          lifeRoot.addChild(puff);
+          return puff;
+        });
+        const tram = new Graphics();
+        tram.visible = false;
+        lifeRoot.addChild(tram);
+        const bunting = new Graphics();
+        bunting.visible = false;
+        lifeRoot.addChild(bunting);
+        const windowLights = new Sprite();
+        windowLights.visible = false;
+        lightsRoot.addChild(windowLights);
+        const lights = { url: null as string | null, ready: false, generation: 0 };
         let pools: LayerPool[] = [];
         let props: PropPool[] = [];
         let groundLife: InstanceType<typeof Graphics>[] = [];
@@ -656,6 +698,138 @@ export function PixiScene({
           } else {
             sign.sprite.visible = false;
           }
+
+          // ---- The city's own life. Every schedule below is a pure function of
+          // the authoritative second, so two viewers see the same bird, the same
+          // cat and the same tram at the same moment.
+          const life = state.reducedMotion ? 0 : 1;
+          const localHourNow = Number(element.dataset.localHour ?? "12");
+
+          for (let index = 0; index < birds.length; index += 1) birds[index]!.visible = false;
+          const flock = life ? birdFlights(displayedSeconds, pack.assetVersion, limits.birds, effect.windScale) : [];
+          for (let index = 0; index < flock.length && index < birds.length; index += 1) {
+            const flight = flock[index]!;
+            const bird = birds[index]!;
+            const span = width + 120;
+            const x = flight.direction === 1 ? -60 + flight.progress * span : width + 60 - flight.progress * span;
+            const y = height * flight.height;
+            const wing = Math.sin(flight.wing * Math.PI * 2) * 5 * flight.scale;
+            bird.clear();
+            // A shallow "M": two strokes that flap around a shared centre.
+            bird.moveTo(-9 * flight.scale, wing).lineTo(0, -2 * flight.scale).lineTo(9 * flight.scale, wing)
+              .stroke({ color: 0x2c3a45, width: Math.max(1, 1.6 * flight.scale), alpha: 0.55 });
+            bird.position.set(x, y);
+            bird.visible = true;
+          }
+
+          // The cat sits on a wall in the lanes and nowhere else.
+          const catNow = life && activeZone.kind === "lanes"
+            ? catAppearance(displayedSeconds, pack.assetVersion)
+            : { visible: false, progress: 0, frame: 0, lane: 0 };
+          cat.visible = catNow.visible;
+          if (catNow.visible) {
+            const size = layout.personHeightPx * 0.16;
+            const tail = [0.9, 1.15, 0.95, 0.7][catNow.frame] ?? 1;
+            const colour = Number.parseInt((ambient?.catColor ?? "#3a3a3a").slice(1), 16);
+            cat.clear();
+            cat.roundRect(-size, -size * 0.55, size * 2, size * 1.1, size * 0.4).fill({ color: colour, alpha: 0.92 });
+            cat.circle(size * 0.95, -size * 0.5, size * 0.5).fill({ color: colour, alpha: 0.92 });
+            cat.moveTo(-size, -size * 0.3)
+              .lineTo(-size * 1.5, -size * tail)
+              .stroke({ color: colour, width: Math.max(1.5, size * 0.28), alpha: 0.92 });
+            cat.position.set(width * (0.12 + catNow.lane * 0.6), layout.groundY - layout.personHeightPx * 0.92);
+          }
+
+          // Steam from the cafe, rising and thinning as it goes.
+          const steaming = life && activeZone.kind === "cafe";
+          const puffs = steaming ? steamPuffs(displayedSeconds, steam.length) : [];
+          for (let index = 0; index < steam.length; index += 1) {
+            const puff = steam[index]!;
+            const scheduled = puffs[index];
+            puff.visible = Boolean(scheduled);
+            if (!scheduled) continue;
+            const rise = layout.personHeightPx * 0.9 * scheduled.progress;
+            const radius = layout.personHeightPx * (0.05 + scheduled.progress * 0.09);
+            puff.clear();
+            puff.circle(0, 0, radius).fill({ color: 0xffffff, alpha: 0.22 * (1 - scheduled.progress) });
+            puff.position.set(
+              width * 0.74 + scheduled.drift * layout.personHeightPx * 0.08,
+              layout.groundY - layout.personHeightPx * 1.15 - rise,
+            );
+          }
+
+          // A tram silhouette crosses the arrival zone, for cities that run one.
+          const tramNow = life && ambient?.tram && activeZone.kind === "arrival"
+            ? tramPass(displayedSeconds, pack.assetVersion)
+            : { active: false, progress: 0, direction: 1 as const };
+          tram.visible = tramNow.active;
+          if (tramNow.active) {
+            const carHeight = layout.personHeightPx * 0.82;
+            const carWidth = carHeight * 3.4;
+            const span = width + carWidth * 2;
+            const x = tramNow.direction === 1
+              ? -carWidth + tramNow.progress * span
+              : width + carWidth - tramNow.progress * span;
+            tram.clear();
+            tram.roundRect(0, 0, carWidth, carHeight, carHeight * 0.14).fill({ color: 0x2b3c47, alpha: 0.34 });
+            for (let window = 0; window < 5; window += 1) {
+              tram.rect(carWidth * (0.1 + window * 0.17), carHeight * 0.2, carWidth * 0.1, carHeight * 0.3)
+                .fill({ color: 0xf4e2b8, alpha: 0.2 });
+            }
+            tram.position.set(x, layout.groundY - carHeight);
+          }
+
+          // Bunting, only once the server has confirmed a hundred watchers at once.
+          const buntingUp = activeZone.kind === "market"
+            && buntingVisible(state.hundredWatchersAt, new Date());
+          bunting.visible = buntingUp;
+          if (buntingUp) {
+            const top = layout.groundY - layout.personHeightPx * 1.9;
+            const sag = layout.personHeightPx * 0.22;
+            bunting.clear();
+            bunting.moveTo(0, top).quadraticCurveTo(width / 2, top + sag, width, top)
+              .stroke({ color: 0xf2e0bb, width: 2, alpha: 0.7 });
+            const flags = Math.max(6, Math.round(width / 90));
+            for (let flag = 0; flag <= flags; flag += 1) {
+              const t = flag / flags;
+              const x = t * width;
+              // The same quadratic the line follows, so the flags hang off it.
+              const y = (1 - t) * (1 - t) * top + 2 * (1 - t) * t * (top + sag) + t * t * top;
+              const size = layout.personHeightPx * 0.09;
+              const colour = [0xd8734f, 0xe9c05c, 0x62a08a][deterministicVariant(`${pack.assetVersion}:bunting`, flag, 3)]!;
+              bunting.moveTo(x - size * 0.5, y).lineTo(x + size * 0.5, y).lineTo(x, y + size)
+                .fill({ color: colour, alpha: 0.78 });
+            }
+          }
+
+          // Lit windows: the zone's own night overlay, faded in on the same dusk
+          // ramp as the night grade. Absent art simply means no lights.
+          const lightsUrl = activeZone.lightsUrl ? publicAssetUrl(activeZone.lightsUrl) : null;
+          if (lightsUrl !== lights.url) {
+            lights.url = lightsUrl;
+            lights.ready = false;
+            windowLights.visible = false;
+            const generation = ++lights.generation;
+            if (lightsUrl) {
+              void Assets.load(lightsUrl).then((texture: PixiTexture) => {
+                if (disposed || generation !== lights.generation) return;
+                windowLights.texture = texture;
+                lights.ready = true;
+              }).catch(() => { lights.ready = false; });
+            }
+          }
+          const lightAlpha = lights.ready ? nightMix(localHourNow) : 0;
+          windowLights.visible = lightAlpha > 0.01;
+          if (windowLights.visible) {
+            windowLights.position.set(layout.imageX, layout.imageY);
+            windowLights.scale.set(layout.imageScale);
+            windowLights.alpha = lightAlpha * 0.85;
+          }
+          element.dataset.windowLightAlpha = lightAlpha.toFixed(3);
+          element.dataset.birdsVisible = String(birds.filter((bird) => bird.visible).length);
+          element.dataset.catVisible = String(cat.visible);
+          element.dataset.buntingVisible = String(bunting.visible);
+
           for (const kind of ["traveler", "resident"] as const) {
             const contact = contacts.current[kind];
             const shadow = shadows[kind];
@@ -797,6 +971,11 @@ export function PixiScene({
             // only in visual review.
             const drawnTextures = new Set<string>();
             const collectTextures = (node: InstanceType<typeof Container>) => {
+              // Only what is actually on screen. A hidden sprite that is waiting
+              // for its texture — the cafe sign before a premium sponsor, the
+              // window lights before dusk — is not something the world is drawing,
+              // and counting it would report a texture nobody can see.
+              if (!node.visible) return;
               if (node instanceof Sprite) {
                 const texture = node.texture;
                 drawnTextures.add(

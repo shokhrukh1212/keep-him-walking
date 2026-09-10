@@ -91,6 +91,7 @@ type BootstrapBundleRow = {
   weather: unknown;
   contribution_seconds: number | null;
   passport: null | { streak: number; collectedToday: boolean };
+  milestones: null | { hundredWatchersAt: string | null };
   postcard: null | { public_token: string; status: string; expires_at: string };
   sponsor: null | {
     public_id: string;
@@ -365,6 +366,7 @@ function bootstrapFromBundle(
       collectedToday: Boolean(bundle.passport?.collectedToday),
       collectSeconds: config.passportCollectSeconds,
     },
+    milestones: { hundredWatchersAt: bundle.milestones?.hundredWatchersAt ?? null },
     assets: countryPack,
   };
 }
@@ -463,7 +465,7 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v11", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v12", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -544,6 +546,7 @@ export async function liveBootstrapSnapshot(
   let passport: BootstrapSnapshot["passport"] = {
     streak: 0, collectedToday: false, collectSeconds: config.passportCollectSeconds,
   };
+  let milestones: BootstrapSnapshot["milestones"] = { hundredWatchersAt: null };
   if (config.phase2Enabled && countryPack.schemaVersion === 3) {
     const [{ data: contribution }, { data: existingPostcard }, { data: slot, error: sponsorError }] = await Promise.all([
       supabase.from("visitor_day_contributions").select("active_seconds").eq("country_day_id", countryDay.id).eq("visitor_hash", visitorHash).maybeSingle(),
@@ -594,6 +597,9 @@ export async function liveBootstrapSnapshot(
       collectedToday: Boolean(read.days?.find((day) => day.countryDayId === countryDay.id)?.collected),
       collectSeconds: config.passportCollectSeconds,
     };
+    const { data: milestoneRow } = await supabase.from("journey_runtime")
+      .select("hundred_watchers_at").eq("country_day_id", countryDay.id).maybeSingle();
+    milestones = { hundredWatchersAt: milestoneRow?.hundred_watchers_at ?? null };
   }
 
   return {
@@ -644,6 +650,7 @@ export async function liveBootstrapSnapshot(
     sponsor,
     postcard,
     passport,
+    milestones,
     assets: countryPack,
   };
 }

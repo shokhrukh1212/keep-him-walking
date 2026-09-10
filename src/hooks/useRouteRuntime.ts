@@ -31,7 +31,7 @@ export function useRouteRuntime(
     // two authoritative payloads carried them.
     const scheduledActions = mergeScheduledActions(
       snapshot.reactions.scheduled,
-      heartbeat?.reactions.scheduled,
+      heartbeat?.reactions?.scheduled,
     );
     const motion = travelerMotionAt(
       snapshot.assets,

@@ -262,6 +262,11 @@ export const routeZoneSchema = z.object({
    * cross-fade to it across dusk; absent ones are graded to night instead.
    */
   nightUrl: z.string().startsWith("/").optional(),
+  /**
+   * The lit-windows overlay for this zone, drawn additively across dusk. Optional
+   * because the owner paints these; a zone without one simply grades to night.
+   */
+  lightsUrl: z.string().startsWith("/").optional(),
 });
 
 function routeSchemaWithDistanceDefaults() {
@@ -372,10 +377,24 @@ export const preloadGroupSchema = z.object({
   assets: z.array(z.string().startsWith("/")).min(1),
 });
 
+/**
+ * What the city does on its own. Defaulted whole so every existing pack keeps
+ * validating and simply gets the quietest version of the world.
+ */
+export const ambientSchema = z.object({
+  season: z.enum(["spring", "summer", "autumn", "winter"]).default("summer"),
+  /** Falling petals or leaves; absent means the air is still. */
+  petalColor: z.string().optional(),
+  catColor: z.string().optional(),
+  /** A tram or bus silhouette crossing the arrival zone. Opt-in per city. */
+  tram: z.boolean().default(false),
+});
+
 export const countryPackV3Schema = baseCountryPackSchema
   .omit({ countryDayId: true })
   .extend({
     schemaVersion: z.literal(3),
+    ambient: ambientSchema.prefault({}),
     packId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*-v\d+$/),
     revision: z.number().int().positive(),
     dayRouteMetres: z.number().positive().max(100_000).default(DEFAULT_DAY_ROUTE_METRES),
@@ -455,6 +474,7 @@ export type DialogueLine = z.infer<typeof dialogueLineSchema>;
 export type EncounterContent = z.infer<typeof encounterContentSchema>;
 export type CountryPackV2 = z.infer<typeof countryPackSchema>;
 export type CountryPackV3 = z.infer<typeof countryPackV3Schema>;
+export type PackAmbient = z.infer<typeof ambientSchema>;
 export type CountryPack = CountryPackV2 | CountryPackV3;
 export type CountryPackV1 = z.infer<typeof countryPackV1Schema>;
 export type RouteLayer = z.infer<typeof routeLayerSchema>;

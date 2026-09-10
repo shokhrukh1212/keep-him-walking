@@ -31,6 +31,7 @@ type Props = {
   scheduledActions?: readonly ScheduledActionView[];
   weather?: JourneyWeather | null;
   sponsorSignUrl?: string | null;
+  hundredWatchersAt?: string | null;
   onWorldCaptureReady?: (capture: CanvasCapture | null) => void;
   onCharacterCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
@@ -54,6 +55,7 @@ export function SceneStage({
   scheduledActions,
   weather,
   sponsorSignUrl = null,
+  hundredWatchersAt = null,
   onWorldCaptureReady,
   onCharacterCaptureReady,
   command,
@@ -133,6 +135,7 @@ export function SceneStage({
           scheduledActions={scheduledActions}
           weather={weather}
           sponsorSignUrl={sponsorSignUrl}
+          hundredWatchersAt={hundredWatchersAt}
           onCaptureReady={onWorldCaptureReady}
           command={command}
           qualityTier={qualityTier}

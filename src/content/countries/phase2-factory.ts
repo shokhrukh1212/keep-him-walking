@@ -155,6 +155,8 @@ export type Phase2CountryDefinition = {
     };
     exchange: [string, string, string, string];
   };
+  /** What the city does on its own; omitted cities get the quiet default. */
+  ambient?: Partial<CountryPackV3["ambient"]>;
   postcardTitle: string;
   postcardCopy: string;
   sourceNotes: [string, string, ...string[]];
@@ -237,6 +239,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     schemaVersion: 3,
     packId: definition.packId,
     revision: 1,
+    ambient: definition.ambient ?? {},
     assetVersion: definition.packId,
     countryCode: definition.countryCode,
     countryName: definition.countryName,

@@ -26,8 +26,11 @@ export const QUALITY_LIMITS: Record<QualityTier, {
   maxProps: number;
   motes: number;
   targetFps: number;
+  /** Background people in the Three canvas. Reduced motion forces low, so zero. */
+  walkers: number;
+  birds: number;
 }> = {
-  low: { resolution: 1, maxProps: 10, motes: 0, targetFps: 30 },
-  medium: { resolution: 1.25, maxProps: 16, motes: 14, targetFps: 50 },
-  high: { resolution: 1.6, maxProps: 24, motes: 22, targetFps: 60 },
+  low: { resolution: 1, maxProps: 10, motes: 0, targetFps: 30, walkers: 0, birds: 0 },
+  medium: { resolution: 1.25, maxProps: 16, motes: 14, targetFps: 50, walkers: 1, birds: 2 },
+  high: { resolution: 1.6, maxProps: 24, motes: 22, targetFps: 60, walkers: 3, birds: 4 },
 };

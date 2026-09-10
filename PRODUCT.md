@@ -195,6 +195,11 @@ that is hashed before it ever reaches the database.
   collected days read as "4 days in a row".
 - **Season sheet** — `/season/1` is the whole passport as one shareable poster: the stamp
   sheet, the confirmed totals, the route map and a share card.
+- **A city that lives** — birds cross the sky, a cat appears on a wall in the lanes,
+  steam lifts off the cafe, a tram passes on the boulevard, and people walk by behind
+  him. Everything runs off the same clock he does, so everyone watching sees the same
+  bird at the same moment. When a hundred people are watching at once, bunting goes up
+  in the market for the rest of the day.
 - **Tomorrow** — the next city's name and start time, plus a downloadable `.ics`
   calendar file so you can come back for it.
 - **Sound** — per-zone ambient street audio, off until you ask for it.
