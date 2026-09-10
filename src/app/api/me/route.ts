@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { attachVisitorCookie, visitorFromRequest } from "@/lib/identity/cookie";
 import { hashOpaqueValue } from "@/lib/identity/server";
 import { withRouteTelemetry } from "@/lib/observability/route";
-import { loadVisitorPassport } from "@/lib/season/passport";
+import { loadVisitorPrivateState } from "@/lib/season/passport";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -20,9 +20,9 @@ async function handleGet(request: NextRequest) {
   const limit = await consumeRateLimit(visitorHash, RATE_LIMITS.me);
   if (limit.configured && !limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds, "Too many passport refreshes.");
 
-  const passport = await loadVisitorPassport(visitorHash);
+  const state = await loadVisitorPrivateState(visitorHash);
   const response = NextResponse.json(
-    { firstVisit: visitor.isNew, passport },
+    { firstVisit: visitor.isNew, ...state },
     { headers: { "Cache-Control": "private, no-store" } },
   );
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);

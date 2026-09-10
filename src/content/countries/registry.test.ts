@@ -17,8 +17,8 @@ describe("country pack registry", () => {
   });
 
   it("applies geography however the pack was authored", () => {
-    // tashkent-v3 is hand-written; tashkent-v4 comes from the factory.
-    for (const id of ["tashkent-v2", "tashkent-v3", "tashkent-v4"]) {
+    // dushanbe-v1 is hand-written; tashkent-v4 comes from the factory.
+    for (const id of ["tashkent-v4"]) {
       const pack = getCountryPack(id);
       expect(pack?.lat).toBeCloseTo(41.2995, 4);
       expect(pack?.neighbours).toContain("dushanbe-v1");

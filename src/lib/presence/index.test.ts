@@ -20,3 +20,26 @@ describe("presence timing", () => {
     expect(formatPaceRate(Number.NaN)).toBe("1");
   });
 });
+
+describe("adaptive heartbeat interval", () => {
+  // The server decides the interval from the crowd it counted; the client only
+  // spreads arrivals out so a large crowd does not knock in unison.
+  it("jitters the server's interval by six seconds either side", () => {
+    expect(nextHeartbeatDelay(() => 0, 30_000)).toBe(27_000);
+    expect(nextHeartbeatDelay(() => 0.5, 30_000)).toBe(30_000);
+    expect(nextHeartbeatDelay(() => 1, 30_000)).toBe(33_000);
+  });
+
+  it("falls back to twenty seconds when the server names no interval", () => {
+    expect(nextHeartbeatDelay(() => 0.5)).toBe(20_000);
+    expect(nextHeartbeatDelay(() => 0.5, 0)).toBe(20_000);
+    expect(nextHeartbeatDelay(() => 0.5, Number.NaN)).toBe(20_000);
+  });
+
+  it("always asks again well before a lease that outlives two beats expires", () => {
+    for (const [heartbeatSeconds, ttlSeconds] of [[20, 50], [30, 70], [40, 90]]) {
+      const worst = nextHeartbeatDelay(() => 1, heartbeatSeconds * 1_000);
+      expect(worst * 2).toBeLessThan(ttlSeconds * 1_000);
+    }
+  });
+});

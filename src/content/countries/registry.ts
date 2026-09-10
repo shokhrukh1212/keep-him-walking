@@ -1,5 +1,3 @@
-import { tashkentCountryPackV2 } from "./tashkent.v2";
-import { tashkentCountryPackV3 } from "./tashkent.v3";
 import { tashkentCountryPackV4 } from "./tashkent.v4";
 import { dushanbeCountryPackV1 } from "./dushanbe.v1";
 import { bishkekCountryPackV1 } from "./bishkek.v1";
@@ -29,8 +27,6 @@ function withGeography(pack: CountryPack): CountryPack {
 }
 
 const packs = new Map<string, CountryPack>(([
-  [tashkentCountryPackV2.assetVersion, tashkentCountryPackV2],
-  [tashkentCountryPackV3.assetVersion, tashkentCountryPackV3],
   [tashkentCountryPackV4.assetVersion, tashkentCountryPackV4],
   [dushanbeCountryPackV1.assetVersion, dushanbeCountryPackV1],
   [bishkekCountryPackV1.assetVersion, bishkekCountryPackV1],

@@ -31,7 +31,7 @@ function snapshot(routeIndex = 0): BootstrapSnapshot {
     postcard: { eligible: true, unlockSeconds: 60, contributedSeconds: 75, url: null },
     passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
     milestones: { hundredWatchersAt: null },
-    assets: { ...pack, traveler: { ...pack.traveler, riveUrl: null } },
+    assets: pack,
   };
 }
 

@@ -8,91 +8,9 @@ import {
   type RouteZone,
 } from "@/lib/content/schema";
 
-export const PHASE2_RIVE_CONTRACT = {
-  riveUrl: "/rive/traveler/v1/traveler.riv",
-  artboard: "JourneyCharacter",
-  stateMachine: "JourneyMachine",
-  viewModel: "JourneyCharacterVM",
-  requiredInputs: [
-    "walking",
-    "walkingSpeed",
-    "action",
-    "mood",
-    "facingRight",
-    "reducedMotion",
-    "sponsorPatch",
-  ] as const,
-};
 
 const TRAVELER_ROOT = "/traveler/production/v2";
 const ACTION_ROOT = `${TRAVELER_ROOT}/actions`;
-const WALK_ROOT = `${TRAVELER_ROOT}/walk`;
-
-function frameMetadata(index = 0, moving = false) {
-  const phase = index % 6;
-  const leftPlanted = moving && phase === 0;
-  const rightPlanted = moving && phase === 3;
-  const sponsorX = [0.365, 0.35, 0.34, 0.36, 0.35, 0.34][phase] ?? 0.35;
-  const sponsorY = [0.39, 0.385, 0.38, 0.39, 0.385, 0.38][phase] ?? 0.385;
-  return {
-    leftFoot: { x: leftPlanted ? 0.48 : 0.44, y: leftPlanted ? 0.99 : 0.94, planted: leftPlanted },
-    rightFoot: { x: rightPlanted ? 0.52 : 0.56, y: rightPlanted ? 0.99 : 0.94, planted: rightPlanted },
-    rootX: 0,
-    rootY: moving ? [0, -0.004, -0.008, 0, -0.004, -0.008][phase] : 0,
-    shadowScale: moving ? [1, 0.95, 0.91, 1, 0.95, 0.91][phase] : 1,
-    sponsorAnchor: {
-      x: moving ? sponsorX : 0.35,
-      y: moving ? sponsorY : 0.385,
-      scale: 0.105,
-      rotation: moving ? [-2, -1, 1, 2, 1, -1][phase] : 0,
-    },
-  };
-}
-
-function clip(frames: string[], framesPerSecond: number, loop: boolean, moving = false, strideWorldUnits?: number) {
-  return {
-    frames,
-    framesPerSecond,
-    loop,
-    ...(strideWorldUnits ? { strideWorldUnits } : {}),
-    metadata: frames.map((_, index) => frameMetadata(index, moving)),
-  };
-}
-
-function productionSpriteManifest() {
-  const action = (name: string) => `${ACTION_ROOT}/${name}.webp`;
-  // The high-resolution source includes two exaggerated knee-up poses. Keep
-  // them available for future transition work, but omit them from the calm
-  // route gait so the live loop reads as an adult walk rather than a skip.
-  const walk = [1, 2, 4, 5, 6, 8].map((index) => `${WALK_ROOT}/walk-${index}.webp`);
-  return {
-    version: 1 as const,
-    canvas: { width: 540, height: 960, groundY: 0.99 },
-    maxDecodedCacheBytes: 32 * 1_048_576,
-    clips: {
-      loading: clip([action("idle")], 1, true),
-      idle: clip([action("idle"), action("idle-alt")], 0.25, true),
-      start_walk: clip(walk, 5, true, true, 92),
-      walk: clip(walk, 5, true, true, 92),
-      slow_walk: clip(walk, 5, true, true, 92),
-      stop: clip([action("stop")], 1, false),
-      rest: clip([action("rest"), action("idle-alt")], 0.25, true),
-      notice: clip([action("notice")], 1, false),
-      approach: clip(walk, 5, true, true, 92),
-      greet: clip([action("wave")], 1, false),
-      talk: clip([action("talk")], 1, true),
-      listen: clip([action("listen")], 1, true),
-      react: clip([action("react")], 1, false),
-      wave: clip([action("wave")], 1, true),
-      phone: clip([action("phone")], 1, true),
-      drink: clip([action("drink")], 1, true),
-      photo: clip([action("photo")], 1, true),
-      sit: clip([action("rest")], 1, false),
-      goodbye: clip([action("goodbye")], 1, false),
-      resume_walk: clip(walk, 5, true, true, 92),
-    },
-  };
-}
 
 const CULTURAL_REVIEWS = {
   tashkent: {
@@ -190,22 +108,18 @@ function routeZone(city: string, version: string, zone: ZoneDefinition, index: n
     lengthMetres: DEFAULT_ZONE_LENGTH_METRES[index] ?? DEFAULT_ZONE_LENGTH_METRES[DEFAULT_ZONE_LENGTH_METRES.length - 1],
     kind: DEFAULT_ZONE_KINDS[index] ?? DEFAULT_ZONE_KINDS[DEFAULT_ZONE_KINDS.length - 1],
     durationActiveSeconds: 150,
+    // Schema-v3 zones are drawn as one coherent painting; the stacked parallax
+    // crops that used to live here have not reached a screen since Phase 3, and
+    // their files were removed in P18. Two layers are the schema minimum and
+    // both name the painting the renderer actually uses.
     layers: [
       {
-        id: "distant", depth: 0.14, speed: 0.035, y: 0, height: 1,
-        segments: [{ id: `${zone.id}-distant`, url: `${root}/distant.webp`, worldWidth: 2_400 }],
-      },
-      {
-        id: "architecture", depth: 0.52, speed: 0.28, y: 0.18, height: 0.68,
-        segments: [{ id: `${zone.id}-architecture`, url: `${root}/architecture.webp`, worldWidth: 2_400 }],
+        id: "architecture", depth: 0.52, speed: 0.7, y: 0, height: 1,
+        segments: [{ id: `${zone.id}-painting`, url: `${root}/fallback.webp`, worldWidth: 2_400 }],
       },
       {
         id: "ground", depth: 0.98, speed: 1, y: 0.76, height: 0.24,
-        segments: [1, 2, 3].map((variant) => ({
-          id: `${zone.id}-ground-${variant}`,
-          url: `${root}/ground-${variant}.webp`,
-          worldWidth: 1_200,
-        })),
+        segments: [{ id: `${zone.id}-ground`, url: `${root}/fallback.webp`, worldWidth: 1_200 }],
       },
     ],
     props: routeProps(city, version, zone.id),
@@ -258,35 +172,12 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
       },
     },
     traveler: {
-      driver: "sprite",
-      ...PHASE2_RIVE_CONTRACT,
+      // The only image a pack still needs: the frame that holds his place while
+      // the GLB loads. Every other state is animated on the model.
       fallbackSprites: {
         loading: `${ACTION_ROOT}/idle.webp`,
         idle: `${ACTION_ROOT}/idle.webp`,
-        start_walk: `${WALK_ROOT}/walk-1.webp`,
-        walk: `${WALK_ROOT}/walk-1.webp`,
-        slow_walk: `${WALK_ROOT}/walk-6.webp`,
-        stop: `${ACTION_ROOT}/stop.webp`,
-        rest: `${ACTION_ROOT}/rest.webp`,
-        notice: `${ACTION_ROOT}/notice.webp`,
-        approach: `${WALK_ROOT}/walk-2.webp`,
-        greet: `${ACTION_ROOT}/wave.webp`,
-        talk: `${ACTION_ROOT}/talk.webp`,
-        listen: `${ACTION_ROOT}/listen.webp`,
-        react: `${ACTION_ROOT}/react.webp`,
-        wave: `${ACTION_ROOT}/wave.webp`,
-        phone: `${ACTION_ROOT}/phone.webp`,
-        drink: `${ACTION_ROOT}/drink.webp`,
-        photo: `${ACTION_ROOT}/photo.webp`,
-        sit: `${ACTION_ROOT}/rest.webp`,
-        goodbye: `${ACTION_ROOT}/goodbye.webp`,
-        resume_walk: `${ACTION_ROOT}/resume-walk.webp`,
       },
-      walkCycle: {
-        frames: [1, 2, 4, 5, 6, 8].map((index) => `${WALK_ROOT}/walk-${index}.webp`),
-        framesPerSecond: 5,
-      },
-      spriteManifest: productionSpriteManifest(),
     },
     npcAssets: {
       neutral: `/npcs/${city}/${version}/neutral.webp`,
@@ -331,9 +222,8 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     // ground crops and prop cutouts are never drawn and are not worth fetching.
     // The files stay on disk until P18 retires them.
     preload: [
-      `${sceneRoot}/distant.webp`,
-      `${sceneRoot}/architecture.webp`,
-      `${WALK_ROOT}/walk-1.webp`,
+      firstZone.fallbackUrl,
+      `${ACTION_ROOT}/idle.webp`,
     ],
     route: { worldUnitsPerSecond: 92, travelerViewportAnchor: 0.61, zones },
     postcardBackgroundUrl: `/postcards/${city}/${version}/background.webp`,
@@ -346,7 +236,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     preloadGroups: [
       {
         id: `${city}-critical`, timing: "critical", zoneId: firstZone.id,
-        assets: [`${sceneRoot}/distant.webp`, `${sceneRoot}/architecture.webp`],
+        assets: [firstZone.fallbackUrl],
       },
       ...zones.slice(1).map((zone) => ({
         id: `${city}-${zone.id}-next`, timing: "next_zone" as const, zoneId: zone.id,

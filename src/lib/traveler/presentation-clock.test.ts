@@ -34,6 +34,17 @@ describe("two-track presentation clock",()=>{
     const c=new PresentationClock();c.accept(runtime(0,0,0,true,4),90_000,0);
     expect(c.sample(70_000)).toEqual({rawSeconds:60,distanceMetres:300,traveling:false});
   });
+  // P18 lets the server hand out a longer lease when the crowd is large. A
+  // longer lease must buy a longer *presence*, never a longer guess: the sixty
+  // second presentation cap is a separate constant and stays where it is.
+  it.each([70_000, 90_000])("keeps the sixty-second guess independent of a %ims lease",(ttl)=>{
+    // The clock only moves forward, so each reading gets its own clock.
+    const at=(ms:number)=>{const c=new PresentationClock();c.accept(runtime(0,0,0,true,4),ttl,0);return c.sample(ms);};
+    expect(at(59_000).rawSeconds).toBeCloseTo(59,6);
+    expect(at(60_000).rawSeconds).toBe(60);
+    // Past the cap the guess stops, however much lease is left.
+    expect(at(ttl)).toEqual({rawSeconds:60,distanceMetres:300,traveling:false});
+  });
   it("renews an unchanged authoritative sample without rewinding its anchors",()=>{
     const c=new PresentationClock();c.accept(runtime(10,25,0,true,2),5_000,0);
     expect(c.sample(4_000)).toMatchObject({rawSeconds:14,distanceMetres:35,traveling:true});

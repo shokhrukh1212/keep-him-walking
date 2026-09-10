@@ -19,8 +19,13 @@ describe("loadCharacterGltf", () => {
     const mesh = gltf([{ name: "idle" } as GLTF["animations"][number]]);
     const takes = gltf([{ name: "greet" } as GLTF["animations"][number]]);
     const loadAsync = vi.fn().mockResolvedValueOnce(mesh).mockResolvedValueOnce(takes);
+    const setMeshoptDecoder = vi.fn();
 
-    const result = await loadCharacterGltf({ loadAsync } as unknown as GLTFLoader, definition);
+    const result = await loadCharacterGltf({ loadAsync, setMeshoptDecoder } as unknown as GLTFLoader, definition);
+
+    // The shipped models are meshopt-compressed and declare the extension as
+    // required, so a loader without the decoder would throw instead of drawing.
+    expect(setMeshoptDecoder).toHaveBeenCalledTimes(1);
 
     expect(loadAsync.mock.calls.map(([url]) => url)).toEqual([definition.url, definition.animationUrl]);
     expect(result.animations.map(({ name }) => name)).toEqual(["idle", "greet"]);
@@ -30,7 +35,7 @@ describe("loadCharacterGltf", () => {
     const fallback = gltf();
     const loadAsync = vi.fn().mockRejectedValueOnce(new Error("missing")).mockResolvedValueOnce(fallback);
 
-    const result = await loadCharacterGltf({ loadAsync } as unknown as GLTFLoader, definition);
+    const result = await loadCharacterGltf({ loadAsync, setMeshoptDecoder: vi.fn() } as unknown as GLTFLoader, definition);
 
     expect(result).toBe(fallback);
     expect(loadAsync.mock.calls.map(([url]) => url)).toEqual([definition.url, definition.fallbackUrl]);
@@ -40,6 +45,8 @@ describe("loadCharacterGltf", () => {
     const mesh = gltf();
     const loadAsync = vi.fn().mockResolvedValueOnce(mesh).mockRejectedValueOnce(new Error("missing"));
 
-    await expect(loadCharacterGltf({ loadAsync } as unknown as GLTFLoader, definition)).resolves.toBe(mesh);
+    await expect(loadCharacterGltf(
+      { loadAsync, setMeshoptDecoder: vi.fn() } as unknown as GLTFLoader, definition,
+    )).resolves.toBe(mesh);
   });
 });

@@ -52,7 +52,7 @@ async function handlePost(request: NextRequest) {
     p_steps_per_second: config.stepsPerActiveSecond,
   };
   const { data, error } = await supabase.rpc(
-    paceEnabled ? "record_presence_heartbeat_v9" : "record_presence_heartbeat_v2",
+    paceEnabled ? "record_presence_heartbeat_v10" : "record_presence_heartbeat_v2",
     paceEnabled
       ? {
           ...heartbeatArguments,
@@ -90,8 +90,14 @@ async function handlePost(request: NextRequest) {
     walking: activeViewers > 0,
     globalSteps: Number(row?.out_global_steps ?? 0),
     visitorActiveSeconds: Number(row?.out_visitor_active_seconds ?? 0),
-    ttlSeconds: config.presenceTtlSeconds,
-    nextHeartbeatInMs: nextHeartbeatDelay(),
+    // The server chose both from the crowd it counted under the lock. The lease
+    // always outlives two beats; when the RPC has no opinion (the v2 path) the
+    // configured defaults stand.
+    ttlSeconds: Number(row?.out_lease_ttl_seconds ?? config.presenceTtlSeconds),
+    nextHeartbeatInMs: nextHeartbeatDelay(
+      Math.random,
+      Number(row?.out_heartbeat_seconds ?? 0) * 1_000 || undefined,
+    ),
     globalActiveSeconds: Number(row?.out_global_active_seconds ?? 0),
     globalDistanceMetres: Number(row?.out_global_distance_metres ?? 0),
     paceRate: Number(row?.out_pace_rate ?? 1),

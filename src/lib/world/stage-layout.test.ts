@@ -103,9 +103,10 @@ describe("backward compatible stage metadata", () => {
     expect(stageSchema.parse({parallax: {mid: 0.6}}).parallax).toEqual({far: 0.35, mid: 0.6, near: 1.25});
   });
 
-  it("validates all 16 packs with and without stage blocks", () => {
+  it("validates every registered pack with and without stage blocks", () => {
     const packs = registeredCountryPacks();
-    expect(packs).toHaveLength(16);
+    // Two Tashkent rollback packs were retired in P18.
+    expect(packs).toHaveLength(14);
     for (const pack of packs) {
       expect(readableCountryPackSchema.safeParse(pack).success).toBe(true);
       const legacy = JSON.parse(JSON.stringify(pack));

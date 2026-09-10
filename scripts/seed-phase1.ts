@@ -3,10 +3,9 @@ import {
   PHASE1_COUNTRY_DAY_ID,
   PHASE1_ENCOUNTER_ID,
 } from "../src/content/countries/tashkent.v1";
-// tashkent-v3 is schemaVersion 2: the legacy layered renderer kept only as a
-// rollback target. Every Season 1 feature — the panorama, the metre-driven
-// route, the bundle bootstrap — requires a schemaVersion 3 pack, so the seed
-// uses the current one.
+// Every Season 1 feature — the panorama, the metre-driven route, the bundle
+// bootstrap — requires a schemaVersion 3 pack, and tashkent-v4 is the one that
+// ships. The schemaVersion 2 rollback packs were retired in P18.
 import { tashkentCountryPackV4 } from "../src/content/countries/tashkent.v4";
 
 const JOURNEY_ID = "00000000-0000-4000-8000-000000000001";

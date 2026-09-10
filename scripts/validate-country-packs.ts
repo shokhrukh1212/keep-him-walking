@@ -12,8 +12,14 @@ for (const candidate of packs) {
   if (pack.schemaVersion === 1) continue;
   if (versions.has(pack.assetVersion)) throw new Error(`Duplicate pack version: ${pack.assetVersion}`);
   versions.add(pack.assetVersion);
-  const segments = pack.route.zones.flatMap((zone) => zone.layers.flatMap((layer) => layer.segments));
-  if (segments.length < 12) throw new Error(`${pack.assetVersion} needs at least 12 route segment families`);
+  // Phase 2 stacked several parallax crops per zone and this asked for twelve
+  // families across the route. Schema-v3 zones are one coherent painting each,
+  // so the guarantee that still means something is that every zone has its own
+  // painting rather than borrowing a neighbour's.
+  const paintings = new Set(pack.route.zones.map((zone) => zone.fallbackUrl));
+  if (paintings.size !== pack.route.zones.length) {
+    throw new Error(`${pack.assetVersion} reuses a zone painting; each zone needs its own`);
+  }
 
   const urls = new Set([
     pack.scene.fallbackUrl,
@@ -22,10 +28,6 @@ for (const candidate of packs) {
     ...pack.audio.map((asset) => asset.url),
     ...Object.values(pack.npcAssets),
     ...Object.values(pack.traveler.fallbackSprites).filter((url): url is string => Boolean(url)),
-    ...(pack.traveler.walkCycle?.frames ?? []),
-    ...(pack.traveler.spriteManifest
-      ? Object.values(pack.traveler.spriteManifest.clips).flatMap((clip) => clip?.frames ?? [])
-      : []),
     ...(pack.schemaVersion === 3 ? Object.values(pack.npcSystem.states) : []),
     ...pack.route.zones.flatMap((zone) => [
       zone.fallbackUrl,
@@ -34,9 +36,11 @@ for (const candidate of packs) {
     ]),
   ]);
   if (pack.schemaVersion === 3) {
+    // The distant/architecture crops were retired with the parallax renderer in
+    // P18. What the renderer needs now is a ground plane in every zone.
     const layerKinds = pack.route.zones.map((zone) => new Set(zone.layers.map((layer) => layer.id)));
-    if (layerKinds.some((kinds) => !kinds.has("distant") || !kinds.has("architecture") || !kinds.has("ground"))) {
-      throw new Error(`${pack.assetVersion} requires distant, architecture, and ground layers in every zone`);
+    if (layerKinds.some((kinds) => !kinds.has("ground"))) {
+      throw new Error(`${pack.assetVersion} requires a ground layer in every zone`);
     }
     const metres = pack.storyBeats
       .filter((beat) => beat.kind !== "departure")

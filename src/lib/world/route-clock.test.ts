@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tashkentCountryPackV3 as tashkentCountryPackV2 } from "@/content/countries/tashkent.v3";
+import { tashkentCountryPackV4 } from "@/content/countries/tashkent.v4";
 import {
   deterministicVariant,
   extrapolatedRouteDistance,
@@ -21,7 +21,7 @@ describe("route clock", () => {
   ] as const)("maps %s metres onto the route and evening loop", (
     distance, phase, zoneIndex, zoneProgress, metresIntoZone, remaining, marathon,
   ) => {
-    expect(routePositionAt(tashkentCountryPackV2, distance)).toEqual({
+    expect(routePositionAt(tashkentCountryPackV4, distance)).toEqual({
       phase,
       zoneIndex,
       zoneProgress,
@@ -48,10 +48,10 @@ describe("route clock", () => {
   });
 
   it("sanitizes invalid and negative distances", () => {
-    expect(routePositionAt(tashkentCountryPackV2, Number.NaN))
-      .toEqual(routePositionAt(tashkentCountryPackV2, 0));
-    expect(routePositionAt(tashkentCountryPackV2, -10))
-      .toEqual(routePositionAt(tashkentCountryPackV2, 0));
+    expect(routePositionAt(tashkentCountryPackV4, Number.NaN))
+      .toEqual(routePositionAt(tashkentCountryPackV4, 0));
+    expect(routePositionAt(tashkentCountryPackV4, -10))
+      .toEqual(routePositionAt(tashkentCountryPackV4, 0));
   });
 
   it("selects segment variants deterministically", () => {

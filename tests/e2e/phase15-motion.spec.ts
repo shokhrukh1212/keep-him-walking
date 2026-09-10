@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { tashkentCountryPackV3 as tashkentCountryPackV2 } from "../../src/content/countries/tashkent.v3";
+import { tashkentCountryPackV4 } from "../../src/content/countries/tashkent.v4";
 import type { BootstrapSnapshot, ScheduledEventView } from "../../src/lib/contracts";
 
 type MotionServer = {
@@ -19,7 +19,7 @@ function makeSnapshot(server: MotionServer): BootstrapSnapshot {
     refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
     journey: { travelerName: null, rolloverUtcHour: 16 },
     countryDay: {
-      id: tashkentCountryPackV2.countryDayId,
+      id: "10000000-0000-4000-8000-000000000001",
       dayNumber: 1,
       totalDays: 195,
       countryCode: "UZ",
@@ -29,7 +29,7 @@ function makeSnapshot(server: MotionServer): BootstrapSnapshot {
       startsAt: new Date(now.getTime() - 60_000).toISOString(),
       endsAt: new Date(now.getTime() + 86_340_000).toISOString(),
       storySummary: "The journey begins in Tashkent.",
-      scenePackId: tashkentCountryPackV2.assetVersion,
+      scenePackId: tashkentCountryPackV4.assetVersion,
     },
     activeEvent: server.activeEvent,
     nextEvent: null,
@@ -51,7 +51,7 @@ function makeSnapshot(server: MotionServer): BootstrapSnapshot {
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
     milestones: { hundredWatchersAt: null },
-    assets: tashkentCountryPackV2,
+    assets: tashkentCountryPackV4,
   };
 }
 
@@ -114,7 +114,7 @@ test("streams the route, collapses onboarding, and eases stop/resume", async ({ 
 
 test("runs the canonical NPC encounter through focus, dialogue and resume", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "Encounter proof runs once on desktop Chromium");
-  const encounter = tashkentCountryPackV2.encounters[0];
+  const encounter = tashkentCountryPackV4.encounters[0];
   const server: MotionServer = {
     active: true,
     routeSeconds: 1_520,

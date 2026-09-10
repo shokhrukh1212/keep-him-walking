@@ -93,6 +93,9 @@ importers:
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
+      meshoptimizer:
+        specifier: 0.22.0
+        version: 0.22.0
       pg:
         specifier: ^8.23.0
         version: 8.23.0

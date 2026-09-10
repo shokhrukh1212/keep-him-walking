@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { tashkentCountryPackV3 as tashkentCountryPackV2 } from "../../src/content/countries/tashkent.v3";
+import { tashkentCountryPackV4 } from "../../src/content/countries/tashkent.v4";
 import type { BootstrapSnapshot } from "../../src/lib/contracts";
 
 test("ten-minute route soak keeps bounded pools and non-repeating compositions", async ({ page }, testInfo) => {
@@ -15,11 +15,11 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
       journeyState: "live", refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
       journey: { travelerName: null, rolloverUtcHour: 16 },
       countryDay: {
-        id: tashkentCountryPackV2.countryDayId, dayNumber: 1, totalDays: 195,
+        id: "10000000-0000-4000-8000-000000000001", dayNumber: 1, totalDays: 195,
         countryCode: "UZ", countryName: "Uzbekistan", cityName: "Tashkent",
         timeZone: "Asia/Tashkent", startsAt: now.toISOString(),
         endsAt: new Date(now.getTime() + 86_400_000).toISOString(), storySummary: null,
-        scenePackId: tashkentCountryPackV2.assetVersion,
+        scenePackId: tashkentCountryPackV4.assetVersion,
       },
       activeEvent: null, nextEvent: null, vote: null,
       presence: { activeViewers: 0, status: "live", ttlSeconds: 1, waitingSince: null },
@@ -33,7 +33,7 @@ test("ten-minute route soak keeps bounded pools and non-repeating compositions",
       postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
       passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
       milestones: { hundredWatchersAt: null },
-      assets: tashkentCountryPackV2,
+      assets: tashkentCountryPackV4,
     };
   };
   await page.route("**/api/bootstrap", (route) => route.fulfill({ json: makeSnapshot() }));

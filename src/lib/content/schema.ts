@@ -60,68 +60,14 @@ const sceneLayerSchema = z.object({
   scale: z.number().positive().default(1),
 });
 
-const spriteFootSchema = z.object({
-  x: z.number().min(0).max(1),
-  y: z.number().min(0).max(1),
-  planted: z.boolean(),
-});
-
-const spriteFrameMetadataSchema = z.object({
-  leftFoot: spriteFootSchema,
-  rightFoot: spriteFootSchema,
-  rootX: z.number().min(-0.25).max(0.25),
-  rootY: z.number().min(-0.25).max(0.25),
-  shadowScale: z.number().min(0.5).max(1.25),
-  sponsorAnchor: z.object({
-    x: z.number().min(0).max(1),
-    y: z.number().min(0).max(1),
-    scale: z.number().min(0.02).max(0.4),
-    rotation: z.number().min(-45).max(45),
-  }),
-});
-
-const spriteClipSchema = z.object({
-  frames: z.array(z.string().startsWith("/")).min(1).max(16),
-  framesPerSecond: z.number().min(0.1).max(18),
-  loop: z.boolean(),
-  strideWorldUnits: z.number().positive().max(300).optional(),
-  metadata: z.array(spriteFrameMetadataSchema).min(1).max(16),
-}).refine((clip) => clip.frames.length === clip.metadata.length, {
-  message: "Sprite clips require one metadata record per frame",
-});
-
-export const spriteManifestSchema = z.object({
-  version: z.literal(1),
-  canvas: z.object({
-    width: z.number().int().positive().max(1_024),
-    height: z.number().int().positive().max(1_024),
-    groundY: z.number().min(0.75).max(1),
-  }),
-  maxDecodedCacheBytes: z.number().int().positive().max(64 * 1_048_576),
-  clips: z.partialRecord(travelerStateSchema, spriteClipSchema),
-});
-
+/**
+ * What is left of the traveler after P18: the GLB is the character, and the only
+ * image a pack still needs is the one frame that holds his place while it loads.
+ * The Rive artboard, the sprite manifest and the walk cycle went with the 2D
+ * renderers that read them.
+ */
 const travelerSchema = z.object({
-  driver: z.enum(["sprite", "rive"]).optional(),
-  riveUrl: z.string().startsWith("/").nullable(),
-  artboard: z.string().min(1),
-  stateMachine: z.string().min(1),
-  viewModel: z.string().min(1).optional(),
-  requiredInputs: z.array(z.enum([
-    "walking",
-    "walkingSpeed",
-    "action",
-    "mood",
-    "facingRight",
-    "reducedMotion",
-    "sponsorPatch",
-  ])).optional(),
   fallbackSprites: z.partialRecord(travelerStateSchema, z.string().startsWith("/")),
-  walkCycle: z.object({
-    frames: z.array(z.string().startsWith("/")).min(6).max(8),
-    framesPerSecond: z.number().min(5).max(18),
-  }).optional(),
-  spriteManifest: spriteManifestSchema.optional(),
 });
 
 const audioSchema = z.object({
@@ -481,7 +427,6 @@ export type RouteLayer = z.infer<typeof routeLayerSchema>;
 export type RouteProp = z.infer<typeof routePropSchema>;
 export type RouteZone = z.infer<typeof routeZoneSchema>;
 export type TravelerState = z.infer<typeof travelerStateSchema>;
-export type SpriteManifest = z.infer<typeof spriteManifestSchema>;
 
 /** Packs a destination vote may offer: reviewed by the creator or a qualified local. */
 export const VOTE_READY_REVIEW_STATUSES = ["approved", "creator_reviewed"] as const;

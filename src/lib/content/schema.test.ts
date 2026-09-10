@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tashkentCountryPackV3 } from "@/content/countries/tashkent.v3";
+import { tashkentCountryPackV4 } from "@/content/countries/tashkent.v4";
 import { phase3EditorialBufferOrder, registeredCountryPacks } from "@/content/countries/registry";
 import {
   countryPackV3Schema,
@@ -8,23 +8,23 @@ import {
   DEFAULT_ZONE_LENGTH_METRES,
   DEFAULT_ZONE_KINDS,
 } from "./schema";
-import { countryPackSchema } from "./schema";
 import type { CountryPackV3 } from "./schema";
 
 describe("Tashkent content pack", () => {
   it("satisfies the production-compatible asset contract", () => {
-    expect(countryPackSchema.parse(tashkentCountryPackV3).assetVersion).toBe("tashkent-v3");
-    expect(tashkentCountryPackV3.route.zones).toHaveLength(5);
-    expect(tashkentCountryPackV3.route.zones.every((zone) => zone.layers.length >= 2)).toBe(true);
-    expect(tashkentCountryPackV3.route.zones.every((zone) => zone.props.every((prop) => prop.assetUrl))).toBe(true);
-    expect(tashkentCountryPackV3.ambientActions).toHaveLength(4);
-    expect(tashkentCountryPackV3.encounters[0]?.lines).toHaveLength(4);
+    expect(countryPackV3Schema.parse(tashkentCountryPackV4).assetVersion).toBe("tashkent-v4");
+    expect(tashkentCountryPackV4.route.zones).toHaveLength(5);
+    expect(tashkentCountryPackV4.route.zones.every((zone) => zone.layers.length >= 2)).toBe(true);
+    expect(tashkentCountryPackV4.route.zones.every((zone) => zone.props.every((prop) => prop.assetUrl))).toBe(true);
+    expect(tashkentCountryPackV4.ambientActions).toHaveLength(4);
+    expect(tashkentCountryPackV4.encounters[0]?.lines).toHaveLength(4);
   });
 
   it("keeps dialogue outside animation files", () => {
-    expect(tashkentCountryPackV3.encounters[0]?.lines.every((line) => line.text.length > 0)).toBe(true);
-    expect(tashkentCountryPackV3.traveler.riveUrl).toBeNull();
-    expect(tashkentCountryPackV3.traveler.walkCycle?.frames).toHaveLength(8);
+    expect(tashkentCountryPackV4.encounters[0]?.lines.every((line) => line.text.length > 0)).toBe(true);
+    // The GLB is the character; a pack carries only the frame that holds his
+    // place while it loads.
+    expect(tashkentCountryPackV4.traveler.fallbackSprites.idle).toMatch(/^\//);
   });
 });
 
@@ -44,7 +44,7 @@ describe("Phase 2 country packs", () => {
         zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
       ),
     );
-    expect(new Set(sceneUrls).size).toBe(175);
+    expect(new Set(sceneUrls).size).toBe(35);
     expect(packs.every((pack) => pack.storyBeats.length >= 4)).toBe(true);
     expect(packs[0]?.culturalReview.status).toBe("approved");
     expect(packs.slice(1).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
@@ -93,9 +93,9 @@ describe("zone kind", () => {
   });
 
   it("keeps an explicit kind when a pack declares one", () => {
-    const source = JSON.parse(JSON.stringify(tashkentCountryPackV3)) as Record<string, unknown>;
+    const source = JSON.parse(JSON.stringify(tashkentCountryPackV4)) as Record<string, unknown>;
     const route = source.route as { zones: Record<string, unknown>[] };
     route.zones[1].kind = "market";
-    expect(countryPackSchema.parse(source).route.zones[1].kind).toBe("market");
+    expect(countryPackV3Schema.parse(source).route.zones[1].kind).toBe("market");
   });
 });

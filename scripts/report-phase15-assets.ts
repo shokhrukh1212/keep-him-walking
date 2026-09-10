@@ -1,11 +1,11 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { tashkentCountryPackV3 } from "../src/content/countries/tashkent.v3";
+import { tashkentCountryPackV4 } from "../src/content/countries/tashkent.v4";
 
 let totalTransfer = 0;
 let largestDecodedZone = 0;
-for (const zone of tashkentCountryPackV3.route.zones) {
+for (const zone of tashkentCountryPackV4.route.zones) {
   const urls = new Set([
     zone.fallbackUrl,
     ...zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),

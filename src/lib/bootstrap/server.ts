@@ -457,6 +457,16 @@ async function loadVote(
   };
 }
 
+/**
+ * The key every public bootstrap read shares.
+ *
+ * /api/bootstrap answers the same thing for everyone so a CDN can hold it, which
+ * means it cannot be read as any particular visitor. Reading it under one shared
+ * key leaves the ballot unselected, the postcard locked and the passport empty —
+ * exactly the public view. Everything visitor-specific comes from /api/me.
+ */
+export const PUBLIC_BOOTSTRAP_KEY = "public-bootstrap";
+
 export async function liveBootstrapSnapshot(
   visitorHash: string,
   now = new Date(),

@@ -650,17 +650,34 @@ gaze. A code-authored umbrella is visible only for confirmed rain when a direct
   per-city `variantId` and six named states, so many people can be described from two
   reusable rigs.
 
-### 6.5 Parallel paths that are no longer rendered
+### 6.5 The parallel paths, and their removal in P18
 
-Naming these explicitly, because reading the code without this list is misleading:
+Everything below used to ship alongside the 3D character without ever drawing a
+pixel. All of it is gone as of P18; the table is kept so a reader of the git
+history knows what was there and why it went.
 
-| Path | Status |
+| Path | Removed in P18 |
 |---|---|
-| `spriteManifest` in every pack + `public/traveler/production/v2/` (8 walk + 16 action WebP frames at 540×960, with per-frame planted-foot, root offset, shadow scale and sponsor-anchor metadata) | Still generated, validated by `rig-contract.ts`, and shipped — but **nothing renders it** since the 3D swap. |
-| `SpriteTravelerRenderer.tsx` | Not imported anywhere. |
-| `pixi-puppet.ts`, `puppet.ts`, `limb-skin.ts` (the procedural 2D puppet with continuous joint skinning) | Removed from `PixiScene` in commit `af8dd03`; `pixi-puppet` is now unreachable. |
-| Rive adapter — `RiveTravelerRenderer.tsx` and the `JourneyCharacter` / `JourneyMachine` / `JourneyCharacterVM` contract | Intact and reachable only if a pack sets `driver: "rive"`. **No pack does, and no `.riv` file has ever been commissioned.** |
-| `public/characters/v1/` | The rejected first character candidate, kept for comparison. |
+| `SpriteTravelerRenderer.tsx` (+ test) | Not imported by anything. Deleted. |
+| `RiveTravelerRenderer.tsx` and the `JourneyCharacter` / `JourneyMachine` / `JourneyCharacterVM` contract | Reachable only if a pack set `driver: "rive"`. No pack ever did and no `.riv` file was ever commissioned. Deleted with the schema fields. |
+| `Traveler.tsx` | Existed only to choose between those two. Its one surviving job — a single idle frame while the GLB downloads — is now six lines inline in `JourneyExperience`. |
+| `pixi-puppet.ts`, `puppet.ts` (+ test), `limb-skin.ts` | The procedural 2D puppet with continuous joint skinning. Unreachable since `af8dd03`. Deleted. |
+| `rig-contract.ts` (+ test), `sprite-manifest.test.ts` | Validated a manifest nothing read. Deleted. |
+| `spriteManifest`, `walkCycle`, `riveUrl`, `artboard`, `stateMachine`, `viewModel`, `requiredInputs` in the pack schema | Deleted. `traveler` is now one field: `fallbackSprites`, holding the loading frame. |
+| `public/traveler/production/v1/` (24 frames) and all of `v2/` except `actions/idle.webp` | Deleted. |
+| Packs `tashkent-v2` and `tashkent-v3` and `public/scenes/tashkent/v2`, `v3` | The schema-v2 rollback targets. Deleted; `tashkent-v4` is the live pack and is untouched. With no schema-v2 pack registered, the `coherentPanorama` branch and the `paceEnabled` fork each collapse to one path. |
+
+**Kept deliberately:**
+
+- `public/characters/v1/` and its "Rejected baseline v1" entry in
+  `CHARACTER_CANDIDATES` — the review page's comparison baseline until the V3
+  traveler is accepted.
+- The prop cutout assets (`zone.props[].assetUrl`). P15 hangs the cafe sign near
+  them and the awning-flutter option (P17) stays open.
+- `public/scenes/tashkent/v1/`, `public/traveler/temporary/` and
+  `public/npcs/tashkent-chef/` — referenced by `tashkent.v1.ts`, the schema-v1
+  pack that is not registered but is still the Phase-1 rollback record. Roughly
+  2.3 MiB, and outside the scope the owner approved.
 
 The only character code on the live path is: a single static
 `fallbackSprites.idle` `<img>` while the GLB downloads, then
@@ -1025,36 +1042,37 @@ their original masters (`docs/stage-calibration.md`). Other packs use defaults. 
 the independent scale/ground contract; character anatomy and animation quality remain
 separate review work; P4 now owns the distance-driven panorama wrapping described above.
 
-### 8.5 Shipped-but-never-drawn assets
+### 8.5 Shipped-but-never-drawn assets — removed in P18
 
-Because every *scheduled* pack takes the `coherentPanorama` branch, since `98e1c77` only
-**one of the six files per zone** reaches the screen: `fallback.webp`, the panorama.
-Everything else is still generated and shipped but never drawn.
+Every scheduled pack takes the `coherentPanorama` branch, so only **one of the six
+files per zone** ever reached the screen: `fallback.webp`, the painting. The other
+five were generated, shipped, and in two cases preloaded, for nothing.
 
-Measured on Tbilisi (`public/scenes/tbilisi/v1/`), five zones:
+They are deleted. Measured across the fourteen registered packs:
 
-| Category | Size | Status |
-|---|---:|---|
-| `fallback.webp` × 5 | **1.33 MiB** | rendered |
-| `distant.webp`, `architecture.webp` × 5 | 1.45 MiB | never drawn, **still listed in `preload` / `preloadGroups`** |
-| `ground-1/2/3.webp` × 5 | 0.43 MiB | never drawn, no longer preloaded |
-| 15 prop WebP files | 1.36 MiB | never drawn (props are disabled on this branch), never preloaded |
-| **Unrendered total per city** | **3.24 MiB** | |
+| Category | Removed |
+|---|---:|
+| `distant.webp`, `architecture.webp` (2 per zone) | 140 files |
+| `ground-1/2/3.webp` (3 per zone) | 210 files |
+| `public/traveler/production/v1` + `v2` sprite frames | 46 files |
+| `public/scenes/tashkent/v2` + `v3` | 5.6 MiB |
+| **`public/` total** | **73 MiB → 51 MiB** |
 
-`98e1c77` stopped fetching the `ground-*` crops. The `distant`/`architecture` pair is
-deliberately still fetched: it is the same 1.45 MiB per city that the two schema-v2
-rollback packs genuinely render from, and dropping it from the v3 preload hints belongs
-with the pass that retires the files (P18) rather than with the strip removal.
+`content:validate` went from *16 packs / 717 uniquely owned scene assets* to
+*14 packs / 280*.
 
-Separately, `public/traveler/production/v2/` ships **1.51 MiB** of sprite frames
-(8 walk + 16 action). Of those, only `actions/idle.webp` is actually used — as the
-placeholder shown while the GLB downloads — plus `walk/walk-1.webp`, which the critical
-preload list still fetches. The other 22 frames are deployed but unreachable.
+Two pack-level rules changed with the files, because they described a renderer
+that no longer exists:
 
-So roughly **3.2 MiB per city plus 1.4 MiB of sprites** is dead weight on disk. Deleting
-the files is a straightforward win now that §8.3 is settled, but it is gated on §8.4:
-whichever way the panorama/ground/character-scale relationship is resolved may want the
-`architecture` band back as a separate layer.
+- `zone.layers` used to be `distant` + `architecture` + three `ground` variants.
+  A schema-v3 zone now declares two layers, both naming its painting, because the
+  schema requires a minimum of two and the renderer reads the painting.
+- `validate-country-packs.ts` used to demand twelve segment families per route
+  and a `distant`/`architecture`/`ground` triple per zone. It now demands that
+  every zone has its own painting and a `ground` layer — the things that are
+  actually true of what ships.
+
+The prop cutouts (1.36 MiB per city) are **not** deleted: see §6.5.
 
 ### 8.6 Zone clock, budgets and quality tiers
 
@@ -1078,7 +1096,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (24 forward migrations)
+### Tables (26 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1160,7 +1178,7 @@ bootstrap v9 carry it.
 `record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule, distinct-watcher
 pace and pace-weighted distance) → `_v5` (per-country watch aggregation) → `_v6`
 (reaction buckets and scheduled crowd actions) → `_v7` (weather) → `_v8` (exact daily
-peak),
+peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval and lease),
 `normalize_country_code`, `read_country_day_watch`, `reaction_threshold`,
 `close_and_pick_vote_winner`, `create_next_country_day`, `read_traveler_name`,
 `write_journey_weather`, `read_journey_weather`,
@@ -1172,10 +1190,11 @@ peak),
 `reconcile_phase2_state`, `reconcile_phase2_state_v2`, `finalize_day_outcome`,
 `cleanup_phase2_retention`, `journey_story_now`,
 `read_journey_runtime_v3` / `_v4` / `_v5`,
-`read_visitor_passport`,
-`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10` / `_v11`
+`read_visitor_passport`, `presence_heartbeat_seconds`, `presence_lease_ttl_seconds`,
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10` / `_v11` / `_v12`
 (one-call bootstrap with atomic admission control, the distance projection, the
-country aggregate, the reaction board, the ballot, the weather and the passport streak),
+country aggregate, the reaction board, the ballot, the weather, the passport streak and
+the hundred-watcher moment),
 `set_country_notification_opt_in`.
 
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
@@ -1184,10 +1203,12 @@ only to `service_role`. The browser never talks to these directly.
 ### Route handlers (29)
 
 ```
-GET  /api/bootstrap                 full snapshot: day, event, vote, presence, steps,
-                                    route runtime, sponsor, postcard state, asset pack
-GET  /api/me                        the visitor-private slice: collected days, streak,
-                                    today's counted seconds. private, no-store.
+GET  /api/bootstrap                 the world only: day, event, vote, presence, steps,
+                                    route runtime, sponsor, asset pack. Identical for
+                                    everyone; public, s-maxage=3, no Set-Cookie.
+GET  /api/me                        the visitor only: first visit, their ballot, their
+                                    postcard, their passport. private, no-store, and
+                                    the route that issues the visitor cookie.
 POST /api/presence/heartbeat        the walking rule
 POST /api/votes                     one ballot per visitor, server-enforced
 POST /api/postcards                 render + upload + public token (idempotent)
@@ -1396,6 +1417,81 @@ inferred from a client-side count.
 every Sprite reachable from the stage; a sprite waiting for a texture it may never get —
 the cafe sign with no premium sponsor, the window lights before dusk — was being reported
 as `generated:1x1`, a texture nobody can see. The walk now stops at an invisible node.
+
+### Compression, cost protection and deletions (P18)
+
+**The models.** `scripts/characters/compress-glb.mjs` (`pnpm characters:compress`)
+quantises the skinning and UV streams, then meshopt-encodes every geometry and
+animation stream as `EXT_meshopt_compression`. Nothing is taken on trust: each encoded
+stream is decoded again with the same decoder the browser uses and compared before the
+file is written, and each lossy step is checked against a stated bound. A file that
+fails the round trip is never written.
+
+| File | Before | After |
+|---|---:|---:|
+| `public/characters/v2/traveler.glb` | 4.43 MiB | **2.48 MiB** |
+| `public/characters/v2/almaty-host.glb` | 3.55 MiB | **1.77 MiB** |
+
+Measured worst-case error, printed by the script on every run: skin weights
+≤ 5.6 × 10⁻³ (three quantisation steps, and they are renormalised to sum to exactly
+one); UVs ≤ 7.6 × 10⁻⁶; normals turned by ≤ 1.9 × 10⁻² rad, about 1.1°; every other
+float ≤ 6.1 × 10⁻⁵ relative to the largest component beside it, which is under two
+millimetres on a 1.78 m character.
+
+`loadCharacterGltf` attaches `MeshoptDecoder` through the exported
+`withMeshoptDecoder`, so both stages and the CPU-side `actor-motion` test inherit it.
+The extension is declared **required**, so a loader without the decoder throws instead
+of silently drawing nothing — `loader.test.ts` asserts the decoder is attached.
+
+**The ≤ 1.8 MB target in the prompt was not reached, and here is what is left.** The
+traveler's remaining 2.48 MiB is 0.90 MiB of textures, 0.68 MiB of glTF JSON and
+0.86 MiB of compressed streams. The JSON grew by ~0.28 MiB because meshopt adds an
+extension object to each of 1,587 bufferViews — a real cost of the win, not waste. The
+two levers that would close the gap are both visible or structural decisions for the
+owner rather than a compression setting: dropping the texture cap in
+`optimize-glb.mjs` from 1536 px to 1024 px (~0.45 MiB), and merging the 31 mesh
+primitives, which would shrink the accessor table the JSON is made of. Splitting the
+animations into `traveler-anim.glb` was considered and rejected: `loadCharacterGltf`
+fetches `animationUrl` immediately, so it would move bytes between two requests
+without removing any from a first visit.
+
+**The heartbeat adapts to the crowd.** `presence_heartbeat_seconds` returns 20 s, 30 s
+above 300 watchers and 40 s above 1,000, chosen from the same distinct count taken
+under the row lock the pace already holds, so the interval and the crowd it was chosen
+for can never disagree. The lease follows it: `max(50, 2 × heartbeat + 10)`, which is
+always more than two beats.
+
+The trap this could have walked into: `PresentationClock` extrapolates towards the
+lease expiry, so a 90-second lease must not license a 90-second guess. It does not —
+`leaseMs = Math.min(60_000, ttlMs)` keeps presentation authority at sixty seconds
+whatever the lease says, and `presentation-clock.test.ts` asserts that at 70 s and 90 s
+TTLs specifically.
+
+**`/api/bootstrap` is now the world, and only the world.** It is read under one shared
+key (`PUBLIC_BOOTSTRAP_KEY`), so the ballot comes back unselected, the postcard locked
+and the passport empty — the public view. It carries
+`Cache-Control: public, s-maxage=3, stale-while-revalidate=10` and **no `Set-Cookie`**,
+so an edge cache can absorb a viral minute that would otherwise be one database read
+per arrival. Everything about a particular visitor — first visit, their ballot, their
+postcard, their passport — moved to **`GET /api/me`**, which is `private, no-store` and
+issues the visitor cookie. `tests/e2e/cache-split.spec.ts` asserts both halves,
+including that no private key ever reappears in the public body.
+
+Rate limiting followed: the public read shares one 600-per-minute bucket, about thirty
+times what a three-second cache should let through, and still a ceiling if the cache is
+bypassed.
+
+**Asset origin.** Confirmed rather than rebuilt — `publicAssetUrl` was shipped early by
+owner decision Q13. Packs, GLBs and audio all route through it, and every element that
+reads pixels back sets `crossOrigin="anonymous"`, so a tainted canvas cannot silently
+break day photos when `ASSET_BASE_URL` is set. One honest gap: `ASSET_ROOTS` is
+`characters`, `scenes`, `audio`, `npcs` — the four trees `upload-assets.mjs` mirrors —
+so `/traveler/production/v2/actions/idle.webp` (53 KB, the GLB loading frame) is still
+served from the origin.
+
+**The load gate is open.** See `docs/phase-3-results.md`: the recorded numbers predate
+this commit, the harness now models reactions and the `/api/me` call, and only the dry
+run was executed here.
 
 ### Sponsor pricing and placements (P15)
 

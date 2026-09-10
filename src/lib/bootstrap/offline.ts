@@ -1,4 +1,5 @@
-import { tashkentCountryPackV3 } from "@/content/countries/tashkent.v3";
+import { tashkentCountryPackV4 } from "@/content/countries/tashkent.v4";
+import { PHASE1_COUNTRY_DAY_ID } from "@/content/countries/tashkent.v1";
 import type { BootstrapSnapshot } from "@/lib/contracts";
 import { DEFAULT_PRESENCE_TTL_SECONDS } from "@/lib/presence";
 import { DEFAULT_ROLLOVER_UTC_HOUR } from "@/lib/story-clock/rollover-hour";
@@ -18,17 +19,19 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     refresh: { nextAt: endsAt.toISOString(), afterMs: 5 * 60_000, reason: "country_rollover" },
     journey: { travelerName: null, rolloverUtcHour: DEFAULT_ROLLOVER_UTC_HOUR },
     countryDay: {
-      id: tashkentCountryPackV3.countryDayId,
+      // Schema-v3 packs carry no country-day of their own; the offline preview
+      // is not a real day, so it borrows the seeded id and says so in `mode`.
+      id: PHASE1_COUNTRY_DAY_ID,
       dayNumber: 1,
       totalDays: 195,
-      countryCode: tashkentCountryPackV3.countryCode,
-      countryName: tashkentCountryPackV3.countryName,
-      cityName: tashkentCountryPackV3.cityName,
-      timeZone: tashkentCountryPackV3.timeZone,
+      countryCode: tashkentCountryPackV4.countryCode,
+      countryName: tashkentCountryPackV4.countryName,
+      cityName: tashkentCountryPackV4.cityName,
+      timeZone: tashkentCountryPackV4.timeZone,
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
       storySummary: "The journey begins in Tashkent.",
-      scenePackId: tashkentCountryPackV3.assetVersion,
+      scenePackId: tashkentCountryPackV4.assetVersion,
     },
     activeEvent: null,
     nextEvent: null,
@@ -55,6 +58,6 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
     milestones: { hundredWatchersAt: null },
-    assets: tashkentCountryPackV3,
+    assets: tashkentCountryPackV4,
   };
 }

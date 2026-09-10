@@ -24,7 +24,10 @@ export const CHARACTER_MANIFEST: {
     heightMetres: 1.78,
   },
   resident: { url: "/characters/v2/almaty-host.glb?rev=interactions-1", heightMetres: 1.68 },
-  combinedBudgetBytes: 8 * 1024 * 1024,
+  // Both shipped models are meshopt-compressed: 2.48 MiB + 1.77 MiB measured.
+  // The budget leaves room for the V3 traveler without leaving room for a
+  // regression that ships an uncompressed rig again.
+  combinedBudgetBytes: 5 * 1024 * 1024,
 };
 
 export const CHARACTER_CANDIDATES = {

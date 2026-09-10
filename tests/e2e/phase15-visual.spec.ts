@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
-import { tashkentCountryPackV3 } from "../../src/content/countries/tashkent.v3";
+import { tashkentCountryPackV4 } from "../../src/content/countries/tashkent.v4";
 import type { BootstrapSnapshot } from "../../src/lib/contracts";
 
 const evidenceRoot = "artifacts/phase15-visual-v3";
@@ -15,7 +15,7 @@ function snapshot(routeSeconds: number): BootstrapSnapshot {
     refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
     journey: { travelerName: null, rolloverUtcHour: 16 },
     countryDay: {
-      id: tashkentCountryPackV3.countryDayId,
+      id: "10000000-0000-4000-8000-000000000001",
       dayNumber: 1,
       totalDays: 195,
       countryCode: "UZ",
@@ -25,7 +25,7 @@ function snapshot(routeSeconds: number): BootstrapSnapshot {
       startsAt: new Date(now.getTime() - 60_000).toISOString(),
       endsAt: new Date(now.getTime() + 86_340_000).toISOString(),
       storySummary: "The journey begins in Tashkent.",
-      scenePackId: tashkentCountryPackV3.assetVersion,
+      scenePackId: tashkentCountryPackV4.assetVersion,
     },
     activeEvent: null,
     nextEvent: null,
@@ -41,7 +41,7 @@ function snapshot(routeSeconds: number): BootstrapSnapshot {
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
     milestones: { hundredWatchersAt: null },
-    assets: tashkentCountryPackV3,
+    assets: tashkentCountryPackV4,
   };
 }
 

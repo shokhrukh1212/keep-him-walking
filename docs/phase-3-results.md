@@ -41,6 +41,51 @@ Status on 2026-09-06: the non-payment Phase 3 implementation, automated technica
 
 The production-shaped load model performs one bootstrap and one invalid-mutation validation per persistent anonymous viewer, then maintains presence at the application's heartbeat cadence. A deliberately unrealistic zero-ramp 100-viewer cold burst also produced zero errors but exceeded latency budget (2,849 ms overall p95; 3,470 ms bootstrap p95). This remains a documented burst-capacity caveat rather than being hidden by the passing sustained test.
 
+### The load gate has not been re-run since P18 (2026-09-10)
+
+**The numbers in the table above were measured on 2026-09-06 and describe a build
+that no longer exists.** They are left unchanged rather than relabelled, because
+relabelling them would claim coverage nobody has.
+
+Three things have changed since, and every one of them moves the result:
+
+- **Reactions were never in the model.** The harness measured a site where nobody
+  pressed anything. `scripts/load/phase3-load.ts` now takes `--reaction-percent`
+  (default 5) and has five per cent of watchers react once a minute, which is the
+  rate `06` assumes. Reactions are the only write an ordinary watcher makes, so
+  the old run understated the write path entirely.
+- **The visitor cookie moved.** `/api/bootstrap` is now shared-cacheable and
+  issues no cookie; `/api/me` issues it. Each watcher therefore makes one extra
+  request on arrival, and the harness now makes it too. In production the
+  bootstrap should mostly be served by the edge, which the harness cannot model.
+- **The heartbeat is adaptive.** Above 300 watchers the server hands out a
+  30-second interval and above 1,000 a 40-second one, so a 1,000-watcher run
+  should now produce roughly a third fewer presence writes than the recorded run
+  did. The `--heartbeat` flag still forces a fixed cadence for comparison.
+
+**What was actually run on 2026-09-10:** the dry run only.
+
+```
+pnpm exec tsx scripts/load/phase3-load.ts --watchers 1000 --duration 300 --reaction-percent 5
+```
+
+It prints the plan and exits; it sends no traffic. Executing the gate needs a
+deployed Preview, `--confirm-host`, and a protection-bypass file, none of which
+exist in the environment this work was done in. **The 1,000-viewer gate is
+therefore open, and P18's performance claims about the live site rest on the
+2026-09-06 run plus reasoning, not on measurement.**
+
+To close it, from a machine with the Preview deployed:
+
+```
+pnpm exec tsx scripts/load/phase3-load.ts --execute \
+  --base-url <preview url> --confirm-host <preview host> \
+  --watchers 1000 --duration 300 --reaction-percent 5 \
+  --vercel-bypass-file <path>
+```
+
+Then replace the table row above with the result and delete this section.
+
 Development-server Web Vitals are not representative production lab or field evidence. Physical-device Core Web Vitals and memory measurements are not claimed.
 
 ## Visual evidence

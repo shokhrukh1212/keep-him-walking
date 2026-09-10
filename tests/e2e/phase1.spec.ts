@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { tashkentCountryPackV3 as tashkentCountryPackV2 } from "../../src/content/countries/tashkent.v3";
+import { tashkentCountryPackV4 } from "../../src/content/countries/tashkent.v4";
 import type { BootstrapSnapshot } from "../../src/lib/contracts";
 
 type SharedServer = {
@@ -42,7 +42,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
     refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
     journey: { travelerName: null, rolloverUtcHour: 16 },
     countryDay: {
-      id: tashkentCountryPackV2.countryDayId,
+      id: "10000000-0000-4000-8000-000000000001",
       dayNumber: 1,
       totalDays: 195,
       countryCode: "UZ",
@@ -52,7 +52,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       startsAt: new Date(now.getTime() - 60_000).toISOString(),
       endsAt: new Date(now.getTime() + 86_340_000).toISOString(),
       storySummary: "The journey begins in Tashkent.",
-      scenePackId: tashkentCountryPackV2.assetVersion,
+      scenePackId: tashkentCountryPackV4.assetVersion,
     },
     activeEvent: {
       id: "20000000-0000-4000-8000-000000000001",
@@ -61,7 +61,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
       durationSeconds: 300,
       status: "live",
       locationLabel: "Near Chorsu Bazaar",
-      lines: tashkentCountryPackV2.encounters[0]?.lines,
+      lines: tashkentCountryPackV4.encounters[0]?.lines,
     },
     nextEvent: null,
     vote: {
@@ -105,7 +105,7 @@ function snapshot(server: SharedServer): BootstrapSnapshot {
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
     milestones: { hundredWatchersAt: null },
-    assets: tashkentCountryPackV2,
+    assets: tashkentCountryPackV4,
   };
 }
 

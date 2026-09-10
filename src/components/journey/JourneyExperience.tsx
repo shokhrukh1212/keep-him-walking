@@ -33,7 +33,6 @@ import { routePositionAt } from "@/lib/world/route-clock";
 import type { MotionTransition } from "@/lib/world/motion-machine";
 import type { WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import { SceneStage } from "@/components/scene/SceneStage";
-import { Traveler } from "@/components/traveler/Traveler";
 import { EncounterDialogue } from "@/components/dialogue/EncounterDialogue";
 import { JourneyHud } from "@/components/hud/JourneyHud";
 import { ContributionMeter } from "@/components/hud/ContributionMeter";
@@ -173,6 +172,33 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     });
   }, [initialSnapshot.countryDay.countryCode, initialSnapshot.countryDay.dayNumber]);
 
+  // /api/bootstrap is shared by every visitor and held in a cache, so the parts
+  // that are about *this* visitor arrive separately and are merged in here.
+  const refreshMe = useCallback(async () => {
+    try {
+      const response = await fetch("/api/me", { cache: "no-store" });
+      if (!response.ok) return;
+      const me = await response.json() as {
+        firstVisit?: boolean;
+        passport?: BootstrapSnapshot["passport"];
+        postcard?: BootstrapSnapshot["postcard"];
+        selectedOptionId?: string | null;
+      };
+      setSnapshot((current) => ({
+        ...current,
+        firstVisit: me.firstVisit ?? current.firstVisit,
+        passport: me.passport ?? current.passport,
+        postcard: me.postcard ?? current.postcard,
+        vote: current.vote
+          ? { ...current.vote, selectedOptionId: me.selectedOptionId ?? null }
+          : current.vote,
+      }));
+    } catch {
+      // The public snapshot already rendered; a missing private slice only means
+      // no stamp, no postcard and no highlighted ballot until the next attempt.
+    }
+  }, []);
+
   const refreshBootstrap = useCallback(async (): Promise<number> => {
     try {
       const response = await fetch("/api/bootstrap", { cache: "no-store" });
@@ -196,6 +222,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       }
       setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
       setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
+      void refreshMe();
       return Math.max(1_000, Math.min(5 * 60_000, next.refresh.afterMs));
     } catch {
       if (!navigator.onLine) setBootstrapIssue("Your browser is offline. Waiting to reconnect…");
@@ -210,7 +237,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     } finally {
       setLoadingLive(false);
     }
-  }, []);
+  }, [refreshMe]);
 
   useEffect(() => {
     let stopped = false;
@@ -769,7 +796,13 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         </div>
       ) : null}
 
-      {!puppetReady ? <Traveler pack={snapshot.assets} command={command} onReady={() => setTravelerReady(true)} /> : null}
+      {/* A single connected idle frame holds the traveler's place until the 3D
+          model reports ready. The sprite and Rive renderers it used to sit in
+          front of were retired in P18; nothing else remains of that path. */}
+      {!puppetReady ? <div className="traveler-wrap" role="img" aria-label={`Traveler is ${command.state.replaceAll("_", " ")}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="traveler-safe-fallback" src={publicAssetUrl(snapshot.assets.traveler.fallbackSprites.idle ?? "")} alt="" onLoad={() => setTravelerReady(true)} onError={() => setTravelerReady(true)} />
+      </div> : null}
       <WalkingRuleStatus
         walking={review?review.moving:walking}
         label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : snapshot.mode === "offline_preview"
