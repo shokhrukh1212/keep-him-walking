@@ -91,7 +91,8 @@ for (const [index, scheduled] of schedule.entries()) {
   ]);
   if (optionsError) throw optionsError;
   const { error: slotError } = await supabase.from("sponsor_slots").insert({
-    country_day_id: day.id, price_cents: process.env.SPONSOR_PAYMENT_PROVIDER === "fixture" ? 100 : process.env.LEMON_SQUEEZY_TEST_MODE === "false" ? 100_000 : 100,
+    journey_id: journey.id, slot_date: new Date(scheduled.startsAt).toISOString().slice(0, 10), country_day_id: day.id,
+    price_cents: process.env.SPONSOR_PAYMENT_PROVIDER === "fixture" ? 100 : process.env.LEMON_SQUEEZY_TEST_MODE === "false" ? 100_000 : 100,
     currency: "USD", status: "available",
   });
   if (slotError) throw slotError;

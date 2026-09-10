@@ -30,6 +30,7 @@ type Props = {
   routeRuntime: RouteRuntime;
   scheduledActions?: readonly ScheduledActionView[];
   weather?: JourneyWeather | null;
+  sponsorSignUrl?: string | null;
   onWorldCaptureReady?: (capture: CanvasCapture | null) => void;
   onCharacterCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
@@ -52,6 +53,7 @@ export function SceneStage({
   routeRuntime,
   scheduledActions,
   weather,
+  sponsorSignUrl = null,
   onWorldCaptureReady,
   onCharacterCaptureReady,
   command,
@@ -130,6 +132,7 @@ export function SceneStage({
           routeRuntime={routeRuntime}
           scheduledActions={scheduledActions}
           weather={weather}
+          sponsorSignUrl={sponsorSignUrl}
           onCaptureReady={onWorldCaptureReady}
           command={command}
           qualityTier={qualityTier}

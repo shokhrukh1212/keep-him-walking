@@ -32,6 +32,8 @@ type Props = {
   routeRuntime: RouteRuntime;
   scheduledActions?: readonly ScheduledActionView[];
   weather?: JourneyWeather | null;
+  /** Premium placement only: an approved sign texture drawn in the cafe zone. */
+  sponsorSignUrl?: string | null;
   onCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
   reducedMotion: boolean;
@@ -45,7 +47,7 @@ type Props = {
 };
 
 type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">
-  & { scheduledActions: readonly ScheduledActionView[]; weather: JourneyWeather | null };
+  & { scheduledActions: readonly ScheduledActionView[]; weather: JourneyWeather | null; sponsorSignUrl: string | null };
 
 export function PixiScene({
   pack,
@@ -56,6 +58,7 @@ export function PixiScene({
   routeRuntime,
   scheduledActions = EMPTY_SCHEDULED_ACTIONS,
   weather = null,
+  sponsorSignUrl = null,
   onCaptureReady,
   command,
   reducedMotion,
@@ -68,19 +71,19 @@ export function PixiScene({
   onFailure,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather });
+  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather, sponsorSignUrl });
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const diagnosticsCallback = useRef(onDiagnostics);
   const captureCallback = useRef(onCaptureReady);
 
   useEffect(() => {
-    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather };
+    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather, sponsorSignUrl };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     diagnosticsCallback.current = onDiagnostics;
     captureCallback.current = onCaptureReady;
-  }, [command, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, weather, onMotionSample]);
+  }, [command, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, weather, sponsorSignUrl, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -117,6 +120,7 @@ export function PixiScene({
         const layerRoot = new Container();
         const transitionRoot = new Container();
         const propRoot = new Container();
+        const signRoot = new Container();
         const groundLifeRoot = new Container();
         const groundDetailsRoot = new Container();
         const weatherRoot = new Container();
@@ -154,7 +158,7 @@ export function PixiScene({
         // Draw order, back to front: sky, the panorama (or the legacy parallax
         // layers), props, ground life, weather. Nothing composites over the
         // painting itself.
-        camera.addChild(sky, layerRoot, transitionRoot, propRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
+        camera.addChild(sky, layerRoot, transitionRoot, propRoot, signRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
         weatherStaticRoot.addChild(fogBand);
         app.stage.addChild(stormFlash);
         app.stage.addChild(camera);
@@ -184,6 +188,15 @@ export function PixiScene({
           nativeHeight: number;
           slot: number;
         };
+        const sign = {
+          sprite: new Sprite(),
+          url: null as string | null,
+          ready: false,
+          generation: 0,
+        };
+        sign.sprite.anchor.set(0.5, 0.5);
+        sign.sprite.visible = false;
+        signRoot.addChild(sign.sprite);
         let pools: LayerPool[] = [];
         let props: PropPool[] = [];
         let groundLife: InstanceType<typeof Graphics>[] = [];
@@ -611,6 +624,38 @@ export function PixiScene({
 
           const groundCamera = state.reducedMotion ? 0 : groundPixels;
           groundLifeRoot.x = -groundCamera;
+
+          // Premium cafe sign. It hangs on the near plane and scrolls with the
+          // pavement, so it reads as part of the street rather than an overlay.
+          const signUrl = activeZone.kind === "cafe" ? state.sponsorSignUrl : null;
+          if (signUrl !== sign.url) {
+            sign.url = signUrl;
+            sign.sprite.visible = false;
+            // Drop the old texture's readiness immediately, or a sponsor change
+            // would draw the previous logo until the replacement arrives.
+            sign.ready = false;
+            const generation = ++sign.generation;
+            if (signUrl) {
+              void Assets.load(signUrl).then((texture: PixiTexture) => {
+                if (disposed || generation !== sign.generation) return;
+                sign.sprite.texture = texture;
+                sign.ready = true;
+              }).catch(() => { sign.ready = false; });
+            }
+          }
+          if (sign.ready && signUrl) {
+            const signWidth = Math.min(width * 0.28, layout.personHeightPx * 1.6);
+            sign.sprite.width = signWidth;
+            sign.sprite.height = signWidth / 2;
+            // Anchored to a fixed point on the street so every viewer sees it in
+            // the same place, and wrapped over the zone so it recurs as he walks.
+            const spacing = Math.max(width * 1.4, layout.personHeightPx * 9);
+            const offset = ((-groundCamera % spacing) + spacing) % spacing;
+            sign.sprite.position.set(offset + spacing * 0.25, layout.groundY - layout.personHeightPx * 1.55);
+            sign.sprite.visible = sign.sprite.x > -signWidth && sign.sprite.x < width + signWidth;
+          } else {
+            sign.sprite.visible = false;
+          }
           for (const kind of ["traveler", "resident"] as const) {
             const contact = contacts.current[kind];
             const shadow = shadows[kind];

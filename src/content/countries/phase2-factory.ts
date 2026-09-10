@@ -1,6 +1,8 @@
 import {
   countryPackV3Schema,
   stageSchema,
+  DEFAULT_ZONE_KINDS,
+  DEFAULT_ZONE_LENGTH_METRES,
   type CountryPackV3,
   type RouteProp,
   type RouteZone,
@@ -183,7 +185,8 @@ function routeZone(city: string, version: string, zone: ZoneDefinition, index: n
     stage: stageSchema.parse(zone.stage ?? {}),
     id: zone.id,
     label: zone.label,
-    lengthMetres: [1_200, 1_600, 1_600, 1_400, 2_200][index] ?? 2_200,
+    lengthMetres: DEFAULT_ZONE_LENGTH_METRES[index] ?? DEFAULT_ZONE_LENGTH_METRES[DEFAULT_ZONE_LENGTH_METRES.length - 1],
+    kind: DEFAULT_ZONE_KINDS[index] ?? DEFAULT_ZONE_KINDS[DEFAULT_ZONE_KINDS.length - 1],
     durationActiveSeconds: 150,
     layers: [
       {

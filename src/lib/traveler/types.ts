@@ -20,6 +20,8 @@ export type TravelerCommand = {
   wakeElapsedSeconds?: number;
   reducedMotion: boolean;
   sponsorPatchUrl?: string;
+  /** Premium placement only: the label on the bottle he drinks from. */
+  sponsorBottleUrl?: string;
   actionReview?: ActionReview;
 };
 

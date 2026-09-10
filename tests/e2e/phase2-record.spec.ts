@@ -51,6 +51,8 @@ function snapshot(routeSeconds: number, event: ScheduledEventView): BootstrapSna
       name: "Private preview fixture",
       disclosure: "Sponsored",
       patchUrl: sponsorPatch,
+      tier: "standard" as const,
+      bottleUrl: null,
       ctaLabel: null,
       clickUrl: null,
     },

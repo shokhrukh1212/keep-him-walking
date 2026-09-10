@@ -67,9 +67,10 @@ select throws_ok(
 select ok((select relrowsecurity from pg_class where oid = 'public.postcards'::regclass), 'postcards enforce RLS');
 
 insert into public.sponsor_slots (
-  id, country_day_id, price_cents, currency, status
+  id, journey_id, slot_date, country_day_id, price_cents, currency, status
 ) values (
   '30000000-0000-4000-8000-000000000097',
+  '00000000-0000-4000-8000-000000000097', '2026-09-10',
   '10000000-0000-4000-8000-000000000097', 100, 'USD', 'available'
 );
 

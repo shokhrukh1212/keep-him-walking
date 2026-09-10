@@ -27,15 +27,20 @@ export async function POST(request: NextRequest) {
   if (!config.phase2Enabled) return apiError(503, "UNAVAILABLE", "Phase 2 preview is disabled.");
   const now = new Date();
   const testMode = config.sponsorPaymentProvider === "fixture" || process.env.LEMON_SQUEEZY_TEST_MODE !== "false";
-  const { data, error } = await supabase.rpc("reserve_sponsor_slot", {
+  // The server prices the slot from its own stored inventory. A client never
+  // supplies an amount, and only D+1..D+window are purchasable at all.
+  const { data, error } = await supabase.rpc("reserve_sponsor_slot_v2", {
     p_slot_id: parsed.data.slotId,
     p_sponsor_name: parsed.data.sponsorName,
     p_sponsor_email: parsed.data.sponsorEmail,
+    p_tier: parsed.data.tier,
     p_test_mode: testMode,
     p_now: now.toISOString(),
     p_reservation_minutes: config.sponsorReservationMinutes,
+    p_premium_multiplier: config.sponsorPremiumMultiplier,
+    p_window_days: config.sponsorWindowDays,
   });
-  if (error || !data) return apiError(409, "CONFLICT", "That country-day is no longer available.");
+  if (error || !data) return apiError(409, "CONFLICT", "That day is no longer available.");
   const sponsorship = Array.isArray(data) ? data[0] : data;
   try {
     const origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
       if (updateError) throw updateError;
     }
     trackServerEvent("sponsor_checkout_started", String(sponsorship.id), {
-      sponsorship_id: String(sponsorship.id), slot_id: parsed.data.slotId, test_mode: testMode,
+      sponsorship_id: String(sponsorship.id), slot_id: parsed.data.slotId, test_mode: testMode, tier: parsed.data.tier,
       payment_provider: checkout.provider,
     });
     const response = NextResponse.json({ checkoutUrl: checkout.url, purchase: sponsorship.public_id, paymentProvider: checkout.provider });

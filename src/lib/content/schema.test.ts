@@ -6,6 +6,7 @@ import {
   DEFAULT_DAY_ROUTE_METRES,
   DEFAULT_MARATHON_METRES,
   DEFAULT_ZONE_LENGTH_METRES,
+  DEFAULT_ZONE_KINDS,
 } from "./schema";
 import { countryPackSchema } from "./schema";
 import type { CountryPackV3 } from "./schema";
@@ -80,5 +81,21 @@ describe("Phase 3 editorial buffer", () => {
     expect(typed.map((pack) => pack.assetVersion)).toEqual(phase3EditorialBufferOrder);
     expect(typed.every((pack) => pack.schemaVersion === 3 && pack.route.zones.length === 5 && pack.culturalReview.status === "creator_reviewed")).toBe(true);
     expect(new Set(typed.map((pack) => pack.countryCode)).size).toBe(7);
+  });
+});
+
+describe("zone kind", () => {
+  it("names each zone by position so consumers stop matching city-specific ids", () => {
+    for (const pack of registeredCountryPacks()) {
+      expect(pack.route.zones.map((zone) => zone.kind))
+        .toEqual(DEFAULT_ZONE_KINDS.slice(0, pack.route.zones.length));
+    }
+  });
+
+  it("keeps an explicit kind when a pack declares one", () => {
+    const source = JSON.parse(JSON.stringify(tashkentCountryPackV3)) as Record<string, unknown>;
+    const route = source.route as { zones: Record<string, unknown>[] };
+    route.zones[1].kind = "market";
+    expect(countryPackSchema.parse(source).route.zones[1].kind).toBe("market");
   });
 });

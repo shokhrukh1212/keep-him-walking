@@ -2057,3 +2057,69 @@ button:focus-visible,
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* P15 — the public price board. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sponsor-calendar {
+  width: 100%;
+  margin-top: 2rem;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+.sponsor-calendar th,
+.sponsor-calendar td {
+  border: 1px solid rgb(255 255 255 / 14%);
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.sponsor-calendar th {
+  color: rgb(247 240 223 / 62%);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sponsor-calendar td[data-sold="true"] {
+  background: rgb(145 213 177 / 14%);
+  font-weight: 700;
+}
+
+.sponsor-formula {
+  border-left: 3px solid var(--paper);
+  padding-left: 0.9rem;
+}
+
+.sponsor-price {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.sponsor-report-table {
+  width: 100%;
+  margin-top: 1.5rem;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+.sponsor-report-table th,
+.sponsor-report-table td {
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}

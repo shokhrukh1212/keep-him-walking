@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import { trackVisitorEvent } from "@/lib/analytics/client";
 import type {
@@ -18,7 +18,8 @@ import { crowdActionKindOf, travelerMotionAt, visibleStepsBetween, type Traveler
 import { weatherEffect } from "@/lib/weather/effects";
 import { localHourFraction } from "@/lib/world/time-grade";
 import { formatTemperature, weatherGlyph } from "@/lib/weather/format";
-import { sponsorPresentation } from "@/lib/traveler/demo-sponsor";
+import { safeDemoSponsorLogo, sponsorPresentation } from "@/lib/traveler/demo-sponsor";
+import { formatPriceUsd } from "@/lib/sponsors/pricing";
 import { useJourneyAudio } from "@/hooks/useJourneyAudio";
 import { useJourneyPresence } from "@/hooks/useJourneyPresence";
 import { useMotionPreference } from "@/hooks/useMotionPreference";
@@ -67,6 +68,10 @@ import { shareCard } from "@/lib/share/client";
 type Props = {
   initialSnapshot: BootstrapSnapshot;
   previewDemoSponsor?: boolean;
+  /** Non-production only: lets a prospect see their own logo on the patch. */
+  allowDemoSponsorLogo?: boolean;
+  /** The cheapest day still genuinely open, or null when nothing is for sale. */
+  sponsorPriceCents?: number | null;
 };
 
 type WakeMoment = {
@@ -89,7 +94,9 @@ function currentlyActiveEvent(
   return null;
 }
 
-export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false }: Props) {
+const subscribeNever = () => () => {};
+
+export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeatState, setHeartbeat] = useState<{
     countryDayId: string;
@@ -547,6 +554,17 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
 
   const visitorSeconds = heartbeat?.visitorActiveSeconds ?? 0;
   const sponsor = sponsorPresentation(snapshot.sponsor,previewDemoSponsor);
+  // Sales tool, non-production only: ?demoSponsorLogo=<https url> paints a prospect's
+  // logo on the patch. It never touches the real sponsor disclosure or any storage.
+  // Read through the store API so the server renders no logo and the client adds
+  // one after hydration, rather than a setState cascade inside an effect.
+  const demoLogo = useSyncExternalStore(
+    subscribeNever,
+    () => (allowDemoSponsorLogo
+      ? safeDemoSponsorLogo(new URLSearchParams(window.location.search).get("demoSponsorLogo"))
+      : null),
+    () => null,
+  );
 
   useEffect(() => {
     for (const milestone of [30, 60, 120, 300]) {
@@ -587,7 +605,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
     wakeElapsedSeconds: waking && wakeBeat
       ? Math.max(0, (realNowMs - Date.parse(wakeBeat.wokeAt)) / 1_000)
       : undefined,
-    sponsorPatchUrl: sponsor?.logo ?? undefined,
+    sponsorPatchUrl: demoLogo ?? sponsor?.logo ?? undefined,
+    sponsorBottleUrl: sponsor?.bottle ?? undefined,
     actionReview: previewDemoSponsor?actionReview:undefined,
   };
 
@@ -695,6 +714,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
       <SceneStage
         scheduledActions={scheduledActions}
         weather={weather}
+        // Premium only, and only once the creative is approved and live.
+        sponsorSignUrl={sponsor?.bottle ?? null}
         onWorldCaptureReady={registerWorldCapture}
         onCharacterCaptureReady={registerCharacterCapture}
         pack={snapshot.assets}
@@ -808,7 +829,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
             <img src={sponsor.logo} alt="" width={40} height={40} /> : null}
           <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
             {sponsor.href ? <a href={sponsor.href}>{sponsor.cta} ↗</a> : null}</div>
-        </aside> : <Link className="sponsor-invitation" data-hud-region="sponsor" title="Price rises with the audience" href="/sponsor">Sponsor a day · $49</Link>}
+        </aside> : <Link className="sponsor-invitation" data-hud-region="sponsor" title="Price rises with the audience" href="/sponsors">
+          {sponsorPriceCents === null ? "Sponsor a day" : `Sponsor a day · ${formatPriceUsd(sponsorPriceCents)}`}
+        </Link>}
         {previewDemoSponsor ? <label className="action-review-select">Preview action
           <select aria-label="Preview action" value={actionReview.action} onChange={event=>{
             const now=performance.now();setReviewNow(now);
@@ -864,7 +887,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false 
           onToggleSound={() => void toggleSound()}
         />
         {tomorrowPack ? <TomorrowPreview cityName={tomorrowPack.cityName} countryName={tomorrowPack.countryName} packId={tomorrowPack.assetVersion} startsAt={snapshot.countryDay.endsAt} /> : null}
-        <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsor">Sponsor a day</Link><Link href="/privacy">Privacy</Link></nav>
+        <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/privacy">Privacy</Link></nav>
       </section>
 
       <DailyVote

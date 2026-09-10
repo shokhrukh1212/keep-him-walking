@@ -219,6 +219,14 @@ export const stageSchema = z.object({
 export type ZoneStage = z.infer<typeof stageSchema>;
 
 export const DEFAULT_ZONE_LENGTH_METRES = [1_200, 1_600, 1_600, 1_400, 2_200] as const;
+
+/**
+ * Zone ids are city-specific slugs (`plov-cafe`, `riverside-cafe`, `chaikhana`), so
+ * only the ordinal position is canonical. `kind` names it once instead of leaving
+ * every consumer to match substrings.
+ */
+export const ZONE_KINDS = ["arrival", "lanes", "market", "cafe", "landmark"] as const;
+export const DEFAULT_ZONE_KINDS = ZONE_KINDS;
 export const DEFAULT_DAY_ROUTE_METRES = 8_000;
 export const DEFAULT_MARATHON_METRES = 42_195;
 
@@ -226,6 +234,8 @@ export const routeZoneSchema = z.object({
   stage: stageSchema.prefault({}),
   id: z.string().min(1),
   label: z.string().min(1),
+  /** What this zone is, independent of its city-specific id. Defaults by position. */
+  kind: z.enum(ZONE_KINDS).default("arrival"),
   lengthMetres: z.number().positive().max(100_000).default(DEFAULT_ZONE_LENGTH_METRES[0]),
   /** @deprecated Kept so older packs validate; route progress no longer reads it. */
   durationActiveSeconds: z.number().int().min(45).max(21_600),
@@ -269,6 +279,9 @@ function routeSchemaWithDistanceDefaults() {
           lengthMetres: value.lengthMetres
             ?? DEFAULT_ZONE_LENGTH_METRES[index]
             ?? DEFAULT_ZONE_LENGTH_METRES[DEFAULT_ZONE_LENGTH_METRES.length - 1],
+          kind: value.kind
+            ?? DEFAULT_ZONE_KINDS[index]
+            ?? DEFAULT_ZONE_KINDS[DEFAULT_ZONE_KINDS.length - 1],
         };
       }),
     };

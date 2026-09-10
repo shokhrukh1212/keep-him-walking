@@ -17,6 +17,7 @@ function bottle() {
   const body=new THREE.Mesh(new THREE.CapsuleGeometry(.027,.105,5,16),new THREE.MeshPhysicalMaterial({color:0x68b5df,roughness:.22,transmission:.18,transparent:true,opacity:.88}));
   const neck=new THREE.Mesh(new THREE.CylinderGeometry(.014,.020,.028,16),new THREE.MeshStandardMaterial({color:0x68b5df,roughness:.28}));
   const cap=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.016,16),new THREE.MeshStandardMaterial({color:0xe9e5d5,roughness:.5}));
+  body.name="Bottle body";
   neck.position.y=.087;cap.position.y=.108;cap.name="Bottle cap";group.add(body,neck,cap);return group;
 }
 function phone() {
@@ -72,6 +73,9 @@ export class CharacterActor {
   private sponsorTexture?:THREE.Texture;
   private sponsorUrl?:string;
   private sponsorRevision=0;
+  private bottleTexture?:THREE.Texture;
+  private bottleUrl?:string;
+  private bottleRevision=0;
   constructor(gltf:GLTF,height:number,withProps:boolean) {
     this.root=gltf.scene;
     this.propsEnabled=withProps;
@@ -245,8 +249,32 @@ export class CharacterActor {
       this.sponsorMaterial.map=texture;this.sponsorMaterial.color.set(0xffffff);this.sponsorMaterial.needsUpdate=true;
     }catch{/* The sewn patch remains visible when a remote logo cannot load. */}
   }
+  /**
+   * Premium placement: the water bottle he drinks from carries a sponsor's label.
+   * Mirrors setSponsor exactly, including the generation guard, so a slow texture
+   * arriving after the sponsor changed can never paint the wrong logo.
+   */
+  async setBottle(url?:string) {
+    if(url===this.bottleUrl)return;
+    this.bottleUrl=url;
+    const revision=++this.bottleRevision;
+    this.bottleTexture?.dispose();this.bottleTexture=undefined;
+    const body=this.water.getObjectByName("Bottle body");
+    const material=body instanceof THREE.Mesh?body.material:null;
+    if(!(material instanceof THREE.MeshPhysicalMaterial))return;
+    if(!url){material.map=null;material.color.set(0x68b5df);material.needsUpdate=true;return;}
+    try{
+      const texture=await new THREE.TextureLoader().loadAsync(url);
+      if(revision!==this.bottleRevision){texture.dispose();return;}
+      texture.colorSpace=THREE.SRGBColorSpace;
+      texture.flipY=false;
+      this.bottleTexture=texture;
+      material.map=texture;material.color.set(0xffffff);material.needsUpdate=true;
+    }catch{/* The plain bottle remains when a remote label cannot load. */}
+  }
   dispose(){
-    this.sponsorRevision+=1;this.sponsorTexture?.dispose();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.root);
+    this.sponsorRevision+=1;this.sponsorTexture?.dispose();
+    this.bottleRevision+=1;this.bottleTexture?.dispose();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.root);
     this.sourceMaterials.forEach((material, mesh) => { mesh.material = material; });
     this.toon.dispose();
   }

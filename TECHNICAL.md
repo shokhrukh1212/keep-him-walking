@@ -1088,7 +1088,7 @@ row), `presence_leases`, `mutation_rate_limits`.
 **Phase 2:** `visitor_day_contributions`, `postcards`, `sponsor_slots`, `sponsorships`
 (with a partial unique index enforcing one active sponsorship per slot and a trigger
 enforcing legal state transitions), `payment_webhook_events`, `sponsor_metric_events`,
-`sponsor_daily_metrics`, `operation_ledger`.
+`sponsor_daily_metrics`, `operation_ledger`. Season 1 adds `sponsor_pricing`.
 
 **Phase 3:** `country_notification_opt_ins`, `experiment_exposures`,
 `operational_incidents`, `webhook_replay_audit`.
@@ -1135,6 +1135,20 @@ tally and his name.
 the rows it writes from the `p_real_now` it is given rather than the database clock,
 matching every other write in the schema and clearing a `db lint` warning.
 
+**Season 1 migrations 0021-0023, sponsor pricing:** inventory becomes date-keyed.
+`sponsor_slots.country_day_id` was `not null unique`, but D+2..D+7 cannot have a
+country-day: the destination is only known once that day's vote closes. Slots now carry
+`(journey_id, slot_date)` and `bind_sponsor_slot_day` attaches the country-day at
+rollover. `sponsor_pricing` stores one row per open date with the price and the
+`basis_uniques` that set it; `open_sponsor_pricing_window` inserts `on conflict do
+nothing`, so **a day already on sale keeps the price it opened at** however the formula
+moves. `sponsorships` gains `tier` and a `price_basis` provenance snapshot.
+`reserve_sponsor_slot_v2` refuses any date outside D+1..D+window and prices the tier
+server-side. `read_bootstrap_bundle_v10` carries the live sponsorship's tier so the
+premium placements can be drawn only for a purchase that bought them. Migration 0022
+corrects 0021's shadowed loop variable, which `db lint` reported. `reserve_sponsor_slot`
+(v1) and bundle v9 remain rollback contracts.
+
 **Season 1 migration 0017, weather:** `journey_runtime.weather` caches one
 Open-Meteo reading per city. `write_journey_weather` refuses a reading older than the
 one already stored, so a slow request cannot overwrite a fresher one. Heartbeat v7 and
@@ -1150,12 +1164,14 @@ peak),
 `close_and_pick_vote_winner`, `create_next_country_day`, `read_traveler_name`,
 `write_journey_weather`, `read_journey_weather`,
 `submit_reaction`, `read_day_reactions`, `record_day_photo`,
-`submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot`,
+`submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot` / `_v2`,
+`sponsor_price_cents`, `sponsor_tier_price_cents`, `journey_slot_date`,
+`open_sponsor_pricing_window`, `bind_sponsor_slot_day`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `reconcile_phase2_state_v2`, `finalize_day_outcome`,
 `cleanup_phase2_retention`, `journey_story_now`,
 `read_journey_runtime_v3` / `_v4` / `_v5`,
-`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9`
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10`
 (one-call bootstrap with atomic admission control, the distance projection, the
 country aggregate, the reaction board, the ballot and the weather),
 `set_country_notification_opt_in`.
@@ -1171,7 +1187,7 @@ GET  /api/bootstrap                 full snapshot: day, event, vote, presence, s
 POST /api/presence/heartbeat        the walking rule
 POST /api/votes                     one ballot per visitor, server-enforced
 POST /api/postcards                 render + upload + public token (idempotent)
-POST /api/sponsor/checkout          reserve slot → provider checkout
+POST /api/sponsor/checkout          reserve a dated slot at its tier → provider checkout
 GET  /api/sponsor/status
 POST /api/sponsor/metrics           impression / engaged_view
 GET  /r/sponsor/<publicId>          disclosed click redirect + click metric
@@ -1273,6 +1289,48 @@ candidate branches; reduced-motion rules suppress the pulse through the global p
 The document permits vertical scrolling; viewport-sized scene and character-review
 containers continue to constrain their own overflow. Long map, recap and post-kit pages
 therefore remain reachable.
+
+### Sponsor pricing and placements (P15)
+
+`P(day) = clamp(yesterday_unique_watchers x SPONSOR_CENTS_PER_UNIQUE, floor, cap)`, with
+the owner-approved floor 4,900, cap 299,900 and premium multiplier 1.5 (DECISIONS Q11).
+`src/lib/sponsors/pricing.ts` mirrors the two SQL functions so `/sponsors` can render and
+explain a price without a round trip; the database still prices every reservation, and a
+client never sends an amount. Premium is rounded to a whole dollar, so the published pair
+is Standard $49 / Premium $74.
+
+`/sponsors` is the public price board: the rolling window, sold days by sponsor name, open
+days by price, and the sentence naming the audience that set it. It reads the **stored**
+`basis_uniques`, never a recomputed number, and a founding or floor-priced day says so
+instead of claiming an audience it did not have. `/sponsor` permanently redirects there.
+The dock shows the cheapest genuinely open day and, when nothing is for sale, no number at
+all. The landing page stays statically rendered with a 60-second revalidate: the price is
+one indexed read, and nothing visitor-specific was added to it.
+
+Only a *paid* purchase counts as sold on the board; an abandoned checkout is not social
+proof. `/sponsor/<publicId>/report` renders that sponsorship's stored daily aggregates,
+reached through the unguessable public id exactly like the disclosure redirect.
+
+**Payment.** The purchase snapshot (`expected_price_cents`) remains the payment authority,
+and `validateLemonOrder` is unchanged. The webhook additionally recomputes what the day is
+published at now; a difference is recorded as `price_basis.mismatch` with a
+`sponsor_price_mismatch` log and blocks `approve-sponsor.ts` until someone passes
+`--accept-price-mismatch`. It never re-prices, auto-approves or auto-refunds: a sponsor who
+paid what they were quoted has bought the day.
+
+**Premium placements** are drawn only for `tier = 'premium'` on a sponsorship that is
+`live`, so an unapproved creative can never reach the screen. `CharacterActor.setBottle`
+mirrors `setSponsor` (same texture settings, generation guard and disposal) to label the
+bottle he drinks from; PixiScene draws the cafe sign in a `signRoot` between the props and
+the ground life, shown only where `zone.kind === "cafe"`. `zone.kind` is a new schema field
+defaulted by ordinal position, because zone ids are city-specific slugs (`plov-cafe`,
+`chaikhana`) and only the position is canonical.
+
+The sales-DM preview `?demoSponsorLogo=<https url>` paints a prospect's own logo on the
+patch. It is hard-denied on Production and accepts only an absolute `https` URL. It is
+gated on the deployment rather than on a preview-session cookie deliberately: reading a
+cookie would make the landing page uncacheable for every real visitor, and the capability
+is only "draw an image on the patch" - it stores nothing and reads nothing.
 
 ### Identity, security, limits
 

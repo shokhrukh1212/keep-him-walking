@@ -138,6 +138,9 @@ export type BootstrapSnapshot = {
         name: string;
         disclosure: string;
         patchUrl: string | null;
+        /** Premium buys the bottle label and the cafe sign; standard buys neither. */
+        tier: "standard" | "premium";
+        bottleUrl: string | null;
         ctaLabel: string | null;
         clickUrl: string | null;
       };

@@ -97,6 +97,7 @@ type BootstrapBundleRow = {
     disclosure: string;
     public_creative_path: string | null;
     cta_label: string | null;
+    tier?: string | null;
   };
 };
 
@@ -342,6 +343,9 @@ function bootstrapFromBundle(
       name: liveSponsor.sponsor_name,
       disclosure: liveSponsor.disclosure,
       patchUrl,
+      // Premium placements are drawn only for a purchase that bought them.
+      tier: liveSponsor.tier === "premium" ? "premium" : "standard",
+      bottleUrl: liveSponsor.tier === "premium" ? patchUrl : null,
       ctaLabel: liveSponsor.cta_label,
       clickUrl: liveSponsor.cta_label ? `/r/sponsor/${liveSponsor.public_id}` : null,
     } : { status: "unsponsored" },
@@ -451,7 +455,7 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v9", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v10", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -532,7 +536,7 @@ export async function liveBootstrapSnapshot(
     const [{ data: contribution }, { data: existingPostcard }, { data: slot, error: sponsorError }] = await Promise.all([
       supabase.from("visitor_day_contributions").select("active_seconds").eq("country_day_id", countryDay.id).eq("visitor_hash", visitorHash).maybeSingle(),
       supabase.from("postcards").select("public_token,status,expires_at").eq("country_day_id", countryDay.id).eq("visitor_hash", visitorHash).eq("status", "ready").gt("expires_at", now.toISOString()).maybeSingle(),
-      supabase.from("sponsor_slots").select("id,sponsorships!sponsorships_slot_id_fkey(public_id,status,sponsor_name,disclosure,public_creative_path,cta_label)").eq("country_day_id", countryDay.id).maybeSingle(),
+      supabase.from("sponsor_slots").select("id,sponsorships!sponsorships_slot_id_fkey(public_id,status,sponsor_name,disclosure,public_creative_path,cta_label,tier)").eq("country_day_id", countryDay.id).maybeSingle(),
     ]);
     if (sponsorError) throw sponsorError;
     const contributedSeconds = Number(contribution?.active_seconds ?? row?.out_visitor_active_seconds ?? 0);
@@ -546,7 +550,7 @@ export async function liveBootstrapSnapshot(
     };
     const sponsorships = (slot?.sponsorships ?? []) as Array<{
       public_id: string; status: string; sponsor_name: string; disclosure: string;
-      public_creative_path: string | null; cta_label: string | null;
+      public_creative_path: string | null; cta_label: string | null; tier: string | null;
     }>;
     const liveSponsor = sponsorships.find((entry) => entry.status === "live");
     if (liveSponsor) {
@@ -559,6 +563,8 @@ export async function liveBootstrapSnapshot(
         name: liveSponsor.sponsor_name,
         disclosure: liveSponsor.disclosure,
         patchUrl,
+        tier: liveSponsor.tier === "premium" ? "premium" : "standard",
+        bottleUrl: liveSponsor.tier === "premium" ? patchUrl : null,
         ctaLabel: liveSponsor.cta_label,
         clickUrl: liveSponsor.cta_label ? `/r/sponsor/${liveSponsor.public_id}` : null,
       };

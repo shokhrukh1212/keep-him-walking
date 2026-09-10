@@ -216,7 +216,17 @@ What a sponsor gets:
 - One clearly disclosed placement on that day's journey page.
 - Optionally, a reviewed logo patch on the traveler's backpack, worn all day.
 - Aggregate first-party reporting — impressions, engaged views (10 s+), clicks — with
-  no third-party ad tech and no cross-site tracking.
+  no third-party ad tech and no cross-site tracking, at `/sponsor/<id>/report`.
+- Premium additionally labels the water bottle he drinks from and the café sign in the
+  café zone. Both appear only after the creative is approved and the day is live.
+
+**The price is public and so is the formula.** A day costs one cent per unique watcher
+the day before, with a floor of $49 and a cap of $2,999; `/sponsors` publishes the seven
+days currently on sale, each price, and the number of watchers that set it. Prices only
+change for days that are not yet open — buying early locks the lower price in. The first
+seven days of a season are a flat founding price. A sponsor buys a *day*, not a country:
+the country is decided one day ahead by the vote, which is why inventory is keyed by date
+and only attached to a country-day once that vote closes.
 
 The lifecycle, enforced by a database state machine so it cannot be skipped:
 

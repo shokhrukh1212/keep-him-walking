@@ -37,13 +37,17 @@ export async function reconcilePhase2(now = new Date()) {
       supabase.rpc("cleanup_phase2_retention", { p_now: now.toISOString() }),
     ]);
     if (stateError || cleanupError) throw stateError ?? cleanupError;
+    // Pricing runs after reconciliation, because reconciliation is what finalizes
+    // yesterday's unique watchers, and after tomorrow's day exists, so the date it
+    // was sold as can finally point at a real country-day.
+    const sponsorWindow = await openSponsorWindow(supabase, winner, nextDay, now);
     const recapDays = Array.isArray(state?.recapDays) ? state.recapDays as PendingRecap[] : [];
     const recapImages = await storePendingRecaps(recapDays);
     const yesterday = new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10);
     const { error: metricsError } = await supabase.rpc("aggregate_sponsor_metrics", { p_metric_date: yesterday, p_now: now.toISOString() });
     if (metricsError) throw metricsError;
-    await supabase.from("operation_ledger").update({ status: "completed", completed_at: now.toISOString(), payload_json: { state, cleanup, winner, nextDay, recapImages } }).eq("operation_key", operationKey);
-    return { duplicate: false, operationKey, state, cleanup, winner, nextDay, recapImages };
+    await supabase.from("operation_ledger").update({ status: "completed", completed_at: now.toISOString(), payload_json: { state, cleanup, winner, nextDay, recapImages, sponsorWindow } }).eq("operation_key", operationKey);
+    return { duplicate: false, operationKey, state, cleanup, winner, nextDay, recapImages, sponsorWindow };
   } catch (error) {
     await supabase.from("operation_ledger").update({ status: "failed", completed_at: now.toISOString(), error_code: "RECONCILIATION_FAILED" }).eq("operation_key", operationKey);
     throw error;
@@ -92,5 +96,55 @@ async function createNextDay(
     p_vote: plan.vote,
   });
   if (createError) throw createError;
+  return data;
+}
+
+/**
+ * Binds the date that was already on sale to the country-day the vote just chose,
+ * then opens whatever the rolling window is still missing. Both RPCs are
+ * idempotent, so a replayed rollover changes nothing and an already-open day
+ * keeps the price it opened at.
+ */
+async function openSponsorWindow(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  winner: VoteWinner,
+  nextDay: unknown,
+  now: Date,
+) {
+  // The window opens every rollover, not only on days a ballot closed, so resolve
+  // the journey the same way reconciliation does rather than relying on the winner.
+  const { data: journeyRow, error: journeyError } = await supabase
+    .from("journeys")
+    .select("id")
+    .eq("phase2_enabled", true)
+    .in("status", ["preview", "active"])
+    .order("starts_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (journeyError) throw journeyError;
+  const journeyId = journeyRow?.id ?? winner.journeyId;
+  if (!journeyId) return { state: "no_journey" as const };
+  const config = serverRuntimeConfig();
+
+  const created = nextDay as { countryDayId?: string } | null;
+  if (created?.countryDayId) {
+    const { error } = await supabase.rpc("bind_sponsor_slot_day", {
+      p_country_day_id: created.countryDayId,
+      p_real_now: now.toISOString(),
+    });
+    if (error) throw error;
+  }
+
+  const { data, error } = await supabase.rpc("open_sponsor_pricing_window", {
+    p_journey_id: journeyId,
+    p_real_now: now.toISOString(),
+    p_floor_cents: config.sponsorFloorCents,
+    p_cents_per_unique: config.sponsorCentsPerUnique,
+    p_founding_cents: config.sponsorFoundingCents,
+    p_cap_cents: config.sponsorCapCents,
+    p_window_days: config.sponsorWindowDays,
+    p_currency: "USD",
+  });
+  if (error) throw error;
   return data;
 }

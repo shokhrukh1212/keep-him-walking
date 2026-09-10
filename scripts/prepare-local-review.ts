@@ -91,6 +91,27 @@ const { data: state, error: stateError } = await db.rpc("reconcile_phase2_state_
 });
 if (stateError) throw stateError;
 console.log(JSON.stringify({ reconciliation: state }));
+
+// Open the sponsor window the same way rollover does, so /sponsors has real
+// inventory to review. Idempotent: an already-open day keeps its opening price.
+for (const day of days) {
+  const { error } = await db.rpc("bind_sponsor_slot_day", {
+    p_country_day_id: day.id, p_real_now: now.toISOString(),
+  });
+  if (error) throw error;
+}
+const { data: sponsorWindow, error: windowError } = await db.rpc("open_sponsor_pricing_window", {
+  p_journey_id: journeyId,
+  p_real_now: now.toISOString(),
+  p_floor_cents: Number(process.env.SPONSOR_FLOOR_CENTS ?? 4900),
+  p_cents_per_unique: Number(process.env.SPONSOR_CENTS_PER_UNIQUE ?? 1),
+  p_founding_cents: Number(process.env.SPONSOR_FOUNDING_CENTS ?? 2900),
+  p_cap_cents: Number(process.env.SPONSOR_CAP_CENTS ?? 299900),
+  p_window_days: Number(process.env.SPONSOR_WINDOW_DAYS ?? 7),
+  p_currency: "USD",
+});
+if (windowError) throw windowError;
+console.log(JSON.stringify({ sponsorWindow }));
 if (base) {
   for (const entry of state.recapDays ?? []) {
     const response = await fetch(new URL(`/api/og/recap/${entry.dayNumber}`, base));

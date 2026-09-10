@@ -38,6 +38,13 @@ export function serverRuntimeConfig() {
     dayPhotoBucket: process.env.SUPABASE_DAY_PHOTOS_BUCKET || "khw-day-photos",
     recapBucket: process.env.SUPABASE_RECAPS_BUCKET || "khw-recaps",
     sponsorReservationMinutes: Math.round(numericEnv("SPONSOR_RESERVATION_MINUTES", 30)),
+    // The public price formula (05 section 3); values approved in DECISIONS Q11.
+    sponsorFloorCents: Math.round(numericEnv("SPONSOR_FLOOR_CENTS", 4_900)),
+    sponsorCentsPerUnique: Math.round(numericEnv("SPONSOR_CENTS_PER_UNIQUE", 1)),
+    sponsorFoundingCents: Math.round(numericEnv("SPONSOR_FOUNDING_CENTS", 2_900)),
+    sponsorCapCents: Math.round(numericEnv("SPONSOR_CAP_CENTS", 299_900)),
+    sponsorPremiumMultiplier: numericEnv("SPONSOR_PREMIUM_MULTIPLIER", 1.5),
+    sponsorWindowDays: Math.min(30, Math.max(1, Math.round(numericEnv("SPONSOR_WINDOW_DAYS", 7)))),
     sponsorPaymentProvider: process.env.SPONSOR_PAYMENT_PROVIDER === "fixture" ? "fixture" as const : "lemonsqueezy" as const,
   };
 }

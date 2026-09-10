@@ -3,6 +3,9 @@ import { trackServerEvent } from "@/lib/analytics/server";
 import { nextPaymentState, type SponsorshipState } from "@/lib/payments/state-machine";
 import { parseLemonWebhook, validateLemonOrder, verifyLemonSignature, webhookChecksum } from "@/lib/payments/webhook";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { serverRuntimeConfig } from "@/lib/config/server";
+import { isSponsorTier, tierPriceCents } from "@/lib/sponsors/pricing";
+import { writeOperationalLog } from "@/lib/observability/logger";
 import { apiError, readLimitedText } from "@/lib/validation/http";
 
 export async function POST(request: Request) {
@@ -57,7 +60,7 @@ export async function POST(request: Request) {
   if (ledgerError || !ledger) return NextResponse.json({ error: { code: "UNAVAILABLE", message: "Webhook ledger unavailable." } }, { status: 503 });
 
   const customId = event.meta.custom_data?.sponsorship_id;
-  let query = supabase.from("sponsorships").select("id,slot_id,status,expected_price_cents,expected_currency,test_mode,lemon_order_id");
+  let query = supabase.from("sponsorships").select("id,slot_id,status,expected_price_cents,expected_currency,test_mode,lemon_order_id,tier,price_basis");
   query = customId ? query.eq("id", customId) : query.eq("lemon_order_id", event.data.id);
   const sponsorshipResult = await query.maybeSingle();
   const sponsorship = sponsorshipResult.data;
@@ -80,6 +83,19 @@ export async function POST(request: Request) {
     await supabase.from("payment_webhook_events").update({ sponsorship_id: sponsorship.id, processing_status: "ignored", processed_at: new Date().toISOString(), error_code: "ORDER_MISMATCH" }).eq("id", ledger.id);
     return NextResponse.json({ accepted: true, ignored: true });
   }
+  // Advisory only. The paid amount was already checked against the purchase's own
+  // immutable snapshot above; this records whether the published price has since
+  // drifted, so review can see it. It never re-prices or rejects a paid purchase.
+  const priceDrift = event.meta.event_name === "order_created"
+    ? await detectPriceDrift(supabase, sponsorship)
+    : null;
+  if (priceDrift) {
+    void writeOperationalLog("warning", "sponsor_price_mismatch", {
+      sponsorship_id: String(sponsorship.id),
+      snapshot_cents: Number(sponsorship.expected_price_cents),
+      published_cents: priceDrift.publishedCents,
+    });
+  }
   try {
     const nextStatus = nextPaymentState(sponsorship.status as SponsorshipState, event.meta.event_name);
     const now = new Date().toISOString();
@@ -87,6 +103,9 @@ export async function POST(request: Request) {
       status: nextStatus,
       lemon_order_id: sponsorship.lemon_order_id ?? event.data.id,
       ...(event.meta.event_name === "order_created" ? { paid_at: now } : { removed_at: now }),
+      ...(priceDrift
+        ? { price_basis: { ...(sponsorship.price_basis as Record<string, unknown> | null ?? {}), mismatch: true, publishedCents: priceDrift.publishedCents, noticedAt: now } }
+        : {}),
       updated_at: now,
     }).eq("id", sponsorship.id);
     if (sponsorshipUpdate.error) throw sponsorshipUpdate.error;
@@ -111,4 +130,25 @@ export async function POST(request: Request) {
     if (illegalTransition) return NextResponse.json({ accepted: true, ignored: true });
     return NextResponse.json({ error: { code: "UNAVAILABLE", message: "Webhook processing will be retried." } }, { status: 503 });
   }
+}
+
+/**
+ * Compares the purchase's immutable snapshot against the price its date is
+ * published at now. A difference is a flag for human review, never a refusal:
+ * a sponsor who paid what they were quoted has bought the day.
+ */
+async function detectPriceDrift(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  sponsorship: { slot_id: string; tier: string | null; expected_price_cents: number },
+): Promise<{ publishedCents: number } | null> {
+  const { data: slot } = await supabase.from("sponsor_slots")
+    .select("journey_id,slot_date").eq("id", sponsorship.slot_id).maybeSingle();
+  if (!slot?.journey_id || !slot.slot_date) return null;
+  const { data: pricing } = await supabase.from("sponsor_pricing")
+    .select("price_cents").eq("journey_id", slot.journey_id).eq("day_date", slot.slot_date).maybeSingle();
+  if (!pricing) return null;
+  const config = serverRuntimeConfig();
+  const tier = isSponsorTier(sponsorship.tier) ? sponsorship.tier : "standard";
+  const published = tierPriceCents(Number(pricing.price_cents), tier, config.sponsorPremiumMultiplier);
+  return published === Number(sponsorship.expected_price_cents) ? null : { publishedCents: published };
 }

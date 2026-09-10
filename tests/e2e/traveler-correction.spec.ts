@@ -15,7 +15,7 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
       const snapshot=offlineBootstrapSnapshot(new Date(time));
       await route.fulfill({json:{...snapshot,mode:"live",assets:bishkekCountryPack,
         countryDay:{...snapshot.countryDay,id:"test-day",cityName:"Bishkek",scenePackId:bishkekCountryPack.assetVersion},
-        sponsor:{status:"sponsored",publicId:"local-fixture-only",name:"Demo fixture",disclosure:"Local automated fixture",patchUrl:DEMO_LOGO,ctaLabel:"Explore sponsorship",clickUrl:"/sponsor"},
+        sponsor:{status:"sponsored",publicId:"local-fixture-only",name:"Demo fixture",disclosure:"Local automated fixture",patchUrl:DEMO_LOGO,tier:"standard",bottleUrl:null,ctaLabel:"Explore sponsorship",clickUrl:"/sponsors"},
         refresh:{nextAt:null,afterMs:300_000,reason:"none"},presence:{status:"live",activeViewers:walking?1:0,ttlSeconds:50},
         route:{globalActiveSeconds:seconds,globalDistanceMetres:seconds*1.25,paceRate:1,walking,authoritativeAt:new Date(time).toISOString()}}});
     } else if(route.request().url().includes("/presence/heartbeat")) {

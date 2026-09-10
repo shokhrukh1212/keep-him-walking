@@ -148,6 +148,7 @@ export function ProductCharacterStage3D(props: Props) {
           traveler = actor;
           travelerRoot.add(actor.root);
           void actor.setSponsor(latest.current.command?.sponsorPatchUrl);
+          void actor.setBottle(latest.current.command?.sponsorBottleUrl);
           element.dataset.characterReady = "true";
           latest.current.onTravelerAvailability?.(true);
         } else {
@@ -223,6 +224,7 @@ export function ProductCharacterStage3D(props: Props) {
       previousConversation = cue.conversation;
       traveler?.sample(cue.traveler, dt, snap);
       void traveler?.setSponsor(state.command?.sponsorPatchUrl);
+      void traveler?.setBottle(state.command?.sponsorBottleUrl);
       resident?.sample(cue.resident, dt, snap, 1.8);
 
       const width = Math.max(1, element.clientWidth);

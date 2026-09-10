@@ -19,6 +19,8 @@ export const sponsorCheckoutBodySchema = z.object({
   slotId: z.string().uuid(),
   sponsorName: z.string().trim().min(2).max(100),
   sponsorEmail: z.email().max(254),
+  /** Tier is a closed enum; the server prices it, the client never sends a price. */
+  tier: z.enum(["standard", "premium"]).default("standard"),
 });
 
 export const sponsorMetricBodySchema = z.object({
