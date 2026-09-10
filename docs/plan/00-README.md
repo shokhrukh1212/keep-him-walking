@@ -1,6 +1,6 @@
 # Keep Him Walking — the plan from here to viral
 
-Owner answers recorded on 8 September 2026 are authoritative in [DECISIONS.md](DECISIONS.md). Consult that register and [ROADMAP.md](ROADMAP.md) before executing these original prompts; some recommendations below have been superseded.
+Owner answers recorded on 8 September 2026 are authoritative in [DECISIONS.md](DECISIONS.md). Consult that register and [ROADMAP.md](ROADMAP.md) before executing these original prompts; some recommendations below have been superseded. Work found during implementation and deliberately deferred until every prompt is finished is in [AFTER-P22.md](AFTER-P22.md) — read it when P22 is done, before the launch checklist.
 
 Written 8 September 2026 from the current repo state (`traveler-finalization-v2`),
 `PRODUCT.md`, `TECHNICAL.md`, and six screenshots. Everything below is scoped to one

@@ -53,5 +53,14 @@ HOUSE RULES for this repository (Keep Him Walking):
   changes; and WHAT TO DO — the exact command to run, or the choice to make and its
   trade-off. Never leave a flag the owner cannot act on: an unactionable flag is
   noise, and noise hides the flags that matter.
+- A decision the owner defers is written down, not carried in a chat message. Park it in
+  `docs/plan/AFTER-P22.md` as a new `D<n>` section, in that file's three-part form, and
+  add it to the summary table at the top. That file is the list to work through once all
+  22 prompts are done, and it is read before the launch checklist in
+  `06-LAUNCH-AND-GROWTH.md`. Open entries today: **D1** the character model is 2.48 MB
+  against a 1.8 MB target, **D2** the 1,000-viewer load gate has not been run against
+  current code (the one that matters), **D3** dusk window lights have no artwork.
+  Evidence for each lives in `TECHNICAL.md` and `docs/phase-3-results.md`; do not
+  re-litigate a `D<n>` entry inside an unrelated prompt.
 - Small commits with clear messages. At the end, print: files changed, how to test
   manually, and anything you could not finish.
