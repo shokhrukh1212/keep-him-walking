@@ -63,7 +63,7 @@ export function CharacterStage3D(props:Props) {
     const scene=new THREE.Scene();
     let renderer:THREE.WebGLRenderer;
     try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:"high-performance"});}
-    catch{latest.current.onStatus("3D is unavailable on this device. Showing the original traveler reference.");latest.current.onAvailability(false);setCharacterReady(false);element.dataset.characterError="true";return;}
+    catch{latest.current.onStatus("3D is unavailable on this device. Showing the original traveler reference.");latest.current.onAvailability(false);element.dataset.characterError="true";return;}
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
     renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;
     renderer.toneMappingExposure=1;

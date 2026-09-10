@@ -102,6 +102,7 @@ export default async function SponsorsPage() {
         vote{window.currentCity ? <>; he is in {window.currentCity} right now</> : null}.
       </p>
       <SponsorCheckoutForm slots={slots} premiumMultiplier={window.premiumMultiplier} />
+      <p><Link href="/tickets">Want to choose the country? Buy him a Ticket →</Link></p>
     </section>
 
     <nav className="legal-links">

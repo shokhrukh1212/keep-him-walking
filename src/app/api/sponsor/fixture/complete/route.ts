@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
     await supabase.from("sponsor_slots")
       .update({ status: "available", reserved_by: null, reserved_until: null, updated_at: now })
       .eq("id", sponsorship.slot_id);
+    await supabase.from("tickets").update({ status: "cancelled", updated_at: now })
+      .eq("sponsorship_id", sponsorship.id).eq("status", "pending_review");
   }
   const redirect = action === "confirm"
     ? claims.returnUrl

@@ -48,6 +48,8 @@ export function serverRuntimeConfig() {
     sponsorCapCents: Math.round(numericEnv("SPONSOR_CAP_CENTS", 299_900)),
     sponsorPremiumMultiplier: numericEnv("SPONSOR_PREMIUM_MULTIPLIER", 1.5),
     sponsorWindowDays: Math.min(30, Math.max(1, Math.round(numericEnv("SPONSOR_WINDOW_DAYS", 7)))),
+    ticketsEnabled: process.env.TICKETS_ENABLED === "true",
+    ticketHorizonDays: Math.min(30, Math.max(3, Math.round(numericEnv("TICKET_HORIZON_DAYS", 7)))),
     sponsorPaymentProvider: process.env.SPONSOR_PAYMENT_PROVIDER === "fixture" ? "fixture" as const : "lemonsqueezy" as const,
   };
 }

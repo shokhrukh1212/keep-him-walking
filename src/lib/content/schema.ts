@@ -362,6 +362,8 @@ export const countryPackV3Schema = baseCountryPackSchema
     storyBeats: z.array(storyBeatSchema).min(4).max(6),
     localPhrases: z.array(localPhraseSchema).min(1),
     culturalReview: culturalReviewSchema,
+    /** Owner opt-in for selling a Ticket before the final cultural review lands. */
+    ticketBuildable: z.boolean().default(false),
     resident: z.object({
       name: z.string().min(1).max(80).default("Local resident"),
       role: z.string().min(1).max(120).default("Local host"),

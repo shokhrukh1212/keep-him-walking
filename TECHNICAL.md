@@ -23,18 +23,18 @@
 | Validation | Zod 4 for every content pack and every API body |
 | Payments | Lemon Squeezy (hosted checkout + signed webhooks), plus a deterministic no-money fixture adapter for rehearsals |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest (50 test files, 192 tests) + Playwright (18 spec files across 8 config profiles) + pgTAP (61 baseline + 15 P4 + 17 P5 + 26 P6 assertions) |
+| Testing | Vitest (85 test files, 393 tests) + Playwright (32 spec files across 8 config profiles) + pgTAP (368 assertions) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
 ```
 src/
-  app/                    13 pages, 17 route handlers, sitemap/robots/manifest
+  app/                    24 pages, 34 route handlers, sitemap/robots/manifest
   components/
     journey/JourneyExperience.tsx   the one orchestrating client component
     scene/                PixiScene, SceneStage, StaticScene
     traveler/             ProductCharacterStage3D, CharacterActor host, review UI
-    hud/ dialogue/ vote/ sponsor/ postcard/ archive/ debug/
+    hud/ dialogue/ vote/ sponsor/ tickets/ postcard/ archive/ debug/
   content/countries/      16 registered country packs + two factories
   lib/
     content/schema.ts     the Zod source of truth for all pack shapes
@@ -54,7 +54,7 @@ scripts/
   characters/             Blender/MPFB build pipeline (Python) + browser checks (mjs)
   process-phase*-art.mjs  sharp-based image derivation
   phase2/ phase3/         preflight, seeding, scheduling, rehearsal, reporting
-supabase/migrations/      13 forward migrations, 61 baseline pgTAP assertions
+supabase/migrations/      30 forward migrations, 368 pgTAP assertions
 ```
 
 ---
@@ -1112,7 +1112,7 @@ The prop cutouts (1.36 MiB per city) are **not** deleted: see §6.5.
 
 ## 9. Data model and API surface
 
-### Tables (29 forward migrations)
+### Tables (30 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1142,6 +1142,18 @@ one retry-safe transaction. Heartbeat v11 rejects prelaunch advancement in Postg
 bootstrap v13 carries the stored rollover hour. `switch_country_day_pack` is the
 expected-current guarded v5→v4 rollback. Migration 0029 removes the loop-variable
 shadowing caught after 0028 was applied; it does not change seed behaviour.
+
+**Season 1 migration 0030, Tickets:** `tickets` links one future date, one Standard
+sponsorship and one curated versioned pack. `reserve_ticket` locks the date-keyed slot,
+requires journey Day 8+, enforces D+3 through the configured horizon, and snapshots
+`max(24900, 3 * P(day))`; payment alone leaves the route unchanged. `approve_ticket`
+requires a paid purchase and private creative, enforces the 24-hour cutoff, and activates
+the future-day lock under the journey row lock. `create_next_country_day` re-checks that
+lock while holding the same journey lock, overrides a displaced winner, records
+`arrival_mode='flight'` plus `ticket_id`, and omits the ballot that would select an
+already-fixed next day. The following ballot is generated from the Ticket pack, so the
+route continues from the country actually visited. Pending creative rejection/refund
+releases the slot; because only approval suppresses a ballot, the normal vote never left.
 
 **Season 1 migration 0011, part 1:** `journey_runtime` adds non-negative
 `global_distance_metres` and positive `pace_rate`; `day_outcomes` stores the immutable
@@ -1218,6 +1230,7 @@ peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval a
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot` / `_v2`,
 `sponsor_price_cents`, `sponsor_tier_price_cents`, `journey_slot_date`,
 `open_sponsor_pricing_window`, `bind_sponsor_slot_day`,
+`reserve_ticket`, `cancel_ticket_reservation`, `approve_ticket`, `mark_ticket_refunded`,
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `reconcile_phase2_state_v2`, `finalize_day_outcome`,
 `cleanup_phase2_retention`, `journey_story_now`,
@@ -1233,7 +1246,7 @@ the hundred-watcher moment),
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (33)
+### Route handlers (34)
 
 ```
 GET  /api/bootstrap                 the world only: day, event, vote, presence, steps,
@@ -1246,6 +1259,7 @@ POST /api/presence/heartbeat        the walking rule
 POST /api/votes                     one ballot per visitor, server-enforced
 POST /api/postcards                 render + upload + public token (idempotent)
 POST /api/sponsor/checkout          reserve a dated slot at its tier → provider checkout
+POST /api/tickets/checkout          reserve D+3+ Ticket + Standard slot at server price
 GET  /api/sponsor/status
 POST /api/sponsor/metrics           impression / engaged_view
 GET  /r/sponsor/<publicId>          disclosed click redirect + click metric
@@ -1275,8 +1289,9 @@ GET  /api/og/recap/[n]              finalized day outcome card (PNG; populated b
 GET  /api/map                       cached season route and current ballot geometry
 ```
 
-Public pages added in Season 1: `/country/<cc>` renders a watching country's rank and
-carried time for today, its confirmed season total, and the days it hosted the walk.
+Public pages added in Season 1: `/tickets` exposes the owner-enabled, week-two Ticket
+offer, while `/country/<cc>` renders a watching country's rank and carried time for
+today, its confirmed season total, and the days it hosted the walk.
 Every number on it is a stored aggregate; nothing is extrapolated.
 
 ### Landing HUD and sharing (P12)
@@ -1341,6 +1356,13 @@ only from completed/live `country_days`, completed stamp colours come only from 
 come from stored ballots. A transition is shown as a walk only when the preceding
 versioned pack names the next pack in `neighbours`; fallback transfers and candidates use
 a distinct dashed flight treatment.
+
+Approved future Tickets are also server-confirmed map data. They render as labelled
+dashed flight branches from the latest confirmed city; a materialized Ticket day keeps
+that same explicit flight mode even if the two packs otherwise appear as neighbours.
+The bootstrap announces the nearest approved future Ticket and returns `vote: null`
+when that Ticket fixes tomorrow, so the HUD never offers a ballot whose outcome cannot
+be used.
 
 `projectEquirectangular({lat, lon})` is a pure fixed projection into a 1000×500 viewBox.
 The committed `public/map/world.svg` is 58,611 bytes and was derived from Natural Earth

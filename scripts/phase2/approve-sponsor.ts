@@ -23,6 +23,17 @@ const publicPath = `${id}/${Date.now()}-${data.private_creative_path.split("/").
 const { error: uploadError } = await supabase.storage.from(publicBucket).upload(publicPath, creative, { contentType: creative.type || "image/webp", upsert: false, cacheControl: "31536000" });
 if (uploadError) throw uploadError;
 const now = new Date().toISOString();
-const { error: updateError } = await supabase.from("sponsorships").update({ status: "approved", reviewed_at: now, approved_at: now, public_creative_path: publicPath, updated_at: now }).eq("id", id).eq("status", "paid_pending_review");
-if (updateError) throw updateError;
+const { data: ticket, error: ticketError } = await supabase.from("tickets").select("id,pack_id,target_day_number").eq("sponsorship_id", id).maybeSingle();
+if (ticketError) throw ticketError;
+if (ticket) {
+  const { ticketDestination } = await import("../../src/lib/tickets/catalog");
+  if (!ticketDestination(ticket.pack_id)) throw new Error("Ticket pack is no longer reviewed or owner-marked buildable");
+  const { error: approvalError } = await supabase.rpc("approve_ticket", {
+    p_sponsorship_id: id, p_public_creative_path: publicPath, p_now: now, p_cutoff_hours: 24,
+  });
+  if (approvalError) throw approvalError;
+} else {
+  const { error: updateError } = await supabase.from("sponsorships").update({ status: "approved", reviewed_at: now, approved_at: now, public_creative_path: publicPath, updated_at: now }).eq("id", id).eq("status", "paid_pending_review");
+  if (updateError) throw updateError;
+}
 process.stdout.write(`${JSON.stringify({ approved: true, id, reviewer, publicPath })}\n`);

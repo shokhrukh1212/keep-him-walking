@@ -443,6 +443,35 @@ function bootstrapFromBundle(
   };
 }
 
+async function withApprovedTicket(
+  snapshot: BootstrapSnapshot,
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+): Promise<BootstrapSnapshot> {
+  const dayResult = await supabase.from("country_days")
+    .select("journey_id").eq("id", snapshot.countryDay.id).single();
+  if (dayResult.error) throw dayResult.error;
+  const { data, error } = await supabase.from("tickets")
+    .select("target_day_number,country_code,country_name,city_name,pack_id")
+    .eq("journey_id", dayResult.data.journey_id)
+    .eq("status", "approved")
+    .gt("target_day_number", snapshot.countryDay.dayNumber)
+    .order("target_day_number", { ascending: true }).limit(1).maybeSingle();
+  if (error) throw error;
+  if (!data) return { ...snapshot, ticket: null };
+  const ticket = {
+    dayNumber: data.target_day_number,
+    countryCode: data.country_code.trim(),
+    countryName: data.country_name,
+    cityName: data.city_name,
+    scenePackId: data.pack_id,
+  };
+  return {
+    ...snapshot,
+    ticket,
+    vote: ticket.dayNumber === snapshot.countryDay.dayNumber + 1 ? null : snapshot.vote,
+  };
+}
+
 async function loadEvents(
   countryDayId: string,
   now: Date,
@@ -562,7 +591,12 @@ export async function liveBootstrapSnapshot(
     if (bundleError) throw bundleError;
     const result = atomic as AtomicBootstrapRow | null;
     if (result && !result.allowed) throw new BootstrapRateLimitError();
-    if (result?.bundle) return bootstrapFromBundle(result.bundle, visitorHash, config, supabase);
+    if (result?.bundle) {
+      return withApprovedTicket(
+        bootstrapFromBundle(result.bundle, visitorHash, config, supabase),
+        supabase,
+      );
+    }
   }
   const countryDay = await findCurrentCountryDay(now);
   if (!countryDay) return null;

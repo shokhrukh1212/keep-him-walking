@@ -7,6 +7,7 @@ import { serverRuntimeConfig } from "@/lib/config/server";
 import { isSponsorTier, tierPriceCents } from "@/lib/sponsors/pricing";
 import { writeOperationalLog } from "@/lib/observability/logger";
 import { apiError, readLimitedText } from "@/lib/validation/http";
+import { ticketPriceCents } from "@/lib/tickets/product";
 
 export async function POST(request: Request) {
   let rawBody: string;
@@ -114,6 +115,12 @@ export async function POST(request: Request) {
       reserved_by: null, reserved_until: null, updated_at: now,
     }).eq("id", sponsorship.slot_id);
     if (slotUpdate.error) throw slotUpdate.error;
+    if (event.meta.event_name === "order_refunded") {
+      const ticketUpdate = await supabase.rpc("mark_ticket_refunded", {
+        p_sponsorship_id: sponsorship.id, p_now: now, p_creative_rejected: false,
+      });
+      if (ticketUpdate.error) throw ticketUpdate.error;
+    }
     const ledgerUpdate = await supabase.from("payment_webhook_events").update({ sponsorship_id: sponsorship.id, processing_status: "processed", processed_at: now }).eq("id", ledger.id);
     if (ledgerUpdate.error) throw ledgerUpdate.error;
     trackServerEvent(event.meta.event_name === "order_created" ? "sponsor_payment_confirmed" : "sponsor_refunded", String(sponsorship.id), {
@@ -139,7 +146,7 @@ export async function POST(request: Request) {
  */
 async function detectPriceDrift(
   supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
-  sponsorship: { slot_id: string; tier: string | null; expected_price_cents: number },
+  sponsorship: { slot_id: string; tier: string | null; expected_price_cents: number; price_basis?: unknown },
 ): Promise<{ publishedCents: number } | null> {
   const { data: slot } = await supabase.from("sponsor_slots")
     .select("journey_id,slot_date").eq("id", sponsorship.slot_id).maybeSingle();
@@ -148,7 +155,10 @@ async function detectPriceDrift(
     .select("price_cents").eq("journey_id", slot.journey_id).eq("day_date", slot.slot_date).maybeSingle();
   if (!pricing) return null;
   const config = serverRuntimeConfig();
+  const basis = sponsorship.price_basis as { product?: string } | null;
   const tier = isSponsorTier(sponsorship.tier) ? sponsorship.tier : "standard";
-  const published = tierPriceCents(Number(pricing.price_cents), tier, config.sponsorPremiumMultiplier);
+  const published = basis?.product === "ticket"
+    ? ticketPriceCents(Number(pricing.price_cents))
+    : tierPriceCents(Number(pricing.price_cents), tier, config.sponsorPremiumMultiplier);
   return published === Number(sponsorship.expected_price_cents) ? null : { publishedCents: published };
 }

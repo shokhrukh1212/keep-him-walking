@@ -108,6 +108,14 @@ export type BootstrapSnapshot = {
   activeEvent: ScheduledEventView | null;
   nextEvent: ScheduledEventView | null;
   vote: VoteView | null;
+  /** The nearest approved future Ticket, confirmed by Postgres. */
+  ticket?: {
+    dayNumber: number;
+    countryCode: string;
+    countryName: string;
+    cityName: string;
+    scenePackId: string;
+  } | null;
   presence: {
     activeViewers: number | null;
     status: ConnectionStatus;

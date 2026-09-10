@@ -31,6 +31,15 @@ export function JourneyMap({ data, compact = false }: { data: JourneyMapData; co
               {!compact ? <text className="candidate-name" x={labelX} y={point.y + 10} textAnchor={textAnchor}>{candidate.label}{candidate.transfer === "flight" ? " · flight" : ""}</text> : null}
             </g>;
           }) : null}
+          {current ? data.ticketFlights.map((ticket) => {
+            const start = projectEquirectangular(current);
+            const point = projectEquirectangular(ticket);
+            return <g key={ticket.ticketId} className="map-ticket-flight" data-testid="ticket-flight" data-transfer="flight">
+              <line className="route-segment flight" x1={start.x} y1={start.y} x2={point.x} y2={point.y} />
+              <circle cx={point.x} cy={point.y} r="7" />
+              {!compact ? <text x={point.x + 11} y={point.y - 9}>{flagEmoji(ticket.countryCode)} Day {ticket.dayNumber} · {ticket.cityName}</text> : null}
+            </g>;
+          }) : null}
           {data.cities.map((city) => {
             const point = projectEquirectangular(city);
             return <a key={city.countryDayId} href={city.status === "current" ? "/" : `/day/${city.dayNumber}`} aria-label={`Day ${city.dayNumber}: ${city.cityName}, ${city.outcome}`}>
@@ -50,7 +59,7 @@ export function JourneyMap({ data, compact = false }: { data: JourneyMapData; co
           <div><strong>{data.stats.landmarks}</strong><small>landmarks</small></div>
           <div><strong>{data.stats.marathons}</strong><small>marathons</small></div>
         </div>
-        <div className="map-legend" aria-label="Map legend"><span className="landmark">● landmark</span><span className="marathon">● marathon</span><span className="unfinished">● unfinished</span><span>┄ tomorrow&apos;s vote</span></div>
+        <div className="map-legend" aria-label="Map legend"><span className="landmark">● landmark</span><span className="marathon">● marathon</span><span className="unfinished">● unfinished</span><span>┄ tomorrow&apos;s vote / Ticket flight</span></div>
         <small className="map-attribution">Map geometry: Natural Earth 1:110m · public domain</small>
       </> : null}
     </section>

@@ -63,6 +63,7 @@ import { WakeCard } from "@/components/journey/WakeCard";
 import { FirstVisitOverlay } from "@/components/journey/FirstVisitOverlay";
 import { shareCard } from "@/lib/share/client";
 import { CorrectionForm } from "@/components/corrections/CorrectionForm";
+import { flagEmoji } from "@/lib/countries/flags";
 import { launchCountdown } from "@/lib/story-clock/launch";
 
 type Props = {
@@ -883,6 +884,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           rolloverUtcHour={snapshot.journey.rolloverUtcHour}
           onOpen={() => setVoteOpen(true)}
         />
+        {snapshot.ticket ? <p className="ticket-notice" data-testid="ticket-notice">
+          Ticket: someone is sending him to {flagEmoji(snapshot.ticket.countryCode)} {snapshot.ticket.countryName} on Day {snapshot.ticket.dayNumber}
+        </p> : null}
         <button type="button" aria-expanded={detailsOpen} aria-controls="journey-details" onClick={()=>setDetailsOpen(!detailsOpen)}> {detailsOpen ? "Close details" : "Journey details"}</button>
         <button type="button" disabled={!soundAvailable} onClick={() => void toggleSound()} aria-label={soundEnabled ? "Mute ambient sound" : "Play ambient sound"}>{soundEnabled ? "🔊" : "🔇"}</button>
       </section>
@@ -937,7 +941,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             ? <span className="dock-streak-today"> · today collected</span>
             : <span className="dock-streak-today"> · {Math.max(0, Math.ceil(snapshot.passport.collectSeconds - visitorSeconds))}s to collect today</span>}
         </p> : null}
-        <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/privacy">Privacy</Link></nav>
+        <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/tickets">Buy a ticket</Link><Link href="/privacy">Privacy</Link></nav>
         <CorrectionForm
           packId={snapshot.assets.assetVersion}
           zones={snapshot.assets.route.zones.map((zone) => ({ id: zone.id, label: zone.label }))}

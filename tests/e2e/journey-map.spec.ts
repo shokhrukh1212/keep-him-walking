@@ -12,6 +12,7 @@ const mapFixture: JourneyMapData = {
     { optionId: "option-1", label: "Kazakhstan", countryCode: "KZ", lat: 43.2389, lon: 76.8897, percent: 61, transfer: "walk" },
     { optionId: "option-2", label: "Azerbaijan", countryCode: "AZ", lat: 40.4093, lon: 49.8671, percent: 39, transfer: "flight" },
   ],
+  ticketFlights: [],
   stats: { days: 3, confirmedDistanceMetres: 21_700, landmarks: 1, marathons: 0 },
   currentDayNumber: 3,
 };

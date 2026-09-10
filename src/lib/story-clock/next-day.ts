@@ -43,6 +43,14 @@ export function nextDayPackIdForWinner(winner: VoteWinner): string | null {
   return winner.winnerPackId ?? null;
 }
 
+/** An approved Ticket replaces the ballot winner for exactly its target day. */
+export function nextDayPackId(
+  winner: VoteWinner,
+  approvedTicketPackId: string | null,
+): string | null {
+  return approvedTicketPackId ?? nextDayPackIdForWinner(winner);
+}
+
 /**
  * Builds tomorrow from the pack the vote chose, plus the ballot that follows it.
  * Candidate content comes from the registry here; every write still happens in

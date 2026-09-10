@@ -2,7 +2,7 @@ import "server-only";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { storePendingRecaps, type PendingRecap } from "@/lib/recap/store";
-import { nextDayPackIdForWinner, planNextDay, type VoteWinner } from "@/lib/story-clock/next-day";
+import { nextDayPackId, planNextDay, type VoteWinner } from "@/lib/story-clock/next-day";
 import { writeOperationalLog } from "@/lib/observability/logger";
 
 export async function reconcilePhase2(now = new Date()) {
@@ -23,10 +23,7 @@ export async function reconcilePhase2(now = new Date()) {
     );
     if (winnerError) throw winnerError;
     const winner = (winnerRow ?? { state: "no_closing_vote" }) as VoteWinner;
-    const nextPackId = nextDayPackIdForWinner(winner);
-    const nextDay = nextPackId
-      ? await createNextDay(supabase, { ...winner, winnerPackId: nextPackId }, now)
-      : null;
+    const nextDay = await createNextDay(supabase, winner, now);
 
     const [{ data: state, error: stateError }, { data: cleanup, error: cleanupError }] = await Promise.all([
       supabase.rpc("reconcile_phase2_state_v2", {
@@ -65,10 +62,16 @@ async function createNextDay(
   winner: VoteWinner,
   now: Date,
 ) {
+  const { data: journey, error: journeyError } = await supabase.from("journeys")
+    .select("id").eq("phase2_enabled", true).in("status", ["preview", "active"])
+    .order("starts_at", { ascending: false }).limit(1).maybeSingle();
+  if (journeyError) throw journeyError;
+  const journeyId = journey?.id ?? winner.journeyId;
+  if (!journeyId) return null;
   const { data: days, error } = await supabase
     .from("country_days")
     .select("day_number,country_code,ends_at")
-    .eq("journey_id", winner.journeyId!)
+    .eq("journey_id", journeyId)
     .order("day_number", { ascending: true });
   if (error) throw error;
   const rows = (days ?? []) as Array<{ day_number: number; country_code: string; ends_at: string }>;
@@ -76,13 +79,24 @@ async function createNextDay(
   const previous = rows.at(-1);
   if (!previous) return null;
 
+  const { data: ticket, error: ticketError } = await supabase.from("tickets")
+    .select("id,pack_id").eq("journey_id", journeyId)
+    .eq("target_day_number", dayNumber).eq("status", "approved").maybeSingle();
+  if (ticketError) throw ticketError;
+  const packId = nextDayPackId(winner, ticket?.pack_id ?? null);
+  if (!packId) return null;
+
   const plan = planNextDay({
-    winnerPackId: winner.winnerPackId!,
+    winnerPackId: packId,
     dayNumber,
     visitedCountryCodes: rows.map((row) => row.country_code),
     startsAt: new Date(previous.ends_at),
   });
   if (!plan) return null;
+  const { data: followingTicket, error: followingTicketError } = await supabase.from("tickets")
+    .select("id").eq("journey_id", journeyId)
+    .eq("target_day_number", dayNumber + 1).eq("status", "approved").maybeSingle();
+  if (followingTicketError) throw followingTicketError;
   if (plan.usedFallback) {
     // Neighbours ran out: the ballot is an explicit transfer, not a land border.
     void writeOperationalLog("warning", "vote_candidates_fallback", {
@@ -93,8 +107,8 @@ async function createNextDay(
 
   const { data, error: createError } = await supabase.rpc("create_next_country_day", {
     p_real_now: now.toISOString(),
-    p_day: plan.day,
-    p_vote: plan.vote,
+    p_day: ticket ? { ...plan.day, arrivalMode: "flight", ticketId: ticket.id } : plan.day,
+    p_vote: followingTicket ? null : plan.vote,
   });
   if (createError) throw createError;
   return data;

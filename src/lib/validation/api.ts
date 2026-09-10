@@ -23,6 +23,13 @@ export const sponsorCheckoutBodySchema = z.object({
   tier: z.enum(["standard", "premium"]).default("standard"),
 });
 
+export const ticketCheckoutBodySchema = z.object({
+  slotId: z.uuid(),
+  packId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*-v\d+$/),
+  sponsorName: z.string().trim().min(2).max(100),
+  sponsorEmail: z.email().max(254),
+}).strict();
+
 export const sponsorMetricBodySchema = z.object({
   publicId: z.string().uuid(),
   eventType: z.enum(["impression", "engaged_view", "postcard_created", "postcard_shared", "session"]),
