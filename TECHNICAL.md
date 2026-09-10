@@ -287,12 +287,15 @@ Three layers produce it:
 `worldCommandForEncounter` separately drives the world: camera zoom 1.08, a small pan,
 and background life dropped to 0.22 during the focused phases.
 
-While the traveler is waiting, `waitingBehaviorAt(waitedSeconds, isLocalNight)` selects
-the pockets/watch/stretch/yawn/look-up cycle deterministically. At 600 seconds it uses
-`sit_down` then `sitting`; from 21:00–05:00 local time it uses `sleep`. Missing retargeted
-takes resolve through the manifest to the closest v2 pose. The waited duration and local
-hour are explicit inputs; authoritative route seconds remain unchanged. During the
-three-second first-arrival beat he looks up and stands before locomotion resumes.
+While the traveler is waiting, `waitingBehaviorAt(waitedSeconds, isLocalNight)` selects,
+deterministically, the pockets/look-up cycle for the first minute and then the
+pockets/watch/pockets/stretch/yawn/look-up cycle.
+
+- **Cycle length.** Each take plays once, whole and at its own `CLIP_SPECS` length, before the next begins, so the cycle lengths follow the installed takes.
+- **Ten minutes.** At 600 seconds it plays `sit_down` for its length, then loops `sitting` on its own length. From 21:00–05:00 local time it loops `sleep` instead.
+- **Missing takes.** They resolve through the manifest to the closest v2 pose.
+- **Inputs.** The waited duration and local hour are explicit inputs; authoritative route seconds remain unchanged.
+- **Arrival.** During the three-second first-arrival beat, a traveler still on his feet looks up. One whose wait reached the seated phase holds `sitting` for 0.8 s, then plays `stand_up` before locomotion resumes.
 
 P11 also derives look-up, shoe-tying, one daily stumble and the marathon cheer from the
 pack id plus authoritative seconds/metres. Route beats win over crowd actions, which win
@@ -435,7 +438,21 @@ transforms, arm IK, explicit palm frames and joint-specific finger flexion.
 > recorded in `scripts/characters/motions/*.json` with source file, rest axes, native
 > duration and sampled rotations — but it **failed visual inspection** (arms folded
 > through the torso from missing rest-axis alignment) and is **not present in the served
-> GLBs**. No Mixamo animation is included.
+> GLBs**. The V2 GLBs contain no Mixamo animation.
+
+**V3 Mixamo animation (in use since 2026-09-10 by owner decision; clips still to review are `docs/plan/AFTER-P22.md` D6).**
+
+- **What it builds.** `scripts/characters/import_mixamo.py` bakes the owner's Mixamo takes onto this rig and writes `public/characters/v3/traveler-animations.glb`. It holds 22 runtime clips from 20 downloads: Waving serves `greet` and `goodbye`, and Start Walking serves `walk_start` and `resume`. The takes were downloaded for the traveler's own uploaded skeleton; `public/characters/v3/CREDITS.md` lists which take became which clip.
+- **What loads.** `v3/traveler.glb` is a byte copy of the V2 model. Animation-file clips replace V2 clips of the same name, so `listen`, `notice`, `stop`, `turn` and `photo` are still V2 procedural motion.
+- **Rest-pose alignment.** Every take returns the skeleton re-rested with level arms, 48.8° from this rig's A-pose. Each bone is posed onto that rest, parent first, before its world rotation delta is copied. That is the alignment the Mesh2Motion experiment lacked.
+- **Takes keep their own length.** Nothing is trimmed, mirrored or retimed except the walk, as the owner approved. `CLIP_SPECS` durations record each installed take's length, for example `phone` 23.57 s and `react` 9.77 s. `CharacterActor.sample` maps nominal cue seconds onto the length of the take a character actually carries (§6.1), so the V2 resident and any fallback still play their whole take over the scheduled interval. Scheduled actions keep their `ACTION_DURATIONS` windows, so a long take plays faster than it was recorded inside one.
+- **Placement.** Each take is placed by where its feet start, so Stand To Sit, Sitting Idle and Sit To Stand meet where the previous take left off. Start Walking travels 1.91 m and Tripping 2.38 m, so their hips are held in place, because horizontal travel belongs to the scene clock. Male Laying Pose is a single frame, held for one second.
+- **Walk timing.** The 1.03 s source cycle is cut at left-foot placement and resampled piecewise to 1.2 s, with the right foot at 0.6 s. The planted foot travels at 1.48 m/s against the 1.25 m/s route speed.
+- **Waiting and arrival.** The waiting cycle plays each take whole at its own speed (§4). The first-arrival beat stands the traveler up only if his wait had reached the seated phase, because Sit To Stand starts seated.
+- **Props.** The `props.ts` drink and phone windows follow Drinking and Texting While Standing, and a V2 fallback uses the same windows. Drinking holds the bottle in the left hand while the runtime bottle sits in the right hand; `docs/plan/AFTER-P22.md` D6 lists this with the other clips to review.
+- **Size.** The animation file is 1.88 MiB compressed (3.18 MiB raw), so a first visit now fetches 2.48 + 1.88 MiB of traveler.
+- **Where the raw files live.** Raw downloads and the baked `.blend` stay in the ignored cache, because of Mixamo's terms and the public repository.
+- **Going live.** Files in `public/characters/v3/` become the live character on the next deploy.
 
 The clip table (`src/lib/characters/manifest.ts` must stay in sync with
 `animation.py`):
@@ -497,10 +514,12 @@ change.
   action, which would make the character breathe in size.
 - **Every clip is `play()`ed once and then weight-gated.** Switching action sets a
   0.28 s smoothstep crossfade between exactly two actions; the rest sit at weight 0.
-- **Seeking is deterministic:** `action.time = min(cue.seconds, clipDuration − ε)` and
-  then `mixer.update(0)`. There is no accumulated delta, so the same input second always
-  produces the same pose — this is what lets two viewers, a reload, and a scrubbed review
-  timeline all agree.
+- **Seeking is deterministic:** `action.time = min(cue.seconds / CLIP_SPECS duration ×
+  takeDuration, takeDuration − ε)` and then `mixer.update(0)`. Cue seconds are nominal
+  manifest time, so a character carrying a take of a different length plays its whole take
+  over the same scheduled interval. That covers the V2 resident and any V2 fallback. There
+  is no accumulated delta, so the same input second always produces the same pose — this is
+  what lets two viewers, a reload, and a scrubbed review timeline all agree.
 - **Pace is an explicit cue input.** The active action receives its cue time scale via
   `setEffectiveTimeScale`; the brisk walk still seeks the pure, step-bounded sampled
   second described in §3 rather than accumulating frame delta.

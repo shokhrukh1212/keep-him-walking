@@ -162,9 +162,14 @@ export function productCharacterSceneAt(
   if (localReview) return localReview;
   if (!traveling) {
     if (wakeElapsedSeconds !== undefined) {
-      const clip: CharacterClip = wakeElapsedSeconds < .8 ? "look_up" : "stand_up";
+      // The stand-up take starts seated, so only a traveler whose wait reached the seated
+      // phase rises with it; one still on his feet looks up for the whole beat.
+      const seated = waitingBehaviorAt(waitedSeconds).phase === "sit";
+      const rising = seated && wakeElapsedSeconds >= .8;
+      const clip: CharacterClip = rising ? "stand_up" : seated ? "sitting" : "look_up";
+      const clipSeconds = rising ? wakeElapsedSeconds - .8 : wakeElapsedSeconds;
       return {
-        traveler: { clip, seconds: Math.min(CLIP_DURATIONS[clip] - 1e-5, Math.max(0, wakeElapsedSeconds < .8 ? wakeElapsedSeconds : wakeElapsedSeconds - .8)) },
+        traveler: { clip, seconds: Math.min(CLIP_DURATIONS[clip] - 1e-5, Math.max(0, clipSeconds)) },
         resident: { clip: "idle", seconds: 0 }, showResident: false, conversation: false,
       };
     }

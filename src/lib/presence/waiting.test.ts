@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CLIP_DURATIONS } from "@/lib/characters/manifest";
 import {
   formatWaitDuration,
   formatWaitingLocalTime,
@@ -7,14 +8,31 @@ import {
 } from "./waiting";
 
 describe("waiting presentation", () => {
-  it("cycles explicit waiting and look-up takes, then sits at ten minutes", () => {
-    expect(waitingBehaviorAt(0)).toMatchObject({ phase: "wait", state: "wait", clip: "wait_pockets" });
-    expect(waitingBehaviorAt(4)).toMatchObject({ phase: "look_up", state: "look_up", clip: "look_up" });
-    expect(waitingBehaviorAt(8)).toMatchObject({ phase: "wait", state: "wait", clip: "wait_pockets" });
-    expect(waitingBehaviorAt(12)).toMatchObject({ phase: "wait", state: "wait" });
+  it("plays each waiting take whole at its own speed, then sits at ten minutes", () => {
+    const pockets = CLIP_DURATIONS.wait_pockets;
+    expect(waitingBehaviorAt(0)).toMatchObject({ phase: "wait", state: "wait", clip: "wait_pockets", clipSeconds: 0 });
+    expect(waitingBehaviorAt(pockets - .1).clip).toBe("wait_pockets");
+    expect(waitingBehaviorAt(pockets - .1).clipSeconds).toBeCloseTo(pockets - .1);
+    expect(waitingBehaviorAt(pockets + 1)).toMatchObject({ phase: "look_up", state: "look_up", clip: "look_up" });
+    expect(waitingBehaviorAt(pockets + 1).clipSeconds).toBeCloseTo(1);
+    expect(waitingBehaviorAt(pockets + CLIP_DURATIONS.look_up + 1)).toMatchObject({ phase: "wait", clip: "wait_pockets" });
     expect(waitingBehaviorAt(600)).toMatchObject({ phase: "sit", state: "sit", clip: "sit_down" });
-    expect(waitingBehaviorAt(604)).toMatchObject({ phase: "sit", state: "sit", clip: "sitting" });
-    expect(waitingBehaviorAt(604, true)).toMatchObject({ phase: "sleep", state: "sleep", clip: "sleep" });
+    const seated = 600 + CLIP_DURATIONS.sit_down;
+    expect(waitingBehaviorAt(seated + 1)).toMatchObject({ phase: "sit", state: "sit", clip: "sitting" });
+    expect(waitingBehaviorAt(seated + 1, true)).toMatchObject({ phase: "sleep", state: "sleep", clip: "sleep" });
+  });
+
+  it("loops the seated take on its own length and walks the long wait in order", () => {
+    const seated = 600 + CLIP_DURATIONS.sit_down;
+    expect(waitingBehaviorAt(seated + CLIP_DURATIONS.sitting + .5).clipSeconds).toBeCloseTo(.5);
+    const order = ["wait_pockets", "wait_watch", "wait_pockets", "wait_stretch", "wait_yawn", "look_up"] as const;
+    let start = 60;
+    for (const clip of order) {
+      expect(waitingBehaviorAt(start + .25)).toMatchObject({ clip });
+      expect(waitingBehaviorAt(start + .25).clipSeconds).toBeCloseTo(.25);
+      start += CLIP_DURATIONS[clip];
+    }
+    expect(waitingBehaviorAt(start + .25).clip).toBe("wait_pockets");
   });
 
   it("formats fixed wait facts without inventing negative time", () => {

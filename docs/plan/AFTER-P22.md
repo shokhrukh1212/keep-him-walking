@@ -21,6 +21,7 @@ finish rather than what it got wrong.
 | D3 | Lit windows at dusk have no artwork | No | Owner (art) |
 | D4 | Sofia has one source painting instead of the six the pack builder needs | No | Owner (art) |
 | D5 | The production scheduler may run launch jobs late | **Yes** | Owner (hosting) |
+| D6 | Some of his new movements do not fit the moment they are used for | No | Owner (visual) |
 
 ---
 
@@ -141,3 +142,47 @@ keeps the current `sofia-v1` available for rollback.
 **What happens if nothing changes.** Prewarming or a daily border crossing can happen up to 59 minutes late, so the launch and every later day can show the wrong state.
 
 **What to do.** Before launch, choose a production scheduler that guarantees minute-level runs and point it at the two authenticated cron URLs; Vercel Pro is the simplest paid choice, while a free external scheduler avoids that cost but adds another account and failure point.
+
+---
+
+## D6 — Some of his new movements do not fit the moment they are used for
+
+**What it is.** On 10 September 2026 his movements were replaced with Mixamo motion the owner
+picked. The owner approved using every clip exactly as downloaded, so they all went in, and
+the ones that look wrong in a specific moment are listed here to judge on screen at
+`/preview/characters`. The list of which clip plays which moment is in
+`public/characters/v3/CREDITS.md`.
+
+**What happens if nothing changes.** Viewers see these moments:
+
+| Moment | What viewers see |
+|---|---|
+| He drinks | He drinks with his **left** hand while the bottle, including a premium sponsor's label, sits in his right hand at his side. The drink also plays about 2× fast. |
+| He sleeps at night | After sitting down he jumps straight to lying on the pavement, with no lying-down movement, while the status line says "Asleep on a bench". When someone arrives he jumps back to sitting, then stands. |
+| He stumbles, once a day | He falls flat on his face, about 2× fast, then is instantly walking again. |
+| He ties his shoe, about every 15 minutes | He kneels and never gets up, then pops upright when he walks on. |
+| He checks his phone | A 23-second clip squeezed into 3.4 seconds, about 7× fast. |
+| He laughs in a conversation | A 10-second clip squeezed into 2.5 seconds, about 4× fast. |
+| He sets off after any stop | A 3-second clip squeezed into 0.65 seconds, about 4.5× fast, after every drink, photo and wave. |
+| The crowd makes him wave, or he looks up on his own | About 3.4× and 3.3× fast. The old wave was just as fast. |
+| He cheers at the marathon | About 2.4× fast. |
+| He rests | He leans back against a wall that is not in the picture. |
+| He waits | He searches his pockets every five seconds rather than standing with his hands in them. |
+| He walks | His feet slide backwards about 18% faster than the pavement moves. |
+| He listens, notices, stops, turns or takes a photo | These still use his old movements, so their style differs. In rain there is still no umbrella. |
+
+His first-visit download also grows by 1.9 MB for these movements, separately from D1.
+
+**What to do.** Each fix is one Mixamo download into `Downloads\mixamo\traveler\` that
+replaces the old file there, then a re-run of the import (commands in
+`scripts/characters/README.md`), which also updates the clip lengths and bottle timing.
+
+- **Drinking:** download Drinking again with **Mirror** ticked, so the drinking hand matches the bottle.
+- **Sleeping:** save a seated sleeping clip as `sleep.fbx`. Or keep lying down and change the status line to "Asleep · since …", which is a small copy change in the code.
+- **Stumble:** save a small trip that stays on its feet as `stumble.fbx`.
+- **Tie shoe:** save a clip that kneels and stands back up as `tie_shoe.fbx`.
+- **Phone, laugh, setting off, cheer:** use Mixamo's **Trim** slider to keep roughly 3.5 s of Texting While Standing (`phone.fbx`), 2.5 s of Laughing (`react.fbx`), 1 s of Start Walking (`resume.fbx`) and 2 s of Victory (`cheer.fbx`). Trimming Looking Around would also shorten his look around while waiting, so leave it unless the quick version bothers you.
+- **Resting and waiting:** save a plain standing idle as `rest.fbx`, and a hands-in-pockets idle as `wait_pockets.fbx`, if the current ones read wrong.
+- **Walk:** save a walk with shorter steps as `walk.fbx` if the slide is visible.
+- **Old-style movements:** add `listen.fbx`, `notice.fbx`, `stop.fbx`, `photo.fbx` (phone in the right hand), `wait_watch.fbx` (left wrist), `walk_brisk.fbx` and `umbrella_walk.fbx`.
+- **Or accept the list as it is.** Say so, and this entry becomes a record of the choice.

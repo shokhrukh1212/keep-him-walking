@@ -8,8 +8,10 @@ export type PropState = {
 };
 
 const WINDOWS: Partial<Record<CharacterClip,{kind:"water"|"device";retrieve:number;contact:number;release:number;stow:number}>> = {
-  drink:{kind:"water",retrieve:.28,contact:1.2,release:3.85,stow:5.18},
-  phone:{kind:"device",retrieve:.30,contact:.82,release:3.65,stow:4.22},
+  // Seconds into the installed V3 takes: Drinking raises the bottle 2.1-5.6 s (lips 2.7-4.8 s);
+  // Texting While Standing raises the phone 1.2-21.3 s (both hands up 1.8-20.6 s).
+  drink:{kind:"water",retrieve:2.13,contact:2.67,release:4.8,stow:5.6},
+  phone:{kind:"device",retrieve:1.2,contact:1.8,release:20.63,stow:21.3},
   photo:{kind:"device",retrieve:.32,contact:1.00,release:3.05,stow:3.72},
   photo_pose:{kind:"device",retrieve:.32,contact:1.00,release:3.05,stow:3.72},
 };

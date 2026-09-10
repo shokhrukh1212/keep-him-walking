@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { almatyCountryPackV1 } from "@/content/countries/almaty.v1";
 import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { CLIP_DURATIONS } from "./manifest";
 import { productCharacterSceneAt, walkingViewportOffset } from "./product-timeline";
 
 const baseMotion: TravelerMotionSnapshot = {
@@ -34,18 +35,24 @@ describe("product character timeline", () => {
   });
 
   it("cycles extended waiting clips before sitting after ten minutes", () => {
-    expect(productCharacterSceneAt(
-      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 2,
-    ).traveler.clip).toBe("wait_pockets");
-    expect(productCharacterSceneAt(
-      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 6,
-    ).traveler.clip).toBe("look_up");
-    expect(productCharacterSceneAt(
-      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 10,
-    ).traveler.clip).toBe("wait_pockets");
-    expect(productCharacterSceneAt(
-      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, 600,
-    ).traveler.clip).toBe("sit_down");
+    const waiting = (waited: number) => productCharacterSceneAt(
+      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, waited,
+    ).traveler.clip;
+    expect(waiting(2)).toBe("wait_pockets");
+    expect(waiting(CLIP_DURATIONS.wait_pockets + 1)).toBe("look_up");
+    expect(waiting(CLIP_DURATIONS.wait_pockets + CLIP_DURATIONS.look_up + 1)).toBe("wait_pockets");
+    expect(waiting(600)).toBe("sit_down");
+  });
+
+  it("stands a seated traveler up on arrival but only looks up when he was still standing", () => {
+    const wake = (waited: number, elapsed: number) => productCharacterSceneAt(
+      almatyCountryPackV1, baseMotion, false, undefined, 0, 1, waited, 12, false, elapsed,
+    ).traveler;
+    expect(wake(120, .4).clip).toBe("look_up");
+    expect(wake(120, 2).clip).toBe("look_up");
+    expect(wake(900, .4).clip).toBe("sitting");
+    expect(wake(900, 2).clip).toBe("stand_up");
+    expect(wake(900, 2).seconds).toBeCloseTo(1.2);
   });
 
   it("uses a brisk planted-foot sample and two-degree lean from pace three", () => {

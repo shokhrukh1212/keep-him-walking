@@ -1,5 +1,5 @@
 import type { TravelerState } from "@/lib/content/schema";
-import type { CharacterClip } from "@/lib/characters/manifest";
+import { CLIP_DURATIONS, type CharacterClip } from "@/lib/characters/manifest";
 
 export const WAITING_REST_AFTER_SECONDS = 600;
 
@@ -10,36 +10,51 @@ export type WaitingBehavior = {
   clipSeconds: number;
 };
 
+type WaitingTake = { clip: CharacterClip; phase: "wait" | "look_up" };
+
+const FIRST_MINUTE: readonly WaitingTake[] = [
+  { clip: "wait_pockets", phase: "wait" },
+  { clip: "look_up", phase: "look_up" },
+  { clip: "wait_pockets", phase: "wait" },
+];
+
+const LONG_WAIT: readonly WaitingTake[] = [
+  { clip: "wait_pockets", phase: "wait" },
+  { clip: "wait_watch", phase: "wait" },
+  { clip: "wait_pockets", phase: "wait" },
+  { clip: "wait_stretch", phase: "wait" },
+  { clip: "wait_yawn", phase: "wait" },
+  { clip: "look_up", phase: "look_up" },
+];
+
+/** Each take plays once, whole and at its own speed, before the next one in the cycle begins. */
+function takeInCycle(seconds: number, cycle: readonly WaitingTake[]): WaitingBehavior {
+  const length = cycle.reduce((sum, take) => sum + CLIP_DURATIONS[take.clip], 0);
+  let offset = seconds % length;
+  for (const take of cycle) {
+    const duration = CLIP_DURATIONS[take.clip];
+    if (offset < duration) return { phase: take.phase, state: take.phase, clip: take.clip, clipSeconds: offset };
+    offset -= duration;
+  }
+  const last = cycle[cycle.length - 1]!;
+  return { phase: last.phase, state: last.phase, clip: last.clip, clipSeconds: CLIP_DURATIONS[last.clip] - 1e-5 };
+}
+
 /** Pure waiting choreography from the confirmed wait duration and the city's local night flag. */
 export function waitingBehaviorAt(waitedSeconds: number, isLocalNight = false): WaitingBehavior {
   const waited = Number.isFinite(waitedSeconds) ? Math.max(0, waitedSeconds) : 0;
   if (waited >= WAITING_REST_AFTER_SECONDS) {
     const seatedFor = waited - WAITING_REST_AFTER_SECONDS;
-    if (seatedFor < 2.5) return { phase: "sit", state: "sit", clip: "sit_down", clipSeconds: seatedFor };
+    if (seatedFor < CLIP_DURATIONS.sit_down) return { phase: "sit", state: "sit", clip: "sit_down", clipSeconds: seatedFor };
     const clip = isLocalNight ? "sleep" : "sitting";
     return {
       phase: isLocalNight ? "sleep" : "sit",
       state: isLocalNight ? "sleep" : "sit",
       clip,
-      clipSeconds: (seatedFor - 2.5) % 5,
+      clipSeconds: (seatedFor - CLIP_DURATIONS.sit_down) % CLIP_DURATIONS[clip],
     };
   }
-
-  if (waited < 60) {
-    const cycle = waited % 12;
-    if (cycle >= 4 && cycle < 8) {
-      return { phase: "look_up", state: "look_up", clip: "look_up", clipSeconds: cycle - 4 };
-    }
-    return { phase: "wait", state: "wait", clip: "wait_pockets", clipSeconds: cycle < 4 ? cycle : cycle - 8 };
-  }
-
-  const cycle = (waited - 60) % 24;
-  if (cycle < 6) return { phase: "wait", state: "wait", clip: "wait_pockets", clipSeconds: cycle };
-  if (cycle < 10) return { phase: "wait", state: "wait", clip: "wait_watch", clipSeconds: cycle - 6 };
-  if (cycle < 14) return { phase: "wait", state: "wait", clip: "wait_pockets", clipSeconds: cycle - 10 };
-  if (cycle < 18) return { phase: "wait", state: "wait", clip: "wait_stretch", clipSeconds: cycle - 14 };
-  if (cycle < 22) return { phase: "wait", state: "wait", clip: "wait_yawn", clipSeconds: cycle - 18 };
-  return { phase: "look_up", state: "look_up", clip: "look_up", clipSeconds: cycle - 22 };
+  return waited < 60 ? takeInCycle(waited, FIRST_MINUTE) : takeInCycle(waited - 60, LONG_WAIT);
 }
 
 export function waitedSecondsSince(waitingSince: string | null, nowMs: number): number {

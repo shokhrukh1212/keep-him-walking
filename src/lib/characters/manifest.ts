@@ -44,40 +44,46 @@ export const CHARACTER_CANDIDATES = {
 } satisfies Record<string, { label: string; traveler: CharacterDefinition; resident: CharacterDefinition }>;
 export type CharacterCandidate = keyof typeof CHARACTER_CANDIDATES;
 
-/** Runtime names, durations, source aliases, and honest fallbacks for absent retargeted takes. */
+/**
+ * Runtime names, nominal durations, source aliases, and honest fallbacks for absent takes.
+ * A duration is the length of the installed V3 Mixamo take (2026-09-10) where one exists and
+ * the V2 authored length otherwise. Timelines schedule against these numbers; the actor maps
+ * them onto the take a character actually carries, so the V2 resident and any fallback play
+ * their own take over the same scheduled interval.
+ */
 export const CLIP_SPECS = {
-  idle: { duration: 4, aliases: ["idle", "standing idle"], fallback: null },
+  idle: { duration: 9.93, aliases: ["idle", "standing idle"], fallback: null },
   walk: { duration: 1.2, aliases: ["walk", "walking", "walking in place"], fallback: null },
   walk_brisk: { duration: 1.2, aliases: ["walk_brisk", "walking brisk", "brisk walk"], fallback: "walk" },
-  greet: { duration: 4.8, aliases: ["greet", "greeting", "waving"], fallback: "idle" },
-  talk: { duration: 4, aliases: ["talk", "talking"], fallback: "idle" },
+  greet: { duration: 4.73, aliases: ["greet", "greeting", "waving"], fallback: "idle" },
+  talk: { duration: 3.93, aliases: ["talk", "talking"], fallback: "idle" },
   listen: { duration: 4, aliases: ["listen", "listening", "idle listening"], fallback: "idle" },
-  react: { duration: 3, aliases: ["react", "reaction", "surprised"], fallback: "idle" },
-  goodbye: { duration: 3, aliases: ["goodbye", "waving goodbye"], fallback: "greet" },
-  drink: { duration: 5.5, aliases: ["drink", "drinking"], fallback: "idle" },
-  phone: { duration: 4.5, aliases: ["phone", "texting while standing"], fallback: "idle" },
+  react: { duration: 9.77, aliases: ["react", "reaction", "surprised"], fallback: "idle" },
+  goodbye: { duration: 4.73, aliases: ["goodbye", "waving goodbye"], fallback: "greet" },
+  drink: { duration: 8.87, aliases: ["drink", "drinking"], fallback: "idle" },
+  phone: { duration: 23.57, aliases: ["phone", "texting while standing"], fallback: "idle" },
   photo: { duration: 4, aliases: ["photo", "taking selfie"], fallback: "idle" },
   photo_pose: { duration: 4, aliases: ["photo_pose", "photo pose", "thumbs up"], fallback: "photo" },
-  rest: { duration: 5, aliases: ["rest", "leaning idle"], fallback: "idle" },
+  rest: { duration: 3.33, aliases: ["rest", "leaning idle"], fallback: "idle" },
   notice: { duration: 1, aliases: ["notice"], fallback: "idle" },
   stop: { duration: 1.2, aliases: ["stop"], fallback: "idle" },
   turn: { duration: 1.2, aliases: ["turn", "turn left 90"], fallback: "idle" },
-  resume: { duration: 1.2, aliases: ["resume", "resume walk"], fallback: "walk" },
-  walk_start: { duration: 1.2, aliases: ["walk_start", "walk start"], fallback: "walk" },
+  resume: { duration: 2.93, aliases: ["resume", "resume walk"], fallback: "walk" },
+  walk_start: { duration: 2.93, aliases: ["walk_start", "walk start"], fallback: "walk" },
   walk_stop: { duration: 1.2, aliases: ["walk_stop", "walk stop"], fallback: "stop" },
-  wait_pockets: { duration: 4, aliases: ["wait_pockets", "standing idle hands in pockets"], fallback: "idle" },
+  wait_pockets: { duration: 5, aliases: ["wait_pockets", "standing idle hands in pockets"], fallback: "idle" },
   wait_watch: { duration: 4, aliases: ["wait_watch", "checking watch"], fallback: "notice" },
-  wait_stretch: { duration: 4, aliases: ["wait_stretch", "stretching"], fallback: "idle" },
-  wait_yawn: { duration: 4, aliases: ["wait_yawn", "yawn"], fallback: "idle" },
-  sit_down: { duration: 2.5, aliases: ["sit_down", "sit down"], fallback: "rest" },
-  sitting: { duration: 5, aliases: ["sitting", "sitting idle"], fallback: "rest" },
-  stand_up: { duration: 2.5, aliases: ["stand_up", "stand up"], fallback: "resume" },
-  sleep: { duration: 5, aliases: ["sleep", "sleeping idle"], fallback: "sitting" },
-  look_up: { duration: 3, aliases: ["look_up", "look up", "admire"], fallback: "notice" },
-  tie_shoe: { duration: 4, aliases: ["tie_shoe", "tie shoe"], fallback: "rest" },
+  wait_stretch: { duration: 8.87, aliases: ["wait_stretch", "stretching"], fallback: "idle" },
+  wait_yawn: { duration: 8.33, aliases: ["wait_yawn", "yawn"], fallback: "idle" },
+  sit_down: { duration: 2.23, aliases: ["sit_down", "sit down"], fallback: "rest" },
+  sitting: { duration: 4.3, aliases: ["sitting", "sitting idle"], fallback: "rest" },
+  stand_up: { duration: 2.27, aliases: ["stand_up", "stand up"], fallback: "resume" },
+  sleep: { duration: 1, aliases: ["sleep", "sleeping idle"], fallback: "sitting" },
+  look_up: { duration: 6.33, aliases: ["look_up", "look up", "admire"], fallback: "notice" },
+  tie_shoe: { duration: 2.77, aliases: ["tie_shoe", "tie shoe"], fallback: "rest" },
   umbrella_walk: { duration: 1.2, aliases: ["umbrella_walk", "holding umbrella walk"], fallback: "walk" },
-  stumble: { duration: 2.5, aliases: ["stumble", "trip"], fallback: "stop" },
-  cheer: { duration: 3, aliases: ["cheer", "victory", "fist pump"], fallback: "react" },
+  stumble: { duration: 2.77, aliases: ["stumble", "trip"], fallback: "stop" },
+  cheer: { duration: 4.5, aliases: ["cheer", "victory", "fist pump"], fallback: "react" },
 } as const;
 
 export type CharacterClip = keyof typeof CLIP_SPECS;

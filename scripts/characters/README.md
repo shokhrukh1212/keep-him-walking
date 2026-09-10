@@ -51,6 +51,32 @@ textures. Alpha remains alpha. Geometry and skeletal clips require no external
 runtime decoder or CDN. The optimized files can be served directly by Next.
 All source acquisition and candidate authoring has cost $0.
 
+## Mixamo takes (V3 candidate)
+
+The traveler was uploaded to Mixamo from this rig, so takes are downloaded for
+his own skeleton (FBX Binary, Without Skin, 30 fps, no keyframe reduction) into
+`.cache/character-authoring/mixamo/downloads/traveler/`. A file is named after its
+runtime clip (`walk.fbx`) or keeps a Mixamo name listed in `TAKES` in
+`import_mixamo.py`. Raw downloads and the baked `.blend` stay in that ignored cache,
+because Mixamo's terms forbid redistributing the files and this repository is public.
+
+```sh
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --factory-startup art/characters/v2/traveler.blend --python scripts/characters/import_mixamo.py -- traveler .cache/character-authoring/mixamo/downloads/traveler
+node scripts/characters/compress-glb.mjs public/characters/v3/traveler-animations.glb
+```
+
+Mixamo returns the skeleton re-rested with level arms, while this rig rests with its
+arms 49° down. The importer poses each bone onto the source rest before copying
+motion, which avoids the arms-through-torso failure of the first retarget. Takes keep
+their own length. Walk-type loops are resampled so the left foot lands at 0 s and the
+right at 0.6 s. Travelling takes are held in place, and a single-frame pose is held
+for one second. When a replacement take changes length, update its `CLIP_SPECS`
+duration, and for `drink` or `phone` the windows in `props.ts`.
+
+`public/characters/v3/traveler.glb` is a copy of the V2 model. **Files in
+`public/characters/v3/` are the live character on the next deploy**, so review
+them at `/preview/characters` before committing.
+
 ## Verification
 
 The scoped interaction repair preserves checkpoint geometry and untouched clips.
