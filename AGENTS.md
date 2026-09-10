@@ -47,5 +47,11 @@ HOUSE RULES for this repository (Keep Him Walking):
   not a code fault. Re-seed with `reset:phase15:preview` then `seed-phase1.ts --preview
   --starts-at <most recent 16:00Z>`; check before assuming a regression.
 - Do not add dependencies unless the prompt names them. Do not add paid services.
+- Anything that needs the owner's decision must be written in plain English, not in
+  the vocabulary of the code. For each one give three things and nothing else:
+  WHAT it is in one sentence a non-engineer would follow; WHAT HAPPENS if nothing
+  changes; and WHAT TO DO — the exact command to run, or the choice to make and its
+  trade-off. Never leave a flag the owner cannot act on: an unactionable flag is
+  noise, and noise hides the flags that matter.
 - Small commits with clear messages. At the end, print: files changed, how to test
   manually, and anything you could not finish.

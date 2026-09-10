@@ -8,7 +8,7 @@ import type { CountryPack } from "@/lib/content/schema";
 import { CharacterActor } from "@/lib/characters/actor";
 import { CharacterLights } from "@/lib/characters/toon";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
-import { CHARACTER_MANIFEST } from "@/lib/characters/manifest";
+import { CHARACTER_MANIFEST, CLIP_DURATIONS } from "@/lib/characters/manifest";
 import { loadCharacterGltf } from "@/lib/characters/loader";
 import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { actorLayout } from "@/lib/traveler/actor-layout";
@@ -138,7 +138,7 @@ export function ProductCharacterStage3D(props: Props) {
     // The resident GLB is already downloaded for the encounter, so every walker
     // is a skeleton clone of it and costs no extra bytes over the network.
     let residentGltf: Awaited<ReturnType<typeof loadCharacterGltf>> | undefined;
-    type Walker = { actor: CharacterActor; anchor: THREE.Group; lane: number; speed: number };
+    type Walker = { actor: CharacterActor; anchor: THREE.Group; lane: number; speed: number; depth: number };
     let walkers: Walker[] = [];
     let last = 0;
     let lastRender = 0;
@@ -328,9 +328,6 @@ export function ProductCharacterStage3D(props: Props) {
           false,
         );
         const anchor = new THREE.Group();
-        // 0.45-0.6 of his height, and behind him in z so the sort is unambiguous.
-        anchor.scale.setScalar(0.45 + deterministicVariant(`${state.pack.assetVersion}:walker-scale`, index, 4) * 0.05);
-        anchor.position.z = -0.5 - deterministicVariant(`${state.pack.assetVersion}:walker-depth`, index, 3) * 0.5;
         // Walking the other way, so the street reads as two-directional.
         anchor.rotation.y = -0.68;
         anchor.add(actor.root);
@@ -338,7 +335,16 @@ export function ProductCharacterStage3D(props: Props) {
         walkers.push({
           actor,
           anchor,
-          lane: deterministicVariant(`${state.pack.assetVersion}:walker-lane`, index, 100) / 100,
+          // How far down the street this one is, as a fraction of the gap between
+          // his ground line and the horizon. Size and height in frame both follow
+          // from it below, because the camera is orthographic: scaling someone
+          // down without also lifting them toward the horizon does not read as
+          // distance, it reads as a small person standing next to him.
+          depth: 0.16 + deterministicVariant(`${state.pack.assetVersion}:walker-depth`, index, 5) * 0.05,
+          // Lanes are spread by index first and only nudged by the hash, so two
+          // walkers can never start on top of each other.
+          lane: index / Math.max(1, QUALITY_LIMITS[state.qualityTier].walkers)
+            + deterministicVariant(`${state.pack.assetVersion}:walker-lane`, index, 8) / 100,
           speed: 0.55 + deterministicVariant(`${state.pack.assetVersion}:walker-speed`, index, 5) * 0.06,
         });
       }
@@ -353,9 +359,20 @@ export function ProductCharacterStage3D(props: Props) {
         // Their own track across the street: seconds x speed, wrapped, so they
         // never borrow the traveler's anchor or his viewport drift.
         const cycle = (sample.rawSeconds * walker.speed * 0.06 + walker.lane) % 1;
-        walker.anchor.position.x = (1 - cycle - 0.5) * horizontal;
+        walker.anchor.position.x = (0.5 - cycle) * horizontal;
+        // Smaller and higher in the frame together, on the same depth fraction,
+        // so the pair of cues agrees and he reads as nearer than they are.
+        const groundToHorizon = Math.max(1, frame.layout.groundY - height * frame.stage.horizonY);
+        walker.anchor.position.y = walker.depth * groundToHorizon * vertical / height;
+        walker.anchor.scale.setScalar(1 - walker.depth);
+        walker.anchor.position.z = -0.5 - walker.depth;
         walker.actor.sample(
-          index === waver ? { clip: "greet", seconds: motion.action?.elapsedSeconds ?? 0 } : { clip: "walk", seconds: sample.rawSeconds * walker.speed },
+          index === waver
+            ? { clip: "greet", seconds: motion.action?.elapsedSeconds ?? 0 }
+            // CharacterActor clamps a cue to the end of its clip, so a running
+            // clock would park every walker on the walk cycle's last frame and
+            // slide it across the street like a cutout. The phase must wrap.
+            : { clip: "walk", seconds: (sample.rawSeconds * walker.speed) % CLIP_DURATIONS.walk },
           dt,
           false,
           1.8,
