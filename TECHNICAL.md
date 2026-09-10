@@ -1493,6 +1493,34 @@ served from the origin.
 this commit, the harness now models reactions and the `/api/me` call, and only the dry
 run was executed here.
 
+### Pack authoring pipeline (P19)
+
+`pnpm pack:new <slug>` scaffolds an immutable v1 module in
+`src/content/countries/` and an `art/<slug>/` authoring directory. It accepts an
+interactive questionnaire or `--from <json>`; JSON is deliberate because no YAML
+dependency is installed or approved. The strict authoring schema admits only the
+country, geography, five zone descriptions, landmark, phrase, resident, six dialogue
+lines, eight notebook lines, vote blurb and postcard copy. `pnpm pack:lint <slug>`
+checks those fields against the owner-editable
+`docs/plan/content-banned-words.txt`. A keyword match is a review stop, not proof that
+an unflagged pack is culturally safe.
+
+`pnpm pack:build <slug>` requires five distinct `master.png` files and the landmark's
+`night.png`. Sharp normalizes each to 3600×1200, blends eight percent at both horizontal
+edges, writes WebP day/night/lights assets, derives the postcard, samples three palette
+colours and writes `art/<slug>/build.json` with exact transfer bytes against the existing
+5.5 MiB pack ceiling. It then regenerates the module and adds it to the small authored
+registry. Generated packs start with `culturalReview.status = pending`: they work in the
+private pack preview but `isVoteReadyPack` keeps them out of ballots until the owner
+records review evidence. Missing NPC fallback art and ambient audio degrade to the 3D
+resident and silence rather than borrowing another culture's assets.
+
+The v3 schema now rejects unknown top-level, dialogue, phrase, story-beat, review,
+postcard, resident, NPC-system and editorial fields. `resident` and `notebookLines` have
+defaults, so the existing fourteen packs retain their parsed shape. Sofia remains on its
+existing one-master pack until the owner supplies the six separate paintings; the exact
+handoff is D4 in `docs/plan/AFTER-P22.md`.
+
 ### Sponsor pricing and placements (P15)
 
 `P(day) = clamp(yesterday_unique_watchers x SPONSOR_CENTS_PER_UNIQUE, floor, cap)`, with

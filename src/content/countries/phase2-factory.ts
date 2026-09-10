@@ -61,6 +61,10 @@ export type Phase2CountryDefinition = {
   countryName: string;
   cityName: string;
   timeZone: string;
+  lat?: number;
+  lon?: number;
+  neighbours?: string[];
+  voteBlurb?: string;
   zones: [ZoneDefinition, ZoneDefinition, ZoneDefinition, ZoneDefinition, ZoneDefinition];
   encounter: {
     npcId: string;
@@ -71,35 +75,50 @@ export type Phase2CountryDefinition = {
       gloss: string;
       pronunciation: string;
     };
-    exchange: [string, string, string, string];
+    exchange: [string, string, ...string[]];
+    dialogue?: CountryPackV3["encounters"][number]["lines"];
   };
+  resident?: { name: string; role: string; variantId: string };
+  notebookLines?: string[];
   /** What the city does on its own; omitted cities get the quiet default. */
   ambient?: Partial<CountryPackV3["ambient"]>;
   postcardTitle: string;
   postcardCopy: string;
   sourceNotes: [string, string, ...string[]];
   culturalReview?: CountryPackV3["culturalReview"];
+  assetBudgetBytes?: number;
+  /** Asset switches emitted by P19 after it has inspected the owner's source files. */
+  authoredAssets?: {
+    nightZoneIds?: string[];
+    lightsZoneIds?: string[];
+  };
 };
 
-function routeProps(city: string, version: string, zoneId: string): RouteProp[] {
+function routeProps(city: string, version: string, zoneId: string, authored = false): RouteProp[] {
   const root = `/scenes/${city}/${version}/props`;
   return [
     {
       id: `${zoneId}-tree`, kind: "tree", depth: 0.64, minGap: 900, maxGap: 1_260,
-      colors: ["#38594c", "#d6a353"], assetUrl: `${root}/${zoneId}-tree.webp`,
+      colors: ["#38594c", "#d6a353"], ...(authored ? {} : { assetUrl: `${root}/${zoneId}-tree.webp` }),
     },
     {
       id: `${zoneId}-street-detail`, kind: "signpost", depth: 0.84, minGap: 680, maxGap: 980,
-      colors: ["#234754", "#e6c77d"], assetUrl: `${root}/${zoneId}-street-detail.webp`,
+      colors: ["#234754", "#e6c77d"], ...(authored ? {} : { assetUrl: `${root}/${zoneId}-street-detail.webp` }),
     },
     {
       id: `${zoneId}-foreground`, kind: "planter", depth: 1.08, minGap: 760, maxGap: 1_080,
-      colors: ["#2c6859", "#bf6b4e"], assetUrl: `${root}/${zoneId}-foreground.webp`,
+      colors: ["#2c6859", "#bf6b4e"], ...(authored ? {} : { assetUrl: `${root}/${zoneId}-foreground.webp` }),
     },
   ];
 }
 
-function routeZone(city: string, version: string, zone: ZoneDefinition, index: number): RouteZone {
+function routeZone(
+  city: string,
+  version: string,
+  zone: ZoneDefinition,
+  index: number,
+  authoredAssets?: Phase2CountryDefinition["authoredAssets"],
+): RouteZone {
   const root = `/scenes/${city}/${version}/zones/${zone.id}`;
   return {
     stage: stageSchema.parse(zone.stage ?? {}),
@@ -122,7 +141,7 @@ function routeZone(city: string, version: string, zone: ZoneDefinition, index: n
         segments: [{ id: `${zone.id}-ground`, url: `${root}/fallback.webp`, worldWidth: 1_200 }],
       },
     ],
-    props: routeProps(city, version, zone.id),
+    props: routeProps(city, version, zone.id, Boolean(authoredAssets)),
     lighting: {
       skyTop: zone.palette[0],
       skyBottom: zone.palette[1],
@@ -130,7 +149,7 @@ function routeZone(city: string, version: string, zone: ZoneDefinition, index: n
       intensity: 0.2 + index * 0.11,
     },
     weather: zone.weather,
-    audioIds: [`${city}-${zone.id}`],
+    audioIds: authoredAssets ? [] : [`${city}-${zone.id}`],
     eventStage: {
       cameraPan: index % 2 === 0 ? 0.035 : -0.025,
       cameraZoom: 1.1,
@@ -139,13 +158,15 @@ function routeZone(city: string, version: string, zone: ZoneDefinition, index: n
       backgroundLife: 0.4,
     },
     fallbackUrl: `${root}/fallback.webp`,
+    ...(authoredAssets?.nightZoneIds?.includes(zone.id) ? { nightUrl: `${root}/night.webp` } : {}),
+    ...(authoredAssets?.lightsZoneIds?.includes(zone.id) ? { lightsUrl: `${root}/lights.webp` } : {}),
   };
 }
 
 export function createPhase2CountryPack(definition: Phase2CountryDefinition): CountryPackV3 {
   const city = definition.packId.replace(/-v\d+$/, "");
   const version = definition.packId.match(/-(v\d+)$/)?.[1] ?? "v1";
-  const zones = definition.zones.map((zone, index) => routeZone(city, version, zone, index));
+  const zones = definition.zones.map((zone, index) => routeZone(city, version, zone, index, definition.authoredAssets));
   const encounterId = `${city}-welcome`;
   const firstZone = zones[0];
   const sceneRoot = `/scenes/${city}/${version}/zones/${firstZone.id}`;
@@ -159,12 +180,16 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     countryName: definition.countryName,
     cityName: definition.cityName,
     timeZone: definition.timeZone,
+    lat: definition.lat,
+    lon: definition.lon,
+    neighbours: definition.neighbours,
+    voteBlurb: definition.voteBlurb,
     scene: {
       fallbackUrl: firstZone.fallbackUrl,
       layers: [
-        { id: "distant", url: `${sceneRoot}/distant.webp`, depth: 0.14, speed: 0.035 },
-        { id: "architecture", url: `${sceneRoot}/architecture.webp`, depth: 0.52, speed: 0.28 },
-        { id: "ground", url: `${sceneRoot}/ground-1.webp`, depth: 0.98, speed: 1 },
+        { id: "distant", url: definition.authoredAssets ? firstZone.fallbackUrl : `${sceneRoot}/distant.webp`, depth: 0.14, speed: 0.035 },
+        { id: "architecture", url: definition.authoredAssets ? firstZone.fallbackUrl : `${sceneRoot}/architecture.webp`, depth: 0.52, speed: 0.28 },
+        { id: "ground", url: definition.authoredAssets ? firstZone.fallbackUrl : `${sceneRoot}/ground-1.webp`, depth: 0.98, speed: 1 },
       ],
       palette: {
         day: [definition.zones[0].palette[0], definition.zones[0].palette[1]],
@@ -179,15 +204,15 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         idle: `${ACTION_ROOT}/idle.webp`,
       },
     },
-    npcAssets: {
+    npcAssets: definition.authoredAssets ? {} : {
       neutral: `/npcs/${city}/${version}/neutral.webp`,
       talk: `/npcs/${city}/${version}/talk.webp`,
       react: `/npcs/${city}/${version}/react.webp`,
     },
     npcSystem: {
-      baseType: ["dushanbe", "almaty", "tbilisi"].includes(city) ? "resident-b" : "resident-a",
-      variantId: `${city}-${["dushanbe", "almaty", "tbilisi"].includes(city) ? "resident-b" : "resident-a"}`,
-      states: {
+      baseType: definition.resident?.variantId.includes("resident-b") || ["dushanbe", "almaty", "tbilisi"].includes(city) ? "resident-b" : "resident-a",
+      variantId: definition.resident?.variantId ?? `${city}-${["dushanbe", "almaty", "tbilisi"].includes(city) ? "resident-b" : "resident-a"}`,
+      states: definition.authoredAssets ? {} : {
         neutral: `/npcs/${city}/${version}/neutral.webp`,
         greet: `/npcs/${city}/${version}/talk.webp`,
         talk: `/npcs/${city}/${version}/talk.webp`,
@@ -196,7 +221,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         goodbye: `/npcs/${city}/${version}/react.webp`,
       },
     },
-    audio: zones.map((zone) => ({
+    audio: definition.authoredAssets ? [] : zones.map((zone) => ({
       id: zone.audioIds[0],
       url: `/audio/${city}/${version}/${zone.id}.wav`,
       loop: true,
@@ -211,11 +236,12 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
       id: encounterId,
       npcId: definition.encounter.npcId,
       locationLabel: definition.encounter.locationLabel,
-      lines: [
-        { speaker: "npc", text: definition.encounter.exchange[0], mood: "curious" },
-        { speaker: "traveler", text: definition.encounter.exchange[1], mood: "amused" },
-        { speaker: "npc", text: definition.encounter.exchange[2], mood: "thoughtful" },
-        { speaker: "traveler", text: definition.encounter.exchange[3], mood: "neutral" },
+      lines: definition.encounter.dialogue ?? [
+        ...definition.encounter.exchange.map((text, index) => ({
+          speaker: index % 2 === 0 ? "npc" as const : "traveler" as const,
+          text,
+          mood: (["curious", "amused", "thoughtful", "neutral"] as const)[index % 4],
+        })),
       ],
     }],
     // The v3 renderer paints one coherent panorama per zone and no props, so the
@@ -253,12 +279,23 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
       { id: `${city}-departure`, kind: "departure", atMetres: null, durationSeconds: 90, title: "Until tomorrow", summary: `The road turns toward the next country.` },
     ],
     localPhrases: [definition.encounter.phrase],
-    culturalReview: definition.culturalReview ?? CULTURAL_REVIEWS[city as keyof typeof CULTURAL_REVIEWS],
+    culturalReview: definition.culturalReview ?? CULTURAL_REVIEWS[city as keyof typeof CULTURAL_REVIEWS] ?? {
+      reviewerName: null,
+      reviewedAt: null,
+      status: "pending",
+      qualification: null,
+      disposition: null,
+      publicLaunchRequirement: null,
+      citations: [],
+      notes: "Generated pack awaiting the owner's cultural-safety review.",
+    },
+    resident: definition.resident,
+    notebookLines: definition.notebookLines,
     editorial: {
       owner: "Keep Him Walking editorial",
       researchedAt: "2026-09-02T00:00:00.000Z",
       sourceNotes: definition.sourceNotes,
     },
-    assetBudgetBytes: 5_767_168,
+    assetBudgetBytes: definition.assetBudgetBytes ?? 5_767_168,
   });
 }

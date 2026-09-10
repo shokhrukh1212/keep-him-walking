@@ -32,7 +32,7 @@ export function EncounterDialogue({
   const visible = Boolean(line) || replayOpen;
   return (
     <>
-      {visible && showNpcImage ? (
+      {visible && showNpcImage && npcSrc ? (
         <div
           className="npc-wrap"
           aria-hidden="true"

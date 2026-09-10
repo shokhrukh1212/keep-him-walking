@@ -26,6 +26,14 @@ describe("Tashkent content pack", () => {
     // place while it loads.
     expect(tashkentCountryPackV4.traveler.fallbackSprites.idle).toMatch(/^\//);
   });
+
+  it("rejects visitor-facing fields outside the allowed pack slots", () => {
+    const unknownTopLevel = { ...tashkentCountryPackV4, visitorCaption: "unreviewed" };
+    expect(() => countryPackV3Schema.parse(unknownTopLevel)).toThrow(/Unrecognized key/);
+    const unknownDialogue = structuredClone(tashkentCountryPackV4);
+    Object.assign(unknownDialogue.encounters[0]!.lines[0]!, { aside: "unreviewed" });
+    expect(() => countryPackV3Schema.parse(unknownDialogue)).toThrow(/Unrecognized key/);
+  });
 });
 
 describe("Phase 2 country packs", () => {

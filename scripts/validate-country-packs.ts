@@ -31,6 +31,8 @@ for (const candidate of packs) {
     ...(pack.schemaVersion === 3 ? Object.values(pack.npcSystem.states) : []),
     ...pack.route.zones.flatMap((zone) => [
       zone.fallbackUrl,
+      ...(zone.nightUrl ? [zone.nightUrl] : []),
+      ...(zone.lightsUrl ? [zone.lightsUrl] : []),
       ...zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
       ...zone.props.flatMap((prop) => prop.assetUrl ? [prop.assetUrl] : []),
     ]),
@@ -49,7 +51,7 @@ for (const candidate of packs) {
       throw new Error(`${pack.assetVersion} route story beats must be strictly ordered by metres`);
     }
     if (!['approved', 'creator_reviewed', 'provisional_preview'].includes(pack.culturalReview.status)) {
-      throw new Error(`${pack.assetVersion} is not eligible for private preview`);
+      process.stdout.write(`Authoring only: ${pack.assetVersion} is registered for preview but cannot enter a vote.\n`);
     }
     if (pack.culturalReview.status === "provisional_preview") {
       process.stdout.write(`Private-preview only: ${pack.assetVersion} requires qualified local review before public launch.\n`);

@@ -1,0 +1,12 @@
+# One lowercase word or phrase per line. P19 checks authored visitor-facing copy.
+# A match blocks pack:build so the owner can review the line in context.
+religion
+religious
+politics
+political
+ethnic
+ethnicity
+racial
+military
+poverty
+alcohol

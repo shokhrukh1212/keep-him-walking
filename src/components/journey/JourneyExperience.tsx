@@ -844,7 +844,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         line={review ? ["talk","listen","greet","goodbye"].includes(review.state)
           ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine}
         locationLabel={routeEncounter?.locationLabel}
-        npcSrc={snapshot.assets.npcAssets[(review?review.state==="listen":activeLine?.speaker === "npc") ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral}
+        npcSrc={snapshot.assets.npcAssets[(review?review.state==="listen":activeLine?.speaker === "npc") ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral ?? ""}
         replayAvailable={replayAvailable}
         replayOpen={replayOpen}
         motionSeconds={motion.action?.elapsedSeconds}

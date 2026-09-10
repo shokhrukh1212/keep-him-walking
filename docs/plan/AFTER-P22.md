@@ -19,6 +19,7 @@ finish rather than what it got wrong.
 | D1 | His 3D model is bigger than the target | No | Owner (visual) |
 | D2 | The 1,000-viewer load test has not been run on current code | **Yes, effectively** | Owner (needs a deployed Preview) |
 | D3 | Lit windows at dusk have no artwork | No | Owner (art) |
+| D4 | Sofia has one source painting instead of the six the pack builder needs | No | Owner (art) |
 
 ---
 
@@ -110,3 +111,22 @@ does today.
 **Related, and still true:** `nightUrl` is declared in the pack schema and no code reads
 it, so P10's night cross-fade is colour-grading only. That belongs to P10 and is noted
 in `TECHNICAL.md` rather than silently absorbed here.
+
+---
+
+## D4 — Sofia needs separate paintings before it can be the P19 example
+
+**What it is.** The new pack builder needs five separate zone paintings plus a night
+version of the landmark. Sofia currently has one painting at
+`art/phase3/sofia/master.png`, cropped five ways by the older pipeline.
+
+**What happens if nothing changes.** The pack tools still create and build new cities,
+and Sofia keeps using its current checked-in pack. Sofia cannot demonstrate the new
+one-painting-per-zone workflow.
+
+**What to do.** Put the five day paintings at
+`art/sofia/zones/sofia-<arrival|lanes|market|cafe|landmark>/master.png`, and put the
+night painting at `art/sofia/zones/sofia-landmark/night.png`. First scaffold the new,
+immutable version with `pnpm pack:new sofia --version 2 --from <reviewed-json-file>`;
+after placing the paintings, run `pnpm pack:build sofia`. This registers `sofia-v2` and
+keeps the current `sofia-v1` available for rollback.

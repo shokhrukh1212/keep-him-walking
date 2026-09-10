@@ -13,7 +13,7 @@ export const dialogueLineSchema = z.object({
   text: z.string().min(1).max(240),
   mood: dialogueMoodSchema,
   durationMs: z.number().int().min(1_500).max(12_000).optional(),
-});
+}).strict();
 
 export const encounterContentSchema = z.object({
   id: z.string().min(1),
@@ -21,7 +21,7 @@ export const encounterContentSchema = z.object({
   locationLabel: z.string().min(1),
   lines: z.array(dialogueLineSchema).min(2),
   nextStoryBeatId: z.string().optional(),
-});
+}).strict();
 
 export const travelerStateSchema = z.enum([
   "loading",
@@ -126,9 +126,9 @@ export const routeLayerSchema = z.object({
       id: z.string().min(1),
       url: z.string().startsWith("/"),
       worldWidth: z.number().int().min(320).max(2_400),
-    }),
+    }).strict(),
   ).min(1),
-});
+}).strict();
 
 export const routePropSchema = z.object({
   id: z.string().min(1),
@@ -138,7 +138,7 @@ export const routePropSchema = z.object({
   maxGap: z.number().int().min(120).max(3_000),
   colors: z.array(z.string()).min(1).max(4),
   assetUrl: z.string().startsWith("/").optional(),
-}).refine((prop) => prop.maxGap >= prop.minGap, {
+}).strict().refine((prop) => prop.maxGap >= prop.minGap, {
   message: "maxGap must be greater than or equal to minGap",
 });
 
@@ -159,8 +159,8 @@ export const stageSchema = z.object({
     far: z.number().nonnegative().max(3).default(0.35),
     mid: z.number().nonnegative().max(3).default(0.7),
     near: z.number().nonnegative().max(3).default(1.25),
-  }).prefault({}),
-});
+  }).strict().prefault({}),
+}).strict();
 
 export type ZoneStage = z.infer<typeof stageSchema>;
 
@@ -192,16 +192,16 @@ export const routeZoneSchema = z.object({
     skyBottom: z.string(),
     grade: z.string(),
     intensity: z.number().min(0).max(1),
-  }),
+  }).strict(),
   weather: z.enum(["clear", "breeze", "haze", "golden", "evening"]),
-  audioIds: z.array(z.string()).min(1),
+  audioIds: z.array(z.string()).default([]),
   eventStage: z.object({
     cameraPan: z.number().min(-0.2).max(0.2),
     cameraZoom: z.number().min(1).max(1.25),
     travelerAnchor: z.number().min(0.45).max(0.7),
     npcAnchor: z.number().min(0.65).max(0.9),
     backgroundLife: z.number().min(0).max(1),
-  }),
+  }).strict(),
   fallbackUrl: z.string().startsWith("/"),
   /**
    * The night master for this zone, when one has been painted. Present zones
@@ -213,7 +213,7 @@ export const routeZoneSchema = z.object({
    * because the owner paints these; a zone without one simply grades to night.
    */
   lightsUrl: z.string().startsWith("/").optional(),
-});
+}).strict();
 
 function routeSchemaWithDistanceDefaults() {
   return z.preprocess((candidate) => {
@@ -240,7 +240,7 @@ function routeSchemaWithDistanceDefaults() {
     worldUnitsPerSecond: z.number().positive().max(300),
     travelerViewportAnchor: z.number().min(0.55).max(0.65),
     zones: z.array(routeZoneSchema).min(4).max(6),
-  }));
+  }).strict());
 }
 
 export const countryPackSchema = baseCountryPackSchema.extend({
@@ -267,9 +267,9 @@ export const culturalReviewSchema = z.object({
   citations: z.array(z.object({
     title: z.string().min(2),
     url: z.string().url(),
-  })).default([]),
+  }).strict()).default([]),
   notes: z.string().max(1_000),
-}).refine(
+}).strict().refine(
   (review) => !["approved", "creator_reviewed", "provisional_preview"].includes(review.status)
     || Boolean(review.reviewerName && review.reviewedAt && review.qualification && review.disposition),
   { message: "Reviewed packs require reviewer, qualification, disposition and timestamp" },
@@ -284,7 +284,7 @@ export const localPhraseSchema = z.object({
   transliteration: z.string().min(1),
   gloss: z.string().min(1),
   pronunciation: z.string().min(1),
-});
+}).strict();
 
 const DEFAULT_STORY_BEAT_METRES = {
   arrival: 150,
@@ -297,8 +297,10 @@ export const storyBeatSchema = z.preprocess((candidate) => {
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return candidate;
   const beat = candidate as Record<string, unknown>;
   const kind = beat.kind as keyof typeof DEFAULT_STORY_BEAT_METRES | "departure" | undefined;
+  const { atFraction: legacyAtFraction, ...supported } = beat;
+  void legacyAtFraction;
   return {
-    ...beat,
+    ...supported,
     atMetres: beat.atMetres
       ?? (kind === "departure" ? null : kind ? DEFAULT_STORY_BEAT_METRES[kind] : undefined),
   };
@@ -310,7 +312,7 @@ export const storyBeatSchema = z.preprocess((candidate) => {
   title: z.string().min(1),
   summary: z.string().min(1).max(360),
   encounterId: z.string().optional(),
-})).refine((beat) => beat.kind !== "encounter" || Boolean(beat.encounterId), {
+}).strict()).refine((beat) => beat.kind !== "encounter" || Boolean(beat.encounterId), {
   message: "Encounter story beats require an encounterId",
 }).refine((beat) => beat.kind === "departure" ? beat.atMetres === null : beat.atMetres !== null, {
   message: "Only departure remains time-based; all other story beats require atMetres",
@@ -321,7 +323,7 @@ export const preloadGroupSchema = z.object({
   timing: z.enum(["critical", "next_zone", "next_country"]),
   zoneId: z.string().optional(),
   assets: z.array(z.string().startsWith("/")).min(1),
-});
+}).strict();
 
 /**
  * What the city does on its own. Defaulted whole so every existing pack keeps
@@ -334,7 +336,7 @@ export const ambientSchema = z.object({
   catColor: z.string().optional(),
   /** A tram or bus silhouette crossing the arrival zone. Opt-in per city. */
   tram: z.boolean().default(false),
-});
+}).strict();
 
 export const countryPackV3Schema = baseCountryPackSchema
   .omit({ countryDayId: true })
@@ -353,32 +355,38 @@ export const countryPackV3Schema = baseCountryPackSchema
       focalPoint: z.object({
         x: z.number().min(0).max(1),
         y: z.number().min(0).max(1),
-      }),
+      }).strict(),
       textColor: z.string().min(1),
-    }),
+    }).strict(),
     preloadGroups: z.array(preloadGroupSchema).min(2),
     storyBeats: z.array(storyBeatSchema).min(4).max(6),
     localPhrases: z.array(localPhraseSchema).min(1),
     culturalReview: culturalReviewSchema,
+    resident: z.object({
+      name: z.string().min(1).max(80).default("Local resident"),
+      role: z.string().min(1).max(120).default("Local host"),
+      variantId: z.string().min(2).default("resident-a"),
+    }).strict().prefault({}),
+    notebookLines: z.array(z.string().min(1).max(240)).max(8).default([]),
     npcSystem: z.object({
       baseType: z.enum(["resident-a", "resident-b"]),
       variantId: z.string().min(2),
       states: z.object({
-        neutral: z.string().startsWith("/"),
-        greet: z.string().startsWith("/"),
-        talk: z.string().startsWith("/"),
-        listen: z.string().startsWith("/"),
-        react: z.string().startsWith("/"),
-        goodbye: z.string().startsWith("/"),
-      }),
-    }),
+        neutral: z.string().startsWith("/").optional(),
+        greet: z.string().startsWith("/").optional(),
+        talk: z.string().startsWith("/").optional(),
+        listen: z.string().startsWith("/").optional(),
+        react: z.string().startsWith("/").optional(),
+        goodbye: z.string().startsWith("/").optional(),
+      }).strict().prefault({}),
+    }).strict(),
     editorial: z.object({
       owner: z.string().min(2),
       researchedAt: z.string().datetime(),
       sourceNotes: z.array(z.string().min(1)).min(2),
-    }),
+    }).strict(),
     assetBudgetBytes: z.number().int().positive().max(5_767_168),
-  })
+  }).strict()
   .superRefine((pack, context) => {
     if (pack.assetVersion !== pack.packId) {
       context.addIssue({
