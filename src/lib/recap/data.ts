@@ -3,6 +3,7 @@ import "server-only";
 import { getCountryPack } from "@/content/countries/registry";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { latestJourney } from "@/lib/season/data";
 
 export type RecapCountry = { code: string; watchSeconds: number; rank: number };
 export type RecapPhoto = { url: string; atDistanceMetres: number };
@@ -51,7 +52,7 @@ export async function loadRecapDay(dayNumber: number): Promise<RecapDay | null> 
   if (!Number.isInteger(dayNumber) || dayNumber < 1) return null;
   const supabase = getServerSupabase();
   if (!supabase) return null;
-  const { data: journey } = await supabase.from("journeys").select("id").in("status", ["preview", "active", "completed"]).order("starts_at", { ascending: false }).limit(1).maybeSingle();
+  const journey = await latestJourney();
   if (!journey) return null;
   const { data: day } = await supabase.from("country_days").select("id,journey_id,day_number,city_name,country_name,country_code,starts_at,scene_pack_id").eq("journey_id", journey.id).eq("day_number", dayNumber).maybeSingle();
   if (!day) return null;

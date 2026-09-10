@@ -8,7 +8,7 @@ test("a seeded finished day renders its permanent outcome and handoff", async ({
   expect(response?.status()).toBe(200);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/.+/);
   await expect(page.getByLabel("Final confirmed day statistics")).toBeVisible();
-  await expect(outcome).toHaveAttribute("data-outcome", /landmark|marathon|unfinished/);
+  await expect(outcome).toHaveAttribute("data-outcome", /gold|colour|grey/);
   await expect(page.getByRole("heading", { name: "The handoff" })).toBeVisible();
   await expect(page.locator(".recap-sponsor")).toBeVisible();
 });

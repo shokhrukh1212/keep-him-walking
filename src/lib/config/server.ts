@@ -31,6 +31,9 @@ export function serverRuntimeConfig() {
     phase2PreviewStartAt: process.env.PHASE2_PREVIEW_START_AT || null,
     phase2RehearsalScale: numericEnv("PHASE2_REHEARSAL_SCALE", 144),
     postcardUnlockSeconds: Math.round(numericEnv("POSTCARD_UNLOCK_SECONDS", 60)),
+    // Deliberately lower than the postcard unlock: a stamp records that he was
+    // watched, a postcard records that someone stayed.
+    passportCollectSeconds: Math.round(numericEnv("PASSPORT_COLLECT_SECONDS", 30)),
     postcardRetentionDays: Math.round(numericEnv("POSTCARD_RETENTION_DAYS", 365)),
     postcardBucket: process.env.SUPABASE_POSTCARDS_BUCKET || "khw-postcards",
     sponsorPrivateBucket: process.env.SUPABASE_SPONSOR_PRIVATE_BUCKET || "khw-sponsor-private",

@@ -1078,7 +1078,7 @@ whichever way the panorama/ground/character-scale relationship is resolved may w
 
 ## 9. Data model and API surface
 
-### Tables (18 forward migrations)
+### Tables (24 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1088,7 +1088,8 @@ row), `presence_leases`, `mutation_rate_limits`.
 **Phase 2:** `visitor_day_contributions`, `postcards`, `sponsor_slots`, `sponsorships`
 (with a partial unique index enforcing one active sponsorship per slot and a trigger
 enforcing legal state transitions), `payment_webhook_events`, `sponsor_metric_events`,
-`sponsor_daily_metrics`, `operation_ledger`. Season 1 adds `sponsor_pricing`.
+`sponsor_daily_metrics`, `operation_ledger`. Season 1 adds `sponsor_pricing` and gives
+`journeys` a `season_number`.
 
 **Phase 3:** `country_notification_opt_ins`, `experiment_exposures`,
 `operational_incidents`, `webhook_replay_audit`.
@@ -1171,19 +1172,22 @@ peak),
 `reconcile_phase2_state`, `reconcile_phase2_state_v2`, `finalize_day_outcome`,
 `cleanup_phase2_retention`, `journey_story_now`,
 `read_journey_runtime_v3` / `_v4` / `_v5`,
-`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10`
+`read_visitor_passport`,
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10` / `_v11`
 (one-call bootstrap with atomic admission control, the distance projection, the
-country aggregate, the reaction board, the ballot and the weather),
+country aggregate, the reaction board, the ballot, the weather and the passport streak),
 `set_country_notification_opt_in`.
 
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (28)
+### Route handlers (29)
 
 ```
 GET  /api/bootstrap                 full snapshot: day, event, vote, presence, steps,
                                     route runtime, sponsor, postcard state, asset pack
+GET  /api/me                        the visitor-private slice: collected days, streak,
+                                    today's counted seconds. private, no-store.
 POST /api/presence/heartbeat        the walking rule
 POST /api/votes                     one ballot per visitor, server-enforced
 POST /api/postcards                 render + upload + public token (idempotent)
@@ -1289,6 +1293,49 @@ candidate branches; reduced-motion rules suppress the pulse through the global p
 The document permits vertical scrolling; viewport-sized scene and character-review
 containers continue to constrain their own overflow. Long map, recap and post-kit pages
 therefore remain reachable.
+
+### Passport, streaks and the season sheet (P16)
+
+"Collected" is now a server fact. `read_visitor_passport(journey, visitor_hash,
+collect_seconds)` returns one row per published day of the journey plus a streak, and
+`PASSPORT_COLLECT_SECONDS` (30) is the threshold — deliberately lower than the 60-second
+postcard unlock, because a stamp records that he was watched and a postcard records that
+someone stayed. The old `localStorage` passport is gone: it survived nothing and proved
+nothing, and `JourneyExperience` no longer writes a stamp.
+
+Streaks run on `day_number` inside one journey, never on calendar dates, so a rollover
+that lands late cannot break a streak the visitor actually kept. The walk is newest-first
+and stops at the first gap.
+
+`stampFor()` in `src/lib/outcomes/stamp.ts` is the single decision behind every stamp:
+gold for a marathon, colour for a landmark reached, grey for a day that fell short,
+`current` for the live day, and **null** for a day `day_outcomes` has not finalized — the
+passport draws an empty dashed frame rather than guessing a colour. Three ad-hoc ternaries
+in the recap card, the day page and the map used to make this call independently, each in
+its own vocabulary. `/api/map` keeps its published `landmark|marathon|unfinished` words
+through one explicit mapping table, because that contract shipped in P14.
+
+`src/lib/season/data.ts` owns `latestJourney()` — the "newest journey" query that four
+modules used to carry their own copy of — and `loadSeasonSheet(n)`, which totals only
+finalized days so a season total never shrinks after a rollover.
+
+`/archive` is now cacheable (60-second revalidate) because the sheet is identical for
+every visitor; which days *this* visitor collected arrives after paint from **`GET
+/api/me`**, which is `private, no-store` and carries the visitor cookie. That split is
+what P18 needs in order to make `/api/bootstrap` shared-cacheable at all.
+
+`/season/[n]` is the poster page: stamp sheet, confirmed totals, the P14 map rendered
+server-side (the page is cached, so there is no reason to make every visitor fetch
+`/api/map` again) and `/api/og/season/[n]`.
+
+**Known limitation — the soft 404.** An unrun season renders the not-found page but
+answers **200**, not 404. The root `src/app/loading.tsx` wraps every route in a Suspense
+boundary, so the shell has already begun streaming by the time `notFound()` throws, and
+Next cannot change the status afterwards; `next/dist/docs/.../not-found.md` documents
+exactly this trade-off and points at a `proxy` check as the only real fix. Next injects
+`<meta name="robots" content="noindex">`, so the page stays out of search. `/day/[n]`
+has behaved this way since P13. Moving the check into `proxy` would mean a database read
+on every request in the edge path, so it was not done here.
 
 ### Sponsor pricing and placements (P15)
 

@@ -25,6 +25,7 @@ const eventPayloadSchema = z.object({
 
 type CountryDayRow = {
   id: string;
+  journey_id?: string;
   day_number: number;
   country_code: string;
   country_name: string;
@@ -89,6 +90,7 @@ type BootstrapBundleRow = {
   };
   weather: unknown;
   contribution_seconds: number | null;
+  passport: null | { streak: number; collectedToday: boolean };
   postcard: null | { public_token: string; status: string; expires_at: string };
   sponsor: null | {
     public_id: string;
@@ -145,7 +147,7 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
   const { data, error } = await supabase
     .from("country_days")
     .select(
-      "id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id,journeys!inner(total_days,status)",
+      "id,journey_id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id,journeys!inner(total_days,status)",
     )
     .in("status", ["scheduled", "live"])
     .in("journeys.status", config.phase2Enabled ? ["preview", "active"] : ["active"])
@@ -357,6 +359,12 @@ function bootstrapFromBundle(
         ? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/p/${bundle.postcard.public_token}`
         : null,
     },
+    // Server-confirmed, so the HUD can say "4 days in a row" without guessing.
+    passport: {
+      streak: Number(bundle.passport?.streak ?? 0),
+      collectedToday: Boolean(bundle.passport?.collectedToday),
+      collectSeconds: config.passportCollectSeconds,
+    },
     assets: countryPack,
   };
 }
@@ -455,7 +463,7 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v10", {
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v11", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -463,6 +471,7 @@ export async function liveBootstrapSnapshot(
       p_rate_limit: RATE_LIMITS.bootstrap.limit,
       p_rate_window_seconds: RATE_LIMITS.bootstrap.windowSeconds,
       p_pace_cap: config.paceCap,
+      p_collect_seconds: config.passportCollectSeconds,
     });
     if (bundleError) throw bundleError;
     const result = atomic as AtomicBootstrapRow | null;
@@ -532,6 +541,9 @@ export async function liveBootstrapSnapshot(
     url: null,
   };
   let sponsor: BootstrapSnapshot["sponsor"] = { status: "unsponsored" };
+  let passport: BootstrapSnapshot["passport"] = {
+    streak: 0, collectedToday: false, collectSeconds: config.passportCollectSeconds,
+  };
   if (config.phase2Enabled && countryPack.schemaVersion === 3) {
     const [{ data: contribution }, { data: existingPostcard }, { data: slot, error: sponsorError }] = await Promise.all([
       supabase.from("visitor_day_contributions").select("active_seconds").eq("country_day_id", countryDay.id).eq("visitor_hash", visitorHash).maybeSingle(),
@@ -569,6 +581,19 @@ export async function liveBootstrapSnapshot(
         clickUrl: liveSponsor.cta_label ? `/r/sponsor/${liveSponsor.public_id}` : null,
       };
     }
+    // The bundle path gets this inside the same lock; this path reads it on its
+    // own so the fallback still reports a confirmed streak rather than zero.
+    const { data: passportRow } = await supabase.rpc("read_visitor_passport", {
+      p_journey_id: countryDay.journey_id ?? null,
+      p_visitor_hash: visitorHash,
+      p_collect_seconds: config.passportCollectSeconds,
+    });
+    const read = (passportRow ?? {}) as { streak?: number; days?: Array<{ countryDayId: string; collected: boolean }> };
+    passport = {
+      streak: Number(read.streak ?? 0),
+      collectedToday: Boolean(read.days?.find((day) => day.countryDayId === countryDay.id)?.collected),
+      collectSeconds: config.passportCollectSeconds,
+    };
   }
 
   return {
@@ -618,6 +643,7 @@ export async function liveBootstrapSnapshot(
     },
     sponsor,
     postcard,
+    passport,
     assets: countryPack,
   };
 }

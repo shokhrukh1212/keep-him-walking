@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { countryDisplayName, flagEmoji, formatWatchDuration } from "@/lib/countries/flags";
 import { countryFromHeader, UNKNOWN_COUNTRY_CODE } from "@/lib/countries/header";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { latestJourney } from "@/lib/season/data";
 import { CountryShareButton } from "@/components/country/CountryShareButton";
 
 export const dynamic = "force-dynamic";
@@ -38,13 +39,7 @@ async function loadCountrySeason(code: string): Promise<CountrySeason | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
 
-  const { data: journey } = await supabase
-    .from("journeys")
-    .select("id")
-    .in("status", ["preview", "active", "completed"])
-    .order("starts_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const journey = await latestJourney();
   if (!journey) return null;
 
   const { data: days } = await supabase

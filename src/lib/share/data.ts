@@ -1,12 +1,13 @@
 import "server-only";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { latestJourney } from "@/lib/season/data";
 
 export type ShareDay = { id: string; dayNumber: number; cityName: string; countryName: string; countryCode: string; timeZone: string; startsAt: string; endsAt: string };
 
 export async function shareDay(dayNumber?: number): Promise<ShareDay | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
-  const { data: journey } = await supabase.from("journeys").select("id").in("status", ["preview", "active", "completed"]).order("starts_at", { ascending: false }).limit(1).maybeSingle();
+  const journey = await latestJourney();
   if (!journey) return null;
   let query = supabase.from("country_days").select("id,day_number,city_name,country_name,country_code,time_zone,starts_at,ends_at").eq("journey_id", journey.id);
   query = dayNumber === undefined

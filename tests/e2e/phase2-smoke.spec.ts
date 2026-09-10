@@ -29,6 +29,7 @@ function snapshot(routeIndex = 0): BootstrapSnapshot {
     route: { globalActiveSeconds: 30, globalDistanceMetres: 37.5, paceRate: 1, authoritativeAt: now.toISOString(), walking: true },
     sponsor: { status: "unsponsored" },
     postcard: { eligible: true, unlockSeconds: 60, contributedSeconds: 75, url: null },
+    passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
     assets: { ...pack, traveler: { ...pack.traveler, riveUrl: null } },
   };
 }

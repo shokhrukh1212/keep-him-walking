@@ -150,6 +150,12 @@ export type BootstrapSnapshot = {
     contributedSeconds: number;
     url: string | null;
   };
+  passport: {
+    /** Consecutive published days this visitor collected, confirmed by the server. */
+    streak: number;
+    collectedToday: boolean;
+    collectSeconds: number;
+  };
   assets: CountryPack;
 };
 

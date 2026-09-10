@@ -11,6 +11,7 @@ export type RateLimitPolicy = {
 
 export const RATE_LIMITS = {
   bootstrap: { action: "bootstrap", limit: 90, windowSeconds: 60 },
+  me: { action: "me", limit: 60, windowSeconds: 60 },
   presence: { action: "presence", limit: 45, windowSeconds: 60 },
   vote: { action: "vote", limit: 10, windowSeconds: 60 },
   postcard: { action: "postcard", limit: 4, windowSeconds: 300 },

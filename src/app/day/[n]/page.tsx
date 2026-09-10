@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { countryDisplayName, flagEmoji, formatWatchDuration } from "@/lib/countries/flags";
 import { loadRecapDay } from "@/lib/recap/data";
+import { stampFor } from "@/lib/outcomes/stamp";
 import { outcomeLabel } from "@/lib/recap/image";
 
 export const revalidate = 3_600;
@@ -22,7 +23,7 @@ export default async function DayRecapPage({ params }: Props) {
   const dayNumber = Number((await params).n);
   const recap = await loadRecapDay(dayNumber);
   if (!recap) notFound();
-  const stamp = recap.marathon ? "marathon" : recap.landmarkReached ? "landmark" : "unfinished";
+  const stamp = stampFor({ outcome: recap, status: "completed" }) ?? "grey";
   const date = new Intl.DateTimeFormat("en", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(recap.date));
   return (
     <main className="content-page recap-page">

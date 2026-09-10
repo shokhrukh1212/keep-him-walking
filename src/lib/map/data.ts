@@ -2,6 +2,14 @@ import "server-only";
 
 import { getCountryPack } from "@/content/countries/registry";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { stampFor } from "@/lib/outcomes/stamp";
+import { latestJourney } from "@/lib/season/data";
+
+/**
+ * /api/map has published these words since P14, so the map keeps them. The
+ * decision behind them is `stampFor`, shared with the passport and the recap.
+ */
+const MAP_OUTCOME = { gold: "marathon", colour: "landmark", grey: "unfinished", current: "current" } as const;
 
 export type MapCity = {
   countryDayId: string;
@@ -38,7 +46,7 @@ export type JourneyMapData = {
 export async function loadJourneyMap(): Promise<JourneyMapData | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
-  const { data: journey } = await supabase.from("journeys").select("id").in("status", ["preview", "active", "completed"]).order("starts_at", { ascending: false }).limit(1).maybeSingle();
+  const journey = await latestJourney();
   if (!journey) return null;
   const { data: days } = await supabase.from("country_days").select("id,day_number,city_name,country_name,country_code,scene_pack_id,status").eq("journey_id", journey.id).in("status", ["completed", "live"]).order("day_number", { ascending: true });
   const dayRows = days ?? [];
@@ -66,7 +74,7 @@ export async function loadJourneyMap(): Promise<JourneyMapData | null> {
       lat: pack.lat,
       lon: pack.lon,
       status: day.status === "live" ? "current" : "completed",
-      outcome: day.status === "live" ? "current" : outcome?.marathon ? "marathon" : outcome?.landmark_reached ? "landmark" : "unfinished",
+      outcome: MAP_OUTCOME[stampFor({ outcome: outcome ? { marathon: outcome.marathon, landmarkReached: outcome.landmark_reached } : null, status: day.status as "completed" | "live" }) ?? "grey"],
       distanceMetres: Number(outcome?.distance_metres ?? runtimeByDay.get(day.id)?.global_distance_metres ?? 0),
       transferFromPrevious: transfer,
     }];

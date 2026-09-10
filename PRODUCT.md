@@ -188,8 +188,13 @@ that is hashed before it ever reaches the database.
   postcard of the day: a rendered image with the day's art and safe copy, an Open Graph
   variant, and a permanent public link at `/p/<token>` so it can be shared with people
   who were not there. It is idempotent — asking twice returns the same card.
-- **Passport / archive** — completed days as collectible stamps, with the ones you were
-  personally present for marked as collected in that browser.
+- **Passport / archive** — every finished day as a stamp coloured by how it ended: gold
+  for a marathon, colour for a landmark reached, grey for a day that fell short. A day
+  is *collected* when you watched it for at least thirty seconds; the server counts those
+  seconds, so a stamp follows you rather than the browser you earned it in. Consecutive
+  collected days read as "4 days in a row".
+- **Season sheet** — `/season/1` is the whole passport as one shareable poster: the stamp
+  sheet, the confirmed totals, the route map and a share card.
 - **Tomorrow** — the next city's name and start time, plus a downloadable `.ics`
   calendar file so you can come back for it.
 - **Sound** — per-zone ambient street audio, off until you ask for it.

@@ -50,7 +50,6 @@ import { WalkingRuleStatus } from "@/components/hud/WalkingRuleStatus";
 import { GoalBar } from "@/components/hud/GoalBar";
 import { JourneyMapEmbed } from "@/components/map/JourneyMapEmbed";
 import { PostcardButton } from "@/components/postcard/PostcardButton";
-import { PASSPORT_KEY } from "@/components/archive/PassportArchive";
 import Link from "next/link";
 import { getNextCountryPack } from "@/content/countries/registry";
 import { TomorrowPreview } from "@/components/hud/TomorrowPreview";
@@ -553,6 +552,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   }, [activeEvent]);
 
   const visitorSeconds = heartbeat?.visitorActiveSeconds ?? 0;
+  // The stamp is earned the moment the server has counted enough seconds; it
+  // does not wait for the next bootstrap to say so.
+  const collectedToday = snapshot.passport.collectedToday || visitorSeconds >= snapshot.passport.collectSeconds;
   const sponsor = sponsorPresentation(snapshot.sponsor,previewDemoSponsor);
   // Sales tool, non-production only: ?demoSponsorLogo=<https url> paints a prospect's
   // logo on the patch. It never touches the real sponsor disclosure or any storage.
@@ -630,16 +632,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       asset_version: snapshot.assets.assetVersion,
       renderer: sceneRenderer,
     });
-    if (snapshot.assets.schemaVersion === 3) {
-      try {
-        const stamps = new Set(JSON.parse(localStorage.getItem(PASSPORT_KEY) ?? "[]") as string[]);
-        stamps.add(snapshot.assets.assetVersion);
-        localStorage.setItem(PASSPORT_KEY, JSON.stringify([...stamps]));
-      } catch {
-        // Storage can be blocked; passport stamps are an optional local enhancement.
-      }
-    }
-  }, [experienceReady, sceneRenderer, snapshot.assets.assetVersion, snapshot.assets.schemaVersion]);
+    // A stamp is no longer written here: the passport is earned by watching, and
+    // the server is the only thing that can confirm that.
+  }, [experienceReady, sceneRenderer, snapshot.assets.assetVersion]);
 
   useEffect(() => {
     if (!experienceReady || snapshot.sponsor.status !== "sponsored") return;
@@ -887,6 +882,16 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           onToggleSound={() => void toggleSound()}
         />
         {tomorrowPack ? <TomorrowPreview cityName={tomorrowPack.cityName} countryName={tomorrowPack.countryName} packId={tomorrowPack.assetVersion} startsAt={snapshot.countryDay.endsAt} /> : null}
+        <p className="dock-streak" data-testid="dock-streak">
+          {/* Both halves are server-confirmed: the streak came with the bootstrap,
+              and the seconds are the ones the heartbeat has already counted. */}
+          {snapshot.passport.streak > 0
+            ? <><strong>{snapshot.passport.streak}</strong> {snapshot.passport.streak === 1 ? "day" : "days"} in a row</>
+            : null}
+          {collectedToday
+            ? <span className="dock-streak-today"> · today collected</span>
+            : <span className="dock-streak-today"> · {Math.max(0, Math.ceil(snapshot.passport.collectSeconds - visitorSeconds))}s to collect today</span>}
+        </p>
         <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/privacy">Privacy</Link></nav>
       </section>
 
