@@ -44,6 +44,13 @@ function snapshot(server: CountryServer): BootstrapSnapshot {
 
 async function installCountryApi(page: Page, server: CountryServer) {
   await page.route("**/api/bootstrap", (route) => route.fulfill({ json: snapshot(server) }));
+  // Keep this mocked public-world scenario independent from the real cookie-backed
+  // visitor slice. A fresh test browser is otherwise a genuine first visit and its
+  // onboarding overlay correctly intercepts the leaderboard click.
+  await page.route("**/api/me", (route) => route.fulfill({
+    json: { firstVisit: false, selectedOptionId: null },
+    headers: { "Cache-Control": "private, no-store" },
+  }));
   await page.route("**/api/presence/heartbeat", async (route) => {
     server.observedCountry = route.request().headers()[COUNTRY_HEADER] ?? null;
     await route.fulfill({
@@ -64,6 +71,8 @@ async function installCountryApi(page: Page, server: CountryServer) {
         waitingSince: null,
         wokeHim: false,
         countryCode: server.observedCountry ?? "ZZ",
+        reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
+        weather: null,
       },
     });
   });

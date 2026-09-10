@@ -1959,12 +1959,15 @@ button:focus-visible,
 }
 
 .reaction-buttons {
-  position: relative;
+  position: absolute;
   z-index: 16;
+  bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  left: 50%;
   display: flex;
   justify-content: center;
   gap: 0.5rem;
   padding: 0 max(0.75rem, env(safe-area-inset-left));
+  transform: translateX(-50%);
 }
 
 .reaction-button {
@@ -2051,6 +2054,7 @@ button:focus-visible,
     left: 4px;
     gap: 4px;
     padding: 0;
+    transform: none;
   }
 
   .reaction-button {

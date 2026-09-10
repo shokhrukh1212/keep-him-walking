@@ -1324,6 +1324,10 @@ not rendered. `firstVisit` comes only from creation of the existing HTTP-only vi
 cookie, so the four-second onboarding line is neither local-storage authority nor a
 repeat tutorial.
 
+Reaction controls are absolutely anchored above the compact dock at every viewport.
+They do not participate in the page's top flow, where their higher stacking layer would
+otherwise cover the audience-country button even though both controls looked visible.
+
 `src/lib/share/token.ts` signs compact, purpose-bound HMAC claims. Personal cards contain
 only a day number, expiry, and confirmed numbers: steps cards are issued after reading
 `visitor_day_contributions`; first-watcher cards are issued only to the heartbeat that
