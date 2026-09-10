@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CharacterActor } from "@/lib/characters/actor";
@@ -49,14 +49,21 @@ function stool() {
 
 export function CharacterStage3D(props:Props) {
   const host=useRef<HTMLDivElement>(null),latest=useRef(props);
+  const [characterReady,setCharacterReady]=useState(false);
   useEffect(()=>{latest.current=props;},[props]);
+  useEffect(()=>{
+    const element=host.current;if(!element)return;
+    // Review controls expose their selected cue synchronously; the draw loop
+    // still replaces this with the sampled cue on its next frame.
+    element.dataset.clip=sampleScene(props.playback.action,0).traveler.clip;
+  },[props.playback.action,props.playback.revision]);
   useEffect(()=>{
     const element=host.current;if(!element)return;
     let disposed=false,raf=0,lostContext=false;
     const scene=new THREE.Scene();
     let renderer:THREE.WebGLRenderer;
     try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:"high-performance"});}
-    catch{latest.current.onStatus("3D is unavailable on this device. Showing the original traveler reference.");latest.current.onAvailability(false);element.dataset.characterError="true";return;}
+    catch{latest.current.onStatus("3D is unavailable on this device. Showing the original traveler reference.");latest.current.onAvailability(false);setCharacterReady(false);element.dataset.characterError="true";return;}
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
     renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;
     renderer.toneMappingExposure=1;
@@ -76,12 +83,12 @@ export function CharacterStage3D(props:Props) {
         const gltf=await loadCharacterGltf(loader,definition);root=gltf.scene;
         if(disposed){disposeModel(root);return;}
         const model=new CharacterActor(gltf,definition.heightMetres,kind==="traveler");
-        if(kind==="traveler"){actor=model;traveler.add(model.root);element.dataset.characterReady="true";latest.current.onAvailability(true);latest.current.onClipAvailability?.(model.availableClips());}
+        if(kind==="traveler"){actor=model;traveler.add(model.root);setCharacterReady(true);latest.current.onAvailability(true);latest.current.onClipAvailability?.(model.availableClips());}
         else{npc=model;resident.add(model.root);element.dataset.residentReady="true";}
         latest.current.onStatus("Model loaded. Character art and animation repairs are still in progress.");
       }catch(error){
         if(root)disposeModel(root);
-        if(!disposed){if(kind==="traveler")latest.current.onAvailability(false);element.dataset.characterError="true";latest.current.onStatus(error instanceof Error?error.message:"The character could not load. Reload to retry.");}
+        if(!disposed){if(kind==="traveler"){latest.current.onAvailability(false);setCharacterReady(false);}element.dataset.characterError="true";latest.current.onStatus(error instanceof Error?error.message:"The character could not load. Reload to retry.");}
       }
     };
     void load("traveler");
@@ -169,8 +176,8 @@ export function CharacterStage3D(props:Props) {
       }
     };
     raf=requestAnimationFrame(draw);
-    const lost=(event:Event)=>{event.preventDefault();lostContext=true;latest.current.contacts.current={traveler:null,resident:null};renderer.domElement.style.visibility="hidden";latest.current.onAvailability(false);latest.current.onStatus("3D rendering was interrupted. Waiting for the graphics context…");};
-    const restored=()=>{lostContext=false;last=0;renderer.domElement.style.visibility="visible";latest.current.onAvailability(!!actor);latest.current.onStatus("3D rendering restored.");};
+    const lost=(event:Event)=>{event.preventDefault();lostContext=true;latest.current.contacts.current={traveler:null,resident:null};renderer.domElement.style.visibility="hidden";setCharacterReady(false);latest.current.onAvailability(false);latest.current.onStatus("3D rendering was interrupted. Waiting for the graphics context…");};
+    const restored=()=>{lostContext=false;last=0;renderer.domElement.style.visibility="visible";setCharacterReady(!!actor);latest.current.onAvailability(!!actor);latest.current.onStatus("3D rendering restored.");};
     renderer.domElement.addEventListener("webglcontextlost",lost);renderer.domElement.addEventListener("webglcontextrestored",restored);
     return ()=>{
       disposed=true;cancelAnimationFrame(raf);observer.disconnect();actor?.dispose();npc?.dispose();
@@ -179,5 +186,5 @@ export function CharacterStage3D(props:Props) {
       disposeModel(scene);renderer.dispose();renderer.domElement.remove();
     };
   },[]);
-  return <div ref={host} data-testid="character-stage-3d" style={{position:"absolute",inset:0,zIndex:2}} />;
+  return <div ref={host} data-testid="character-stage-3d" data-character-ready={characterReady ? "true" : undefined} style={{position:"absolute",inset:0,zIndex:2}} />;
 }

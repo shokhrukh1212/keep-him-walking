@@ -9,9 +9,10 @@ type Props = {
     waitedDuration: string;
     countdown: number;
   } | null;
+  prelaunch?: boolean;
 };
 
-export function IntroHeadline({ collapsed, firstArrival, travelerName }: Props) {
+export function IntroHeadline({ collapsed, firstArrival, travelerName, prelaunch = false }: Props) {
   const named = typeof travelerName === "string" && travelerName.trim().length > 0;
   const subject = named ? travelerDisplayName(travelerName) : "He";
   return (
@@ -20,7 +21,7 @@ export function IntroHeadline({ collapsed, firstArrival, travelerName }: Props) 
       data-collapsed={collapsed}
       data-first-arrival={Boolean(firstArrival)}
     >
-      <span className="eyebrow">ONE JOURNEY · LIVE ON THE INTERNET</span>
+      <span className="eyebrow">ONE JOURNEY · {prelaunch ? "STARTS SOON" : "LIVE ON THE INTERNET"}</span>
       {firstArrival ? (
         <>
           <h1>

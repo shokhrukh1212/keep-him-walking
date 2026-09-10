@@ -1,4 +1,4 @@
-import { tashkentCountryPackV4 } from "@/content/countries/tashkent.v4";
+import { tashkentCountryPackV5 } from "@/content/countries/tashkent.v5";
 import { PHASE1_COUNTRY_DAY_ID } from "@/content/countries/tashkent.v1";
 import type { BootstrapSnapshot } from "@/lib/contracts";
 import { DEFAULT_PRESENCE_TTL_SECONDS } from "@/lib/presence";
@@ -24,14 +24,14 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
       id: PHASE1_COUNTRY_DAY_ID,
       dayNumber: 1,
       totalDays: 195,
-      countryCode: tashkentCountryPackV4.countryCode,
-      countryName: tashkentCountryPackV4.countryName,
-      cityName: tashkentCountryPackV4.cityName,
-      timeZone: tashkentCountryPackV4.timeZone,
+      countryCode: tashkentCountryPackV5.countryCode,
+      countryName: tashkentCountryPackV5.countryName,
+      cityName: tashkentCountryPackV5.cityName,
+      timeZone: tashkentCountryPackV5.timeZone,
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
       storySummary: "The journey begins in Tashkent.",
-      scenePackId: tashkentCountryPackV4.assetVersion,
+      scenePackId: tashkentCountryPackV5.assetVersion,
     },
     activeEvent: null,
     nextEvent: null,
@@ -58,6 +58,6 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
     milestones: { hundredWatchersAt: null },
-    assets: tashkentCountryPackV4,
+    assets: tashkentCountryPackV5,
   };
 }

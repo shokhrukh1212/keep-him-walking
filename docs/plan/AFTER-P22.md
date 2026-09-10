@@ -20,6 +20,7 @@ finish rather than what it got wrong.
 | D2 | The 1,000-viewer load test has not been run on current code | **Yes, effectively** | Owner (needs a deployed Preview) |
 | D3 | Lit windows at dusk have no artwork | No | Owner (art) |
 | D4 | Sofia has one source painting instead of the six the pack builder needs | No | Owner (art) |
+| D5 | The production scheduler may run launch jobs late | **Yes** | Owner (hosting) |
 
 ---
 
@@ -130,3 +131,13 @@ night painting at `art/sofia/zones/sofia-landmark/night.png`. First scaffold the
 immutable version with `pnpm pack:new sofia --version 2 --from <reviewed-json-file>`;
 after placing the paintings, run `pnpm pack:build sofia`. This registers `sofia-v2` and
 keeps the current `sofia-v1` available for rollback.
+
+---
+
+## D5 — The production scheduler must be minute-accurate
+
+**What it is.** The launch needs one job at 15:55 UTC and rollover at exactly 16:00 UTC, while Vercel's free scheduler may start a daily job anywhere inside its scheduled hour.
+
+**What happens if nothing changes.** Prewarming or a daily border crossing can happen up to 59 minutes late, so the launch and every later day can show the wrong state.
+
+**What to do.** Before launch, choose a production scheduler that guarantees minute-level runs and point it at the two authenticated cron URLs; Vercel Pro is the simplest paid choice, while a free external scheduler avoids that cost but adds another account and failure point.

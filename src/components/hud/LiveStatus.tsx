@@ -10,6 +10,7 @@ type Props = {
   wakeCountdown?: number | null;
   waitingSinceLocalTime?: string | null;
   waitingDuration?: string | null;
+  launchCountdown?: string | null;
 };
 
 export function LiveStatus({
@@ -21,12 +22,17 @@ export function LiveStatus({
   wakeCountdown,
   waitingSinceLocalTime,
   waitingDuration,
+  launchCountdown,
 }: Props) {
   const confirmed = activeViewers ?? 0;
-  const label = status === "offline" && activeViewers === null
+  const label = launchCountdown
+    ? `Starts ${launchCountdown}`
+    : status === "offline" && activeViewers === null
     ? "Live count unavailable"
     : `${confirmed} ${confirmed === 1 ? "person" : "people"} watching`;
-  const detail = status === "reconnecting"
+  const detail = launchCountdown
+    ? "The journey has not started. Watching now does not add presence or progress."
+    : status === "reconnecting"
     ? `Live count reconnecting · last confirmed ${confirmed}`
     : status === "offline"
       ? "He only moves while someone is watching."

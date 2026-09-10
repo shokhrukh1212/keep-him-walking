@@ -63,6 +63,7 @@ import { WakeCard } from "@/components/journey/WakeCard";
 import { FirstVisitOverlay } from "@/components/journey/FirstVisitOverlay";
 import { shareCard } from "@/lib/share/client";
 import { CorrectionForm } from "@/components/corrections/CorrectionForm";
+import { launchCountdown } from "@/lib/story-clock/launch";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -223,7 +224,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       }
       setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
       setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
-      void refreshMe();
+      if (next.journeyState !== "prelaunch") void refreshMe();
       return Math.max(1_000, Math.min(5 * 60_000, next.refresh.afterMs));
     } catch {
       if (!navigator.onLine) setBootstrapIssue("Your browser is offline. Waiting to reconnect…");
@@ -721,6 +722,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     0,
     snapshot.assets.route.zones.findIndex((zone) => zone.id === renderedZone.id),
   );
+  const startsIn = snapshot.journeyState === "prelaunch"
+    ? launchCountdown(Date.parse(snapshot.countryDay.startsAt), realNowMs)
+    : null;
   const tomorrowPack = getNextCountryPack(snapshot.assets.assetVersion);
 
   const acceptVote = (optionId: string, totalBallots: number) => {
@@ -765,6 +769,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       />
       <IntroHeadline
         travelerName={snapshot.journey.travelerName}
+        prelaunch={snapshot.journeyState === "prelaunch"}
         collapsed={waking ? false : introHeadline.collapsed}
         firstArrival={waking && waitingLocalTime && wakeCountdown ? {
           waitingLocalTime,
@@ -789,6 +794,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         waitingDuration={formatWaitDuration(waitedSeconds)}
         liveCountries={snapshot.countries.live}
         todayTopCountries={snapshot.countries.todayTop}
+        launchCountdown={startsIn}
       />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
@@ -806,7 +812,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       </div> : null}
       <WalkingRuleStatus
         walking={review?review.moving:walking}
-        label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : snapshot.mode === "offline_preview"
+        label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : snapshot.journeyState === "prelaunch"
+          ? `Starts ${startsIn ?? "soon"}`
+          : snapshot.mode === "offline_preview"
           ? "Preview only · waiting for the live journey"
           : waking && wakeCountdown
           ? `Waking up · starts walking in ${wakeCountdown}…`
@@ -820,7 +828,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
                 : `Waiting for the internet · since ${waitingLocalTime}`
               : "Waiting for the internet"}
       />
-      <ReactionButtons
+      {snapshot.journeyState !== "prelaunch" ? <ReactionButtons
         counts={heartbeat?.reactions.counts ?? snapshot.reactions.counts}
         activeViewers={activeViewers}
         enabled={snapshot.mode === "live" && connectionStatus === "live"}
@@ -828,15 +836,15 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         onScheduled={(kind, atActiveSecond) => {
           if (kind === "photo") ownedPhotoSecond.current = atActiveSecond;
         }}
-      />
-      <GoalBar
+      /> : null}
+      {snapshot.journeyState !== "prelaunch" ? <GoalBar
         distanceMetres={distanceMetres}
         landmarkMetres={snapshot.assets.dayRouteMetres}
         marathonMetres={snapshot.assets.marathonMetres}
         freshness={distanceMetres > routeRuntime.globalDistanceMetres + 0.001
           ? "extrapolated"
           : "last confirmed"}
-      />
+      /> : null}
       {detailsOpen ? <div className="route-status" aria-label={`Current route zone: ${displayedZoneLabel}`}>
         <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>
         <strong>{displayedZoneLabel}</strong>
@@ -901,7 +909,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             <span className="control-icon" aria-hidden="true">↗</span>
             Share
           </button>
-          {snapshot.assets.schemaVersion === 3 ? (
+          {snapshot.journeyState !== "prelaunch" && snapshot.assets.schemaVersion === 3 ? (
             <PostcardButton
               key={snapshot.countryDay.id}
               countryDayId={snapshot.countryDay.id}
@@ -919,7 +927,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           onToggleSound={() => void toggleSound()}
         />
         {tomorrowPack ? <TomorrowPreview cityName={tomorrowPack.cityName} countryName={tomorrowPack.countryName} packId={tomorrowPack.assetVersion} startsAt={snapshot.countryDay.endsAt} /> : null}
-        <p className="dock-streak" data-testid="dock-streak">
+        {snapshot.journeyState !== "prelaunch" ? <p className="dock-streak" data-testid="dock-streak">
           {/* Both halves are server-confirmed: the streak came with the bootstrap,
               and the seconds are the ones the heartbeat has already counted. */}
           {snapshot.passport.streak > 0
@@ -928,7 +936,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           {collectedToday
             ? <span className="dock-streak-today"> · today collected</span>
             : <span className="dock-streak-today"> · {Math.max(0, Math.ceil(snapshot.passport.collectSeconds - visitorSeconds))}s to collect today</span>}
-        </p>
+        </p> : null}
         <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/privacy">Privacy</Link></nav>
         <CorrectionForm
           packId={snapshot.assets.assetVersion}

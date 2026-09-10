@@ -18,10 +18,13 @@ describe("Phase 2 deployment policy", () => {
     expect(phase2DeploymentAllowed({ ...preview, VERCEL_GIT_COMMIT_REF: "main" })).toBe(false);
   });
 
-  it("refuses Phase 2 and fixture payments in Production", () => {
+  it("requires the independent launch switch in Production", () => {
     const production = { ...preview, VERCEL_ENV: "production" };
     expect(phase2DeploymentAllowed(production)).toBe(false);
+    expect(phase2DeploymentAllowed({ ...production, LAUNCH_ENABLED: "true" })).toBe(true);
+    expect(phase2DeploymentAllowed({ ...production, PHASE2_ENABLED: "false", LAUNCH_ENABLED: "true" })).toBe(false);
     expect(fixturePaymentsAllowed(production)).toBe(false);
+    expect(fixturePaymentsAllowed({ ...production, LAUNCH_ENABLED: "true" })).toBe(false);
   });
 
   it("requires a strong fixture secret", () => {

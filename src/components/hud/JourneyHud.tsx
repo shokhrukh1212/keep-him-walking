@@ -25,6 +25,7 @@ type Props = {
   weatherLabel?: string | null;
   liveCountries?: LiveCountryView[];
   todayTopCountries?: CountryWatchView[];
+  launchCountdown?: string | null;
 };
 
 export function JourneyHud({
@@ -41,6 +42,7 @@ export function JourneyHud({
   weatherLabel = null,
   liveCountries = [],
   todayTopCountries = [],
+  launchCountdown = null,
 }: Props) {
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   return (
@@ -64,6 +66,7 @@ export function JourneyHud({
           wakeCountdown={wakeCountdown}
           waitingSinceLocalTime={waitingSinceLocalTime}
           waitingDuration={waitingDuration}
+          launchCountdown={launchCountdown}
         />
       </div>
       <CountryLeaderboardSheet

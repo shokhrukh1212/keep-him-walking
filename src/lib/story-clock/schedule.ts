@@ -1,7 +1,7 @@
 export const DAY_MS = 24 * 60 * 60 * 1_000;
 
 export const PHASE2_ROUTE = [
-  { dayNumber: 1, countryCode: "UZ", countryName: "Uzbekistan", cityName: "Tashkent", timeZone: "Asia/Tashkent", scenePackId: "tashkent-v4" },
+  { dayNumber: 1, countryCode: "UZ", countryName: "Uzbekistan", cityName: "Tashkent", timeZone: "Asia/Tashkent", scenePackId: "tashkent-v5" },
   { dayNumber: 2, countryCode: "TJ", countryName: "Tajikistan", cityName: "Dushanbe", timeZone: "Asia/Dushanbe", scenePackId: "dushanbe-v1" },
   { dayNumber: 3, countryCode: "KG", countryName: "Kyrgyzstan", cityName: "Bishkek", timeZone: "Asia/Bishkek", scenePackId: "bishkek-v1" },
   { dayNumber: 4, countryCode: "KZ", countryName: "Kazakhstan", cityName: "Almaty", timeZone: "Asia/Almaty", scenePackId: "almaty-v1" },

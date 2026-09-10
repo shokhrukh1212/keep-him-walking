@@ -24,7 +24,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         .toBeCloseTo(viewport.width * 0.61, 0);
       const personHeight = Number(await actor.getAttribute("data-person-height"));
       expect(Number(await world.getAttribute("data-shadow-radius-x"))).toBeCloseTo(personHeight * 0.55 * 0.5, 0);
-      expect(await world.getAttribute("data-grade")).toBe(await actor.getAttribute("data-grade"));
+      const worldGrade = JSON.parse(await world.getAttribute("data-grade") ?? "null") as { exposure: number; tint: { r: number; g: number; b: number } };
+      const actorGrade = JSON.parse(await actor.getAttribute("data-grade") ?? "null") as { exposure: number; tint: { r: number; g: number; b: number } };
+      expect(worldGrade.exposure).toBeCloseTo(actorGrade.exposure, 3);
+      expect(worldGrade.tint.r).toBeCloseTo(actorGrade.tint.r, 3);
+      expect(worldGrade.tint.g).toBeCloseTo(actorGrade.tint.g, 3);
+      expect(worldGrade.tint.b).toBeCloseTo(actorGrade.tint.b, 3);
       await expect(world).toHaveAttribute("data-scene-textures", new RegExp(zone.id));
     }
     await page.getByLabel("Review quality").selectOption("low");

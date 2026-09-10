@@ -35,6 +35,14 @@ export type NextDayPlan = {
   } | null;
 };
 
+/** Day 1 names the traveler rather than choosing a country; its fixed onward
+ * leg is Dushanbe. Every later winner carries its destination pack explicitly. */
+export function nextDayPackIdForWinner(winner: VoteWinner): string | null {
+  if (winner.state !== "closed") return null;
+  if (winner.kind === "name") return "dushanbe-v1";
+  return winner.winnerPackId ?? null;
+}
+
 /**
  * Builds tomorrow from the pack the vote chose, plus the ballot that follows it.
  * Candidate content comes from the registry here; every write still happens in

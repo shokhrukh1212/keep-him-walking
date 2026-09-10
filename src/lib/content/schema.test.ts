@@ -39,9 +39,9 @@ describe("Tashkent content pack", () => {
 describe("Phase 2 country packs", () => {
   const packs = registeredCountryPacks().filter((pack): pack is CountryPackV3 => pack.schemaVersion === 3 && !phase3EditorialBufferOrder.includes(pack.assetVersion as typeof phase3EditorialBufferOrder[number]));
 
-  it("registers the immutable seven-country route", () => {
+  it("registers the immutable launch route and its Tashkent rollback", () => {
     expect(packs.map((pack) => pack.assetVersion)).toEqual([
-      "tashkent-v4", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1",
+      "tashkent-v4", "tashkent-v5", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1",
     ]);
     for (const pack of packs) expect(countryPackV3Schema.parse(pack)).toBeTruthy();
   });
@@ -54,8 +54,8 @@ describe("Phase 2 country packs", () => {
     );
     expect(new Set(sceneUrls).size).toBe(35);
     expect(packs.every((pack) => pack.storyBeats.length >= 4)).toBe(true);
-    expect(packs[0]?.culturalReview.status).toBe("approved");
-    expect(packs.slice(1).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
+    expect(packs.slice(0, 2).every((pack) => pack.culturalReview.status === "approved")).toBe(true);
+    expect(packs.slice(2).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
     expect(new Set(packs.map((pack) => pack.npcSystem.baseType))).toEqual(new Set(["resident-a", "resident-b"]));
   });
 

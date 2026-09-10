@@ -35,7 +35,7 @@ type CountryDayRow = {
   ends_at: string;
   story_summary: string | null;
   scene_pack_id: string;
-  journeys: { total_days: number } | Array<{ total_days: number }>;
+  journeys: { total_days: number; rollover_utc_hour?: number } | Array<{ total_days: number; rollover_utc_hour?: number }>;
   story_now?: string;
   story_scale?: number;
 };
@@ -77,7 +77,7 @@ type BootstrapBundleRow = {
     kind: string;
     options: Array<{ id: string; pack_id: string | null; ballots: number }>;
   };
-  journey: null | { travelerName: string | null };
+  journey: null | { travelerName: string | null; rolloverUtcHour?: number };
   countries: null | {
     live: Array<{ code: string; watchers: number }>;
     top: Array<{ code: string; watchSeconds: number }>;
@@ -120,13 +120,14 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
   const supabase = getServerSupabase();
   if (!supabase) return null;
   const config = serverRuntimeConfig();
+  if (process.env.VERCEL_ENV === "production" && !config.phase2Enabled) return null;
   let effectiveNow = now;
   let journeyId: string | null = null;
   let storyScale = 1;
   if (config.phase2Enabled) {
     const { data: journey, error: journeyError } = await supabase
       .from("journeys")
-      .select("id,real_time_anchor_at,story_time_anchor_at,story_time_scale")
+      .select("id,real_time_anchor_at,story_time_anchor_at,story_time_scale,launch_at")
       .eq("phase2_enabled", true)
       .in("status", ["preview", "active"])
       .order("starts_at", { ascending: false })
@@ -134,6 +135,7 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
       .maybeSingle();
     if (journeyError) throw journeyError;
     if (journey) {
+      if (journey.launch_at && new Date(journey.launch_at).getTime() > now.getTime()) return null;
       journeyId = journey.id;
       storyScale = Number(journey.story_time_scale);
       effectiveNow = scaledStoryNow(
@@ -148,7 +150,7 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
   const { data, error } = await supabase
     .from("country_days")
     .select(
-      "id,journey_id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id,journeys!inner(total_days,status)",
+      "id,journey_id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id,journeys!inner(total_days,status,rollover_utc_hour)",
     )
     .in("status", ["scheduled", "live"])
     .in("journeys.status", config.phase2Enabled ? ["preview", "active"] : ["active"])
@@ -176,6 +178,76 @@ function countryDayView(row: CountryDayRow): CountryDayView {
     endsAt: row.ends_at,
     storySummary: row.story_summary,
     scenePackId: row.scene_pack_id,
+  };
+}
+
+async function prelaunchBootstrapSnapshot(
+  now: Date,
+  config: ReturnType<typeof serverRuntimeConfig>,
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+): Promise<BootstrapSnapshot | null> {
+  const { data: journey, error: journeyError } = await supabase
+    .from("journeys")
+    .select("id,total_days,traveler_name,launch_at,rollover_utc_hour")
+    .eq("phase2_enabled", true)
+    .in("status", ["preview", "active"])
+    .gt("launch_at", now.toISOString())
+    .order("launch_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (journeyError) throw journeyError;
+  if (!journey?.launch_at) return null;
+
+  const { data: day, error: dayError } = await supabase
+    .from("country_days")
+    .select("id,journey_id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id")
+    .eq("journey_id", journey.id)
+    .eq("day_number", 1)
+    .maybeSingle();
+  if (dayError) throw dayError;
+  if (!day) return null;
+  const pack = getCountryPack(day.scene_pack_id);
+  if (!pack || pack.schemaVersion !== 3) {
+    throw new Error(`No matching launch pack for ${day.scene_pack_id}`);
+  }
+  const launchAt = new Date(journey.launch_at);
+  const afterMs = Math.max(1_000, Math.min(5 * 60_000, launchAt.getTime() - now.getTime()));
+  return {
+    serverNow: now.toISOString(),
+    realServerNow: now.toISOString(),
+    storyScale: 1,
+    mode: "prelaunch",
+    journeyState: "prelaunch",
+    refresh: { nextAt: launchAt.toISOString(), afterMs, reason: "launch" },
+    countryDay: countryDayView({
+      ...day,
+      journeys: { total_days: journey.total_days, rollover_utc_hour: journey.rollover_utc_hour },
+    } as CountryDayRow),
+    journey: {
+      travelerName: journey.traveler_name ?? null,
+      rolloverUtcHour: Number(journey.rollover_utc_hour ?? config.rolloverUtcHour),
+    },
+    activeEvent: null,
+    nextEvent: null,
+    vote: null,
+    presence: { activeViewers: null, status: "scheduled", ttlSeconds: config.presenceTtlSeconds, waitingSince: null },
+    countries: { live: [], todayTop: [] },
+    reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null },
+    dayPhotos: [],
+    weather: null,
+    steps: { global: 0, updatedAt: now.toISOString(), stale: false },
+    route: {
+      globalActiveSeconds: 0,
+      globalDistanceMetres: 0,
+      paceRate: 1,
+      authoritativeAt: now.toISOString(),
+      walking: false,
+    },
+    sponsor: { status: "unsponsored" },
+    postcard: { eligible: false, unlockSeconds: config.postcardUnlockSeconds, contributedSeconds: 0, url: null },
+    passport: { streak: 0, collectedToday: false, collectSeconds: config.passportCollectSeconds },
+    milestones: { hundredWatchersAt: null },
+    assets: pack,
   };
 }
 
@@ -311,7 +383,7 @@ function bootstrapFromBundle(
     countryDay: countryDayView(countryDay),
     journey: {
       travelerName: bundle.journey?.travelerName ?? null,
-      rolloverUtcHour: config.rolloverUtcHour,
+      rolloverUtcHour: Number(bundle.journey?.rolloverUtcHour ?? config.rolloverUtcHour),
     },
     activeEvent,
     nextEvent,
@@ -475,7 +547,9 @@ export async function liveBootstrapSnapshot(
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v12", {
+    const prelaunch = await prelaunchBootstrapSnapshot(now, config, supabase);
+    if (prelaunch) return prelaunch;
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v13", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -630,7 +704,10 @@ export async function liveBootstrapSnapshot(
     countryDay: countryDayView(countryDay),
     journey: {
       travelerName: (travelerName as string | null) ?? null,
-      rolloverUtcHour: config.rolloverUtcHour,
+      rolloverUtcHour: Number(
+        (Array.isArray(countryDay.journeys) ? countryDay.journeys[0] : countryDay.journeys)?.rollover_utc_hour
+          ?? config.rolloverUtcHour,
+      ),
     },
     activeEvent: events.activeEvent,
     nextEvent: events.nextEvent,

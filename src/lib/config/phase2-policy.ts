@@ -2,7 +2,9 @@ export type DeploymentEnvironment = Record<string, string | undefined>;
 
 export function phase2DeploymentAllowed(environment: DeploymentEnvironment = process.env): boolean {
   if (environment.PHASE2_ENABLED !== "true") return false;
-  if (environment.VERCEL_ENV === "production") return false;
+  if (environment.VERCEL_ENV === "production") {
+    return environment.LAUNCH_ENABLED === "true";
+  }
   if (environment.VERCEL_ENV === "preview") {
     return [
       "phase-2-seven-day-mvp",

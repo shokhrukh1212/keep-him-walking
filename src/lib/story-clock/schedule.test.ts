@@ -8,7 +8,7 @@ describe("Phase 2 seven-day story schedule", () => {
     const schedule = buildSevenDaySchedule(start);
     expect(schedule).toHaveLength(7);
     expect(schedule.map((day) => day.scenePackId)).toEqual([
-      "tashkent-v4", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1",
+      "tashkent-v5", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1",
     ]);
     schedule.slice(1).forEach((day, index) => expect(day.startsAt).toBe(schedule[index]?.endsAt));
   });

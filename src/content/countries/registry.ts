@@ -1,4 +1,5 @@
 import { tashkentCountryPackV4 } from "./tashkent.v4";
+import { tashkentCountryPackV5 } from "./tashkent.v5";
 import { dushanbeCountryPackV1 } from "./dushanbe.v1";
 import { bishkekCountryPackV1 } from "./bishkek.v1";
 import { almatyCountryPackV1 } from "./almaty.v1";
@@ -29,6 +30,7 @@ function withGeography(pack: CountryPack): CountryPack {
 
 const packs = new Map<string, CountryPack>(([
   [tashkentCountryPackV4.assetVersion, tashkentCountryPackV4],
+  [tashkentCountryPackV5.assetVersion, tashkentCountryPackV5],
   [dushanbeCountryPackV1.assetVersion, dushanbeCountryPackV1],
   [bishkekCountryPackV1.assetVersion, bishkekCountryPackV1],
   [almatyCountryPackV1.assetVersion, almatyCountryPackV1],
@@ -53,7 +55,7 @@ export function registeredCountryPacks(): CountryPack[] {
   return [...packs.values()];
 }
 
-const phase2Order = ["tashkent-v4", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1"];
+const phase2Order = ["tashkent-v5", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1"];
 
 export const phase3EditorialBufferOrder = ["sofia-v1", "belgrade-v1", "zagreb-v1", "ljubljana-v1", "vienna-v1", "bratislava-v1", "prague-v1"] as const;
 

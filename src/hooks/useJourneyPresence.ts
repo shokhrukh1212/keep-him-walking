@@ -151,5 +151,7 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
     };
   }, [heartbeat, sceneReady, snapshot.countryDay.id, snapshot.mode]);
 
-  return snapshot.mode === "offline_preview" ? snapshot.presence.status : status;
+  return snapshot.mode === "offline_preview" || snapshot.mode === "prelaunch"
+    ? snapshot.presence.status
+    : status;
 }

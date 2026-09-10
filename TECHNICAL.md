@@ -780,13 +780,9 @@ Plus a per-zone `.wav` ambience and a postcard background.
 
 `PixiScene` branches on `coherentPanorama = (pack.schemaVersion === 3)`.
 
-Of the 16 registered packs, **14 are schema v3** and take this branch: `tashkent-v4`,
-the six other Phase 2 cities, and the seven Phase 3 cities. The remaining two —
-`tashkent-v2` and `tashkent-v3` — are schema **v2** and still take the older multi-layer
-parallax path (distant + architecture + three ground variants, six pooled sprites per
-layer, illustrated props with depth-scaled tracks). They are kept registered purely as
-rollback targets; nothing schedules them. So the legacy renderer is live code but is not
-what any visitor currently sees.
+All 15 registered packs are schema v3 and take this branch: the launch registration
+`tashkent-v5`, its byte-identical calibrated `tashkent-v4` rollback target, the six
+other Phase 2 cities, and the seven Phase 3 cities. No schema-v2 pack remains registered.
 
 On the v3 panorama branch:
 
@@ -1059,7 +1055,8 @@ They are deleted. Measured across the fourteen registered packs:
 | **`public/` total** | **73 MiB → 51 MiB** |
 
 `content:validate` went from *16 packs / 717 uniquely owned scene assets* to
-*14 packs / 280*.
+*14 packs / 280*. P21 adds the byte-identical `tashkent-v5` launch registration, so
+validation now reports *15 packs / 280 uniquely owned scene assets*.
 
 Two pack-level rules changed with the files, because they described a renderer
 that no longer exists:
@@ -1096,7 +1093,7 @@ The prop cutouts (1.36 MiB per city) are **not** deleted: see §6.5.
 
 ## 9. Data model and API surface
 
-### Tables (27 forward migrations)
+### Tables (29 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1118,6 +1115,14 @@ text store. It keeps a validated pack/optional zone, closed category enum, body 
 state. RLS and grants keep every row service-only. Accepted contributor credit is
 `count(distinct visitor_hash)`, so accepting several notes from one person never inflates
 the public acknowledgement.
+
+**Season 1 migrations 0028-0029, launch:** `journeys.launch_at` is the real launch
+boundary and `rollover_utc_hour` stores 16 for Season 1. `seed_season1_launch` creates
+the 30-day journey, Tashkent v5 Day 1, its name vote and seven founding prices/slots in
+one retry-safe transaction. Heartbeat v11 rejects prelaunch advancement in Postgres;
+bootstrap v13 carries the stored rollover hour. `switch_country_day_pack` is the
+expected-current guarded v5→v4 rollback. Migration 0029 removes the loop-variable
+shadowing caught after 0028 was applied; it does not change seed behaviour.
 
 **Season 1 migration 0011, part 1:** `journey_runtime` adds non-negative
 `global_distance_metres` and positive `pace_rate`; `day_outcomes` stores the immutable
@@ -1185,7 +1190,8 @@ bootstrap v9 carry it.
 `record_presence_heartbeat` → `_v2` → `_v3` → `_v4` (the walking rule, distinct-watcher
 pace and pace-weighted distance) → `_v5` (per-country watch aggregation) → `_v6`
 (reaction buckets and scheduled crowd actions) → `_v7` (weather) → `_v8` (exact daily
-peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval and lease),
+peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval and lease)
+→ `_v11` (the launch boundary),
 `normalize_country_code`, `read_country_day_watch`, `reaction_threshold`,
 `close_and_pick_vote_winner`, `create_next_country_day`, `read_traveler_name`,
 `write_journey_weather`, `read_journey_weather`,
@@ -1198,7 +1204,8 @@ peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval a
 `cleanup_phase2_retention`, `journey_story_now`,
 `read_journey_runtime_v3` / `_v4` / `_v5`,
 `read_visitor_passport`, `presence_heartbeat_seconds`, `presence_lease_ttl_seconds`,
-`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10` / `_v11` / `_v12`
+`seed_season1_launch`, `switch_country_day_pack`,
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10` / `_v11` / `_v12` / `_v13`
 (one-call bootstrap with atomic admission control, the distance projection, the
 country aggregate, the reaction board, the ballot, the weather, the passport streak and
 the hundred-watcher moment),
@@ -1207,7 +1214,7 @@ the hundred-watcher moment),
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (32)
+### Route handlers (33)
 
 ```
 GET  /api/bootstrap                 the world only: day, event, vote, presence, steps,
@@ -1227,8 +1234,9 @@ POST /api/webhooks/lemonsqueezy     signed, replay-audited
 POST /api/sponsor/fixture/complete  no-money rehearsal adapter (multi-gated)
 GET  /api/calendar                  .ics for tomorrow
 POST /api/notifications/country     revocable, provider-gated opt-in
-GET  /api/cron/rollover             daily reconciliation (authorized)
-GET  /api/health                    database + registered-pack readiness
+GET  /api/cron/prewarm              15:55 asset, OG and weather warm-up (authorized)
+GET  /api/cron/rollover             16:00 daily reconciliation (authorized)
+GET  /api/health                    DB/content/provider/weather/asset/launch readiness
 POST /api/reactions                 enum reaction, per-kind cooldown, crowd threshold
 POST /api/day-photos                the crowd's photograph for a scheduled moment
 POST /api/corrections               private correction, three per visitor per hour
@@ -1550,6 +1558,33 @@ pack automatically.
 
 Migration `202609100027_season1_corrections.sql` was applied on 2026-09-10 to dev project
 `tkntxptfhmjnqaaveddx`. All 316 remote pgTAP assertions passed, including P20's 24, and
+remote database lint returned `{"results":[]}`.
+
+### Production launch configuration (P21)
+
+Production enters the Season 1 path only when both `PHASE2_ENABLED=true` and
+`LAUNCH_ENABLED=true`. With the switch armed but before the journey's stored
+`launch_at`, `/api/bootstrap` returns the real Day 1 pack in `prelaunch` mode: the scene
+is idle, both visible status lines say “Starts …”, and presence, reactions, progress,
+postcards and visitor-private refreshes do not run. At the database boundary heartbeat
+v11 independently refuses an instant before `coalesce(launch_at, starts_at)`.
+
+`pnpm seed:season1 --launch-at <...>` is a no-write plan. `--apply` calls the atomic seed
+RPC; a same-data retry returns `exists`, while drift is rejected. The actual production
+date and launch switch remain unset. The Day 1 name winner is followed by the fixed
+Dushanbe leg; its Day 2 ballot then returns to neighbour-first destination voting.
+
+Vercel declares prewarm at 15:55 UTC and rollover at 16:00 UTC. Prewarm fetches the
+upcoming pack before Day 1, all possible vote-owned packs thereafter, the day OG image,
+and a current weather reading. `/api/health` now reports database/content state, weather
+and payment provider configuration, confirmed weather age, representative asset-origin
+reachability, and the stored launch state. The minute-accuracy limitation of free Vercel
+cron is recorded as launch-blocking D5, with the operational checklist and rollback in
+`docs/runbooks/launch-day.md`.
+
+Migrations `202609100028_season1_launch.sql` and
+`202609100029_fix_launch_seed_lint.sql` were applied on 2026-09-10 to dev project
+`tkntxptfhmjnqaaveddx`. All 346 remote pgTAP assertions passed, including P21's 30, and
 remote database lint returned `{"results":[]}`.
 
 ### Sponsor pricing and placements (P15)

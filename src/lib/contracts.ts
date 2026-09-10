@@ -7,7 +7,7 @@ import type { RouteRuntime } from "@/lib/world/types";
 import type { CrowdActionKind } from "@/lib/traveler/motion-clock";
 import type { JourneyWeather } from "@/lib/weather/open-meteo";
 
-export type ConnectionStatus = "live" | "reconnecting" | "offline";
+export type ConnectionStatus = "live" | "reconnecting" | "offline" | "scheduled";
 
 export type CountryDayView = {
   id: string;
@@ -97,11 +97,11 @@ export type BootstrapSnapshot = {
   realServerNow: string;
   /** Story-clock multiplier. It is greater than one only in an isolated rehearsal. */
   storyScale?: number;
-  mode: "live" | "offline_preview";
+  mode: "live" | "prelaunch" | "offline_preview";
   /** Private response fact derived from the HttpOnly identity cookie. */
   firstVisit?: boolean;
   journeyState: "prelaunch" | "live" | "intermission" | "completed";
-  refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "none" };
+  refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "launch" | "none" };
   countryDay: CountryDayView;
   /** Season-level facts. travelerName is null until the Day-1 vote names him. */
   journey: { travelerName: string | null; rolloverUtcHour: number };

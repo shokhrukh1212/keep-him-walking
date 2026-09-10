@@ -2,7 +2,7 @@ import "server-only";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { storePendingRecaps, type PendingRecap } from "@/lib/recap/store";
-import { planNextDay, type VoteWinner } from "@/lib/story-clock/next-day";
+import { nextDayPackIdForWinner, planNextDay, type VoteWinner } from "@/lib/story-clock/next-day";
 import { writeOperationalLog } from "@/lib/observability/logger";
 
 export async function reconcilePhase2(now = new Date()) {
@@ -23,8 +23,9 @@ export async function reconcilePhase2(now = new Date()) {
     );
     if (winnerError) throw winnerError;
     const winner = (winnerRow ?? { state: "no_closing_vote" }) as VoteWinner;
-    const nextDay = winner.state === "closed" && winner.winnerPackId
-      ? await createNextDay(supabase, winner, now)
+    const nextPackId = nextDayPackIdForWinner(winner);
+    const nextDay = nextPackId
+      ? await createNextDay(supabase, { ...winner, winnerPackId: nextPackId }, now)
       : null;
 
     const [{ data: state, error: stateError }, { data: cleanup, error: cleanupError }] = await Promise.all([

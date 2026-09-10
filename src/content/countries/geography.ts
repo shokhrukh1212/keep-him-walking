@@ -14,6 +14,12 @@ export type PackGeography = {
 };
 
 export const PACK_GEOGRAPHY: Record<string, PackGeography> = {
+  "tashkent-v5": {
+    lat: 41.2995,
+    lon: 69.2401,
+    neighbours: ["almaty-v1", "bishkek-v1", "dushanbe-v1"],
+    voteBlurb: "Wide boulevards, blue-tiled domes and the busiest bazaar in Central Asia.",
+  },
   "tashkent-v4": {
     lat: 41.2995,
     lon: 69.2401,
