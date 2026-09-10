@@ -6,6 +6,9 @@ import { countryFromHeader, UNKNOWN_COUNTRY_CODE } from "@/lib/countries/header"
 import { getServerSupabase } from "@/lib/supabase/server";
 import { latestJourney } from "@/lib/season/data";
 import { CountryShareButton } from "@/components/country/CountryShareButton";
+import { CorrectionForm } from "@/components/corrections/CorrectionForm";
+import { registeredCountryPacks } from "@/content/countries/registry";
+import { correctionContributorCount } from "@/lib/corrections/data";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +23,7 @@ type CountryDayRow = {
   starts_at: string;
   ends_at: string;
   status: string;
+  scene_pack_id: string;
 };
 
 type CountrySeason = {
@@ -44,7 +48,7 @@ async function loadCountrySeason(code: string): Promise<CountrySeason | null> {
 
   const { data: days } = await supabase
     .from("country_days")
-    .select("id,day_number,country_code,country_name,city_name,starts_at,ends_at,status")
+    .select("id,day_number,country_code,country_name,city_name,starts_at,ends_at,status,scene_pack_id")
     .eq("journey_id", journey.id)
     .order("day_number", { ascending: true });
   const seasonDays = (days ?? []) as CountryDayRow[];
@@ -104,7 +108,11 @@ export default async function CountryPage({ params }: Props) {
   const code = normalizedCode(cc);
   if (!code) notFound();
   const name = countryDisplayName(code);
-  const season = await loadCountrySeason(code);
+  const correctionPack = registeredCountryPacks().filter((pack) => pack.countryCode === code).at(-1) ?? null;
+  const [season, contributorCount] = await Promise.all([
+    loadCountrySeason(code),
+    correctionPack ? correctionContributorCount(correctionPack.assetVersion) : Promise.resolve(0),
+  ]);
   const shareText = season && season.seasonWatchSeconds > 0
     ? season.todayRank !== null
       ? `${flagEmoji(code)} ${name} carried him ${formatWatchDuration(season.todayWatchSeconds)} today — #${season.todayRank} in the world. →`
@@ -156,6 +164,16 @@ export default async function CountryPage({ params }: Props) {
               </ul>
             </section>
           ) : null}
+
+          {contributorCount > 0 ? <p className="country-contributor-credit">Improved with help from {contributorCount} contributors</p> : null}
+
+          {correctionPack ? <section>
+            <h2>Help improve this country</h2>
+            <CorrectionForm
+              packId={correctionPack.assetVersion}
+              zones={correctionPack.route.zones.map((zone) => ({ id: zone.id, label: zone.label }))}
+            />
+          </section> : null}
 
           <section>
             <h2>Share</h2>

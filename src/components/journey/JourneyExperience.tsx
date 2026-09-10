@@ -62,6 +62,7 @@ import {
 import { WakeCard } from "@/components/journey/WakeCard";
 import { FirstVisitOverlay } from "@/components/journey/FirstVisitOverlay";
 import { shareCard } from "@/lib/share/client";
+import { CorrectionForm } from "@/components/corrections/CorrectionForm";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -929,6 +930,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             : <span className="dock-streak-today"> · {Math.max(0, Math.ceil(snapshot.passport.collectSeconds - visitorSeconds))}s to collect today</span>}
         </p>
         <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/privacy">Privacy</Link></nav>
+        <CorrectionForm
+          packId={snapshot.assets.assetVersion}
+          zones={snapshot.assets.route.zones.map((zone) => ({ id: zone.id, label: zone.label }))}
+        />
       </section>
 
       <DailyVote

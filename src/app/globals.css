@@ -1882,6 +1882,23 @@ button:focus-visible,
 .postkit-list button { justify-self: start; border: 0; border-radius: 999px; padding: 0.6rem 0.9rem; color: #10202a; background: #ffd777; font-weight: 800; cursor: pointer; }
 .admin-day-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .admin-day-links a { border: 1px solid rgb(255 255 255 / 20%); border-radius: 999px; padding: 0.45rem 0.65rem; }
+.correction-form { width: min(34rem, 100%); margin-top: 0.8rem; color: rgb(247 240 223 / 80%); }
+.correction-form summary { cursor: pointer; color: #ffe1a0; font-weight: 700; }
+.correction-form form { display: grid; gap: 0.75rem; margin-top: 0.8rem; border: 1px solid rgb(255 255 255 / 14%); border-radius: 0.85rem; padding: 1rem; background: rgb(9 26 35 / 72%); }
+.correction-form label { display: grid; gap: 0.3rem; font-size: 0.75rem; font-weight: 700; }
+.correction-form select,
+.correction-form textarea { width: 100%; border: 1px solid rgb(255 255 255 / 24%); border-radius: 0.5rem; padding: 0.65rem; background: #10232d; color: #fff3df; font: inherit; }
+.correction-form textarea { resize: vertical; }
+.correction-form button,
+.correction-actions button { justify-self: start; border: 0; border-radius: 999px; padding: 0.6rem 0.9rem; background: #ffd777; color: #10202a; font-weight: 800; cursor: pointer; }
+.correction-form button:disabled { cursor: wait; opacity: 0.65; }
+.correction-thanks,
+.country-contributor-credit { color: #bcebcf !important; }
+.correction-queue { display: grid; gap: 1rem; padding: 0; list-style: none; }
+.correction-queue > li { display: grid; gap: 0.55rem; border: 1px solid rgb(255 255 255 / 16%); border-radius: 0.85rem; padding: 1rem; background: rgb(9 26 35 / 42%); }
+.correction-queue p { margin: 0; white-space: pre-wrap; }
+.correction-queue small { color: rgb(247 240 223 / 58%); }
+.correction-actions { display: flex; gap: 0.5rem; }
 .postkit-list { display: grid; gap: 1rem; }
 .postkit-list h2,
 .postkit-list p { margin: 0; }

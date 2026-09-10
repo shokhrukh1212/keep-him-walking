@@ -38,3 +38,15 @@ export const dayPhotoQuerySchema = z.object({
   atActiveSecond: z.number().int().min(0).max(86_400 * 2),
   atDistanceMetres: z.number().min(0).max(1_000_000),
 });
+
+/** P20's private queue is the sole visitor free-text exception. */
+export const correctionBodySchema = z.object({
+  packId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*-v\d+$/),
+  zoneId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).nullable().optional(),
+  category: z.enum(["place", "phrase", "dialogue", "art", "other"]),
+  body: z.string().trim().min(1).max(280),
+}).strict();
+
+export const correctionModerationSchema = z.object({
+  status: z.enum(["accepted", "rejected"]),
+}).strict();

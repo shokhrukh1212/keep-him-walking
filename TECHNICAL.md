@@ -1096,7 +1096,7 @@ The prop cutouts (1.36 MiB per city) are **not** deleted: see §6.5.
 
 ## 9. Data model and API surface
 
-### Tables (26 forward migrations)
+### Tables (27 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1111,6 +1111,13 @@ enforcing legal state transitions), `payment_webhook_events`, `sponsor_metric_ev
 
 **Phase 3:** `country_notification_opt_ins`, `experiment_exposures`,
 `operational_incidents`, `webhook_replay_audit`.
+
+**Season 1 migration 0027, corrections:** `corrections` is the only visitor-written
+text store. It keeps a validated pack/optional zone, closed category enum, body up to
+280 characters, anonymous visitor hash, trusted two-letter country code and moderation
+state. RLS and grants keep every row service-only. Accepted contributor credit is
+`count(distinct visitor_hash)`, so accepting several notes from one person never inflates
+the public acknowledgement.
 
 **Season 1 migration 0011, part 1:** `journey_runtime` adds non-negative
 `global_distance_metres` and positive `pace_rate`; `day_outcomes` stores the immutable
@@ -1200,7 +1207,7 @@ the hundred-watcher moment),
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (29)
+### Route handlers (32)
 
 ```
 GET  /api/bootstrap                 the world only: day, event, vote, presence, steps,
@@ -1224,11 +1231,14 @@ GET  /api/cron/rollover             daily reconciliation (authorized)
 GET  /api/health                    database + registered-pack readiness
 POST /api/reactions                 enum reaction, per-kind cooldown, crowd threshold
 POST /api/day-photos                the crowd's photograph for a scheduled moment
+POST /api/corrections               private correction, three per visitor per hour
 POST /api/observability/vitals
 GET  /api/admin/preview/[packId]    protected non-production pack preview
 POST /api/admin/preview/session     expiring signed HTTP-only preview session
 POST /api/admin/session             rate-limited 12-hour production admin session
 GET  /api/admin/postkit/[n]         private finalized copy and image URLs
+GET  /api/admin/corrections         private status-filtered correction queue
+PATCH /api/admin/corrections/[id]   locked, idempotent accept/reject decision
 POST /api/share/steps               signed card claims from confirmed contribution rows
 GET  /api/og/day                    current city, count bucket and leading flags (PNG)
 GET  /api/og/steps?token=           signed personal contribution card (PNG)
@@ -1520,6 +1530,27 @@ postcard, resident, NPC-system and editorial fields. `resident` and `notebookLin
 defaults, so the existing fourteen packs retain their parsed shape. Sofia remains on its
 existing one-master pack until the owner supplies the six separate paintings; the exact
 handoff is D4 in `docs/plan/AFTER-P22.md`.
+
+### Private corrections loop (P20)
+
+`CorrectionForm` appears in the live dock and on a hosted country's page. It sends the
+pack, optional zone, category enum and at most 280 characters to `POST /api/corrections`.
+The route checks the Origin and registered pack/zone, hashes the HttpOnly visitor id,
+normalizes only the edge-provided country code and calls `submit_correction`. That RPC
+applies the shared distributed limit at three submissions per visitor per UTC hour and
+stores the text behind RLS. Responses, analytics and logs never echo the body.
+
+The existing 12-hour signed admin session protects `/admin/corrections` and both admin
+routes; unauthenticated requests receive 404 and authenticated responses are private,
+`no-store`. `moderate_correction` locks the row and makes repeated accept/reject calls
+idempotent. Public country pages call the scalar contributor projection and render the
+owner-approved wording only when the confirmed count is positive: “Improved with help
+from N contributors”. Acceptance credits the anonymous contributor but never edits a
+pack automatically.
+
+Migration `202609100027_season1_corrections.sql` was applied on 2026-09-10 to dev project
+`tkntxptfhmjnqaaveddx`. All 316 remote pgTAP assertions passed, including P20's 24, and
+remote database lint returned `{"results":[]}`.
 
 ### Sponsor pricing and placements (P15)
 

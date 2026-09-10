@@ -13,6 +13,7 @@ export default async function AdminPage() {
       <span className="eyebrow">PRIVATE OPERATIONS</span>
       <h1>Post kit</h1>
       <p>Your 12-hour admin session is active.</p>
+      <p><Link href="/admin/corrections">Review private corrections</Link></p>
       <nav className="admin-day-links" aria-label="Post kits">
         {Array.from({ length: 30 }, (_, index) => <Link key={index + 1} href={`/admin/postkit/${index + 1}`}>Day {index + 1}</Link>)}
       </nav>
