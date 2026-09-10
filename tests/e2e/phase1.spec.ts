@@ -194,7 +194,7 @@ test("the first viewport explains the live rule and remains keyboard accessible"
   await expect(page.getByText(/person watching/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Today’s choice", { exact: false })).not.toBeVisible();
 
-  await page.getByRole("button", { name: "Daily vote" }).focus();
+  await page.getByRole("button", { name: /Destination vote/ }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("region", { name: "Daily vote" })).toBeVisible();
   await page.getByRole("button", { name: "Find the best plov" }).click();
@@ -251,7 +251,7 @@ test("two browsers share presence and preserve steps across reconnects", async (
   server.sessions.delete(finalSession!);
   await first.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(first.getByText("0 people watching")).toBeVisible();
-  await expect(first.getByText("He’s waiting for a watcher")).toBeVisible();
+  await expect(first.getByText("Nobody's watching. He's waiting for the internet.")).toBeVisible();
 
   await firstContext.close();
   await secondContext.close();

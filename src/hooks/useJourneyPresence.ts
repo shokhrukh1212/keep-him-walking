@@ -61,7 +61,19 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
         || (result.wokeHim !== undefined && typeof result.wokeHim !== "boolean")) {
         throw new Error("Invalid presence confirmation");
       }
-      onHeartbeat(result);
+      // Keep the last server-confirmed bootstrap values during a rolling deploy
+      // where an older heartbeat route may not yet return the newer optional
+      // presentation fields. Presence/progress still come only from this
+      // heartbeat; nothing is invented in the browser.
+      onHeartbeat({
+        ...result,
+        realServerNow: result.realServerNow ?? result.serverNow,
+        waitingSince: result.waitingSince ?? null,
+        wokeHim: result.wokeHim ?? false,
+        countryCode: result.countryCode ?? snapshot.countryDay.countryCode,
+        reactions: result.reactions ?? snapshot.reactions,
+        weather: result.weather ?? snapshot.weather,
+      });
       setStatus("live");
       if (!forceInactive) {
         if (timer.current) window.clearTimeout(timer.current);
@@ -81,7 +93,15 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
       window.clearTimeout(timeout);
       if (requestGeneration === generation.current) requestInFlight.current = false;
     }
-  }, [onHeartbeat, sceneReady, snapshot.mode, snapshot.countryDay.id]);
+  }, [
+    onHeartbeat,
+    sceneReady,
+    snapshot.mode,
+    snapshot.countryDay.id,
+    snapshot.countryDay.countryCode,
+    snapshot.reactions,
+    snapshot.weather,
+  ]);
 
   useEffect(() => {
     heartbeatRef.current = heartbeat;

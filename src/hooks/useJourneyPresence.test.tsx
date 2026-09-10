@@ -32,7 +32,9 @@ function snapshot(countryDayId: string): BootstrapSnapshot {
   return {
     mode: "live",
     presence: { status: "live", activeViewers: 1, ttlSeconds: 50, waitingSince: null },
-    countryDay: { id: countryDayId },
+    countryDay: { id: countryDayId, countryCode: "UZ" },
+    reactions: { counts: { wave: 2, water: 1, photo: 0 }, scheduled: [], nextScheduledAction: null },
+    weather: null,
   } as unknown as BootstrapSnapshot;
 }
 
@@ -43,6 +45,38 @@ afterEach(() => {
 });
 
 describe("useJourneyPresence country rollover", () => {
+  it("retains confirmed presentation fields from bootstrap during a rolling deploy", async () => {
+    const legacyResponse = {
+      ...heartbeatResponse,
+      realServerNow: undefined,
+      waitingSince: undefined,
+      wokeHim: undefined,
+      countryCode: undefined,
+      reactions: undefined,
+      weather: undefined,
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => legacyResponse });
+    vi.stubGlobal("fetch", fetchMock);
+    const onHeartbeat = vi.fn();
+    const currentSnapshot = snapshot("day-1");
+    const { unmount } = renderHook(() => useJourneyPresence({
+      snapshot: currentSnapshot,
+      sceneReady: true,
+      onHeartbeat,
+    }));
+
+    await waitFor(() => expect(onHeartbeat).toHaveBeenCalledTimes(1));
+    expect(onHeartbeat).toHaveBeenCalledWith(expect.objectContaining({
+      realServerNow: legacyResponse.serverNow,
+      waitingSince: null,
+      wokeHim: false,
+      countryCode: "UZ",
+      reactions: currentSnapshot.reactions,
+      weather: null,
+    }));
+    unmount();
+  });
+
   it("aborts a stalled request and retries instead of locking presence forever",async()=>{
     vi.useFakeTimers();
     const fetchMock=vi.fn()
