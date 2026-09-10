@@ -69,3 +69,18 @@ export type StageFrame = {
   stage: ZoneStage;
   layout: StageLayout;
 };
+
+/**
+ * Pixi snaps its screen to whole device pixels: at 150 % display scaling a 1333 × 811 host
+ * publishes 1333.33 × 811.33. That error is at most half a device pixel, which is two CSS
+ * pixels at the browser's 25 % minimum zoom.
+ */
+export const STAGE_FRAME_TOLERANCE_PX = 2;
+
+/** Whether a published world frame describes this host's viewport, allowing for that rounding. */
+export function frameFitsViewport(
+  frame: Pick<StageFrame, "viewportW" | "viewportH">, width: number, height: number,
+): boolean {
+  return Math.abs(frame.viewportW - width) <= STAGE_FRAME_TOLERANCE_PX
+    && Math.abs(frame.viewportH - height) <= STAGE_FRAME_TOLERANCE_PX;
+}

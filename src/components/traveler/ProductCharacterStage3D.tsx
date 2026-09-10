@@ -12,7 +12,7 @@ import { CHARACTER_MANIFEST, CLIP_DURATIONS } from "@/lib/characters/manifest";
 import { loadCharacterGltf } from "@/lib/characters/loader";
 import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { actorLayout } from "@/lib/traveler/actor-layout";
-import type { StageFrame } from "@/lib/world/stage-layout";
+import { frameFitsViewport, type StageFrame } from "@/lib/world/stage-layout";
 import { travelerMotionAt } from "@/lib/traveler/motion-clock";
 import { walkerPopulation, wavingWalker } from "@/lib/world/ambient";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
@@ -244,8 +244,10 @@ export function ProductCharacterStage3D(props: Props) {
       const height = Math.max(1, element.clientHeight);
       const frame = state.stageFrame.current;
       // Wait for decoded world dimensions; never invent a second layout for the actor.
+      // An exact size match never happens on a scaled screen, because Pixi rounds to
+      // device pixels, and every frame returned here leaves the people frozen or gone.
       if (!frame || frame.assetVersion !== state.pack.assetVersion
-        || frame.viewportW !== width || frame.viewportH !== height) {
+        || !frameFitsViewport(frame, width, height)) {
         state.contacts.current = { traveler: null, resident: null };
         return;
       }

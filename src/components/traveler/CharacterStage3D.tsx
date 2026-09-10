@@ -9,7 +9,7 @@ import { reviewDuration, sampleScene, type SceneCue } from "@/lib/characters/tim
 import { CharacterLights } from "@/lib/characters/toon";
 import { loadCharacterGltf } from "@/lib/characters/loader";
 import { stageSchema } from "@/lib/content/schema";
-import type { StageFrame } from "@/lib/world/stage-layout";
+import { frameFitsViewport, type StageFrame } from "@/lib/world/stage-layout";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 import type { QualityTier } from "@/lib/world/types";
 
@@ -118,7 +118,7 @@ export function CharacterStage3D(props:Props) {
       resident.visible=pair;resident.position.x=.65;resident.rotation.y=action==="encounter"?cue.residentYaw:-.6;
       seat.visible=["rest","sit_down","sitting","sleep"].includes(cue.traveler.clip);seat.position.x=traveler.position.x;seat.rotation.y=traveler.rotation.y;
       const frame=state.composition?state.stageFrame.current:null;
-      if(state.composition&&(!frame||frame.viewportW!==element.clientWidth||frame.viewportH!==element.clientHeight)) {
+      if(state.composition&&(!frame||!frameFitsViewport(frame,element.clientWidth,element.clientHeight))) {
         state.contacts.current={traveler:null,resident:null};
         return;
       }

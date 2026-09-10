@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { stageSchema, readableCountryPackSchema } from "../content/schema";
 import { registeredCountryPacks } from "@/content/countries/registry";
-import { blendStageLayout, stageLayout, stageScaleWarning } from "./stage-layout";
+import { blendStageLayout, frameFitsViewport, stageLayout, stageScaleWarning } from "./stage-layout";
 import {
   characterHeightTargetsFromEnv,
   DEFAULT_CHARACTER_HEIGHT_TARGETS,
@@ -61,6 +61,25 @@ describe("stage layout", () => {
       expect(() => stageLayout(value, 900, 1600, 900, defaults, targets)).toThrow(RangeError);
       expect(() => stageLayout(1440, 900, 1600, value, defaults, targets)).toThrow(RangeError);
     }
+  });
+
+  it("accepts a world frame that Pixi snapped to whole device pixels", () => {
+    // 1333 × 811 and 1334 × 811 CSS pixels at 125 %, 150 % and the 25 % minimum zoom.
+    for (const resolution of [1.25, 1.5, 0.25]) {
+      const snap = (value: number) => Math.round(value * resolution) / resolution;
+      for (const width of [1333, 1334]) {
+        expect(frameFitsViewport({viewportW: snap(width), viewportH: snap(811)}, width, 811)).toBe(true);
+      }
+    }
+    expect(frameFitsViewport({viewportW: 1333.3333, viewportH: 811.3333}, 1333, 811)).toBe(true);
+  });
+
+  it("still waits for a world frame that describes a different viewport", () => {
+    // The host shrank without a window resize; the world has not redrawn yet.
+    expect(frameFitsViewport({viewportW: 1280, viewportH: 720}, 1280, 640)).toBe(false);
+    expect(frameFitsViewport({viewportW: 1600, viewportH: 900}, 1280, 800)).toBe(false);
+    expect(frameFitsViewport({viewportW: 1283, viewportH: 800}, 1280, 800)).toBe(false);
+    expect(frameFitsViewport({viewportW: NaN, viewportH: 811}, 1333, 811)).toBe(false);
   });
 
   it("blends from the displayed layout for exactly 400 ms", () => {

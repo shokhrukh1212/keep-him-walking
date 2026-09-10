@@ -1024,7 +1024,21 @@ grading/parallax work; they do not move the fixed foot plane.
 Pixi publishes the actual loaded zone's stage frame through `SceneStage`'s ref. Three
 reads that ref in its existing frame loop, updates the orthographic camera, and clamps
 actor anchors to `walkableX`. Height and ground values blend with smoothstep over 400 ms
-at zone changes. Resize recalculates immediately. CSS variables give loading traveler and
+at zone changes. Resize recalculates immediately.
+
+Three draws only from a frame that describes its own host. The comparison is
+`frameFitsViewport`, with a tolerance of two CSS pixels, because Pixi snaps its screen to
+whole device pixels: at 150 % display scaling a 1333 × 811 page publishes 1333.33 × 811.33,
+and half a device pixel is two CSS pixels at the browser's 25 % minimum zoom. The comparison
+was exact until 2026-09-10. On scaled screens (most Windows laptops) Three therefore stopped
+drawing as soon as Pixi took over: the traveler and the walkers froze in their last pose
+under a "Walking" status, and a zoom or reload left them invisible. Pixi's `resizeTo` listens
+only for window resizes, so `PixiScene`'s own `ResizeObserver` now also calls `app.resize()`;
+a host that changes size without a window resize no longer leaves Three waiting for a frame
+that never matches. `tests/e2e/stage-device-scaling.spec.ts` covers 1333 × 811 at scale 1.5;
+the other layout specs pin scale 1, where the rounding never shows.
+
+CSS variables give loading traveler and
 fallback NPC images the same height and bottom; the no-WebGL static scene publishes the
 same layout after decoding its image. No journey progress or authoritative inputs change.
 

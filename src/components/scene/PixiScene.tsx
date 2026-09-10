@@ -470,6 +470,9 @@ export function PixiScene({
         };
 
         const resize = () => {
+          // resizeTo only listens for window resizes. The host can change size without one,
+          // and until the world redraws at that size the characters wait for its frame.
+          app.resize();
           sky.clear();
           if (activeZone) {
             sky.rect(0, 0, app.screen.width, app.screen.height).fill(activeZone.lighting.skyTop);
