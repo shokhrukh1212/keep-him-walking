@@ -26,7 +26,7 @@ import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { useQualityTier } from "@/hooks/useQualityTier";
 import { useRouteRuntime } from "@/hooks/useRouteRuntime";
 import { useIntroHeadline } from "@/hooks/useIntroHeadline";
-import { confirmedWalkingLease, walkingLeaseIsActive } from "@/lib/presence/walking-lease";
+import { confirmedWalkingLease, presenceReadIsCurrent, walkingLeaseIsActive } from "@/lib/presence/walking-lease";
 import { worldCommandForEncounter } from "@/lib/world/encounter-timeline";
 import { motionPhaseAt, motionSpeedForPhase } from "@/lib/world/motion-machine";
 import { routePositionAt } from "@/lib/world/route-clock";
@@ -216,7 +216,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       setSnapshot(current=> next.mode !== "live" && current.mode === "live"
         ? {...current,presence:{...current.presence,status:"reconnecting"},steps:{...current.steps,stale:true}}
         : {...next,assets:current.assets.assetVersion === next.assets.assetVersion ? current.assets : next.assets});
-      if (next.mode === "live") {
+      // A read taken before the newest heartbeat counted fewer people than that heartbeat did.
+      if (next.mode === "live" && presenceReadIsCurrent(next.route.authoritativeAt, newestHeartbeat.current)) {
         setWalkingLease(confirmedWalkingLease(
           (next.presence.activeViewers ?? 0) > 0,
           next.presence.ttlSeconds,

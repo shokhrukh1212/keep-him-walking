@@ -16,3 +16,13 @@ export function confirmedWalkingLease(
 export function walkingLeaseIsActive(lease: WalkingLease, nowMs = Date.now()) {
   return lease.confirmed && nowMs <= lease.expiresAtMs;
 }
+
+/**
+ * Bootstrap is a slow, cached read. One taken before the newest heartbeat must not replace
+ * the walking lease that heartbeat confirmed, or he stops until the next beat.
+ */
+export function presenceReadIsCurrent(readAuthoritativeAt: string, newestConfirmedMs: number): boolean {
+  if (!Number.isFinite(newestConfirmedMs)) return true;
+  const readMs = Date.parse(readAuthoritativeAt);
+  return Number.isFinite(readMs) && readMs >= newestConfirmedMs;
+}

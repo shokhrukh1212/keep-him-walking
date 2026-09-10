@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { confirmedWalkingLease, walkingLeaseIsActive } from "./walking-lease";
+import { confirmedWalkingLease, presenceReadIsCurrent, walkingLeaseIsActive } from "./walking-lease";
 
 describe("confirmed walking lease", () => {
   it("keeps movement alive through a brief reconnect", () => {
@@ -18,5 +18,25 @@ describe("confirmed walking lease", () => {
     expect(walkingLeaseIsActive(expired, 7_000)).toBe(false);
     const renewed = confirmedWalkingLease(true, 50, 7_000);
     expect(walkingLeaseIsActive(renewed, 56_999)).toBe(true);
+  });
+});
+
+describe("a presence read replacing the walking lease", () => {
+  const heartbeat = Date.parse("2026-09-10T17:34:29.858Z");
+
+  it("ignores a read taken before the newest heartbeat", () => {
+    // A slow or cached bootstrap that counted nobody, arriving after the heartbeat that
+    // counted this visitor, must not stop him until the next beat.
+    expect(presenceReadIsCurrent("2026-09-10T17:34:25.709Z", heartbeat)).toBe(false);
+    expect(presenceReadIsCurrent("not a time", heartbeat)).toBe(false);
+  });
+
+  it("accepts a read at least as new as the newest heartbeat", () => {
+    expect(presenceReadIsCurrent("2026-09-10T17:34:29.858Z", heartbeat)).toBe(true);
+    expect(presenceReadIsCurrent("2026-09-10T17:35:56.661Z", heartbeat)).toBe(true);
+  });
+
+  it("accepts any read before the first heartbeat", () => {
+    expect(presenceReadIsCurrent("2026-09-10T17:34:25.709Z", Number.NEGATIVE_INFINITY)).toBe(true);
   });
 });

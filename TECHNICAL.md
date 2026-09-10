@@ -199,6 +199,12 @@ new lease exists; wake-card eligibility is never present in bootstrap.
 Both extrapolation helpers and the presentation clock cap invention at 60 seconds,
 even if a future lease TTL is longer.
 
+The page's confirmed walking lease comes from heartbeats and from `/api/bootstrap`
+refreshes. A refresh replaces it only when its `route.authoritativeAt` is at least as new as
+the newest heartbeat (`presenceReadIsCurrent`). Bootstrap is slow on a dev server and cached
+for up to 13 s in production. A read that counted nobody used to arrive after the heartbeat
+that counted this visitor and stop him until the next beat.
+
 ### The locomotion constants
 
 ```
