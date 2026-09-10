@@ -231,6 +231,8 @@ export function ProductCharacterStage3D(props: Props) {
         state.command?.localHour,
         state.command?.raining,
         state.command?.wakeElapsedSeconds,
+        state.command?.state,
+        state.command?.motionPhaseSeconds,
       );
       const snap = firstSample || cue.conversation !== previousConversation;
       firstSample = false;

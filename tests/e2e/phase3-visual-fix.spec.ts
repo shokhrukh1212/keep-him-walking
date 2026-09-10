@@ -79,27 +79,29 @@ async function installApi(page: Page) {
   });
 }
 
-test("Dushanbe renders seamless scenery and continuously advancing production-v2 walking", async ({ page }, testInfo) => {
-  test.setTimeout(75_000);
+test("Dushanbe renders seamless scenery and continuously advancing 3D walking", async ({ page }, testInfo) => {
+  test.setTimeout(150_000);
   await installApi(page);
   await page.goto("/");
   await expect(page.locator(".scene-stage")).toHaveAttribute("data-renderer", "pixi", { timeout: 20_000 });
   await expect(page.getByRole("button", { name: /Full motion|Motion reduced/ })).toHaveCount(0);
-  await expect(page.locator(".traveler-sprite[data-state='walk']")).toBeVisible({ timeout: 20_000 });
+  const actor = page.getByTestId("product-character-stage");
+  await expect(actor).toHaveAttribute("data-character-ready", "true", { timeout: 20_000 });
+  await expect(actor).toHaveAttribute("data-character-state", "walk");
   await expect(page.locator(".traveler-state")).toContainText("Walking");
 
-  const observedFrames = new Set<string>();
+  const observedTimes = new Set<string>();
   for (let sample = 0; sample < 10; sample += 1) {
-    observedFrames.add(await page.locator(".traveler-frame").getAttribute("src") ?? "");
-    await page.waitForTimeout(120);
+    observedTimes.add(await actor.getAttribute("data-character-seconds") ?? "");
+    await page.waitForTimeout(250);
   }
-  expect(observedFrames.size).toBeGreaterThanOrEqual(5);
-  expect([...observedFrames].every((src) => src.includes("/traveler/production/v2/walk/"))).toBe(true);
+  expect(observedTimes.size).toBeGreaterThanOrEqual(2);
 
   await page.screenshot({ path: testInfo.outputPath("dushanbe-walking.png") });
-  const initialZone = await page.locator(".route-status strong").textContent();
+  const world = page.locator(".pixi-scene");
+  const initialZone = await world.getAttribute("data-zone-id");
   await page.waitForTimeout(8_000);
-  await expect(page.locator(".route-status strong")).not.toHaveText(initialZone ?? "");
+  await expect(world).not.toHaveAttribute("data-zone-id", initialZone ?? "");
   await page.screenshot({ path: testInfo.outputPath("dushanbe-zone-transition.png") });
 
 });

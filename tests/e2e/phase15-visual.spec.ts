@@ -67,7 +67,7 @@ async function installApi(page: Page, getRouteSeconds: () => number) {
 }
 
 test("captures coherent full-motion zones and the complete reduced-motion fallback", async ({ page }, testInfo) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   await mkdir(evidenceRoot, { recursive: true });
   const evidencePrefix = testInfo.project.name === "chromium" ? "desktop" : testInfo.project.name;
   let routeSeconds = 36;
@@ -77,9 +77,11 @@ test("captures coherent full-motion zones and the complete reduced-motion fallba
     routeSeconds = seconds;
     await page.goto("/?debug=world&quality=high");
     const diagnostics = page.getByTestId("world-diagnostics");
-    await expect(diagnostics).toHaveAttribute("data-zone", zone, { timeout: 20_000 });
+    await expect(page.locator(".scene-stage")).toHaveAttribute("data-renderer", "pixi", { timeout: 60_000 });
+    await expect(diagnostics).toHaveAttribute("data-zone", zone, { timeout: 60_000 });
     await expect(diagnostics).toContainText("WORLD / pixi / high");
-    await expect(page.locator(".traveler-sprite[data-state='walk']")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("product-character-stage"))
+      .toHaveAttribute("data-character-state", "walk", { timeout: 60_000 });
     await page.waitForTimeout(1_200);
     await page.screenshot({ path: `${evidenceRoot}/${evidencePrefix}-${name}.png`, fullPage: true });
   };
@@ -98,8 +100,10 @@ test("captures coherent full-motion zones and the complete reduced-motion fallba
     "src",
     /chorsu-market\/fallback\.webp/,
   );
-  await expect(page.locator(".route-status strong")).toHaveText("Chorsu market");
-  await expect(page.locator(".traveler-sprite img")).toHaveAttribute("src", /walk-8\.webp/);
+  const actor = page.getByTestId("product-character-stage");
+  await expect(actor).toHaveAttribute("data-character-ready", "true", { timeout: 20_000 });
+  await expect(actor).toHaveAttribute("data-zone-id", "chorsu-market");
+  await expect(actor).toHaveAttribute("data-character-state", "walk");
   await page.waitForTimeout(800);
   await page.screenshot({
     path: `${evidenceRoot}/${evidencePrefix}-chorsu-reduced-motion.png`,

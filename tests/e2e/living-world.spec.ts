@@ -134,10 +134,8 @@ test("the world stays quiet and error-free through minutes of its own life", asy
 
   // Nothing may throw while the world runs itself.
   expect(errors).toEqual([]);
-  // The one known gap: CHARACTER_MANIFEST asks for the V3 traveler first and the
-  // loader falls back to V2, which is the file that actually ships. Anything else
-  // failing to load is a regression.
-  expect([...new Set(missingResources)]).toEqual(["/characters/v3/traveler.glb"]);
+  // Both production character models ship. Any failed asset request is a regression.
+  expect([...new Set(missingResources)]).toEqual([]);
   // The diagnostic must be live either way.
   expect(worstP95).toBeGreaterThan(0);
   // A frame budget is only meaningful on a real GPU. A headless software

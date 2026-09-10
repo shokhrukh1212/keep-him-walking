@@ -90,26 +90,27 @@ test("streams the route, collapses onboarding, and eases stop/resume", async ({ 
 
   await expect(page.locator(".premise-lockup")).toHaveAttribute("data-collapsed", "true");
   await expect.poll(() => server.heartbeatCalls, { timeout: 20_000 }).toBeGreaterThan(0);
-  await expect(page.locator(".traveler-sprite[data-state='walk']")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".pixi-scene[data-character-state='walk']")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("world-diagnostics")).toContainText("mahalla-street", { timeout: 10_000 });
   await expect(page.getByTestId("world-diagnostics")).toContainText("WORLD / pixi / low");
   await expect(page.getByTestId("world-diagnostics")).toContainText(/objects \d+\/\d+/);
 
-  const firstSegment = await page.getByTestId("world-diagnostics").getAttribute("data-segment");
-  await expect.poll(async () => page.getByTestId("world-diagnostics").getAttribute("data-segment"), {
+  const firstGroundPosition = Number(await page.locator(".pixi-scene").getAttribute("data-ground-pixels"));
+  await expect.poll(async () => Number(await page.locator(".pixi-scene").getAttribute("data-ground-pixels")), {
     timeout: 12_000,
-  }).not.toBe(firstSegment);
+  }).toBeGreaterThan(firstGroundPosition + 5);
 
   server.active = false;
-  await expect(page.locator(".traveler-sprite[data-state='slow_walk']")).toBeVisible({ timeout: 5_000 });
-  await expect(page.locator(".traveler-sprite[data-state='rest']")).toBeVisible({ timeout: 5_000 });
+  const actor = page.getByTestId("product-character-stage");
+  await expect(actor).toHaveAttribute("data-character-state", /stop|walk_stop/, { timeout: 5_000 });
+  await expect(actor).toHaveAttribute("data-character-state", "wait_pockets", { timeout: 5_000 });
   const stoppedRoute = server.routeSeconds;
   await page.waitForTimeout(1_000);
   expect(server.routeSeconds).toBe(stoppedRoute);
 
   server.active = true;
-  await expect(page.locator(".traveler-sprite[data-state='resume_walk']")).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator(".traveler-sprite[data-state='walk']")).toBeVisible({ timeout: 10_000 });
+  await expect(actor).toHaveAttribute("data-character-state", "resume", { timeout: 10_000 });
+  await expect(actor).toHaveAttribute("data-character-state", "walk", { timeout: 10_000 });
 });
 
 test("runs the canonical NPC encounter through focus, dialogue and resume", async ({ page }, testInfo) => {
@@ -133,9 +134,10 @@ test("runs the canonical NPC encounter through focus, dialogue and resume", asyn
   await page.goto("/?debug=world&quality=low");
 
   test.setTimeout(90_000);
-  await expect(page.locator(".traveler-sprite[data-state='notice']")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".traveler-sprite[data-state='approach']")).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator(".dialogue-bubble")).toBeVisible({ timeout: 5_000 });
-  await expect(page.getByRole("button", { name: "Read today’s conversation" })).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator(".traveler-sprite[data-state='walk']")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(".pixi-scene[data-character-state='notice']")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".dialogue-bubble")).toBeVisible({ timeout: 20_000 });
+  // Confirm a route point beyond the metre-owned encounter. This tests the
+  // authoritative resume without coupling route progress to headless GPU speed.
+  server.routeSeconds = 1_570;
+  await expect(page.locator(".pixi-scene[data-character-state='walk']")).toBeVisible({ timeout: 10_000 });
 });

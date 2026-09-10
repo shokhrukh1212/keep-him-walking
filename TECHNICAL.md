@@ -205,6 +205,12 @@ the newest heartbeat (`presenceReadIsCurrent`). Bootstrap is slow on a dev serve
 for up to 13 s in production. A read that counted nobody used to arrive after the heartbeat
 that counted this visitor and stop him until the next beat.
 
+During a rolling deployment, an older heartbeat response can briefly omit presentation-only
+fields added by a newer page bundle. `useJourneyPresence` retains the bootstrap-confirmed
+reaction counts, weather and country in that case while accepting only the heartbeat's
+authoritative presence and progress. Missing presentation fields therefore cannot crash or
+invent a newer public state.
+
 ### The locomotion constants
 
 ```
@@ -602,6 +608,10 @@ are read through a ref so the renderer is never torn down mid-journey.
   with `snap = true` on the first frame and on every conversation boundary so a cut is a
   cut, not a 0.28 s smear. The resident is sampled with a 1.8 s face offset so the two
   characters do not blink in unison.
+- The locomotion phase and its elapsed presentation time are explicit timeline inputs.
+  The live GLB therefore plays `walk_start`, `stop` / `walk_stop`, and `resume` across
+  the same 650 ms / 450 ms state-machine windows instead of jumping directly between
+  walking and the first waiting take after the retired sprite renderer was removed.
 - The confirmed/projected `routeRuntime.paceRate` is passed into that pure timeline.
   At 3× and above the host applies its returned 2° forward lean; actions and encounters
   are not retimed or leaned.

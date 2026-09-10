@@ -24,6 +24,30 @@ describe("product character timeline", () => {
     expect(productCharacterSceneAt(almatyCountryPackV1, baseMotion, false, undefined, 0).traveler.clip).toBe("wait_pockets");
   });
 
+  it("renders the explicit start, stop and resume phases after the sprite renderer is gone", () => {
+    const scene = (state: "start_walk" | "slow_walk" | "stop" | "resume_walk", seconds: number) =>
+      productCharacterSceneAt(
+        almatyCountryPackV1,
+        baseMotion,
+        state === "start_walk" || state === "resume_walk",
+        undefined,
+        0,
+        1,
+        0,
+        12,
+        false,
+        undefined,
+        state,
+        seconds,
+      ).traveler;
+
+    expect(scene("start_walk", .3).clip).toBe("walk_start");
+    expect(scene("slow_walk", .3).clip).toBe("stop");
+    expect(scene("stop", .8).clip).toBe("walk_stop");
+    expect(scene("resume_walk", .3).clip).toBe("resume");
+    expect(scene("resume_walk", .3).seconds).toBeGreaterThan(0);
+  });
+
   it("moves a walking actor around the camera-follow anchor without leaving the stage", () => {
     expect(walkingViewportOffset(0)).toBeCloseTo(0);
     expect(walkingViewportOffset(2)).toBeCloseTo(.032);

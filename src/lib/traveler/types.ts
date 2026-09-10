@@ -10,6 +10,8 @@ export type TravelerCommand = {
   facing: FacingDirection;
   walkingSpeed: number;
   walking: boolean;
+  /** Presentation-only phase age from the deterministic locomotion state machine. */
+  motionPhaseSeconds?: number;
   routeRuntime: RouteRuntime;
   motionSampleUntilMs: number;
   presenceTtlMs?: number;

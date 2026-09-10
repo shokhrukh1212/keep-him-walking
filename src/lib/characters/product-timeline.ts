@@ -157,9 +157,30 @@ export function productCharacterSceneAt(
   localHour = 12,
   raining = false,
   wakeElapsedSeconds: number | undefined = undefined,
+  locomotionState: TravelerState | undefined = undefined,
+  motionPhaseSeconds = 0,
 ): ProductCharacterScene {
   const localReview = review ? reviewCue(review, now) : null;
   if (localReview) return localReview;
+  if (!motion.action && locomotionState) {
+    const transition = locomotionState === "start_walk"
+      ? scaledCue("walk_start", motionPhaseSeconds, .65)
+      : locomotionState === "resume_walk"
+        ? scaledCue("resume", motionPhaseSeconds, .65)
+        : locomotionState === "slow_walk"
+          ? scaledCue("stop", motionPhaseSeconds, .65)
+          : locomotionState === "stop"
+            ? scaledCue("walk_stop", Math.max(0, motionPhaseSeconds - .65), .45)
+            : null;
+    if (transition) {
+      return {
+        traveler: transition,
+        resident: { clip: "idle", seconds: 0 },
+        showResident: false,
+        conversation: false,
+      };
+    }
+  }
   if (!traveling) {
     if (wakeElapsedSeconds !== undefined) {
       // The stand-up take starts seated, so only a traveler whose wait reached the seated
