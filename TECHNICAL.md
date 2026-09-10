@@ -342,6 +342,16 @@ node scripts/characters/optimize-glb.mjs public/characters/v2/traveler.glb publi
 node scripts/characters/report.mjs
 ```
 
+`-- resident-b` builds the male local resident through the same steps, with his own
+fixed body sliders (gender 1, age 0.6, muscle and weight 0.5, proportions 0.6) and none
+of the traveler's identity work: no face targets, swept hair, backpack, watch, belt, open
+placket or cuffs. `wardrobe.tailor` takes a `traveler` flag for that tailoring; for the
+two earlier roles it equals the old `not female`, and a rebuilt Almaty host matches her
+checked-in skeleton joint for joint. `scripts/characters/export_mixamo_upload.py` writes
+the copy of any character that is uploaded to Mixamo (full outfit, leaf bones, no
+actions) and re-imports it to check the 52-bone rig. As of 2026-09-11 `resident-b` exists
+only as a staged build in the ignored cache; nothing loads him yet.
+
 Step by step, in the order the script performs it:
 
 1. **Macro body shape.** A MakeHuman macro dictionary: `gender` 0/1, `age` 0.46,

@@ -77,6 +77,29 @@ duration, and for `drink` or `phone` the windows in `props.ts`.
 `public/characters/v3/` are the live character on the next deploy**, so review
 them at `/preview/characters` before committing.
 
+## Residents
+
+Two base residents carry every city. `resident-a` is the Almaty host
+(`art/characters/v2/almaty-host.blend`); `resident-b` is the male local, built by the
+same script with `-- resident-b`. Their body sliders are fixed, because Mixamo takes
+are made for their joints; per-city variants change hair, clothes and colours only.
+Rebuilding `almaty-host` reproduces her checked-in skeleton exactly (all 52 joints,
+checked 2026-09-11), so her variants can come from a rebuild without new takes.
+
+Upload copies for Mixamo keep the full outfit and the 52-bone A-pose rig with leaf
+bones, and carry no actions or shape keys. The export script re-imports each file and
+fails unless it finds exactly 52 `mixamorig` bones. The same script works for
+`-- traveler`.
+
+```sh
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --factory-startup art/characters/v2/almaty-host.blend --python scripts/characters/export_mixamo_upload.py -- almaty-host .cache/character-authoring/mixamo/upload/resident-a-for-mixamo.fbx
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --threads 4 --factory-startup --python scripts/characters/build_models.py -- resident-b --v2 --staged
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --factory-startup .cache/character-authoring/staged/v2/resident-b.blend --python scripts/characters/export_mixamo_upload.py -- resident-b .cache/character-authoring/mixamo/upload/resident-b-for-mixamo.fbx
+```
+
+Their takes download into `.cache/character-authoring/mixamo/downloads/resident-a/`
+and `resident-b/` with the same settings as the traveler's.
+
 ## Verification
 
 The scoped interaction repair preserves checkpoint geometry and untouched clips.

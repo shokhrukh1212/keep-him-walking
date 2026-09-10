@@ -182,17 +182,27 @@ def add_watch(rig):
 
 
 def build(role):
+    # resident-a is the Almaty host; resident-b is the male local every other city dresses.
     female = role == 'almaty-host'
+    traveler = role == 'traveler'
+    if role not in ('traveler', 'almaty-host', 'resident-b'):
+        raise ValueError(f'Unknown character role: {role}')
     macro = TargetService.get_default_macro_info_dict()
-    macro.update(gender=0 if female else 1, age=.46,
-                 muscle=.42 if female else (.23 if VERSION=='v2' else .40),
-                 weight=.39 if female else (.28 if VERSION=='v2' else .34),
-                 proportions=.58 if VERSION=='v2' and not female else .65, height=.48)
-    # These are shape-space controls, not a statement about the character's identity.
-    macro['race'] = {'asian': .65 if female else .12, 'caucasian': .35 if female else .88, 'african': 0}
+    if traveler or female:
+        macro.update(gender=0 if female else 1, age=.46,
+                     muscle=.42 if female else (.23 if VERSION=='v2' else .40),
+                     weight=.39 if female else (.28 if VERSION=='v2' else .34),
+                     proportions=.58 if VERSION=='v2' and not female else .65, height=.48)
+        # These are shape-space controls, not a statement about the character's identity.
+        macro['race'] = {'asian': .65 if female else .12, 'caucasian': .35 if female else .88, 'african': 0}
+    else:
+        # One body for every city's variant. Hair, clothes and colours change per city;
+        # these sliders do not, because they move the joints his Mixamo takes are made for.
+        macro.update(gender=1, age=.6, muscle=.5, weight=.5, proportions=.6, height=.5)
+        macro['race'] = {'asian': .45, 'caucasian': .5, 'african': .05}
     body=HumanService.create_human(macro_detail_dict=macro)
     body.name = role+'-body'
-    if not female:
+    if traveler:
         identity = [('head-age-decr',.14),('head-invertedtriangular',.05),
                     ('l-eye-scale-incr',.045),('r-eye-scale-incr',.045),
                     ('nose-scale-horiz-decr',.06),('mouth-scale-horiz-incr',.12),
@@ -219,23 +229,33 @@ def build(role):
     TargetService.bake_targets(body)
     rig=HumanService.add_builtin_rig(body,'mixamo')
     rig.name=role
-    skin='young_asian_female' if female else 'young_caucasian_male2'
+    skin='young_asian_female' if female else 'young_caucasian_male2' if traveler else 'young_caucasian_male'
     HumanService.set_character_skin(str(ASSETS/'skins'/skin/(skin+'.mhmat')),body,skin_type='GAMEENGINE',material_instances=False)
     asset('eyes/high-poly/high-poly.mhclo',body,'Eyes')
     asset('eyebrows/eyebrow001/eyebrow001.mhclo',body,'Eyebrows')
     asset('eyelashes/eyelashes01/eyelashes01.mhclo',body,'Eyelashes')
     asset('teeth/teeth_base/teeth_base.mhclo',body,'Teeth')
-    hair_path='braid01/braid01' if female else 'elvs_grump_hair/elvs_grump_hair'
+    hair_path='braid01/braid01' if female else 'elvs_grump_hair/elvs_grump_hair' if traveler else 'short02/short02'
     hair=asset('hair/'+hair_path+'.mhclo',body,'Hair')
     hair.name=role+'-hair'
     pants=asset('clothes/cortu_cargo_pants/cortu_cargo_pants.mhclo',body)
-    cloth_color(pants,'Charcoal cotton' if female else 'Sand cotton',(.045,.055,.072) if female else (.54,.40,.26))
+    if female:
+        cloth_color(pants,'Charcoal cotton',(.045,.055,.072))
+    elif traveler:
+        cloth_color(pants,'Sand cotton',(.54,.40,.26))
+    else:
+        cloth_color(pants,'Stone cotton',(.30,.29,.26))
     shirt_path = 'clothes/elvs_male_shirt_untucked_bd1/elvs_male_shirt_untucked_bd1.mhclo'
     shirt=asset(shirt_path,body)
-    cloth_color(shirt,'Ochre jacket' if female else 'Teal overshirt',(.38,.22,.105) if female else ((.018,.23,.29) if VERSION=='v2' else (.012,.12,.145)))
+    if female:
+        cloth_color(shirt,'Ochre jacket',(.38,.22,.105))
+    elif traveler:
+        cloth_color(shirt,'Teal overshirt',(.018,.23,.29) if VERSION=='v2' else (.012,.12,.145))
+    else:
+        cloth_color(shirt,'Navy jacket',(.035,.06,.12))
     inner=asset('clothes/punkduck_deathnote_t-shirt/punkduck_deathnote_t-shirt.mhclo',body)
-    inner.name='Blue inner shirt' if female else 'Ivory T-shirt'
-    cloth_color(inner,inner.name,(.025,.10,.20) if female else (.88,.85,.77))
+    inner.name='Blue inner shirt' if female else 'Ivory T-shirt' if traveler else 'Rust inner shirt'
+    cloth_color(inner,inner.name,(.025,.10,.20) if female else (.88,.85,.77) if traveler else (.36,.12,.05))
     shoes=asset('clothes/shoes05/shoes05.mhclo',body)
     shoes.name=role+'-shoes'
     # Smooth the low-resolution trouser pattern before deforming it.
@@ -251,14 +271,14 @@ def build(role):
             node.inputs['Alpha'].default_value=1
             node.inputs['Roughness'].default_value=.65
     from wardrobe import tailor, style_hair
-    tailor(bpy,rig,body,shirt,inner,pants,shoes,female,material,VERSION)
-    if VERSION == 'v2' and not female:
+    tailor(bpy,rig,body,shirt,inner,pants,shoes,traveler,material,VERSION)
+    if VERSION == 'v2' and traveler:
         # Use the garment's own collar and pockets; rigid boxes and tubes
         # previously crossed the skinned surface and floated at the chest.
         belt = material('Warm brown belt', (.18,.065,.022), .72)
         tube('Trouser belt', [(-.16,-.045,.91),(0,-.085,.90),(.16,-.045,.91)],
              .008, belt, rig, 'Hips')
-    if not female:
+    if traveler:
         style_hair(hair, VERSION)
     # The bundled expression targets avoid a dependency on a separate face pack.
     for name,source in [('blinkLeft','eye-left-closure'),('blinkRight','eye-right-closure'),
@@ -270,7 +290,7 @@ def build(role):
     smooth(inner)
     smooth(body)
     bpy.context.view_layer.update()
-    if not female:
+    if traveler:
         add_backpack(rig)
         add_watch(rig)
     from animation import Animator
