@@ -11,6 +11,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 HOUSE RULES for this repository (Keep Him Walking):
 - Read docs/plan/*.md, PRODUCT.md and TECHNICAL.md before changing anything. TECHNICAL.md
   describes the code accurately as of 2026-09-06; trust it over assumptions.
+- After P22, read `docs/plan/08-LAUNCH-READINESS.md` and execute the first incomplete
+  R0–R9 item that is not waiting on owner artwork, credentials, deployment or visual
+  acceptance. Keep automated verification separate from owner acceptance. Preserve the
+  approved traveler Mixamo motions, do not bulk-generate city art, and do not build the
+  remaining 23 launch paintings before the owner accepts the single London pilot.
 - Authority stays in Postgres: journey_runtime is advanced only inside security definer
   RPCs under a row lock. The browser never calls RPCs. Never compute progress client-side
   except bounded extrapolation (≤ 60 s).

@@ -45,6 +45,20 @@ The owner has selected these values. Domain ownership and service readiness stil
 | Q15 | Actual launch date: **TODO until all gates pass**. Working target: **Wednesday 23 September 2026, 16:00 UTC**. | P21: target is not permission to bypass launch gates or set a live launch timestamp now. |
 | Q16 | Start in Tashkent. Day 2 follows Q4, with Dushanbe fallback. Include Kazakhstan, Georgia and Türkiye if the route allows. No country is globally banned. | P9: exclude unordered pairs AM–AZ, AM–TR, RS–XK and GR–TR from the same vote; exclude every pair involving IL or RU for Season 1. If candidates conflict, drop one and choose the nearest ready third country that also passes the pair filter. Apply the rule to the whole ballot, including Q4 and fallbacks. IL/RU are not a global content ban. |
 
+## Post-P22 launch decisions — 11 September 2026
+
+These later owner decisions supersede Q4/Q16 only where the launch city, fallback and
+route order conflict. The safety rules and two-stage Day-1 vote remain in force.
+
+| Area | Approved decision | Implementation record |
+|---|---|---|
+| Launch route | Start in **London**. **Paris by train** is the announced Day-2 fallback. Later ready ballots move through Belgium and Germany before expanding across reviewed Europe. | `08-LAUNCH-READINESS.md` R6 |
+| Day-1 name | Vote on **Milo, Nur, Sami, Bek**, then open the destination vote. | `08-LAUNCH-READINESS.md` R6 |
+| Scene | Use an illustrated layered street: non-repeating sky and city, seamless pavement, occasional foreground occlusion. | `08-LAUNCH-READINESS.md` R1–R2 |
+| Launch art | Build London, Paris, Brussels and Berlin only: five day-zone paintings and one night landmark per city. Owner makes the paintings after accepting one London pilot. | `08-LAUNCH-READINESS.md` R1/R7 |
+| UI | Reactions at top centre, one audience control top right, status/progress low centre and Vote/Journey/Sponsor in the footer. | `08-LAUNCH-READINESS.md` R3 |
+| Weather | Keep the implementation but hide it and stop provider requests for launch behind a reversible flag. | `08-LAUNCH-READINESS.md` R9 |
+
 ## Owner work still needed before launch
 
 - Create R2 bucket/public host, configure browser CORS and provide bucket-scoped credentials privately; see the [asset hosting runbook](../runbooks/asset-hosting.md). Do not paste secrets into the conversation or commit them.
