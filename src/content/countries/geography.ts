@@ -4,7 +4,7 @@
  * between the two countries — the destination vote must never invent one.
  *
  * Kept in one file so the borders can be reviewed together rather than hunted
- * through sixteen pack definitions.
+ * through the registered pack definitions.
  */
 export type PackGeography = {
   lat: number;
@@ -103,6 +103,12 @@ export const PACK_GEOGRAPHY: Record<string, PackGeography> = {
     lon: 14.4378,
     neighbours: ["bratislava-v1", "vienna-v1"],
     voteBlurb: "Bridges over the Vltava, and a hundred spires above the red rooftops.",
+  },
+  "paris-v1": {
+    lat: 48.8566,
+    lon: 2.3522,
+    neighbours: [],
+    voteBlurb: "Station boulevards, canal paths, market passages and the Seine, ending beneath the evening lights.",
   },
 };
 

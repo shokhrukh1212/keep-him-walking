@@ -140,7 +140,7 @@ describe("backward compatible stage metadata", () => {
   it("validates every registered pack with and without stage blocks", () => {
     const packs = registeredCountryPacks();
     // V4 remains registered as the calibrated rollback for launch identity v5.
-    expect(packs).toHaveLength(15);
+    expect(packs).toHaveLength(16);
     for (const pack of packs) {
       expect(readableCountryPackSchema.safeParse(pack).success).toBe(true);
       const legacy = JSON.parse(JSON.stringify(pack));

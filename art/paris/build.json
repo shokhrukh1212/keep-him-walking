@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "builtAt": "2026-09-11T17:37:17.965Z",
+  "assetBudgetBytes": 5767168,
+  "transferBytes": 4220300,
+  "zones": {
+    "paris-arrival": {
+      "palette": [
+        "#aaccee",
+        "#aa9988",
+        "#777777"
+      ],
+      "night": false,
+      "lights": false,
+      "continuous": true,
+      "bytes": 642354
+    },
+    "paris-lanes": {
+      "palette": [
+        "#888888",
+        "#ccaa99",
+        "#aaccee"
+      ],
+      "night": false,
+      "lights": false,
+      "continuous": true,
+      "bytes": 745490
+    },
+    "paris-market": {
+      "palette": [
+        "#888888",
+        "#eeccaa",
+        "#ccaa99"
+      ],
+      "night": false,
+      "lights": false,
+      "continuous": true,
+      "bytes": 777152
+    },
+    "paris-cafe": {
+      "palette": [
+        "#888888",
+        "#eeccaa",
+        "#663333"
+      ],
+      "night": false,
+      "lights": false,
+      "continuous": true,
+      "bytes": 788990
+    },
+    "paris-landmark": {
+      "palette": [
+        "#776666",
+        "#8899cc",
+        "#ffbb77"
+      ],
+      "night": true,
+      "lights": false,
+      "continuous": true,
+      "bytes": 1146430
+    }
+  }
+}

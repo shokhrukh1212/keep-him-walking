@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "country": "France",
+  "city": "Paris",
+  "iso2": "FR",
+  "lat": 48.8566,
+  "lon": 2.3522,
+  "timezone": "Europe/Paris",
+  "neighbours": [],
+  "zones": {
+    "arrival": "The first steps outside Gare du Nord, with the station held once in the middle distance.",
+    "lanes": "A quiet Canal Saint-Martin promenade with plane trees and an iron footbridge.",
+    "market": "An intimate Marais market street inspired by the covered passages around Marché des Enfants Rouges.",
+    "cafe": "A calm Left Bank corner café with an open side street and empty tables behind the walking line.",
+    "landmark": "A broad Seine promenade opening onto a single Eiffel Tower view at golden hour."
+  },
+  "landmark": "The Seine and Eiffel Tower",
+  "localPhrase": {
+    "original": "Bonjour, je découvre Paris à pied.",
+    "transliteration": "Bon-zhoor, zhuh day-koovr Pa-ree ah pyay.",
+    "gloss": "Hello, I am discovering Paris on foot.",
+    "pronunciation": "bon-ZHOOR, zhuh day-KOOVR pah-REE ah PYAY"
+  },
+  "resident": {
+    "name": "Camille",
+    "role": "Canal-side resident",
+    "variantId": "paris-resident-b"
+  },
+  "dialogue": [
+    {
+      "speaker": "npc",
+      "text": "Bonjour! Are you finding your way from the station?",
+      "mood": "curious"
+    },
+    {
+      "speaker": "traveler",
+      "text": "Bonjour. Yes, I am discovering Paris on foot.",
+      "mood": "amused"
+    },
+    {
+      "speaker": "npc",
+      "text": "Follow the canal for a quieter start; the city changes pace beside the water.",
+      "mood": "thoughtful"
+    },
+    {
+      "speaker": "traveler",
+      "text": "That sounds better than rushing straight to the famous view.",
+      "mood": "thoughtful"
+    },
+    {
+      "speaker": "npc",
+      "text": "There is time for the market, a café, and the river before evening.",
+      "mood": "neutral"
+    },
+    {
+      "speaker": "traveler",
+      "text": "Merci, Camille. I will let the streets lead me there.",
+      "mood": "amused"
+    }
+  ],
+  "notebookLines": [
+    "The station opened onto pale stone and a long morning pavement.",
+    "Canal water made the city feel quieter without making it still.",
+    "An iron footbridge held the middle of the view for a few steps.",
+    "The market lane traded grand facades for flowers, produce and small doors.",
+    "Lunch arrived as a pause at the edge of a Left Bank side street.",
+    "The best parts of the route were the changes in scale between each district.",
+    "The Seine widened the horizon just as the light began to soften.",
+    "At night, the same riverside view felt newly drawn in blue and gold."
+  ],
+  "voteBlurb": "Station boulevards, canal paths, market passages and the Seine, ending beneath the evening lights.",
+  "postcard": {
+    "title": "Evening beside the Seine",
+    "copy": "Five Paris streets later, the river opened and the tower caught the last light."
+  }
+}
