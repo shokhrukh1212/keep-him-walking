@@ -1665,14 +1665,23 @@ checks those fields against the owner-editable
 an unflagged pack is culturally safe.
 
 `pnpm pack:build <slug>` requires five distinct `master.png` files and the landmark's
-`night.png`. Sharp normalizes each to 3600×1200, blends eight percent at both horizontal
-edges, writes WebP day/night/lights assets, derives the postcard, samples three palette
+`night.png`. Sharp normalizes each source to a bounded 3600×1200 city WebP, derives a
+soft 1600×900 sky plate, and extracts the lower 18% into a 3600×216 pavement texture
+whose outer eight percent is blended for the seam audit. The factory emits these as a
+`continuousScene`: the city never wraps and only the pavement moves as a tile. The
+builder also writes day/night/lights assets, derives the postcard, samples three palette
 colours and writes `art/<slug>/build.json` with exact transfer bytes against the existing
 5.5 MiB pack ceiling. It then regenerates the module and adds it to the small authored
 registry. Generated packs start with `culturalReview.status = pending`: they work in the
 private pack preview but `isVoteReadyPack` keeps them out of ballots until the owner
 records review evidence. Missing NPC fallback art and ambient audio degrade to the 3D
 resident and silence rather than borrowing another culture's assets.
+
+Paris `v1` is the first pack produced by this layered authoring path. Its five day
+masters and matching landmark night master live under `art/paris/`; its derived runtime
+transfer is 4,220,300 bytes. It is registered for private preview with cultural review
+still pending. The reversible development seed accepts `--preview --pack <registered-v3-pack>`;
+for example, `pnpm seed:phase1 --preview --pack paris-v1 --starts-at <ISO timestamp>`.
 
 The v3 schema now rejects unknown top-level, dialogue, phrase, story-beat, review,
 postcard, resident, NPC-system and editorial fields. `resident` and `notebookLines` have

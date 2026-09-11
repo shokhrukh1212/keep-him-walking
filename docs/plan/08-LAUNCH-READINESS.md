@@ -154,6 +154,10 @@ Every package has two independent completion marks:
 
 - [ ] After R1 acceptance, owner creates six assets for each of London, Paris, Brussels
   and Berlin: five day zones plus one night landmark.
+- Paris pilot progress (11 September 2026): five distinct day masters and one
+  composition-matched landmark night master are generated, built as `paris-v1`, and
+  available in the guarded local preview. This does not close the item: owner visual
+  acceptance and cultural review are still required, and London remains the launch pilot.
 - [ ] Run pack scaffold/build/validate/scale-audit, cultural review and visual review for
   each immutable version. Each pack needs real notebook lines and reviewed citations.
 - [ ] Preload today plus tomorrow only. Keep later days on the asset origin.

@@ -7,6 +7,7 @@ import {
 // bootstrap — requires a schemaVersion 3 pack, and tashkent-v4 is the one that
 // ships. The schemaVersion 2 rollback packs were retired in P18.
 import { tashkentCountryPackV4 } from "../src/content/countries/tashkent.v4";
+import { getCountryPack } from "../src/content/countries/registry";
 
 const JOURNEY_ID = "00000000-0000-4000-8000-000000000001";
 const VOTE_ID = "30000000-0000-4000-8000-000000000001";
@@ -20,6 +21,14 @@ function argument(name: string): string | undefined {
 
 const preview = process.argv.includes("--preview");
 const journeySlug = preview ? "keep-him-walking-phase15-preview" : "keep-him-walking";
+const requestedPackId = argument("--pack");
+if (requestedPackId && !preview) {
+  throw new Error("--pack is available only with --preview; use seed:season1 for launch data");
+}
+const pack = requestedPackId ? getCountryPack(requestedPackId) : tashkentCountryPackV4;
+if (!pack || pack.schemaVersion !== 3) {
+  throw new Error(`Preview pack ${requestedPackId ?? tashkentCountryPackV4.assetVersion} is not a registered v3 pack`);
+}
 const rawStart = argument("--starts-at") ?? (preview ? process.env.PHASE15_PREVIEW_START_AT : undefined);
 if (!rawStart) {
   throw new Error(
@@ -47,8 +56,8 @@ const supabase = createClient(url, key, {
 });
 const endsAt = new Date(startsAt.getTime() + 24 * 60 * 60 * 1_000);
 const encounterStartsAt = new Date(startsAt.getTime() + 15 * 60 * 1_000);
-const encounter = tashkentCountryPackV4.encounters[0];
-if (!encounter) throw new Error("Tashkent content pack has no encounter");
+const encounter = pack.encounters[0];
+if (!encounter) throw new Error(`${pack.cityName} content pack has no encounter`);
 
 const { data: existingJourney, error: existingJourneyError } = await supabase
   .from("journeys")
@@ -88,15 +97,15 @@ const writes = [
     id: PHASE1_COUNTRY_DAY_ID,
     journey_id: JOURNEY_ID,
     day_number: 1,
-    country_code: "UZ",
-    country_name: "Uzbekistan",
-    city_name: "Tashkent",
-    time_zone: "Asia/Tashkent",
+    country_code: pack.countryCode,
+    country_name: pack.countryName,
+    city_name: pack.cityName,
+    time_zone: pack.timeZone,
     starts_at: startsAt.toISOString(),
     ends_at: endsAt.toISOString(),
-    scene_pack_id: tashkentCountryPackV4.assetVersion,
+    scene_pack_id: pack.assetVersion,
     status: "live",
-    story_summary: "A first morning in Tashkent—and a serious invitation to try plov.",
+    story_summary: pack.postcard.safeCopy,
     updated_at: new Date().toISOString(),
   }),
 ];
@@ -138,13 +147,13 @@ const { error: optionsError } = await supabase.from("vote_options").upsert([
   {
     id: OPTION_PLOV_ID,
     vote_id: VOTE_ID,
-    label: "Find the best plov",
+    label: pack.route.zones[2]?.label ?? "Explore the market",
     display_order: 0,
   },
   {
     id: OPTION_CHORSU_ID,
     vote_id: VOTE_ID,
-    label: "Explore Chorsu Bazaar",
+    label: pack.route.zones[4]?.label ?? "Reach the landmark",
     display_order: 1,
   },
 ]);
@@ -163,5 +172,5 @@ const { error: runtimeError } = await supabase.from("journey_runtime").upsert(
 if (runtimeError) throw runtimeError;
 
 process.stdout.write(
-  `Seeded ${preview ? "reversible Phase 1.5 preview" : "Tashkent"} from ${startsAt.toISOString()} to ${endsAt.toISOString()}\n`,
+  `Seeded ${preview ? `reversible ${pack.cityName} preview` : "Tashkent"} from ${startsAt.toISOString()} to ${endsAt.toISOString()}\n`,
 );
