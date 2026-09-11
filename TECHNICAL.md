@@ -573,14 +573,18 @@ change.
   (skin, cloth, hair, shoes, backpack and patch) become `MeshToonMaterial`, preserving
   colours, colour/normal/bump/alpha maps and other supported texture inputs. Eyes keep
   their original material. Each actor owns one code-generated 3×1 red-channel
-  `DataTexture` with values 72/160/255, nearest filtering and no mipmaps.
+  `DataTexture` with values 128/199/255, nearest filtering and no mipmaps. Every
+  directional light adds at least the lowest band everywhere; the original 72 left the
+  side away from the key at 28% and read as dirt on the face (raised 2026-09-11).
   The shader multiplies exposure/tint **after sRGB encoding**, matching Pixi's
   `ColorMatrixFilter` display-space operation without modifying texture colours.
 - **Outline:** cloned mesh siblings use BackSide, `stage.palette[2]`, alpha 0.7 and
   depth writing. Their transforms and bind matrices match the source. After skinning
   and morphing, the vertex shader expands the silhouette along its projected normal by
   1.5 CSS pixels. This replaces the origin-based 1.018 scale that displaced the grey
-  hull above the head and shoulders. Hair/lash hulls retain texture alpha cutouts. Low quality hides all hulls;
+  hull above the head and shoulders. Hair hulls retain texture alpha cutouts. Brows,
+  lashes and teeth get no hull (`FACE_DETAIL`): they are a few pixels wide at live size,
+  and a 1.5 px hull painted dark smudges over the eyes. Low quality hides all hulls;
   medium/high show them. Geometry and skeletons are shared, not duplicated.
 - **Props.** A capsule water bottle and a boxed phone are built in code (no asset).
   `sampleProp()` returns a deterministic `{visible, contact, progress}` from
@@ -610,11 +614,18 @@ are read through a ref so the renderer is never torn down mid-journey.
   (1.5 / 1.25 cap), outlines and the frame cap (30 vs 60 fps) come from the quality tier.
 - `SRGBColorSpace` output, `NoToneMapping`, exposure 1.0. No shadow maps or shadow floor.
 - Shared `CharacterLights` in live and review stages: hemisphere palette[0]/palette[2]
-  at 1.55, key palette[0] at 0.9 from `(−3,5,4)`, `(3,5,4)` or `(0,5,4)` for
-  left/right/top, fill palette[2] at 0.35 from the opposite side. Lights and outline
+  at 1.1, key palette[0] at 1.6 from `(−3,5,4)`, `(3,5,4)` or `(0,5,4)` for
+  left/right/top, fill palette[2] at 0.4 from the opposite side. Lights and outline
   colour follow the actually rendered zone's stage frame.
-  Below daylight exposure, a warm front lamp and back rim increase gradually so the
-  face and silhouette remain readable while both renderers retain the same night grade.
+  Pack palettes are a painting's dominant colours (Paris arrival: sky blue and grey), so
+  a light keeps only 15% of its palette colour's hue, at full brightness; the hemisphere
+  ground colour is that ×0.55. three divides diffuse light by π, and the earlier
+  palette-coloured 1.55/0.9 left a Paris face at 30–50% of its texture, tinted blue.
+  Now a camera-facing face shows about 90% of its own colour in daylight and the side
+  away from the key about 65%; `toon.test.ts` pins both for grey, sky-blue and default
+  palettes. Below daylight exposure, a warm front lamp (up to 0.5) and back rim (up to
+  1.0) increase gradually so the face and silhouette remain readable while both
+  renderers retain the same night grade.
 - **Orthographic camera**, updated from the current stage frame: 1.78 m maps to
   `stageLayout().personHeightPx` and world y=0 projects to `stageLayout().groundY`.
   `actorLayout(viewportHeight, layout)` adapts these to height/bottom (§8.4).

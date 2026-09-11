@@ -3,9 +3,17 @@ import type { ZoneStage } from "../content/schema";
 import type { QualityTier } from "../world/types";
 import type { VisualGrade } from "../world/visual-grade";
 
+/**
+ * Brows, lashes and teeth are a few pixels wide at live size. A 1.5-pixel hull around
+ * them reads as dark smudges over his eyes, so only silhouette-making meshes get one.
+ */
+const FACE_DETAIL = /eyebrow|eyelash|teeth/i;
+
 /** Actor-owned materials; source textures/geometries remain owned by the loaded GLB. */
 export class CharacterToon {
-  readonly gradient = new THREE.DataTexture(new Uint8Array([72, 160, 255]), 3, 1, THREE.RedFormat);
+  // Every light adds at least the lowest band everywhere. At 72 the side away from the
+  // key fell to 28% and read as dirt on his face and clothes.
+  readonly gradient = new THREE.DataTexture(new Uint8Array([128, 199, 255]), 3, 1, THREE.RedFormat);
   readonly exposure = { value: 1 };
   readonly tint = { value: new THREE.Vector3(1, 1, 1) };
   readonly viewport = { value: new THREE.Vector2(1, 1) };
@@ -51,6 +59,7 @@ export class CharacterToon {
   addOutline(source: THREE.Mesh) {
     const originals = Array.isArray(source.material) ? source.material : [source.material];
     if (!originals.some((m) => m instanceof THREE.MeshToonMaterial)) return;
+    if (originals.some((m) => FACE_DETAIL.test(m.name))) return;
     const materials = originals.map((original) => {
       const toon = original instanceof THREE.MeshToonMaterial ? original : null;
       const material = new THREE.MeshBasicMaterial({
@@ -117,10 +126,30 @@ export class CharacterToon {
   }
 }
 
+const WHITE = new THREE.Color(1, 1, 1);
+/** How much of the zone's hue a light keeps. */
+const PALETTE_HINT = 0.15;
+/** Light bounced up from the pavement is dimmer than the sky's. */
+const GROUND_BOUNCE = 0.55;
+
+/**
+ * Pack palettes are the colours that dominate a painting, often sky blue or grey. Lit by
+ * those as they are, his skin turned grey and cold, so a light keeps only a hint of the
+ * colour's hue, at full brightness.
+ */
+function hintedLight(target: THREE.Color, hex: string): THREE.Color {
+  target.set(hex);
+  const peak = Math.max(target.r, target.g, target.b);
+  if (peak <= 0) return target.copy(WHITE);
+  return target.multiplyScalar(1 / peak).lerp(WHITE, 1 - PALETTE_HINT);
+}
+
 export class CharacterLights extends THREE.Group {
-  readonly hemisphere = new THREE.HemisphereLight(0xffffff, 0x2e3a4f, 1.55);
-  readonly key = new THREE.DirectionalLight(0xffffff, 0.9);
-  readonly fill = new THREE.DirectionalLight(0x2e3a4f, 0.35);
+  // three divides diffuse light by π. These show a camera-facing face at about 90% of its
+  // own colour in daylight, and the side away from the key at about 65%.
+  readonly hemisphere = new THREE.HemisphereLight(0xffffff, 0x2e3a4f, 1.1);
+  readonly key = new THREE.DirectionalLight(0xffffff, 1.6);
+  readonly fill = new THREE.DirectionalLight(0x2e3a4f, 0.4);
   readonly lamp = new THREE.DirectionalLight(0xffd8a0, 0);
   readonly rim = new THREE.DirectionalLight(0xffd8a0, 0);
   constructor() {
@@ -129,17 +158,18 @@ export class CharacterLights extends THREE.Group {
     this.add(this.hemisphere, this.key, this.fill, this.lamp, this.rim);
   }
   update(stage: ZoneStage, grade?: VisualGrade) {
-    this.hemisphere.color.set(stage.palette[0]);
-    this.hemisphere.groundColor.set(stage.palette[2]);
-    this.key.color.set(stage.palette[0]);
+    hintedLight(this.hemisphere.color, stage.palette[0]);
+    hintedLight(this.hemisphere.groundColor, stage.palette[2]).multiplyScalar(GROUND_BOUNCE);
+    hintedLight(this.key.color, stage.palette[0]);
     this.key.position.set(stage.lightDir === "left" ? -3 : stage.lightDir === "right" ? 3 : 0, 5, 4);
-    this.fill.color.set(stage.palette[2]);
+    hintedLight(this.fill.color, stage.palette[2]);
     this.fill.position.x = stage.lightDir === "right" ? -4 : 4;
     const darkness = THREE.MathUtils.clamp((1 - (grade?.exposure ?? 1)) / 0.38, 0, 1);
     const side = stage.lightDir === "right" ? 1 : -1;
     this.lamp.position.set(side * 2, 3, 4);
     this.rim.position.set(side * 3, 2, -3);
-    this.lamp.intensity = darkness * 2.2;
-    this.rim.intensity = darkness * 2.8;
+    // The brighter daylight base needs far less help at night.
+    this.lamp.intensity = darkness * 0.5;
+    this.rim.intensity = darkness;
   }
 }

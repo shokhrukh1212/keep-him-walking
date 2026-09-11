@@ -27,7 +27,7 @@ describe("toon material ownership", () => {
     expect(toon.depthWrite).toBe(true);
     expect(toon.side).toBe(THREE.DoubleSide);
     expect(appearance.gradient.image.width).toBe(3);
-    expect([...appearance.gradient.image.data]).toEqual([72, 160, 255]);
+    expect([...appearance.gradient.image.data]).toEqual([128, 199, 255]);
     expect(appearance.gradient.minFilter).toBe(THREE.NearestFilter);
     expect(appearance.gradient.magFilter).toBe(THREE.NearestFilter);
     expect(appearance.gradient.generateMipmaps).toBe(false);
@@ -109,9 +109,11 @@ describe("toon material ownership", () => {
       const material = (scene.getObjectByName(name) as THREE.Mesh).material as THREE.MeshToonMaterial;
       expect(material).toBeInstanceOf(THREE.MeshToonMaterial);
       expect(material.transparent).toBe(false); expect(material.alphaTest).toBe(0.4); expect(material.depthWrite).toBe(true);
-      const hull = actor.toon.outlines.find((item) => item.source.name === name)!;
-      expect(hull.materials[0].map).toBe(material.map);
     }
+    // Hair keeps a cutout hull for its silhouette; lashes are too small on screen for one.
+    const hair = (scene.getObjectByName("elvs_grump_hair") as THREE.Mesh).material as THREE.MeshToonMaterial;
+    expect(actor.toon.outlines.find((item) => item.source.name === "elvs_grump_hair")!.materials[0].map).toBe(hair.map);
+    expect(actor.toon.outlines.map((item) => item.source.name)).not.toContain("eyelashes01");
     const eye = (scene.getObjectByName("high-poly") as THREE.Mesh).material;
     expect(eye).toBe(sources[3]); expect((eye as THREE.Material).depthWrite).toBe(false);
     const patch = (scene.getObjectByName("SponsorPatch") as THREE.Mesh).material as THREE.MeshToonMaterial;
@@ -131,17 +133,48 @@ describe("toon material ownership", () => {
   });
 });
 
-it("uses the zone palette and named light side without shadow maps", () => {
+it("takes the named light side and a hint of the zone palette without shadow maps", () => {
   const lights = new CharacterLights();
   for (const [lightDir, x] of [["left", -3], ["right", 3], ["top", 0]] as const) {
     lights.update({ ...stage, lightDir });
     expect(lights.key.position.x).toBe(x);
-    expect(lights.key.color.getHexString()).toBe("ffe2b0");
-    expect(lights.hemisphere.groundColor.getHexString()).toBe("223344");
-    expect(lights.fill.intensity).toBe(0.35);
-    expect(lights.key.intensity).toBe(0.9);
+    const key = lights.key.color;
+    expect(Math.max(key.r, key.g, key.b)).toBeCloseTo(1);
+    expect(key.r).toBeGreaterThan(key.b);
+    expect(lights.hemisphere.groundColor.r).toBeLessThan(lights.hemisphere.color.r);
+    expect(lights.fill.intensity).toBe(0.4);
+    expect(lights.key.intensity).toBe(1.6);
     expect(lights.key.castShadow).toBe(false);
   }
+});
+
+/** three's toon lighting for one surface direction: hemisphere mix plus each directional light through the bands, over π. */
+function toonIrradiance(lights: CharacterLights, bands: ArrayLike<number>, normal: THREE.Vector3) {
+  const total = new THREE.Color().lerpColors(lights.hemisphere.groundColor, lights.hemisphere.color, 0.5 * normal.y + 0.5)
+    .multiplyScalar(lights.hemisphere.intensity);
+  for (const light of [lights.key, lights.fill, lights.lamp, lights.rim]) {
+    const along = 0.5 * normal.dot(light.position.clone().normalize()) + 0.5;
+    total.add(light.color.clone().multiplyScalar(light.intensity * bands[Math.min(2, Math.floor(along * 3))]! / 255));
+  }
+  return total.multiplyScalar(1 / Math.PI);
+}
+
+it("shows his face near its own colour in daylight, even under a grey or sky-blue palette", () => {
+  const lights = new CharacterLights();
+  const toon = new CharacterToon();
+  const bands = toon.gradient.image.data;
+  // Paris arrival and lanes as the pack builder estimated them, then the authoring default.
+  for (const palette of [["#aaccee", "#aa9988", "#777777"], ["#888888", "#ccaa99", "#aaccee"], ["#b9a27a", "#6f7a5a", "#2e3a4f"]]) {
+    lights.update(stageSchema.parse({ palette }), { exposure: 1, tint: { r: 1, g: 1, b: 1 } });
+    const face = toonIrradiance(lights, bands, new THREE.Vector3(0, 0, 1));
+    const awayFromKey = toonIrradiance(lights, bands, new THREE.Vector3(1, 0, 0));
+    const crown = toonIrradiance(lights, bands, new THREE.Vector3(0, 1, 0));
+    expect(Math.min(face.r, face.g, face.b)).toBeGreaterThan(0.8);
+    expect(Math.max(face.r, face.g, face.b) / Math.min(face.r, face.g, face.b)).toBeLessThan(1.15);
+    expect(Math.min(awayFromKey.r, awayFromKey.g, awayFromKey.b)).toBeGreaterThan(0.55);
+    expect(Math.max(crown.r, crown.g, crown.b)).toBeLessThan(1.1);
+  }
+  toon.dispose();
 });
 
 it("adds warm face and rim lighting in dark scenes while retaining the shared grade", () => {
@@ -149,8 +182,8 @@ it("adds warm face and rim lighting in dark scenes while retaining the shared gr
   lights.update(stage, { exposure: 1, tint: { r: 1, g: 1, b: 1 } });
   expect(lights.lamp.intensity).toBe(0);
   lights.update(stage, { exposure: 0.62, tint: { r: 0.72, g: 0.8, b: 1 } });
-  expect(lights.lamp.intensity).toBeCloseTo(2.2);
-  expect(lights.rim.intensity).toBeCloseTo(2.8);
+  expect(lights.lamp.intensity).toBeCloseTo(0.5);
+  expect(lights.rim.intensity).toBeCloseTo(1);
   expect(lights.lamp.position.z).toBeGreaterThan(0);
   expect(lights.rim.position.z).toBeLessThan(0);
 });
