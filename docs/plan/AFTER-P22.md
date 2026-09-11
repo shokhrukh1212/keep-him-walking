@@ -22,6 +22,7 @@ finish rather than what it got wrong.
 | D4 | Sofia has one source painting instead of the six the pack builder needs | No | Owner (art) |
 | D5 | The production scheduler may run launch jobs late | **Yes** | Owner (hosting) |
 | D6 | Some of his new movements do not fit the moment they are used for | No | Owner (visual) |
+| D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Yes** — every watched day reaches it within 2 hours | Owner (product) |
 
 ---
 
@@ -189,3 +190,108 @@ replaces the old file there, then a re-run of the import (commands in
 - **Walk:** save a walk with shorter steps as `walk.fbx` if the slide is visible.
 - **Old-style movements:** add `listen.fbx`, `notice.fbx`, `stop.fbx`, `photo.fbx` (phone in the right hand), `wait_watch.fbx` (left wrist), `walk_brisk.fbx` and `umbrella_walk.fbx`.
 - **Or accept the list as it is.** Say so, and this entry becomes a record of the choice.
+
+---
+
+## D7 — After the landmark he stays there for the rest of the day
+
+**Found 11 September 2026** while testing Paris. Nothing has been changed yet.
+
+**What it is.** A day's five places add up to 8 km, which he walks in about 1 hour 47
+minutes when one person is watching. After that the code keeps him at the landmark for
+the rest of the 24-hour day, still walking. `PRODUCT.md` §3 says the opposite: that the
+five places repeat.
+
+How long each place lasts. These are watched minutes: he stands still when nobody
+watches.
+
+| Place | Length | 1 viewer (×1) | 16+ viewers (×5) |
+|---|---|---|---|
+| Arrival | 1.2 km | 16 min | 3 min |
+| Lanes | 1.6 km | 21 min | 4 min |
+| Market | 1.6 km | 21 min | 4 min |
+| Café | 1.4 km | 19 min | 4 min |
+| Landmark | 2.2 km | 29 min | 6 min |
+| **All five** | **8 km** | **1 h 47 min** | **21 min** |
+
+He walks 4.5 km an hour at ×1. More viewers make him faster: 2 viewers ×2, 4 viewers
+×3, 8 viewers ×4, 16 or more ×5. This is the approved "collective pace" in
+`DECISIONS.md`.
+
+A day watched for all 24 hours by one viewer covers about 108 km:
+
+| Time into the day | What happens |
+|---|---|
+| 0:02 | Arrival moment (150 m) |
+| 0:25 | Meets the local resident, in the lanes (1.9 km) |
+| 0:27–1:20 | Stumbles once, at a point between 2 and 6 km picked for each pack |
+| 1:04 | Food moment at the café (4.8 km) |
+| 1:45 | Landmark moment (7.9 km) |
+| **1:47** | **All five places done (8 km)** |
+| 1:47–24:00 | **Stays at the landmark, still walking, for about 22 hours** |
+| 9:23 | Reaches marathon distance (42.2 km) and cheers |
+| 24:00 | Departure moment at the 16:00 UTC rollover; the next city begins |
+
+At ×5 he reaches the landmark after 21 minutes and the marathon after 1 hour 53 minutes,
+and the day covers about 540 km.
+
+All day he also:
+
+- ties his shoe every 15 watched minutes
+- looks up every 9 minutes in the lanes and at the landmark
+- reacts when viewers press Wave, Water or Photo
+- has residents walk past every few minutes
+
+The scene dims from 19:00 to its night look at 21:00 local time, then brightens again
+between 05:00 and 07:00. With nobody watching he stands and waits, sits down after 10
+minutes, and sleeps instead of sitting between 21:00 and 05:00 local time.
+
+Where it lives in the code:
+
+- **The landmark loop.** `routePositionAt` in `src/lib/world/route-clock.ts`: once
+  distance passes `dayRouteMetres` (8,000 m), it returns phase `evening`, keeps the last
+  zone, and counts the metres into that zone modulo its 2,200 m.
+- **The jump.** `PixiScene` pans the city painting by metres into the zone ÷ zone length
+  (`boundedPanoramaLayout`). Each wrap therefore puts the painting back at its left edge.
+  The zone itself does not change, so there is no fade.
+- **Lengths and speeds.** Place lengths are `DEFAULT_ZONE_LENGTH_METRES` in
+  `src/lib/content/schema.ts`, and Paris uses them. Speed is `METRES_PER_SECOND` in
+  `src/lib/traveler/motion-clock.ts`. The ×5 cap is `PACE_CAP` in
+  `src/lib/config/server.ts`. The database migrations have no daily distance cap.
+- **Moments and waiting.** Story distances are `DEFAULT_STORY_BEAT_METRES` in
+  `schema.ts`. Departure is the only moment set by the clock
+  (`src/lib/story-clock/cadence.ts`). Waiting, sitting and sleeping are in
+  `src/lib/presence/waiting.ts`.
+- **Stale product text.** `PRODUCT.md` §3 still says each zone lasts "150 active
+  seconds", which no current pack does.
+
+**What happens if nothing changes.**
+
+- **Mostly the landmark.** Every watched day shows the landmark for most of its 24 hours,
+  and a busy day shows it for almost all of them.
+- **The painting jumps.** It jumps back to its left edge at 8 km and again every 2.2 km
+  after that: every 29 minutes with one viewer, and about every 6 minutes at ×5. This
+  comes from reading the code; nobody has watched it on screen yet.
+
+**What to do — pick one.**
+
+- **A — Repeat the five places after the landmark (recommended).** After 8 km he walks
+  arrival → lanes → market → café → landmark again, with the normal change between
+  places. That removes the jump and matches `PRODUCT.md`. The day's outcome still comes
+  from total distance, so the landmark and the story moments still count once a day.
+  **Trade-off:** viewers see the same five paintings again every 1 hour 47 minutes, or
+  every 21 minutes on a busy day. **Code:** loop the distance inside `routePositionAt`,
+  keeping it a pure function, and test the change from the landmark back to arrival.
+- **B — Make each place much longer so the five places fill the day.** Nothing repeats.
+  **Trade-offs:**
+  - The paintings move even more slowly than now, and they already look still.
+  - The approved daily goal "reach the landmark at 8,000 metres" in `DECISIONS.md`
+    would have to change.
+  - On a quiet day he may never reach the landmark.
+- **C — Stop walking at the landmark.** He sits and enjoys the view until the next city.
+  It is calm and simple. **Trade-offs:** one picture fills most of the day. Distance also
+  stops, so the approved 42,195-metre marathon goal could never be reached and would have
+  to be dropped.
+
+Whichever is chosen, update `PRODUCT.md` §3 afterwards so it describes what the code
+does.
