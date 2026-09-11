@@ -47,6 +47,39 @@ describe("route clock", () => {
     expect(extrapolatedRouteDistance(walking, later)).toBe(275);
   });
 
+  it("holds server-confirmed distance for a crowd action and resumes afterward", () => {
+    const runtime = {
+      globalActiveSeconds: 100,
+      globalDistanceMetres: 250,
+      paceRate: 2,
+      authoritativeAt: "2026-09-01T00:00:00Z",
+      walking: true,
+    };
+    const action = [{
+      kind: "photo" as const,
+      atActiveSecond: 102,
+      endsAtActiveSecond: 106,
+      frozenDistanceMetres: 255,
+    }];
+    expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:03Z"), action))
+      .toBe(255);
+    expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:08Z"), action))
+      .toBe(260);
+  });
+
+  it("supports action rows from the rollback contract without new fields", () => {
+    const runtime = {
+      globalActiveSeconds: 0,
+      globalDistanceMetres: 0,
+      paceRate: 1,
+      authoritativeAt: "2026-09-01T00:00:00Z",
+      walking: true,
+    };
+    expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:08Z"), [
+      { kind: "wave", atActiveSecond: 2 },
+    ])).toBeCloseTo(6.875);
+  });
+
   it("sanitizes invalid and negative distances", () => {
     expect(routePositionAt(tashkentCountryPackV4, Number.NaN))
       .toEqual(routePositionAt(tashkentCountryPackV4, 0));

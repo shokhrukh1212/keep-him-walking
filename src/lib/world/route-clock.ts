@@ -1,5 +1,8 @@
 import type { CountryPack } from "@/lib/content/schema";
+import type { ScheduledActionView } from "@/lib/contracts";
 import type { RoutePosition, RouteRuntime } from "./types";
+
+const CROWD_ACTION_DURATION_SECONDS = { wave: 2.5, drink: 5.5, photo: 4 } as const;
 
 export function routePositionAt(
   pack: CountryPack,
@@ -56,12 +59,45 @@ export function extrapolatedRouteSeconds(runtime: RouteRuntime, nowMs: number): 
   return runtime.globalActiveSeconds + elapsed;
 }
 
-export function extrapolatedRouteDistance(runtime: RouteRuntime, nowMs: number): number {
+export function extrapolatedRouteDistance(
+  runtime: RouteRuntime,
+  nowMs: number,
+  scheduledActions: readonly ScheduledActionView[] = [],
+): number {
   if (!runtime.walking) return runtime.globalDistanceMetres;
   const authoritativeMs = new Date(runtime.authoritativeAt).getTime();
   if (!Number.isFinite(authoritativeMs)) return runtime.globalDistanceMetres;
   const elapsed = Math.min(60, Math.max(0, (nowMs - authoritativeMs) / 1_000));
-  return runtime.globalDistanceMetres + elapsed * 1.25 * runtime.paceRate;
+  return projectedRouteDistance(runtime, elapsed, scheduledActions);
+}
+
+/** Pure bounded projection used by both React state and the two render clocks. */
+export function projectedRouteDistance(
+  runtime: RouteRuntime,
+  elapsedSeconds: number,
+  scheduledActions: readonly ScheduledActionView[] = [],
+): number {
+  const elapsed = Math.min(60, Math.max(0, Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0));
+  const projectedActiveSecond = runtime.globalActiveSeconds + elapsed;
+  let heldSeconds = 0;
+  let frozenDistance: number | null = null;
+  for (const action of scheduledActions) {
+    const end = action.endsAtActiveSecond
+      ?? action.atActiveSecond + CROWD_ACTION_DURATION_SECONDS[action.kind];
+    heldSeconds += Math.max(
+      0,
+      Math.min(projectedActiveSecond, end)
+        - Math.max(runtime.globalActiveSeconds, action.atActiveSecond),
+    );
+    if (projectedActiveSecond >= action.atActiveSecond
+      && projectedActiveSecond < end
+      && Number.isFinite(action.frozenDistanceMetres)) {
+      frozenDistance = Math.max(0, action.frozenDistanceMetres!);
+    }
+  }
+  if (frozenDistance !== null) return frozenDistance;
+  return runtime.globalDistanceMetres
+    + Math.max(0, elapsed - Math.min(elapsed, heldSeconds)) * 1.25 * runtime.paceRate;
 }
 
 export function deterministicVariant(seed: string, index: number, count: number): number {

@@ -54,4 +54,10 @@ describe("two-track presentation clock",()=>{
     expect(renewed.rawSeconds).toBeGreaterThan(14);
     expect(renewed.distanceMetres).toBeGreaterThan(35);
   });
+  it("plants both renderers on the server-confirmed distance during an action",()=>{
+    const c=new PresentationClock();c.accept(runtime(10,25,0,true,2),50_000,0);
+    const action=[{kind:"photo" as const,atActiveSecond:12,endsAtActiveSecond:16,frozenDistanceMetres:30}];
+    expect(c.sample(3_000,action)).toEqual({rawSeconds:13,distanceMetres:30,traveling:true});
+    expect(c.sample(8_000,action).distanceMetres).toBeGreaterThan(30);
+  });
 });

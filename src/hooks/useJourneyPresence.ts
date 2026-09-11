@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type {
   BootstrapSnapshot,
   ConnectionStatus,
@@ -12,9 +13,10 @@ type Props = {
   snapshot: BootstrapSnapshot;
   sceneReady: boolean;
   onHeartbeat: (heartbeat: HeartbeatResponse) => void;
+  onReactionHint?: () => void;
 };
 
-export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props) {
+export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat, onReactionHint }: Props) {
   const [status, setStatus] = useState<ConnectionStatus>(snapshot.presence.status);
   const sessionId = useRef<string | null>(null);
   const timer = useRef<number | null>(null);
@@ -22,6 +24,18 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
   const requestController = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const heartbeatRef = useRef<(forceInactive?: boolean) => Promise<void>>(async () => undefined);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const reactionHintRef = useRef(onReactionHint);
+
+  useEffect(() => {
+    reactionHintRef.current = onReactionHint;
+  }, [onReactionHint]);
+
+  const broadcastReactionHint = useCallback(() => {
+    const channel = channelRef.current;
+    if (!channel) return;
+    void channel.send({ type: "broadcast", event: "reaction", payload: {} });
+  }, []);
 
   const heartbeat = useCallback(async (forceInactive = false) => {
     if (snapshot.mode !== "live" || !sceneReady || !sessionId.current) return;
@@ -112,8 +126,12 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
     sessionId.current ??= crypto.randomUUID();
     const supabase = getBrowserSupabase();
     const channel = supabase?.channel(`journey:${snapshot.countryDay.id}`, {
-      config: { presence: { key: sessionId.current } },
+      config: {
+        presence: { key: sessionId.current },
+        broadcast: { self: false },
+      },
     });
+    channelRef.current = channel ?? null;
     const trackRealtimePresence = async () => {
       if (!channel) return;
       if (document.visibilityState === "visible") {
@@ -147,6 +165,7 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
       ?.on("presence", { event: "sync" }, reconcile)
       .on("presence", { event: "join" }, reconcile)
       .on("presence", { event: "leave" }, reconcile)
+      .on("broadcast", { event: "reaction" }, () => reactionHintRef.current?.())
       .subscribe(async (channelStatus) => {
         if (channelStatus === "SUBSCRIBED") await trackRealtimePresence();
       });
@@ -168,10 +187,14 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat }: Props)
         void channel.untrack();
         void supabase.removeChannel(channel);
       }
+      if (channelRef.current === channel) channelRef.current = null;
     };
   }, [heartbeat, sceneReady, snapshot.countryDay.id, snapshot.mode]);
 
-  return snapshot.mode === "offline_preview" || snapshot.mode === "prelaunch"
-    ? snapshot.presence.status
-    : status;
+  return {
+    status: snapshot.mode === "offline_preview" || snapshot.mode === "prelaunch"
+      ? snapshot.presence.status
+      : status,
+    broadcastReactionHint,
+  };
 }

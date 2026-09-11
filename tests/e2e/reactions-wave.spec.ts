@@ -31,7 +31,7 @@ function snapshot(server: ReactionServer): BootstrapSnapshot {
     mode: "live",
     countryDay: { ...base.countryDay, id: COUNTRY_DAY_ID, totalDays: 30 },
     refresh: { nextAt: null, afterMs: 1_000, reason: "none" },
-    presence: { activeViewers: 2, status: "live", ttlSeconds: TTL_SECONDS, waitingSince: null },
+    presence: { activeViewers: 1, status: "live", ttlSeconds: TTL_SECONDS, waitingSince: null },
     reactions: reactions(server),
     route: {
       globalActiveSeconds: GLOBAL_ACTIVE_SECONDS,
@@ -45,6 +45,8 @@ function snapshot(server: ReactionServer): BootstrapSnapshot {
 
 async function installReactionApi(page: Page, server: ReactionServer, visitor: string) {
   await page.route("**/api/bootstrap", (route) => route.fulfill({ json: snapshot(server) }));
+  await page.route("**/api/me", (route) => route.fulfill({ json: { firstVisit: false } }));
+  await page.route("**/api/observability/vitals", (route) => route.fulfill({ status: 204 }));
   await page.route("**/api/presence/heartbeat", async (route) => {
     const now = new Date();
     await route.fulfill({
@@ -52,7 +54,7 @@ async function installReactionApi(page: Page, server: ReactionServer, visitor: s
         countryDayId: COUNTRY_DAY_ID,
         serverNow: now.toISOString(),
         realServerNow: now.toISOString(),
-        activeViewers: 2,
+        activeViewers: 1,
         walking: true,
         globalSteps: 0,
         visitorActiveSeconds: 0,
@@ -72,13 +74,17 @@ async function installReactionApi(page: Page, server: ReactionServer, visitor: s
     });
   });
   await page.route("**/api/reactions", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: { countryDayId: COUNTRY_DAY_ID, reactions: reactions(server) } });
+      return;
+    }
     // One wave per visitor, exactly as consume_mutation_rate_limit enforces.
     if (!server.waveVisitors.has(visitor)) {
       server.waveVisitors.add(visitor);
       server.waveCount += 1;
     }
     let scheduledAt: number | null = null;
-    if (server.waveCount >= 2 && server.scheduled.length === 0) {
+    if (server.waveCount >= 1 && server.scheduled.length === 0) {
       scheduledAt = GLOBAL_ACTIVE_SECONDS;
       server.scheduled = [{ kind: "wave", atActiveSecond: scheduledAt }];
       server.waveCount = 0;
@@ -88,7 +94,7 @@ async function installReactionApi(page: Page, server: ReactionServer, visitor: s
         accepted: true,
         kind: "wave",
         count: server.waveCount,
-        threshold: 2,
+        threshold: 1,
         scheduledAt,
         cooldownSeconds: 60,
       },
@@ -96,39 +102,23 @@ async function installReactionApi(page: Page, server: ReactionServer, visitor: s
   });
 }
 
-test("two watchers waving make him wave in both browsers at the same second", async ({ browser }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium", "The two-context crowd action runs once");
+test("one confirmed watcher can make him wave", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "The solo crowd action runs once");
   const server: ReactionServer = { waveCount: 0, waveVisitors: new Set(), scheduled: [] };
 
-  const contextA = await browser.newContext();
-  const pageA = await contextA.newPage();
-  await installReactionApi(pageA, server, "a");
-  await pageA.goto("/");
+  await installReactionApi(page, server, "solo");
+  await page.goto("/");
+  const intro = page.getByRole("button", { name: "Dismiss introduction" });
+  if (await intro.count()) await intro.click();
 
-  const contextB = await browser.newContext();
-  const pageB = await contextB.newPage();
-  await installReactionApi(pageB, server, "b");
-  await pageB.goto("/");
+  const wave = page.locator('.reaction-button[data-kind="wave"]');
+  await expect(wave).toBeEnabled();
 
-  const waveA = pageA.getByRole("button", { name: /^Wave\./ });
-  const waveB = pageB.getByRole("button", { name: /^Wave\./ });
-  await expect(waveA).toBeEnabled();
-  await expect(waveB).toBeEnabled();
-
-  // One wave is not a crowd.
-  await waveA.click();
-  await expect(waveA).toBeDisabled();
-  expect(server.scheduled).toHaveLength(0);
-
-  // The second wave inside the same bucket reaches the threshold.
-  await waveB.click();
+  // The scene is continuously animated; bypass Playwright's layout-stability wait
+  // while retaining a real pointer click on the fixed HUD control.
+  await wave.click({ force: true });
+  await expect(wave).toBeDisabled();
   expect(server.scheduled).toEqual([{ kind: "wave", atActiveSecond: GLOBAL_ACTIVE_SECONDS }]);
 
-  // Both browsers compute the same frame from the same authoritative inputs.
-  for (const page of [pageA, pageB]) {
-    await expect(page.getByRole("status", { name: /Walking rule/ })).toContainText("Waving back");
-  }
-
-  await contextA.close();
-  await contextB.close();
+  await expect(page.getByRole("status", { name: /Walking rule/ })).toContainText("Waving back");
 });

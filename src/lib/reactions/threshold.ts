@@ -22,11 +22,12 @@ export const REACTION_MOTION_KIND: Record<ReactionKind, CrowdActionKind> = {
 };
 
 /**
- * How many watchers have to agree before he does it. Two people is always
- * enough; past six watchers it takes 30 % of the room. The RPC computes the
+ * How many watchers have to agree before he does it. A solo watcher can act;
+ * from two people upward the floor is two, and past six it takes 30 % of the room. The RPC computes the
  * same number — this mirror exists so the button can show "3/5" honestly.
  */
 export function reactionThreshold(liveWatchers: number): number {
   const watchers = Number.isFinite(liveWatchers) ? Math.max(0, Math.floor(liveWatchers)) : 0;
+  if (watchers === 1) return 1;
   return Math.max(2, Math.ceil(0.3 * watchers));
 }

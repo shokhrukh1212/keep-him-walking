@@ -6,10 +6,10 @@ import {
 } from "./threshold";
 
 describe("reactionThreshold", () => {
-  it("matches greatest(2, ceil(0.3 × watchers)) across the table", () => {
+  it("allows a solo watcher, then matches greatest(2, ceil(0.3 × watchers))", () => {
     const table: Array<[number, number]> = [
       [0, 2],
-      [1, 2],
+      [1, 1],
       [2, 2],
       [3, 2],
       [6, 2],
@@ -25,15 +25,16 @@ describe("reactionThreshold", () => {
     }
   });
 
-  it("never asks for fewer than two people", () => {
-    for (const watchers of [-5, 0, 1, Number.NaN]) {
+  it("uses two only when nobody is confirmed, never zero", () => {
+    for (const watchers of [-5, 0, Number.NaN]) {
       expect(reactionThreshold(watchers)).toBe(2);
     }
+    expect(reactionThreshold(1)).toBe(1);
   });
 
   it("rises monotonically with the crowd", () => {
     let previous = 0;
-    for (let watchers = 0; watchers <= 200; watchers += 1) {
+    for (let watchers = 1; watchers <= 200; watchers += 1) {
       const threshold = reactionThreshold(watchers);
       expect(threshold).toBeGreaterThanOrEqual(previous);
       previous = threshold;

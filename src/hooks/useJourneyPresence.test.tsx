@@ -98,7 +98,7 @@ describe("useJourneyPresence country rollover", () => {
     vi.stubGlobal("fetch",fetchMock);const onHeartbeat=vi.fn();
     const {unmount,result}=renderHook(()=>useJourneyPresence({snapshot:snapshot("day-2"),sceneReady:true,onHeartbeat}));
     await act(async()=>{await vi.advanceTimersByTimeAsync(0);});
-    expect(onHeartbeat).not.toHaveBeenCalled();expect(result.current).toBe("reconnecting");unmount();
+    expect(onHeartbeat).not.toHaveBeenCalled();expect(result.current.status).toBe("reconnecting");unmount();
   });
 
   it("starts the new day active without sending an inactive cleanup heartbeat", async () => {

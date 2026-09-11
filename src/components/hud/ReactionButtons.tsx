@@ -22,6 +22,7 @@ type Props = {
   /** The crowd action he is performing right now, if any. */
   activeCrowdKind: CrowdActionKind | null;
   onScheduled?: (kind: ReactionKind, atActiveSecond: number) => void;
+  onConfirmed?: () => void;
 };
 
 type CooldownMap = Partial<Record<ReactionKind, number>>;
@@ -32,6 +33,7 @@ export function ReactionButtons({
   enabled,
   activeCrowdKind,
   onScheduled,
+  onConfirmed,
 }: Props) {
   const [cooldowns, setCooldowns] = useState<CooldownMap>({});
   const [now, setNow] = useState(() => Date.now());
@@ -71,12 +73,13 @@ export function ReactionButtons({
       if (response.ok && typeof result?.scheduledAt === "number") {
         onScheduled?.(kind, result.scheduledAt);
       }
+      if (response.ok) onConfirmed?.();
     } catch {
       // A failed send simply leaves the button available again.
     } finally {
       setPending(null);
     }
-  }, [onScheduled]);
+  }, [onConfirmed, onScheduled]);
 
   const threshold = reactionThreshold(activeViewers ?? 0);
 

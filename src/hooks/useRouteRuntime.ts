@@ -25,14 +25,14 @@ export function useRouteRuntime(
           walking: heartbeat.walking,
         }
       : snapshot.route;
-    const rawSeconds = extrapolatedRouteSeconds(runtime, serverNowMs);
-    const distanceMetres = extrapolatedRouteDistance(runtime, serverNowMs);
     // Crowd actions the server has already committed to, from whichever of the
     // two authoritative payloads carried them.
     const scheduledActions = mergeScheduledActions(
       snapshot.reactions.scheduled,
       heartbeat?.reactions?.scheduled,
     );
+    const rawSeconds = extrapolatedRouteSeconds(runtime, serverNowMs);
+    const distanceMetres = extrapolatedRouteDistance(runtime, serverNowMs, scheduledActions);
     const motion = travelerMotionAt(
       snapshot.assets,
       rawSeconds,

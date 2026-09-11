@@ -27,6 +27,8 @@ export type CrowdActionKind = "wave" | "drink" | "photo";
 export type ScheduledCrowdAction = {
   kind: CrowdActionKind;
   atActiveSecond: number;
+  endsAtActiveSecond?: number;
+  frozenDistanceMetres?: number | null;
 };
 
 const CROWD_ACTION_LABELS: Record<CrowdActionKind, string> = {
@@ -250,7 +252,10 @@ function crowdActionAt(
     const sinceScheduled = rawActiveSeconds - alignedStep(entry.atActiveSecond);
     if (sinceScheduled < 0) continue;
     const elapsed = Math.min(sinceScheduled, sinceLastBeat);
-    if (elapsed >= ACTION_DURATIONS[entry.kind]) continue;
+    const duration = Number.isFinite(entry.endsAtActiveSecond)
+      ? Math.max(0, entry.endsAtActiveSecond! - entry.atActiveSecond)
+      : ACTION_DURATIONS[entry.kind];
+    if (elapsed >= duration) continue;
     if (best === null || elapsed < best.elapsed) best = { entry, elapsed };
   }
   if (best === null) return null;
@@ -259,7 +264,9 @@ function crowdActionAt(
     {
       atMetres: distanceMetres,
       kind: best.entry.kind,
-      durationSeconds: ACTION_DURATIONS[best.entry.kind],
+      durationSeconds: Number.isFinite(best.entry.endsAtActiveSecond)
+        ? Math.max(0, best.entry.endsAtActiveSecond! - best.entry.atActiveSecond)
+        : ACTION_DURATIONS[best.entry.kind],
       label: CROWD_ACTION_LABELS[best.entry.kind],
     },
     best.elapsed,
@@ -285,7 +292,7 @@ export function systemActionAt(
 ): TravelerMotionAction | null {
   if (pack.schemaVersion !== 3) return null;
   const route = routePositionAt(pack, distanceMetres);
-  const zone = pack.route.zones[route.zoneIndex]?.id ?? "";
+  const zone = pack.route.zones[route.zoneIndex];
   const seed = pack.assetVersion;
 
   const stumbleAt = pack.dayRouteMetres * .25
@@ -301,7 +308,7 @@ export function systemActionAt(
   const tie = systemAction("tie_shoe", (rawActiveSeconds - tieOffset + tiePeriod) % tiePeriod, "Tying a shoe");
   if (rawActiveSeconds >= tieOffset && tie) return tie;
 
-  if (zone.includes("lane") || zone.includes("landmark")) {
+  if (zone?.kind === "lanes" || zone?.kind === "landmark") {
     const lookPeriod = 9 * 60;
     const lookOffset = deterministicVariant(`${seed}:look-up`, 0, lookPeriod - ACTION_DURATIONS.look_up);
     const look = systemAction("look_up", (rawActiveSeconds - lookOffset + lookPeriod) % lookPeriod, "Looking up at the city");

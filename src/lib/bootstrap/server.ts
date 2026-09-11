@@ -399,7 +399,7 @@ function bootstrapFromBundle(
     countries: countriesView(bundle.countries),
     reactions: reactionsFromRow(bundle.reactions),
     dayPhotos: dayPhotosView(bundle.reactions, config, supabase),
-    weather: weatherFromRow(bundle.weather),
+    weather: config.weatherEnabled ? weatherFromRow(bundle.weather) : null,
     steps: {
       global: Number(bundle.runtime.out_global_steps ?? 0),
       updatedAt: String(bundle.runtime.out_accounted_at),
@@ -450,14 +450,36 @@ async function withApprovedTicket(
   const dayResult = await supabase.from("country_days")
     .select("journey_id").eq("id", snapshot.countryDay.id).single();
   if (dayResult.error) throw dayResult.error;
-  const { data, error } = await supabase.from("tickets")
+  const [{ data, error }, { data: tomorrow, error: tomorrowError }] = await Promise.all([
+    supabase.from("tickets")
     .select("target_day_number,country_code,country_name,city_name,pack_id")
     .eq("journey_id", dayResult.data.journey_id)
     .eq("status", "approved")
     .gt("target_day_number", snapshot.countryDay.dayNumber)
-    .order("target_day_number", { ascending: true }).limit(1).maybeSingle();
+    .order("target_day_number", { ascending: true }).limit(1).maybeSingle(),
+    supabase.from("country_days")
+      .select("day_number,country_code,country_name,city_name,scene_pack_id,starts_at,arrival_mode")
+      .eq("journey_id", dayResult.data.journey_id)
+      .eq("day_number", snapshot.countryDay.dayNumber + 1)
+      .in("status", ["scheduled", "live"])
+      .maybeSingle(),
+  ]);
   if (error) throw error;
-  if (!data) return { ...snapshot, ticket: null };
+  if (tomorrowError) throw tomorrowError;
+  const committedTomorrow = tomorrow ? {
+    dayNumber: tomorrow.day_number,
+    countryCode: tomorrow.country_code.trim(),
+    countryName: tomorrow.country_name,
+    cityName: tomorrow.city_name,
+    scenePackId: tomorrow.scene_pack_id,
+    startsAt: tomorrow.starts_at,
+    arrivalMode: tomorrow.arrival_mode === "flight"
+      ? "flight" as const
+      : tomorrow.arrival_mode === "train"
+        ? "train" as const
+        : "walk" as const,
+  } : null;
+  if (!data) return { ...snapshot, ticket: null, tomorrow: committedTomorrow };
   const ticket = {
     dayNumber: data.target_day_number,
     countryCode: data.country_code.trim(),
@@ -468,6 +490,7 @@ async function withApprovedTicket(
   return {
     ...snapshot,
     ticket,
+    tomorrow: committedTomorrow,
     vote: ticket.dayNumber === snapshot.countryDay.dayNumber + 1 ? null : snapshot.vote,
   };
 }
@@ -577,8 +600,8 @@ export async function liveBootstrapSnapshot(
   const config = serverRuntimeConfig();
   if (config.phase2Enabled) {
     const prelaunch = await prelaunchBootstrapSnapshot(now, config, supabase);
-    if (prelaunch) return prelaunch;
-    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v13", {
+    if (prelaunch) return withApprovedTicket(prelaunch, supabase);
+    const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v14", {
       p_visitor_hash: visitorHash,
       p_real_now: now.toISOString(),
       p_ttl_seconds: config.presenceTtlSeconds,
@@ -755,7 +778,7 @@ export async function liveBootstrapSnapshot(
     countries: countriesView(countries as BootstrapBundleRow["countries"]),
     reactions: reactionsFromRow(reactions as RawReactionsPayload),
     dayPhotos: dayPhotosView(reactions as BootstrapBundleRow["reactions"], config, supabase),
-    weather: weatherFromRow(weather),
+    weather: config.weatherEnabled ? weatherFromRow(weather) : null,
     steps: {
       global: Number(row?.out_global_steps ?? 0),
       updatedAt: String(row?.out_accounted_at ?? now.toISOString()),

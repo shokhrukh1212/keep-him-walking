@@ -8,6 +8,39 @@ import { reactionBodySchema } from "@/lib/validation/api";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
 import { withRouteTelemetry } from "@/lib/observability/route";
+import { reactionsFromRow } from "@/lib/reactions/payload";
+
+async function handleGet() {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: "Reactions are not configured." }, { status: 503 });
+  }
+  const now = new Date();
+  const countryDay = await findCurrentCountryDay(now);
+  if (!countryDay) {
+    return NextResponse.json({ error: "No country-day is active." }, { status: 409 });
+  }
+  const { data: runtime, error: runtimeError } = await supabase
+    .from("journey_runtime")
+    .select("global_active_seconds")
+    .eq("country_day_id", countryDay.id)
+    .maybeSingle();
+  if (runtimeError) {
+    return NextResponse.json({ error: "Reaction confirmation unavailable." }, { status: 503 });
+  }
+  const { data, error } = await supabase.rpc("read_day_reactions", {
+    p_country_day_id: countryDay.id,
+    p_now: now.toISOString(),
+    p_global_active_seconds: Number(runtime?.global_active_seconds ?? 0),
+  });
+  if (error) {
+    return NextResponse.json({ error: "Reaction confirmation unavailable." }, { status: 503 });
+  }
+  return NextResponse.json({
+    countryDayId: countryDay.id,
+    reactions: reactionsFromRow(data),
+  }, { headers: { "Cache-Control": "no-store" } });
+}
 
 async function handlePost(request: NextRequest) {
   if (!hasTrustedOrigin(request)) {
@@ -74,3 +107,4 @@ async function handlePost(request: NextRequest) {
 }
 
 export const POST = withRouteTelemetry("reactions", handlePost);
+export const GET = withRouteTelemetry("reactions-read", handleGet);

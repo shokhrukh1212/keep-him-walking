@@ -78,6 +78,9 @@ export type ReactionCounts = {
 export type ScheduledActionView = {
   kind: CrowdActionKind;
   atActiveSecond: number;
+  /** Server-owned action boundary and planted route position. */
+  endsAtActiveSecond?: number;
+  frozenDistanceMetres?: number | null;
 };
 
 export type DayPhotoView = {
@@ -115,6 +118,16 @@ export type BootstrapSnapshot = {
     countryName: string;
     cityName: string;
     scenePackId: string;
+  } | null;
+  /** The next committed country-day. Never inferred from the content registry. */
+  tomorrow?: {
+    dayNumber: number;
+    countryCode: string;
+    countryName: string;
+    cityName: string;
+    scenePackId: string;
+    startsAt: string;
+    arrivalMode: "walk" | "train" | "flight";
   } | null;
   presence: {
     activeViewers: number | null;

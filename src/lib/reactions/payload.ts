@@ -2,7 +2,12 @@ import type { ReactionsView, ScheduledActionView } from "@/lib/contracts";
 
 const CROWD_ACTION_KINDS = new Set(["wave", "drink", "photo"]);
 
-type RawScheduled = { kind?: unknown; atActiveSecond?: unknown } | null | undefined;
+type RawScheduled = {
+  kind?: unknown;
+  atActiveSecond?: unknown;
+  endsAtActiveSecond?: unknown;
+  frozenDistanceMetres?: unknown;
+} | null | undefined;
 
 export type RawReactionsPayload = {
   counts?: { wave?: unknown; water?: unknown; photo?: unknown } | null;
@@ -19,7 +24,18 @@ export function scheduledActionFromRow(row: RawScheduled): ScheduledActionView |
   if (!row || typeof row.kind !== "string" || !CROWD_ACTION_KINDS.has(row.kind)) return null;
   const at = Number(row.atActiveSecond);
   if (!Number.isFinite(at)) return null;
-  return { kind: row.kind as ScheduledActionView["kind"], atActiveSecond: at };
+  const end = Number(row.endsAtActiveSecond);
+  const frozen = row.frozenDistanceMetres === null || row.frozenDistanceMetres === undefined
+    ? null
+    : Number(row.frozenDistanceMetres);
+  return {
+    kind: row.kind as ScheduledActionView["kind"],
+    atActiveSecond: at,
+    ...(Number.isFinite(end) && end > at ? { endsAtActiveSecond: end } : {}),
+    ...(frozen === null || Number.isFinite(frozen)
+      ? { frozenDistanceMetres: frozen }
+      : {}),
+  };
 }
 
 /**

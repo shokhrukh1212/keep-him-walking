@@ -52,7 +52,7 @@ async function handlePost(request: NextRequest) {
     p_steps_per_second: config.stepsPerActiveSecond,
   };
   const { data, error } = await supabase.rpc(
-    paceEnabled ? "record_presence_heartbeat_v11" : "record_presence_heartbeat_v2",
+    paceEnabled ? "record_presence_heartbeat_v12" : "record_presence_heartbeat_v2",
     paceEnabled
       ? {
           ...heartbeatArguments,
@@ -107,7 +107,7 @@ async function handlePost(request: NextRequest) {
     firstWatcherShareToken,
     countryCode: String(row?.out_country_code ?? countryCode),
     reactions: reactionsFromRow(row?.out_reactions),
-    weather: weatherFromRow(row?.out_weather),
+    weather: config.weatherEnabled ? weatherFromRow(row?.out_weather) : null,
     // The bunting goes up only once the server has confirmed the moment.
     hundredWatchersAt: row?.out_hundred_watchers_at ? String(row.out_hundred_watchers_at) : null,
   });

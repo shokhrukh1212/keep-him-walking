@@ -1,4 +1,6 @@
 import type { RouteRuntime } from "@/lib/world/types";
+import type { ScheduledActionView } from "@/lib/contracts";
+import { projectedRouteDistance } from "@/lib/world/route-clock";
 
 /** Two monotonic tracks shared by the scene and rig. Network updates change targets, not origins. */
 export class PresentationClock {
@@ -40,7 +42,7 @@ export class PresentationClock {
       this.initialized = true;
     }
   }
-  sample(now = performance.now()) {
+  sample(now = performance.now(), scheduledActions: readonly ScheduledActionView[] = []) {
     const dt = Math.max(0, Math.min(0.1, (now - this.lastTick) / 1000));
     this.lastTick = now;
     const valid = this.walking && now < this.expiry;
@@ -49,12 +51,23 @@ export class PresentationClock {
       : 0;
     const secondsTarget = this.secondsAnchor + elapsed;
     const distanceRate = 1.25 * this.paceRate;
-    const distanceTarget = this.distanceAnchor + elapsed * distanceRate;
+    const distanceTarget = projectedRouteDistance({
+      globalActiveSeconds: this.secondsAnchor,
+      globalDistanceMetres: this.distanceAnchor,
+      paceRate: this.paceRate,
+      authoritativeAt: new Date(0).toISOString(),
+      walking: this.walking,
+    }, elapsed, scheduledActions);
+    const actionActive = scheduledActions.some((action) => {
+      const end = action.endsAtActiveSecond ?? action.atActiveSecond
+        + ({ wave: 2.5, drink: 5.5, photo: 4 } as const)[action.kind];
+      return secondsTarget >= action.atActiveSecond && secondsTarget < end;
+    });
     const secondsDifference = secondsTarget - this.seconds;
     const distanceDifference = distanceTarget - this.distance;
     if (Math.abs(secondsDifference) > 2 || !valid) this.seconds = secondsTarget;
     else this.seconds += dt * Math.max(0, Math.min(1.05, 1 + secondsDifference * 0.1));
-    if (Math.abs(distanceDifference) > 2 * distanceRate || !valid) this.distance = distanceTarget;
+    if (actionActive || Math.abs(distanceDifference) > 2 * distanceRate || !valid) this.distance = distanceTarget;
     else this.distance += dt * distanceRate * Math.max(
       0,
       Math.min(1.05, 1 + distanceDifference / Math.max(1, distanceRate) * 0.1),

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(38);
 
 insert into public.journeys (
   id, slug, title, starts_at, total_days, status,
@@ -27,6 +27,8 @@ select has_type('public', 'reaction_kind', 'reactions are a closed enum');
 select has_table('public', 'reaction_windows', 'reaction buckets exist');
 select has_table('public', 'scheduled_actions', 'crowd actions are recorded');
 select has_table('public', 'day_photos', 'day photographs are recorded');
+select has_column('public', 'scheduled_actions', 'end_active_second', 'actions own an authoritative end second');
+select has_column('public', 'scheduled_actions', 'frozen_distance_metres', 'actions own a planted route distance');
 select col_is_pk(
   'public', 'reaction_windows',
   array['country_day_id', 'kind', 'bucket_start'],
@@ -56,6 +58,19 @@ select has_function(
     'integer', 'numeric', 'real', 'integer', 'text'
   ],
   'the heartbeat carries reactions'
+);
+select has_function(
+  'public', 'record_presence_heartbeat_v12',
+  array[
+    'uuid', 'text', 'text', 'text', 'boolean', 'timestamp with time zone',
+    'integer', 'numeric', 'real', 'integer', 'text'
+  ],
+  'the action-aware heartbeat owns distance'
+);
+select has_function(
+  'public', 'read_journey_runtime_v6',
+  array['uuid', 'timestamp with time zone', 'integer', 'numeric', 'real'],
+  'the action-aware read projection owns distance'
 );
 
 -- Grants --------------------------------------------------------------------
@@ -87,9 +102,68 @@ select is(
 -- Threshold table -----------------------------------------------------------
 
 select is(public.reaction_threshold(0), 2, 'an empty room still needs two people');
+select is(public.reaction_threshold(1), 1, 'one confirmed watcher can act');
 select is(public.reaction_threshold(6), 2, 'six watchers still need two');
 select is(public.reaction_threshold(7), 3, 'seven watchers need three');
 select is(public.reaction_threshold(100), 30, 'a hundred watchers need thirty');
+
+-- A real solo room reaches that threshold and schedules the requested action.
+insert into public.journeys (
+  id, slug, title, starts_at, total_days, status,
+  real_time_anchor_at, story_time_anchor_at, story_time_scale, phase2_enabled
+) values (
+  '00000000-0000-4000-8000-000000000078', 'phase8-solo-reaction-test',
+  'Phase 8 Solo Reaction Test', '2026-09-24T00:00:00Z', 1, 'preview',
+  '2026-09-24T00:00:00Z', '2026-09-24T00:00:00Z', 1, true
+);
+
+insert into public.country_days (
+  id, journey_id, day_number, country_code, country_name, city_name, time_zone,
+  starts_at, ends_at, scene_pack_id, status
+) values (
+  '10000000-0000-4000-8000-000000000079',
+  '00000000-0000-4000-8000-000000000078',
+  1, 'GB', 'United Kingdom', 'London', 'Europe/London',
+  '2026-09-24T00:00:00Z', '2026-09-25T00:00:00Z', 'tashkent-v4', 'live'
+);
+
+do $$ begin
+  perform * from public.record_presence_heartbeat_v6(
+    '10000000-0000-4000-8000-000000000079', repeat('s', 64), repeat('9', 64),
+    'active', true, '2026-09-24T00:10:00Z', 50, 1.8, 5, 600, 'GB'
+  );
+end; $$;
+
+create temporary table solo_photo as
+select * from public.submit_reaction(
+  '10000000-0000-4000-8000-000000000079', repeat('s', 64), 'photo',
+  '2026-09-24T00:10:01Z', 50
+);
+
+select is((select out_threshold from solo_photo), 1, 'the solo room receives threshold one');
+select isnt((select out_scheduled_at from solo_photo), null, 'the solo reaction schedules its action');
+select is(
+  (select end_active_second - at_active_second from public.scheduled_actions
+    where country_day_id = '10000000-0000-4000-8000-000000000079'),
+  4.000::numeric,
+  'the photo owns a four-second watched-time window'
+);
+select is(
+  (select frozen_distance_metres from public.scheduled_actions
+    where country_day_id = '10000000-0000-4000-8000-000000000079'),
+  2.5::double precision,
+  'the scheduled action stores its authoritative planted distance'
+);
+
+create temporary table solo_after_action as select * from public.record_presence_heartbeat_v12(
+  '10000000-0000-4000-8000-000000000079', repeat('s', 64), repeat('9', 64),
+  'active', true, '2026-09-24T00:10:10Z', 50, 1.8, 5, 600, 'GB'
+);
+select is(
+  (select out_global_distance_metres from solo_after_action),
+  7.5::double precision,
+  'ten watched seconds advance distance for only six seconds around the photo hold'
+);
 
 -- Behaviour -----------------------------------------------------------------
 

@@ -77,6 +77,36 @@ describe("deterministic system actions", () => {
         .toEqual(systemActionAt(tashkentCountryPackV4, seconds, 3_000));
     }
   });
+
+  it("selects look-up moments from the authored zone kind, never words in its id", () => {
+    const lanesPack = {
+      ...tashkentCountryPackV4,
+      route: {
+        ...tashkentCountryPackV4.route,
+        zones: tashkentCountryPackV4.route.zones.map((zone, index) => index === 1
+          ? { ...zone, id: "quiet-street", kind: "lanes" as const }
+          : zone),
+      },
+    };
+    const misleadingPack = {
+      ...lanesPack,
+      route: {
+        ...lanesPack.route,
+        zones: lanesPack.route.zones.map((zone, index) => index === 1
+          ? { ...zone, id: "looks-like-landmark", kind: "arrival" as const }
+          : zone),
+      },
+    };
+    const metresInSecondZone = lanesPack.route.zones[0]!.lengthMetres + 100;
+    let lookSecond: number | null = null;
+    for (let seconds = 0; seconds < 540 && lookSecond === null; seconds += 0.25) {
+      if (systemActionAt(lanesPack, seconds, metresInSecondZone)?.kind === "look_up") {
+        lookSecond = seconds;
+      }
+    }
+    expect(lookSecond).not.toBeNull();
+    expect(systemActionAt(misleadingPack, lookSecond!, metresInSecondZone)?.kind).not.toBe("look_up");
+  });
 });
 
 describe("crowd-scheduled actions", () => {
