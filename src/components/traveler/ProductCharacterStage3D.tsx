@@ -14,7 +14,7 @@ import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { packResidentType, walkerResidentType } from "@/lib/characters/residents";
 import { actorLayout } from "@/lib/traveler/actor-layout";
 import { frameFitsViewport, type StageFrame } from "@/lib/world/stage-layout";
-import { travelerMotionAt } from "@/lib/traveler/motion-clock";
+import { METRES_PER_SECOND, travelerMotionAt } from "@/lib/traveler/motion-clock";
 import { wavingWalker } from "@/lib/world/ambient";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import {
@@ -156,8 +156,8 @@ export function ProductCharacterStage3D(props: Props) {
       lane: WalkerLane; placement: WalkerPlacement; street: StreetWalker;
     };
     let walkers: Walker[] = [];
-    // Where the watched clock and his distance stood when the walkers last moved.
-    let walkerClock: { seconds: number; distanceMetres: number; at: number } | undefined;
+    // The watched second the walkers last moved at; passes start in the interval since.
+    let walkerSecond: number | undefined;
     const removeWalker = (walker: Walker) => {
       walkerRoot.remove(walker.anchor);
       walker.actor.dispose();
@@ -368,24 +368,26 @@ export function ProductCharacterStage3D(props: Props) {
       // The tier is read here, not at mount: this effect has an empty dependency list.
       const walkerLimit = QUALITY_LIMITS[state.qualityTier].walkers;
       const travelerHeight = CHARACTER_MANIFEST.traveler.heightMetres;
-      // The pavement moves under everyone exactly as fast as his distance grows.
-      const walkerSeconds = walkerClock ? (now - walkerClock.at) / 1000 : 0;
-      const groundSpeed = walkerClock && walkerSeconds > 0
-        ? Math.max(0, (sample.distanceMetres - walkerClock.distanceMetres) / walkerSeconds)
+      // How fast the pavement moves under everyone: his authoritative rate while he
+      // walks, nothing while an action or waiting holds his distance. It decides which
+      // way a walker faces, so it is never a per-frame measurement that a heartbeat
+      // correction could spike into turning an overtaker round.
+      const groundSpeed = sample.traveling && !motion.action
+        ? METRES_PER_SECOND * Math.max(0, state.routeRuntime.paceRate)
         : 0;
       // Nobody sets off before the conversation partner's model is in, so a walker's
       // download never leaves the partner still loading.
-      const passes = walkerClock && residentGltf && sample.traveling && (state.command?.walking ?? true)
-        && !cue.conversation && !motion.action
+      const passes = walkerSecond !== undefined && residentGltf && sample.traveling
+        && (state.command?.walking ?? true) && !cue.conversation && !motion.action
         ? walkerPassesBetween(
-            walkerClock.seconds,
+            walkerSecond,
             sample.rawSeconds,
             state.command?.localHour ?? 12,
             state.pack.assetVersion,
             walkerLimit,
           )
         : [];
-      walkerClock = { seconds: sample.rawSeconds, distanceMetres: sample.distanceMetres, at: now };
+      walkerSecond = sample.rawSeconds;
       // Reduced motion forces the low tier, which shows nobody, so they stop at once.
       if (walkerLimit <= 0) {
         for (const walker of walkers) removeWalker(walker);
@@ -408,8 +410,6 @@ export function ProductCharacterStage3D(props: Props) {
         const anchor = new THREE.Group();
         anchor.add(actor.root);
         anchor.scale.setScalar(placement.scale);
-        // Facing the way they walk, three-quarters to the camera as he is.
-        anchor.rotation.y = pass.direction > 0 ? 0.68 : -0.68;
         walkerRoot.add(anchor);
         walkers.push({ actor, anchor, type, heightMetres, lane: pass.lane, placement, street });
       }
@@ -426,13 +426,16 @@ export function ProductCharacterStage3D(props: Props) {
       walkers.forEach((walker, index) => {
         const waving = index === waver;
         walker.street = advanceWalker(
-          walker.street, dt, walker.placement, walker.heightMetres, travelerHeight, waving,
+          walker.street, dt, walker.placement, walker.heightMetres, travelerHeight, groundSpeed, waving,
         );
         if (walkerHasLeft(walker.street, sample.distanceMetres, horizontal)) {
           removeWalker(walker);
           return;
         }
         passing.push(walker);
+        // Facing the way they move across the screen, three-quarters to the camera as he
+        // is. An overtaker he outpaces turns round here rather than drift backwards.
+        walker.anchor.rotation.y = walker.street.direction > 0 ? 0.68 : -0.68;
         wavingBack ||= waving;
         const x = walkerScreenX(walker.street, sample.distanceMetres);
         walker.anchor.position.set(x, walker.placement.footY, walker.placement.z);

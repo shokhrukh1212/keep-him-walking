@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CHARACTER_MANIFEST, RESIDENT_TYPES } from "@/lib/characters/manifest";
 import { GAIT_CYCLE_SECONDS, METRES_PER_SECOND } from "@/lib/traveler/motion-clock";
 import {
-  WALKER_EDGE_MARGIN_METRES, WALKER_LANES, WALKER_MAX_CATCH_UP_SECONDS,
-  advanceWalker, enterWalker, walkerHasLeft, walkerPassesBetween, walkerPlacement, walkerScreenX,
+  WALKER_EDGE_MARGIN_METRES, WALKER_LANES, WALKER_MAX_CATCH_UP_SECONDS, WALKER_MIN_SCREEN_SPEED,
+  advanceWalker, enterWalker, walkerHasLeft, walkerPassesBetween, walkerPlacement, walkerScreenSpeed, walkerScreenX,
   type StreetWalker, type WalkerLane, type WalkerPass, type WalkerPlacement,
 } from "./walkers";
 
@@ -66,17 +66,19 @@ describe("walkerPassesBetween", () => {
     }
   });
 
-  it("passes in front of him only coming towards him, and nobody walks at his pace", () => {
+  it("passes in front of him only coming towards him, and nobody walks his way slower than him", () => {
     const passes = passesOver(7200, 2);
     const kinds = new Set<string>();
     for (const pass of passes) {
       if (pass.lane === "front") expect(pass.direction).toBe(-1);
-      const placement = walkerPlacement(pass.lane, residentHeight(pass.slot), TRAVELER_HEIGHT);
-      const alongHim = pass.direction * pass.speedMetresPerSecond * placement.scale;
-      expect(Math.abs(alongHim - METRES_PER_SECOND)).toBeGreaterThanOrEqual(0.35);
-      kinds.add(pass.direction < 0 ? "towards him" : alongHim < METRES_PER_SECOND ? "stroller" : "overtaking");
+      if (pass.direction > 0) {
+        const placement = walkerPlacement(pass.lane, residentHeight(pass.slot), TRAVELER_HEIGHT);
+        // Any slower and the pavement would carry them backwards while they face forwards.
+        expect(pass.speedMetresPerSecond * placement.scale).toBeGreaterThanOrEqual(METRES_PER_SECOND + 0.35);
+      }
+      kinds.add(pass.direction < 0 ? "towards him" : "overtaking");
     }
-    expect([...kinds].sort()).toEqual(["overtaking", "stroller", "towards him"]);
+    expect([...kinds].sort()).toEqual(["overtaking", "towards him"]);
   });
 
   it("is the same for every viewer, whatever their frame rate", () => {
@@ -122,35 +124,60 @@ describe("a walker on the street", () => {
   });
   const placement = walkerPlacement("behind", 1.68, TRAVELER_HEIGHT);
   const edge = DESKTOP_WIDTH_METRES / 2 + WALKER_EDGE_MARGIN_METRES;
+  const advance = (walker: StreetWalker, dt: number, groundSpeed: number, standing = false) =>
+    advanceWalker(walker, dt, placement, 1.68, TRAVELER_HEIGHT, groundSpeed, standing);
 
-  it("enters beyond the edge it walks in from", () => {
+  it("walks in from the right facing left, or from the left facing right", () => {
     const towards = enterWalker(pass(-1, 1.3), placement, 500, METRES_PER_SECOND, DESKTOP_WIDTH_METRES)!;
+    expect(towards.direction).toBe(-1);
     expect(walkerScreenX(towards, 500)).toBeCloseTo(edge);
     const overtaking = enterWalker(pass(1, 1.9), placement, 500, METRES_PER_SECOND, DESKTOP_WIDTH_METRES)!;
+    expect(overtaking.direction).toBe(1);
     expect(walkerScreenX(overtaking, 500)).toBeCloseTo(-edge);
-    // At twice the pace he catches the same walker up, so they come from ahead of him.
-    const caughtUp = enterWalker(pass(1, 1.9), placement, 500, 2 * METRES_PER_SECOND, DESKTOP_WIDTH_METRES)!;
-    expect(walkerScreenX(caughtUp, 500)).toBeCloseTo(edge);
-    for (const walker of [towards, overtaking, caughtUp]) {
-      expect(walkerHasLeft(walker, 500, DESKTOP_WIDTH_METRES)).toBe(false);
-    }
+    for (const walker of [towards, overtaking]) expect(walkerHasLeft(walker, 500, DESKTOP_WIDTH_METRES)).toBe(false);
   });
 
-  it("refuses a pass that would hover beside him", () => {
-    expect(enterWalker(pass(1, METRES_PER_SECOND / placement.scale), placement, 0, METRES_PER_SECOND, DESKTOP_WIDTH_METRES))
-      .toBeNull();
+  it("comes towards him from the right instead when he walks too fast to be overtaken", () => {
+    const atTwicePace = enterWalker(pass(1, 1.9), placement, 500, 2 * METRES_PER_SECOND, DESKTOP_WIDTH_METRES)!;
+    expect(atTwicePace.direction).toBe(-1);
+    expect(walkerScreenX(atTwicePace, 500)).toBeCloseTo(edge);
+  });
+
+  it("never enters facing one way while the pavement carries it the other", () => {
+    for (let groundSpeed = 0; groundSpeed <= 7; groundSpeed += 0.05) {
+      for (const candidate of [pass(-1, 1.2), pass(-1, 1.36), pass(1, 1.8), pass(1, 1.96)]) {
+        const walker = enterWalker(candidate, placement, 0, groundSpeed, DESKTOP_WIDTH_METRES)!;
+        const across = walkerScreenSpeed(walker.direction, walker.speedMetresPerSecond, placement, groundSpeed);
+        expect(walker.direction * across).toBeGreaterThanOrEqual(WALKER_MIN_SCREEN_SPEED);
+        // In from the side behind the way they face.
+        expect(Math.sign(walkerScreenX(walker, 0))).toBe(-walker.direction);
+      }
+    }
+    expect(enterWalker(pass(1, 1.9), placement, 0, Number.NaN, DESKTOP_WIDTH_METRES)).toBeNull();
   });
 
   it("steps in time with the ground it covers, and stands still when standing", () => {
     const walker: StreetWalker = { streetMetres: 0, direction: -1, speedMetresPerSecond: 1.3, gaitSeconds: 0 };
-    const moved = advanceWalker(walker, 0.5, placement, 1.68, TRAVELER_HEIGHT);
+    const moved = advance(walker, 0.5, METRES_PER_SECOND);
     expect(moved.streetMetres).toBeCloseTo(-1.3 * 0.5 * placement.scale);
     expect(moved.gaitSeconds).toBeCloseTo((1.3 * 0.5) / (METRES_PER_SECOND * 1.68 / TRAVELER_HEIGHT));
-    expect(advanceWalker(walker, 0.5, placement, 1.68, TRAVELER_HEIGHT, true)).toBe(walker);
+    expect(advance(walker, 0.5, METRES_PER_SECOND, true)).toBe(walker);
     let cycling = walker;
-    for (let frame = 0; frame < 600; frame += 1) cycling = advanceWalker(cycling, 1 / 60, placement, 1.68, TRAVELER_HEIGHT);
+    for (let frame = 0; frame < 600; frame += 1) cycling = advance(cycling, 1 / 60, METRES_PER_SECOND);
     expect(cycling.gaitSeconds).toBeGreaterThanOrEqual(0);
     expect(cycling.gaitSeconds).toBeLessThan(GAIT_CYCLE_SECONDS);
+  });
+
+  it("turns round rather than drift backwards once he outpaces it, and never turns back", () => {
+    const overtaking: StreetWalker = { streetMetres: 0, direction: 1, speedMetresPerSecond: 1.9, gaitSeconds: 0 };
+    expect(advance(overtaking, 0.1, METRES_PER_SECOND).direction).toBe(1);
+    expect(advance(overtaking, 0.1, 0).direction).toBe(1);
+    const outpaced = advance(overtaking, 0.1, 2 * METRES_PER_SECOND);
+    expect(outpaced.direction).toBe(-1);
+    expect(outpaced.streetMetres).toBeLessThan(0);
+    for (let groundSpeed = 0; groundSpeed <= 7; groundSpeed += 0.25) {
+      expect(advance(outpaced, 0.1, groundSpeed).direction).toBe(-1);
+    }
   });
 
   it("is removed only once it is beyond the edge", () => {
@@ -164,7 +191,9 @@ describe("a walker on the street", () => {
 });
 
 describe("people passing him over a long watch", () => {
-  type Simulated = { street: StreetWalker; placement: WalkerPlacement; lane: WalkerLane; height: number; inView: number };
+  type Simulated = {
+    street: StreetWalker; placement: WalkerPlacement; lane: WalkerLane; height: number; inView: number; previousX: number;
+  };
 
   /**
    * Plays the stage's own rules at 60 frames a second for 40 minutes: his pace minute
@@ -173,7 +202,9 @@ describe("people passing him over a long watch", () => {
    */
   function watch(paces: readonly number[]) {
     const frame = 1 / 60;
-    const events = { entries: [] as number[], exits: [] as number[], sides: new Set<string>(), longestInView: 0 };
+    const events = {
+      entries: [] as number[], exits: [] as number[], sides: new Set<string>(), longestInView: 0, backwards: 0, turns: 0,
+    };
     let raw = 0;
     let distance = 0;
     let walkers: Simulated[] = [];
@@ -195,11 +226,18 @@ describe("people passing him over a long watch", () => {
         const x = walkerScreenX(street, distance);
         events.entries.push(x);
         events.sides.add(x > 0 ? "right" : "left");
-        walkers.push({ street, placement, lane: pass.lane, height, inView: 0 });
+        walkers.push({ street, placement, lane: pass.lane, height, inView: 0, previousX: x });
       }
       walkers = walkers.filter((walker) => {
-        walker.street = advanceWalker(walker.street, frame, walker.placement, walker.height, TRAVELER_HEIGHT);
+        const facing = walker.street.direction;
+        walker.street = advanceWalker(
+          walker.street, frame, walker.placement, walker.height, TRAVELER_HEIGHT, groundSpeed,
+        );
+        if (walker.street.direction !== facing) events.turns += 1;
         const x = walkerScreenX(walker.street, distance);
+        // Moving across the screen against the way they face is the bug this guards.
+        if ((x - walker.previousX) * walker.street.direction < 0) events.backwards += 1;
+        walker.previousX = x;
         if (Math.abs(x) < DESKTOP_WIDTH_METRES / 2 + BODY_HALF_WIDTH_METRES) walker.inView += frame;
         if (!walkerHasLeft(walker.street, distance, DESKTOP_WIDTH_METRES)) return true;
         events.exits.push(x);
@@ -220,6 +258,12 @@ describe("people passing him over a long watch", () => {
       for (const x of [...events.entries, ...events.exits]) expect(Math.abs(x)).toBeGreaterThan(outOfView);
       expect(events.exits.length).toBeGreaterThanOrEqual(events.entries.length - 2);
     }
+  });
+
+  it("never shows anyone walking one way while moving the other", () => {
+    for (const events of [changingPace, oneWatcher]) expect(events.backwards).toBe(0);
+    // At one watcher's steady pace nobody who overtakes him is ever outpaced.
+    expect(oneWatcher.turns).toBe(0);
   });
 
   it("brings people in from both sides at one watcher's pace", () => {

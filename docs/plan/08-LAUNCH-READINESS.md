@@ -124,9 +124,10 @@ Every package has two independent completion marks:
   scripted encounter states.
 - Refined 11 September 2026 at the owner's request: passers-by walk on his pavement at
   85–95% of his height, in a lane just behind him or just in front (in front only when
-  coming towards him). Each walks in at one screen edge and out at the other, so a pass
-  lasts as long as the crossing takes — about 4 s coming towards him, up to about 30 s
-  overtaking or being overtaken at one watcher's pace — instead of a 12–18 s window.
+  coming towards him). Each walks in at one screen edge and out at the other, facing the
+  way they move (fixed 12 September), so a pass lasts as long as the crossing takes —
+  about 4 s coming towards him, up to about 30 s overtaking him at one watcher's pace —
+  instead of a 12–18 s window.
   Gaps stay 90–150 s and never more than two show at once. Nobody new sets off at night,
   on the low tier, before launch, while he waits, or during an action or encounter;
   someone already crossing finishes. Verified by unit tests; not yet accepted on screen.

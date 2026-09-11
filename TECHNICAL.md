@@ -1568,17 +1568,26 @@ two dozen jumps from one edge to the other with half a body in view.
   pavement, drawn behind him. `front` has 1.04: feet 0.06 m lower, drawn over him. Foot
   height follows a 1.6 m eye-level horizon (02 §3); drawn scale is capped at 95% of his
   height, so both residents show at 85–95% of him. Only people coming towards him use
-  the front lane, so they cover him for about half a second. Behind him, a quarter come
-  towards him at 1.2–1.36 m/s, a quarter stroll his way at 0.8–0.96 m/s (he catches them
-  up) and half overtake at 1.8–1.96 m/s. Nobody moves within 0.35 m/s of his 1.25 m/s on
-  screen, or they would hover beside him.
+  the front lane, so they cover him for about half a second. Behind him, half come
+  towards him at 1.2–1.36 m/s and half overtake at 1.8–1.96 m/s.
+- **Facing** (fixed 2026-09-12 after the owner saw it at ×2 pace). Everyone faces the way
+  they move across the screen: in from the right facing left, in from the left facing
+  right. The pavement moves left under everyone at his speed, so someone walking his way
+  moves right on screen only while they outpace him. The first version also had strollers
+  at 0.8–0.96 m/s and let an overtaker enter at any pace; he walked past both, and they
+  drifted backwards while facing forwards. Now nobody walks his way slower than him.
+  `enterWalker` lets an overtaking pass in from the left only if it still crosses
+  rightwards at 0.2 m/s or more (one watcher's pace, or while he stands still), and
+  otherwise sends the same person towards him from the right. If he outpaces an overtaker
+  mid-crossing because a watcher arrives, `advanceWalker` turns them round to walk back
+  out on the left. Both decisions use his authoritative ground speed,
+  `METRES_PER_SECOND × paceRate` while he walks and 0 while an action or waiting holds his
+  distance, never a per-frame measurement that a heartbeat correction could spike.
 - **How they move.** The stage keeps each walker's `streetMetres` on his distance axis,
   and screen x is `streetMetres − distance`, so the pavement carries them exactly as the
   Pixi ground tile scrolls (`distance × pxPerMetre`). `advanceWalker` adds their own
   steps, and the gait advances by metres walked over his 1.25 m/s stride scaled to their
-  height, so their feet stay planted. `enterWalker` starts a pass beyond the side it is
-  moving away from, given his current ground speed. A pass that would drift across at
-  under 0.2 m/s is skipped.
+  height, so their feet stay planted.
 - **When they leave.** A walker is removed only once `walkerHasLeft` says it is past the
   edge by 0.9 m plus 0.25 m, or when the tier drops to low (reduced motion). New passes
   start only while he is walking with no action or conversation, and only after the
