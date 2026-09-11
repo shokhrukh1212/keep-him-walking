@@ -52,44 +52,30 @@ export function birdFlights(activeSecond: number, seed: string, limit: number, w
   return birds;
 }
 
-/** The cat sits on a wall for twenty seconds roughly every six minutes. */
-const CAT_CYCLE_SECONDS = 360;
-const CAT_VISIBLE_SECONDS = 20;
-
-export type CatAppearance = { visible: boolean; progress: number; frame: number; lane: number };
-
-export function catAppearance(activeSecond: number, seed: string): CatAppearance {
-  const hidden: CatAppearance = { visible: false, progress: 0, frame: 0, lane: 0 };
-  if (!Number.isFinite(activeSecond)) return hidden;
-  const second = Math.max(0, activeSecond);
-  const cycle = Math.floor(second / CAT_CYCLE_SECONDS);
-  const offset = second - cycle * CAT_CYCLE_SECONDS;
-  const start = deterministicVariant(`${seed}:cat`, cycle, CAT_CYCLE_SECONDS - CAT_VISIBLE_SECONDS);
-  if (offset < start || offset >= start + CAT_VISIBLE_SECONDS) return hidden;
-  const progress = (offset - start) / CAT_VISIBLE_SECONDS;
-  return {
-    visible: true,
-    progress,
-    // Four-frame idle loop at roughly three frames a second.
-    frame: Math.floor(((offset - start) * 3) % 4),
-    lane: deterministicVariant(`${seed}:cat-lane`, cycle, 100) / 100,
-  };
-}
-
 /**
- * How many people are out. Zero in the dead of night, busiest in the early
- * afternoon; the tier is a hard ceiling, so a low-end device gets none.
+ * Occasional supporting walkers. A deterministic start inside each two-minute
+ * block makes gaps vary from 90–150 seconds, while a 12–18 second window keeps
+ * the traveler visually dominant. Low quality, night, waiting and scripted
+ * actions opt out through the explicit inputs.
  */
-const WALKERS_BY_HOUR = [1, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1];
-
-export function walkerPopulation(localHour: number, tierLimit: number): number {
-  if (tierLimit <= 0 || !Number.isFinite(localHour)) return 0;
+export function walkerPopulation(
+  activeSecond: number,
+  localHour: number,
+  seed: string,
+  tierLimit: number,
+  eligible = true,
+): number {
+  if (!eligible || tierLimit <= 0 || !Number.isFinite(activeSecond) || !Number.isFinite(localHour)) return 0;
   const hour = ((localHour % 24) + 24) % 24;
-  const low = Math.floor(hour);
-  const high = (low + 1) % 24;
-  const blend = hour - low;
-  const value = WALKERS_BY_HOUR[low]! * (1 - blend) + WALKERS_BY_HOUR[high]! * blend;
-  return Math.min(tierLimit, Math.round(value));
+  if (hour < 5 || hour >= 22) return 0;
+  const second = Math.max(0, activeSecond);
+  const cycle = Math.floor(second / 120);
+  const offset = second - cycle * 120;
+  const start = deterministicVariant(`${seed}:walker-start`, cycle, 31);
+  const duration = 12 + deterministicVariant(`${seed}:walker-duration`, cycle, 7);
+  if (offset < start || offset >= start + duration) return 0;
+  const count = 1 + deterministicVariant(`${seed}:walker-count`, cycle, 2);
+  return Math.min(2, tierLimit, count);
 }
 
 /** Steam rises from the cafe continuously; three puffs share one rising cycle. */

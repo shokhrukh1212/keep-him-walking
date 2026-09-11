@@ -1915,6 +1915,7 @@ button:focus-visible,
 .season-route { fill: none; stroke: rgb(255 247 226 / 45%); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .route-segment { stroke: #ffd777; stroke-width: 2.2; stroke-linecap: round; }
 .route-segment.flight { stroke-dasharray: 7 6; }
+.route-segment.train { stroke-dasharray: 14 4 3 4; }
 .map-ticket-flight line { stroke: #ffd777; stroke-width: 2.5; stroke-dasharray: 7 6; }
 .map-ticket-flight circle { fill: #102a32; stroke: #ffd777; stroke-width: 2; }
 .map-ticket-flight text { fill: #fff3c7; font-size: 13px; font-weight: 700; }
@@ -1956,6 +1957,182 @@ button:focus-visible,
   .recap-countries span { min-width: 0; }
   .map-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .journey-map svg { min-height: 10rem; }
+}
+
+/* Post-P22 launch HUD: one quiet top row and one unobstructed bottom stack. */
+.journey-hud {
+  padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 0 max(1rem, env(safe-area-inset-left));
+}
+
+.journey-hud-audience {
+  display: flex;
+  max-width: min(23rem, 44vw);
+  min-height: 3.4rem;
+  align-items: flex-start;
+  gap: 0.2rem;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 1rem;
+  padding: 0.28rem;
+  background: rgb(9 26 35 / 78%);
+  box-shadow: 0 12px 36px rgb(7 21 29 / 20%);
+  backdrop-filter: blur(16px) saturate(125%);
+}
+
+.journey-hud-audience .country-flags {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  justify-content: center;
+  border: 0;
+  padding: 0.35rem;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.journey-hud-audience .live-status {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  padding: 0.46rem 0.55rem 0.46rem 0.25rem;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.reaction-buttons {
+  top: calc(1rem + env(safe-area-inset-top));
+  bottom: auto;
+}
+
+.reaction-button {
+  min-height: 2.75rem;
+  padding: 0.48rem 0.85rem;
+  background: rgb(9 26 35 / 78%);
+}
+
+.traveler-state {
+  bottom: calc(7.2rem + env(safe-area-inset-bottom));
+  left: 50%;
+  max-width: calc(100vw - 2rem);
+  transform: translateX(-50%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goal-bar {
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(4.35rem + env(safe-area-inset-bottom));
+  left: max(1rem, env(safe-area-inset-left));
+}
+
+.compact-dock {
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  left: max(1rem, env(safe-area-inset-left));
+  justify-content: center;
+}
+
+.compact-dock .sponsor-card,
+.compact-dock .sponsor-invitation {
+  margin-right: 0;
+}
+
+.compact-dock button,
+.compact-dock .sponsor-invitation {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.journey-details {
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  width: min(46rem, calc(100% - 2rem));
+  max-height: calc(100svh - 9rem);
+}
+
+.journey-details .route-status {
+  position: static;
+  min-width: 0;
+  justify-self: stretch;
+}
+
+.journey-details .journey-map svg {
+  min-height: 0;
+  max-height: 15rem;
+}
+
+.journey-details-primary,
+.journey-details-secondary {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (min-width: 900px) and (min-height: 760px) {
+  .journey-details {
+    width: min(62rem, calc(100% - 2rem));
+    max-height: none;
+    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+    overflow: visible;
+  }
+}
+
+@media (max-width: 760px) {
+  .journey-hud-audience {
+    max-width: 52vw;
+  }
+
+  .journey-hud-audience .country-flags {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .journey-hud-audience .live-status {
+    max-width: none;
+  }
+
+  .reaction-buttons {
+    top: calc(5.9rem + env(safe-area-inset-top));
+    right: 0.5rem;
+    bottom: auto;
+    left: 0.5rem;
+    transform: none;
+  }
+
+  .reaction-label {
+    display: inline;
+  }
+
+  .traveler-state {
+    bottom: calc(7.5rem + env(safe-area-inset-bottom));
+  }
+
+  .goal-bar {
+    bottom: calc(4.4rem + env(safe-area-inset-bottom));
+  }
+
+  .compact-dock {
+    gap: 0.4rem;
+  }
+
+  .compact-dock button,
+  .compact-dock .sponsor-invitation {
+    max-width: none;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.72rem;
+    font-size: 0.68rem;
+  }
+
+  .sponsor-card {
+    max-width: min(42vw, 12rem);
+  }
+
+  .journey-details {
+    bottom: calc(4.7rem + env(safe-area-inset-bottom));
+    max-height: calc(100svh - 8rem);
+  }
 }
 
 .reaction-buttons {
@@ -2228,3 +2405,31 @@ button:focus-visible,
 }
 
 .dock-streak-today { color: rgb(247 240 223 / 70%); }
+
+/* Keep these after the reaction component's base rules. */
+.reaction-buttons {
+  top: calc(1rem + env(safe-area-inset-top));
+  bottom: auto;
+}
+
+.reaction-button {
+  min-height: 2.75rem;
+  padding: 0.48rem 0.85rem;
+  background: rgb(9 26 35 / 78%);
+}
+
+@media (max-width: 760px) {
+  .reaction-buttons {
+    top: calc(5.9rem + env(safe-area-inset-top));
+    right: 0.5rem;
+    bottom: auto;
+    left: 0.5rem;
+    transform: none;
+  }
+
+  .reaction-label { display: inline; }
+}
+
+@media (max-width: 420px) {
+  .reaction-label { display: none; }
+}

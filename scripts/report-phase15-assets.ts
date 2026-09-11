@@ -8,6 +8,11 @@ let largestDecodedZone = 0;
 for (const zone of tashkentCountryPackV4.route.zones) {
   const urls = new Set([
     zone.fallbackUrl,
+    ...(zone.nightUrl ? [zone.nightUrl] : []),
+    ...(zone.lightsUrl ? [zone.lightsUrl] : []),
+    ...(zone.continuousScene
+      ? Object.values(zone.continuousScene).filter((value): value is string => typeof value === "string")
+      : []),
     ...zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
     ...zone.props.flatMap((prop) => prop.assetUrl ? [prop.assetUrl] : []),
   ]);

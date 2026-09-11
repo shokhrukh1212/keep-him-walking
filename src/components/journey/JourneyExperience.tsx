@@ -50,7 +50,7 @@ import { GoalBar } from "@/components/hud/GoalBar";
 import { JourneyMapEmbed } from "@/components/map/JourneyMapEmbed";
 import { PostcardButton } from "@/components/postcard/PostcardButton";
 import Link from "next/link";
-import { getNextCountryPack } from "@/content/countries/registry";
+import { getCountryPack } from "@/content/countries/registry";
 import { TomorrowPreview } from "@/components/hud/TomorrowPreview";
 import {REVIEW_ACTIONS,reviewPoseAt,type ActionReview,type ReviewAction} from "@/lib/traveler/action-preview";
 import {
@@ -117,7 +117,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const [puppetReady, setPuppetReady] = useState(false);
   const [residentReady, setResidentReady] = useState(false);
   const [presentationFrame,setPresentationFrame]=useState<{assetVersion:string;motion:TravelerMotionSnapshot}|null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [openPanel, setOpenPanel] = useState<"audience" | "journey" | "vote" | null>(null);
   const [wakeBeat, setWakeBeat] = useState<WakeMoment | null>(null);
   const [wakeCard, setWakeCard] = useState<WakeMoment | null>(null);
   const [onboardingVisible, setOnboardingVisible] = useState(false);
@@ -133,7 +133,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const [visitorSteps,setVisitorSteps]=useState(0);
   const newestHeartbeat = useRef(-Infinity);
   const confirmedContribution = useRef({day:initialSnapshot.countryDay.id,raw:0,visitor:0,steps:0});
-  const [voteOpen, setVoteOpen] = useState(false);
   const [replayOpen, setReplayOpen] = useState(false);
   const [loadingLive, setLoadingLive] = useState(true);
   const [bootstrapIssue, setBootstrapIssue] = useState("The live journey is temporarily unavailable. Retrying…");
@@ -322,10 +321,28 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   }, [snapshot.countryDay.id,snapshot.assets]);
 
   const experienceReady = sceneRenderer !== null && travelerReady;
-  const connectionStatus = useJourneyPresence({
+  const refreshReactions = useCallback(async () => {
+    try {
+      const response = await fetch("/api/reactions", { cache: "no-store" });
+      if (!response.ok) return;
+      const result = await response.json() as {
+        countryDayId?: string;
+        reactions?: BootstrapSnapshot["reactions"];
+      };
+      if (result.countryDayId !== snapshot.countryDay.id || !result.reactions) return;
+      setSnapshot((current) => current.countryDay.id === result.countryDayId
+        ? { ...current, reactions: result.reactions! }
+        : current);
+    } catch {
+      // A later heartbeat remains the authoritative fallback.
+    }
+  }, [snapshot.countryDay.id]);
+
+  const { status: connectionStatus, broadcastReactionHint } = useJourneyPresence({
     snapshot,
     sceneReady: experienceReady,
     onHeartbeat: handleHeartbeat,
+    onReactionHint: refreshReactions,
   });
   const activeViewers = heartbeat?.activeViewers ?? snapshot.presence.activeViewers;
   const authoritativeWalking = snapshot.mode === "live"
@@ -518,7 +535,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     if (snapshot.assets.schemaVersion !== 3) return;
     const isDeparture = routePosition.zoneIndex === snapshot.assets.route.zones.length - 1;
     if (!isDeparture || routePosition.zoneProgress < 0.7) return;
-    const next = getNextCountryPack(snapshot.assets.assetVersion);
+    const next = snapshot.tomorrow ? getCountryPack(snapshot.tomorrow.scenePackId) : null;
     if (!next) return;
     for (const url of next.schemaVersion === 3
       ? next.preloadGroups.find((group) => group.timing === "critical")?.assets ?? next.preload
@@ -528,7 +545,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       image.decoding = "async";
       image.src = publicAssetUrl(url);
     }
-  }, [routePosition.zoneIndex, routePosition.zoneProgress, snapshot.assets]);
+  }, [routePosition.zoneIndex, routePosition.zoneProgress, snapshot.assets, snapshot.tomorrow]);
 
   useEffect(() => {
     if (qualityReported.current) return;
@@ -728,7 +745,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const startsIn = snapshot.journeyState === "prelaunch"
     ? launchCountdown(Date.parse(snapshot.countryDay.startsAt), realNowMs)
     : null;
-  const tomorrowPack = getNextCountryPack(snapshot.assets.assetVersion);
+  const tomorrow = snapshot.tomorrow ?? null;
 
   const acceptVote = (optionId: string, totalBallots: number) => {
     setSnapshot((current) => ({
@@ -798,6 +815,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         liveCountries={snapshot.countries.live}
         todayTopCountries={snapshot.countries.todayTop}
         launchCountdown={startsIn}
+        audienceOpen={openPanel === "audience"}
+        onAudienceOpen={() => setOpenPanel("audience")}
+        onAudienceClose={() => setOpenPanel(null)}
       />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
@@ -839,6 +859,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         onScheduled={(kind, atActiveSecond) => {
           if (kind === "photo") ownedPhotoSecond.current = atActiveSecond;
         }}
+        onConfirmed={() => {
+          void refreshReactions();
+          broadcastReactionHint();
+        }}
       /> : null}
       {snapshot.journeyState !== "prelaunch" ? <GoalBar
         distanceMetres={distanceMetres}
@@ -848,10 +872,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           ? "extrapolated"
           : "last confirmed"}
       /> : null}
-      {detailsOpen ? <div className="route-status" aria-label={`Current route zone: ${displayedZoneLabel}`}>
-        <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>
-        <strong>{displayedZoneLabel}</strong>
-      </div> : null}
       <EncounterDialogue
         line={review ? ["talk","listen","greet","goodbye"].includes(review.state)
           ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine}
@@ -884,76 +904,83 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         <VoteChip
           vote={snapshot.vote}
           rolloverUtcHour={snapshot.journey.rolloverUtcHour}
-          onOpen={() => setVoteOpen(true)}
+          onOpen={() => setOpenPanel("vote")}
         />
-        {snapshot.ticket ? <p className="ticket-notice" data-testid="ticket-notice">
-          Ticket: someone is sending him to {flagEmoji(snapshot.ticket.countryCode)} {snapshot.ticket.countryName} on Day {snapshot.ticket.dayNumber}
-        </p> : null}
-        <button type="button" aria-expanded={detailsOpen} aria-controls="journey-details" onClick={()=>setDetailsOpen(!detailsOpen)}> {detailsOpen ? "Close details" : "Journey details"}</button>
-        <button type="button" disabled={!soundAvailable} onClick={() => void toggleSound()} aria-label={soundEnabled ? "Mute ambient sound" : "Play ambient sound"}>{soundEnabled ? "🔊" : "🔇"}</button>
+        <button type="button" aria-expanded={openPanel === "journey"} aria-controls="journey-details" onClick={()=>setOpenPanel(openPanel === "journey" ? null : "journey")}> {openPanel === "journey" ? "Close journey" : "Journey"}</button>
       </section>
-      <section id="journey-details" className="journey-details" hidden={!detailsOpen} aria-label="Journey details">
-        <JourneyMapEmbed />
-        {wakeCard?.countryDayId === snapshot.countryDay.id ? (
-          <WakeCard
-            cityName={snapshot.countryDay.cityName}
-            localTime={formatWaitingLocalTime(wakeCard.wokeAt, snapshot.countryDay.timeZone)}
-            waitedDuration={formatWaitDuration(wakeCard.waitedSeconds)}
-            onShare={() => void shareWake(wakeCard)}
-          />
-        ) : null}
-        <DayPhotoStrip photos={snapshot.dayPhotos} />
-        <ContributionMeter
-          seconds={visitorSeconds}
-          steps={visitorSteps}
-          globalSteps={connectionStatus === "live" ? motion.plantIndex : travelerMotionAt(snapshot.assets,heartbeat?.globalActiveSeconds ?? snapshot.route.globalActiveSeconds).plantIndex}
-          stale={connectionStatus !== "live" || snapshot.steps.stale}
-          onShare={() => void shareSteps()}
-        />
-        <div className="primary-controls">
-          <button type="button" onClick={() => void share()}>
-            <span className="control-icon" aria-hidden="true">↗</span>
-            Share
-          </button>
-          {snapshot.journeyState !== "prelaunch" && snapshot.assets.schemaVersion === 3 ? (
-            <PostcardButton
-              key={snapshot.countryDay.id}
-              countryDayId={snapshot.countryDay.id}
-              eligible={snapshot.postcard.eligible}
-              unlockSeconds={snapshot.postcard.unlockSeconds}
-              contributedSeconds={visitorSeconds}
-              existingUrl={snapshot.postcard.url}
-              sponsorPublicId={snapshot.sponsor.status === "sponsored" ? snapshot.sponsor.publicId : undefined}
+      <section id="journey-details" className="journey-details" hidden={openPanel !== "journey"} aria-label="Journey details">
+        <div className="journey-details-primary">
+          <div className="route-status" aria-label={`Current route zone: ${displayedZoneLabel}`}>
+            <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>
+            <strong>{displayedZoneLabel}</strong>
+          </div>
+          <JourneyMapEmbed />
+          {snapshot.ticket ? <p className="ticket-notice" data-testid="ticket-notice">
+            Ticket: someone is sending him to {flagEmoji(snapshot.ticket.countryCode)} {snapshot.ticket.countryName} on Day {snapshot.ticket.dayNumber}
+          </p> : null}
+          {wakeCard?.countryDayId === snapshot.countryDay.id ? (
+            <WakeCard
+              cityName={snapshot.countryDay.cityName}
+              localTime={formatWaitingLocalTime(wakeCard.wokeAt, snapshot.countryDay.timeZone)}
+              waitedDuration={formatWaitDuration(wakeCard.waitedSeconds)}
+              onShare={() => void shareWake(wakeCard)}
             />
           ) : null}
+          <DayPhotoStrip photos={snapshot.dayPhotos} />
         </div>
-        <SoundMotionControls
-          soundEnabled={soundEnabled}
-          soundAvailable={soundAvailable}
-          onToggleSound={() => void toggleSound()}
-        />
-        {tomorrowPack ? <TomorrowPreview cityName={tomorrowPack.cityName} countryName={tomorrowPack.countryName} packId={tomorrowPack.assetVersion} startsAt={snapshot.countryDay.endsAt} /> : null}
-        {snapshot.journeyState !== "prelaunch" ? <p className="dock-streak" data-testid="dock-streak">
-          {/* Both halves are server-confirmed: the streak came with the bootstrap,
-              and the seconds are the ones the heartbeat has already counted. */}
-          {snapshot.passport.streak > 0
-            ? <><strong>{snapshot.passport.streak}</strong> {snapshot.passport.streak === 1 ? "day" : "days"} in a row</>
-            : null}
-          {collectedToday
-            ? <span className="dock-streak-today"> · today collected</span>
-            : <span className="dock-streak-today"> · {Math.max(0, Math.ceil(snapshot.passport.collectSeconds - visitorSeconds))}s to collect today</span>}
-        </p> : null}
-        <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/tickets">Buy a ticket</Link><Link href="/privacy">Privacy</Link></nav>
-        <CorrectionForm
-          packId={snapshot.assets.assetVersion}
-          zones={snapshot.assets.route.zones.map((zone) => ({ id: zone.id, label: zone.label }))}
-        />
+        <div className="journey-details-secondary">
+          <ContributionMeter
+            seconds={visitorSeconds}
+            steps={visitorSteps}
+            globalSteps={connectionStatus === "live" ? motion.plantIndex : travelerMotionAt(snapshot.assets,heartbeat?.globalActiveSeconds ?? snapshot.route.globalActiveSeconds).plantIndex}
+            stale={connectionStatus !== "live" || snapshot.steps.stale}
+            onShare={() => void shareSteps()}
+          />
+          <div className="primary-controls">
+            <button type="button" onClick={() => void share()}>
+              <span className="control-icon" aria-hidden="true">↗</span>
+              Share
+            </button>
+            {snapshot.journeyState !== "prelaunch" && snapshot.assets.schemaVersion === 3 ? (
+              <PostcardButton
+                key={snapshot.countryDay.id}
+                countryDayId={snapshot.countryDay.id}
+                eligible={snapshot.postcard.eligible}
+                unlockSeconds={snapshot.postcard.unlockSeconds}
+                contributedSeconds={visitorSeconds}
+                existingUrl={snapshot.postcard.url}
+                sponsorPublicId={snapshot.sponsor.status === "sponsored" ? snapshot.sponsor.publicId : undefined}
+              />
+            ) : null}
+          </div>
+          <SoundMotionControls
+            soundEnabled={soundEnabled}
+            soundAvailable={soundAvailable}
+            onToggleSound={() => void toggleSound()}
+          />
+          {tomorrow ? <TomorrowPreview cityName={tomorrow.cityName} countryName={tomorrow.countryName} packId={tomorrow.scenePackId} startsAt={tomorrow.startsAt} arrivalMode={tomorrow.arrivalMode} /> : null}
+          {snapshot.journeyState !== "prelaunch" ? <p className="dock-streak" data-testid="dock-streak">
+            {/* Both halves are server-confirmed: the streak came with the bootstrap,
+                and the seconds are the ones the heartbeat has already counted. */}
+            {snapshot.passport.streak > 0
+              ? <><strong>{snapshot.passport.streak}</strong> {snapshot.passport.streak === 1 ? "day" : "days"} in a row</>
+              : null}
+            {collectedToday
+              ? <span className="dock-streak-today"> · today collected</span>
+              : <span className="dock-streak-today"> · {Math.max(0, Math.ceil(snapshot.passport.collectSeconds - visitorSeconds))}s to collect today</span>}
+          </p> : null}
+          <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/tickets">Buy a ticket</Link><Link href="/privacy">Privacy</Link></nav>
+          <CorrectionForm
+            packId={snapshot.assets.assetVersion}
+            zones={snapshot.assets.route.zones.map((zone) => ({ id: zone.id, label: zone.label }))}
+          />
+        </div>
       </section>
 
       <DailyVote
         vote={snapshot.vote}
-        open={voteOpen}
-        onClose={() => setVoteOpen(false)}
+        open={openPanel === "vote"}
+        onClose={() => setOpenPanel(null)}
         onAccepted={acceptVote}
       />
       <WorldDiagnostics

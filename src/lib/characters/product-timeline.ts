@@ -12,21 +12,11 @@ export type ProductCharacterScene = {
   showResident: boolean;
   conversation: boolean;
   travelerLeanRadians?: number;
-  /** Small camera-follow drift so locomotion is visibly spatial, not a pinned treadmill. */
-  travelerViewportOffset?: number;
 };
 
 const BRISK_PACE_THRESHOLD = 3;
 const BRISK_WALK_TIME_SCALE = 1.25;
 const BRISK_FORWARD_LEAN_RADIANS = 2 * Math.PI / 180;
-const WALK_DRIFT_PERIOD_SECONDS = 8;
-const WALK_DRIFT_VIEWPORT = .032;
-
-export function walkingViewportOffset(locomotionSeconds: number): number {
-  return Math.sin(locomotionSeconds / WALK_DRIFT_PERIOD_SECONDS * Math.PI * 2)
-    * WALK_DRIFT_VIEWPORT;
-}
-
 export const clipForState = (state: TravelerState): CharacterClip => {
   const clips: Partial<Record<TravelerState, CharacterClip>> = {
     loading: "idle",
@@ -228,6 +218,5 @@ export function productCharacterSceneAt(
     showResident: false,
     conversation: false,
     travelerLeanRadians: brisk ? BRISK_FORWARD_LEAN_RADIANS : 0,
-    travelerViewportOffset: walkingViewportOffset(motion.locomotionSeconds),
   };
 }

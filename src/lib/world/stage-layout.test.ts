@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { stageSchema, readableCountryPackSchema } from "../content/schema";
 import { registeredCountryPacks } from "@/content/countries/registry";
-import { blendStageLayout, frameFitsViewport, stageLayout, stageScaleWarning } from "./stage-layout";
+import {
+  blendStageLayout,
+  boundedPanoramaLayout,
+  frameFitsViewport,
+  stageLayout,
+  stageScaleWarning,
+} from "./stage-layout";
 import {
   characterHeightTargetsFromEnv,
   DEFAULT_CHARACTER_HEIGHT_TARGETS,
@@ -13,10 +19,19 @@ const targets = DEFAULT_CHARACTER_HEIGHT_TARGETS;
 const viewports = [[320, 568], [390, 844], [1440, 900], [2560, 1080]] as const;
 
 describe("stage layout", () => {
+  it("pans a landmark painting once without wrapping or exposing an edge", () => {
+    expect(boundedPanoramaLayout(1_800, 1_440, 0)).toEqual({ offset: 0, x: -0 });
+    expect(boundedPanoramaLayout(1_800, 1_440, 0.5)).toEqual({ offset: 180, x: -180 });
+    expect(boundedPanoramaLayout(1_800, 1_440, 1)).toEqual({ offset: 360, x: -360 });
+    expect(boundedPanoramaLayout(1_800, 1_440, 99)).toEqual({ offset: 360, x: -360 });
+    expect(boundedPanoramaLayout(1_200, 1_440, 0.5)).toEqual({ offset: 0, x: 120 });
+    expect(boundedPanoramaLayout(1_800, 1_440, 0, true)).toEqual({ offset: 180, x: -180 });
+  });
+
   it.each(viewports)("anchors %i × %i and scales the image to the viewport-sized actor", (w, h) => {
     for (const [iw, ih] of [[3600, 1200], [1600, 900], [1600, 1067]]) {
       const result = stageLayout(w, h, iw, ih, defaults, targets);
-      const targetPx = h * (w <= 600 ? 0.20 : 0.24);
+      const targetPx = h * (w <= 600 ? 0.28 : 0.30);
       expect(result.personHeightPx).toBe(targetPx);
       expect(result.requiredImageScale).toBeCloseTo(targetPx / (defaults.personHeightFrac * ih));
       expect(result.imageScale).toBe(Math.min(1.6, result.requiredImageScale));
@@ -31,13 +46,13 @@ describe("stage layout", () => {
   it("uses the exact target at every required viewport while image scale varies", () => {
     const layouts = viewports.map(([w, h]) => stageLayout(w, h, 1600, 900, defaults, targets));
     expect(layouts.map((layout, index) => layout.personHeightPx
-      / viewports[index][1])).toEqual([0.20, 0.20, 0.24, 0.24]);
+      / viewports[index][1])).toEqual([0.28, 0.28, 0.30, 0.30]);
     expect(new Set(layouts.map((layout) => layout.requiredImageScale.toFixed(6))).size).toBe(4);
   });
 
-  it("keeps the mobile boundary exact and can expose sky above the centered painting", () => {
+  it("keeps the mobile boundary exact and fills the former empty sky strip", () => {
     const mobile = stageLayout(390, 844, 3600, 1200, defaults, targets);
-    expect(mobile.imageY).toBeGreaterThan(0);
+    expect(mobile.imageY).toBeLessThanOrEqual(0);
     expect(stageLayout(600, 900, 1600, 900, defaults, targets).groundY).toBe(720);
     expect(stageLayout(601, 900, 1600, 900, defaults, targets).groundY).toBe(774);
   });
@@ -45,12 +60,12 @@ describe("stage layout", () => {
   it("clamps unusably distant artwork and produces the required warning", () => {
     const stage = stageSchema.parse({personHeightFrac: 0.05});
     const layout = stageLayout(1440, 900, 1600, 900, stage, targets);
-    expect(layout.requiredImageScale).toBe(4.8);
+    expect(layout.requiredImageScale).toBe(6);
     expect(layout.imageScale).toBe(1.6);
     expect(layout.imageScaleClamped).toBe(true);
-    expect(layout.personHeightPx).toBe(216);
+    expect(layout.personHeightPx).toBe(270);
     expect(stageScaleWarning("sample-v1", "square", layout)).toBe(
-      "pack sample-v1/square: master composed too far away (needs imageScale 4.800); regenerate at eye level",
+      "pack sample-v1/square: master composed too far away (needs imageScale 6.000); regenerate at eye level",
     );
     expect(stageScaleWarning("sample-v1", "square",
       stageLayout(1440, 900, 1600, 900, defaults, targets))).toBeNull();
@@ -99,7 +114,7 @@ describe("stage layout", () => {
 
 describe("character height environment", () => {
   it("uses documented defaults and accepts explicit fractions", () => {
-    expect(characterHeightTargetsFromEnv({})).toEqual({desktop: 0.24, mobile: 0.20});
+    expect(characterHeightTargetsFromEnv({})).toEqual({desktop: 0.30, mobile: 0.28});
     const custom = characterHeightTargetsFromEnv({
       TARGET_CHARACTER_HEIGHT_FRAC: "0.25",
       TARGET_CHARACTER_HEIGHT_FRAC_MOBILE: "0.21",

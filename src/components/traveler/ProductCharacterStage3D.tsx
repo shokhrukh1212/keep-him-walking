@@ -233,7 +233,7 @@ export function ProductCharacterStage3D(props: Props) {
       last = now;
       lastRender = now;
       clock.accept(state.routeRuntime, state.command?.presenceTtlMs ?? 50_000, now);
-      const sample = clock.sample(now);
+      const sample = clock.sample(now, state.scheduledActions ?? EMPTY_SCHEDULED_ACTIONS);
       const motion = travelerMotionAt(
         state.pack,
         sample.rawSeconds,
@@ -312,7 +312,7 @@ export function ProductCharacterStage3D(props: Props) {
       const mobile = width <= 600;
       const [left, right] = frame.stage.walkableX;
       const travelerAnchor = Math.min(right, Math.max(left,
-        cue.conversation ? (mobile ? 0.34 : 0.43) : defaultAnchor + (cue.travelerViewportOffset ?? 0),
+        cue.conversation ? (mobile ? 0.34 : 0.43) : defaultAnchor,
       ));
       const residentAnchor = Math.min(right, Math.max(left, mobile ? 0.76 : 0.72));
       travelerRoot.position.x = (travelerAnchor - 0.5) * horizontal;
@@ -332,7 +332,7 @@ export function ProductCharacterStage3D(props: Props) {
       }
       element.dataset.characterState = traveler?.resolvedClip(cue.traveler.clip) ?? cue.traveler.clip;
       element.dataset.characterSeconds = String(cue.traveler.seconds);
-      element.dataset.characterViewportOffset = String(cue.travelerViewportOffset ?? 0);
+      element.dataset.characterViewportOffset = "0";
       element.dataset.walkTimeScale = String(cue.traveler.timeScale ?? 1);
       element.dataset.forwardLeanDegrees = String((cue.travelerLeanRadians ?? 0) * 180 / Math.PI);
       element.dataset.residentVisible = String(residentRoot.visible);
@@ -356,8 +356,14 @@ export function ProductCharacterStage3D(props: Props) {
       // ---- Background walkers. The count follows the city's own hour and the
       // quality tier, and is adjusted here rather than at mount: this effect has
       // an empty dependency list, so the tier it captured is not the live one.
-      const wanted = residentGltf && !cue.conversation
-        ? walkerPopulation(state.command?.localHour ?? 12, QUALITY_LIMITS[state.qualityTier].walkers)
+      const wanted = residentGltf
+        ? walkerPopulation(
+            sample.rawSeconds,
+            state.command?.localHour ?? 12,
+            state.pack.assetVersion,
+            QUALITY_LIMITS[state.qualityTier].walkers,
+            sample.traveling && !cue.conversation && !motion.action,
+          )
         : 0;
       while (walkers.length > wanted) {
         const spare = walkers.pop();

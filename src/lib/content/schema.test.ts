@@ -107,3 +107,19 @@ describe("zone kind", () => {
     expect(countryPackV3Schema.parse(source).route.zones[1].kind).toBe("market");
   });
 });
+
+describe("continuous scene layers", () => {
+  it("is optional for old packs and defaults the seamless pavement height", () => {
+    expect(countryPackV3Schema.parse(tashkentCountryPackV4).route.zones[0]!.continuousScene)
+      .toBeUndefined();
+    const source = JSON.parse(JSON.stringify(tashkentCountryPackV4)) as Record<string, unknown>;
+    const route = source.route as { zones: Record<string, unknown>[] };
+    route.zones[0]!.continuousScene = {
+      skyUrl: "/scenes/london/v1/arrival/sky.webp",
+      cityUrl: "/scenes/london/v1/arrival/city.webp",
+      groundUrl: "/scenes/london/v1/arrival/ground.webp",
+    };
+    expect(countryPackV3Schema.parse(source).route.zones[0]!.continuousScene)
+      .toMatchObject({ groundHeightFrac: 0.22 });
+  });
+});

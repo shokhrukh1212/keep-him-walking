@@ -164,6 +164,19 @@ export const stageSchema = z.object({
 
 export type ZoneStage = z.infer<typeof stageSchema>;
 
+/**
+ * Optional launch-quality composition. Sky/city/foreground are full-canvas
+ * layers; ground is the only horizontally seamless texture. Existing packs
+ * omit this and keep the bounded single-painting fallback.
+ */
+export const continuousSceneSchema = z.object({
+  skyUrl: z.string().startsWith("/"),
+  cityUrl: z.string().startsWith("/"),
+  groundUrl: z.string().startsWith("/"),
+  foregroundUrl: z.string().startsWith("/").optional(),
+  groundHeightFrac: z.number().min(0.08).max(0.45).default(0.22),
+}).strict();
+
 export const DEFAULT_ZONE_LENGTH_METRES = [1_200, 1_600, 1_600, 1_400, 2_200] as const;
 
 /**
@@ -203,6 +216,7 @@ export const routeZoneSchema = z.object({
     backgroundLife: z.number().min(0).max(1),
   }).strict(),
   fallbackUrl: z.string().startsWith("/"),
+  continuousScene: continuousSceneSchema.optional(),
   /**
    * The night master for this zone, when one has been painted. Present zones
    * cross-fade to it across dusk; absent ones are graded to night instead.

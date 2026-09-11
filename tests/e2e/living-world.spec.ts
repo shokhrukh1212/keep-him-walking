@@ -5,7 +5,7 @@ import type { BootstrapSnapshot } from "../../src/lib/contracts";
 /**
  * Several minutes of accelerated route time. The world is scheduled entirely from
  * the authoritative second, so driving that second forward is enough to make the
- * birds, the cat, the tram and the bunting all run.
+ * birds, the tram and the bunting all run. The rejected procedural cat is absent.
  */
 test("the world stays quiet and error-free through minutes of its own life", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "Living-world budget runs once on desktop Chromium");
@@ -89,7 +89,6 @@ test("the world stays quiet and error-free through minutes of its own life", asy
 
   let sawBirds = false;
   const published = { birds: [] as number[] };
-  let sawCat = false;
   let sawBunting = false;
   let worstP95 = 0;
   const samples: number[] = [];
@@ -116,7 +115,7 @@ test("the world stays quiet and error-free through minutes of its own life", asy
     });
     published.birds.push(reading.birds);
     if (reading.birds > 0) sawBirds = true;
-    if (reading.cat) sawCat = true;
+    expect(reading.cat).toBe(false);
     if (reading.bunting) sawBunting = true;
     zones.add(reading.zone);
     if (tick % 6 !== 5) continue;
@@ -129,7 +128,7 @@ test("the world stays quiet and error-free through minutes of its own life", asy
   const bestFps = Math.max(...fpsSamples);
   testInfo.annotations.push({
     type: "living-world",
-    description: `birds=${sawBirds} cat=${sawCat} bunting=${sawBunting} zones=${[...zones].join(",")} p95=${samples.join(",")} fps=${fpsSamples.join(",")}`,
+    description: `birds=${sawBirds} bunting=${sawBunting} zones=${[...zones].join(",")} p95=${samples.join(",")} fps=${fpsSamples.join(",")}`,
   });
 
   // Nothing may throw while the world runs itself.

@@ -4,9 +4,15 @@ import { useEffect, useRef, type RefObject } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import type { Texture as PixiTexture } from "pixi.js";
 import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
-import { travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { METRES_PER_SECOND, travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
-import { stageLayout, blendStageLayout, type StageFrame, type StageLayout } from "@/lib/world/stage-layout";
+import {
+  boundedPanoramaLayout,
+  stageLayout,
+  blendStageLayout,
+  type StageFrame,
+  type StageLayout,
+} from "@/lib/world/stage-layout";
 import { CHARACTER_HEIGHT_TARGETS } from "@/lib/world/stage-targets";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
@@ -19,7 +25,7 @@ import type { ScheduledActionView } from "@/lib/contracts";
 import type { JourneyWeather } from "@/lib/weather/open-meteo";
 import { weatherEffect } from "@/lib/weather/effects";
 import { combineGrade, gradeForHour, localHourFraction, nightMix } from "@/lib/world/time-grade";
-import { birdFlights, buntingVisible, catAppearance, steamPuffs, tramPass } from "@/lib/world/ambient";
+import { birdFlights, buntingVisible, steamPuffs, tramPass } from "@/lib/world/ambient";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 
 const EMPTY_SCHEDULED_ACTIONS: readonly ScheduledActionView[] = [];
@@ -123,12 +129,13 @@ export function PixiScene({
         const camera = new Container();
         const sky = new Graphics();
         const layerRoot = new Container();
+        const nightRoot = new Container();
         const transitionRoot = new Container();
         const propRoot = new Container();
         const signRoot = new Container();
         // lifeRoot is a sibling of weatherStaticRoot, never a child of weatherRoot:
         // weatherRoot is emptied and destroyed on every zone rebuild, which would
-        // take the birds and the cat with it.
+        // take the birds and other ambient life with it.
         const lifeRoot = new Container();
         const lightsRoot = new Container();
         const groundLifeRoot = new Container();
@@ -168,7 +175,7 @@ export function PixiScene({
         // Draw order, back to front: sky, the panorama (or the legacy parallax
         // layers), props, ground life, weather. Nothing composites over the
         // painting itself.
-        camera.addChild(sky, layerRoot, lightsRoot, transitionRoot, propRoot, signRoot, lifeRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
+        camera.addChild(sky, layerRoot, nightRoot, lightsRoot, transitionRoot, propRoot, signRoot, lifeRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
         // Lit windows add light to the painting rather than covering it.
         lightsRoot.blendMode = "add";
         weatherStaticRoot.addChild(fogBand);
@@ -191,7 +198,12 @@ export function PixiScene({
           sequenceLayerIndex: number;
           textures: PixiTexture[];
           sprites: InstanceType<typeof Sprite>[];
-          panorama: boolean;
+          mode: "panorama" | "sky" | "city" | "ground" | "foreground" | "legacy";
+        };
+        type LoadedLayer = {
+          layer: { id: string; speed: number; y: number; height: number };
+          textures: PixiTexture[];
+          mode: LayerPool["mode"];
         };
         type PropPool = {
           definition: RouteProp;
@@ -220,9 +232,6 @@ export function PixiScene({
           lifeRoot.addChild(bird);
           return bird;
         });
-        const cat = new Graphics();
-        cat.visible = false;
-        lifeRoot.addChild(cat);
         const steam = Array.from({ length: 3 }, () => {
           const puff = new Graphics();
           puff.visible = false;
@@ -239,6 +248,9 @@ export function PixiScene({
         windowLights.visible = false;
         lightsRoot.addChild(windowLights);
         const lights = { url: null as string | null, ready: false, generation: 0 };
+        const night = { sprite: new Sprite(), ready: false };
+        night.sprite.visible = false;
+        nightRoot.addChild(night.sprite);
         let pools: LayerPool[] = [];
         let props: PropPool[] = [];
         let groundLife: InstanceType<typeof Graphics>[] = [];
@@ -265,9 +277,18 @@ export function PixiScene({
         let lastWidth = 0, lastHeight = 0;
 
         const zoneAssetUrls = (zone: RouteZone) => [
-          ...(coherentPanorama
+          ...(zone.continuousScene
+            ? [
+                zone.fallbackUrl,
+                zone.continuousScene.skyUrl,
+                zone.continuousScene.cityUrl,
+                zone.continuousScene.groundUrl,
+                ...(zone.continuousScene.foregroundUrl ? [zone.continuousScene.foregroundUrl] : []),
+              ]
+            : coherentPanorama
             ? [zone.fallbackUrl]
             : zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url))),
+          ...(zone.nightUrl ? [zone.nightUrl] : []),
           ...(!coherentPanorama
             ? zone.props.flatMap((prop) => prop.assetUrl ? [prop.assetUrl] : [])
             : []),
@@ -318,7 +339,7 @@ export function PixiScene({
           }
           if (disposed || generation !== transitionGeneration) return;
           transitionRoot.removeChildren().forEach((child) => child.destroy());
-          const sprites = Array.from({ length: 6 }, () => {
+          const sprites = Array.from({ length: 1 }, () => {
             const sprite = new Sprite(texture);
             transitionRoot.addChild(sprite);
             return sprite;
@@ -332,18 +353,45 @@ export function PixiScene({
           pendingZoneIndex = zoneIndex;
           const generation = ++buildGeneration;
           const zone = pack.route.zones[zoneIndex];
-          const panoramaTexture = await Assets.load<PixiTexture>(publicAssetUrl(zone.fallbackUrl));
-          const loaded = coherentPanorama
+          const [panoramaTexture, nightTexture] = await Promise.all([
+            Assets.load<PixiTexture>(publicAssetUrl(zone.fallbackUrl)),
+            zone.nightUrl
+              ? Assets.load<PixiTexture>(publicAssetUrl(zone.nightUrl))
+              : Promise.resolve(null),
+          ]);
+          const continuous = zone.continuousScene;
+          const loaded: LoadedLayer[] = continuous
+            ? await (async () => {
+                const [skyTexture, cityTexture, groundTexture, foregroundTexture] = await Promise.all([
+                  Assets.load<PixiTexture>(publicAssetUrl(continuous.skyUrl)),
+                  Assets.load<PixiTexture>(publicAssetUrl(continuous.cityUrl)),
+                  Assets.load<PixiTexture>(publicAssetUrl(continuous.groundUrl)),
+                  continuous.foregroundUrl
+                    ? Assets.load<PixiTexture>(publicAssetUrl(continuous.foregroundUrl))
+                    : Promise.resolve(null),
+                ]);
+                return [
+                  { layer: { id: "sky", speed: 0.01, y: 0, height: 1 }, textures: [skyTexture], mode: "sky" as const },
+                  { layer: { id: "city", speed: 0.08, y: 0, height: 1 }, textures: [cityTexture], mode: "city" as const },
+                  { layer: { id: "ground", speed: 1, y: zone.stage.groundLineY, height: continuous.groundHeightFrac }, textures: [groundTexture], mode: "ground" as const },
+                  ...(foregroundTexture
+                    ? [{ layer: { id: "foreground", speed: 0.14, y: 0, height: 1 }, textures: [foregroundTexture], mode: "foreground" as const }]
+                    : []),
+                ];
+              })()
+            : coherentPanorama
             ? [{
-              layer: { id: "coherent-panorama", speed: 0.055, y: 0, height: 1, segments: [] },
-              textures: [panoramaTexture],
-            }]
+                layer: { id: "coherent-panorama", speed: 0.055, y: 0, height: 1 },
+                textures: [panoramaTexture],
+                mode: "panorama",
+              }]
             : await Promise.all(
               zone.layers.map(async (layer) => ({
                 layer,
                 textures: await Promise.all(
                   layer.segments.map((segment) => Assets.load<PixiTexture>(publicAssetUrl(segment.url))),
                 ),
+                mode: "legacy" as const,
               })),
             );
           const propTextures = await Promise.all(
@@ -357,6 +405,9 @@ export function PixiScene({
 
           imageW = panoramaTexture.width;
           imageH = panoramaTexture.height;
+          night.ready = Boolean(nightTexture);
+          night.sprite.visible = false;
+          if (nightTexture) night.sprite.texture = nightTexture;
           previousLayout = displayedLayout;
           layoutChangedAt = performance.now();
 
@@ -373,10 +424,10 @@ export function PixiScene({
           precipitation = [];
           precipitationKind = "none";
           let sequenceLayerIndex = 0;
-          pools = loaded.map(({ layer, textures }, layerIndex) => {
+          pools = loaded.map(({ layer, textures, mode }, layerIndex) => {
             const container = new Container();
             layerRoot.addChild(container);
-            const sprites = Array.from({ length: 6 }, () => {
+            const sprites = Array.from({ length: mode === "legacy" || mode === "ground" ? 6 : 1 }, () => {
               const sprite = new Sprite(textures[0]);
               container.addChild(sprite);
               return sprite;
@@ -395,7 +446,7 @@ export function PixiScene({
               sequenceLayerIndex,
               textures,
               sprites,
-              panorama: coherentPanorama,
+              mode,
             };
             if (textures.length > 1) sequenceLayerIndex += 1;
             return pool;
@@ -531,7 +582,7 @@ export function PixiScene({
           frameSamples.push(wallDeltaMs);
           if (frameSamples.length > 180) frameSamples.shift();
           clock.accept(state.routeRuntime, state.travelerCommand?.presenceTtlMs ?? 50_000, tickAt);
-          const sample = clock.sample(tickAt);
+          const sample = clock.sample(tickAt, state.scheduledActions);
           const motion = travelerMotionAt(pack, sample.rawSeconds, sample.distanceMetres, state.scheduledActions);
           if(tickAt-lastMotionAt>=100) {lastMotionAt=tickAt;motionCallback.current?.({assetVersion:pack.assetVersion,motion});}
           displayedSeconds = sample.rawSeconds;
@@ -555,8 +606,9 @@ export function PixiScene({
             if (position.zoneIndex === activeZoneIndex && activeZoneIndex < pack.route.zones.length - 1) {
               const remaining = Math.max(0, activeZone.lengthMetres - position.metresIntoZone);
               if (remaining <= 200) void prepareTransition(activeZoneIndex + 1).catch(() => undefined);
-              if (remaining <= 60 && transition?.zoneIndex === activeZoneIndex + 1) {
-                transitionAlpha = 1 - remaining / 60;
+              const transitionMetres = METRES_PER_SECOND * Math.max(1, state.routeRuntime.paceRate);
+              if (remaining <= transitionMetres && transition?.zoneIndex === activeZoneIndex + 1) {
+                transitionAlpha = 1 - remaining / transitionMetres;
               }
             } else if (transition?.zoneIndex === position.zoneIndex) {
               // Keep the fully blended next painting visible while its ordinary
@@ -599,25 +651,62 @@ export function PixiScene({
           groundDetailsRoot.alpha = zoneFade * (1 - transitionAlpha) * (0.75 + state.command.backgroundLife * 0.25);
           weatherRoot.alpha = 0.5 + state.command.backgroundLife * 0.5;
           element.dataset.zoneTransition = String(transitionAlpha);
+          let activePaintingX = layout.imageX;
           for (const pool of pools) {
-            if (pool.panorama) {
+            if (pool.mode === "sky") {
+              const texture = pool.textures[0];
+              const scale = Math.max(width / texture.width, height / texture.height);
+              const sprite = pool.sprites[0];
+              sprite.scale.set(scale);
+              sprite.position.set((width - texture.width * scale) / 2, (height - texture.height * scale) / 2);
+              sprite.visible = true;
+              continue;
+            }
+            if (pool.mode === "city" || pool.mode === "panorama") {
               const texture = pool.textures[0];
               const span = Math.max(1, texture.width * layout.imageScale);
-              const cameraPixels = state.reducedMotion
-                ? 0
-                : position.metresIntoZone * layout.pxPerMetre * 0.7;
-              const wrapped = ((cameraPixels % span) + span) % span;
-              element.dataset.panoramaOffset = String(wrapped);
+              const panorama = boundedPanoramaLayout(
+                span,
+                width,
+                position.metresIntoZone / activeZone.lengthMetres,
+                state.reducedMotion,
+              );
+              activePaintingX = panorama.x;
+              element.dataset.panoramaOffset = String(panorama.offset);
               element.dataset.panoramaSpan = String(span);
-              const first = layout.imageX - wrapped - span;
               for (let slot = 0; slot < pool.sprites.length; slot += 1) {
                 const sprite = pool.sprites[slot];
                 sprite.texture = texture;
                 sprite.scale.set(layout.imageScale);
-                sprite.x = first + slot * span;
+                sprite.x = panorama.x;
                 sprite.y = layout.imageY;
-                sprite.visible = sprite.x + span > -4 && sprite.x < width + 4;
+                sprite.visible = slot === 0;
               }
+              continue;
+            }
+            if (pool.mode === "ground") {
+              const texture = pool.textures[0];
+              const targetHeight = Math.max(height - layout.groundY, height * pool.height);
+              const scale = targetHeight / Math.max(1, texture.height);
+              const segmentWidth = Math.max(1, texture.width * scale);
+              const offset = state.reducedMotion
+                ? 0
+                : ((groundPixels % segmentWidth) + segmentWidth) % segmentWidth;
+              const first = -offset - segmentWidth;
+              for (let slot = 0; slot < pool.sprites.length; slot += 1) {
+                const sprite = pool.sprites[slot];
+                sprite.texture = texture;
+                sprite.scale.set(scale);
+                sprite.position.set(first + slot * segmentWidth, layout.groundY);
+                sprite.visible = sprite.x + segmentWidth > -4 && sprite.x < width + 4;
+              }
+              continue;
+            }
+            if (pool.mode === "foreground") {
+              const sprite = pool.sprites[0];
+              sprite.scale.set(layout.imageScale);
+              sprite.position.set(activePaintingX, layout.imageY);
+              sprite.visible = true;
               continue;
             }
             const targetHeight = height * pool.height;
@@ -655,17 +744,26 @@ export function PixiScene({
               CHARACTER_HEIGHT_TARGETS,
             );
             const span = Math.max(1, transition.texture.width * nextLayout.imageScale);
-            const first = nextLayout.imageX - span;
+            const nextX = span >= width ? 0 : (width - span) / 2;
             for (let slot = 0; slot < transition.sprites.length; slot += 1) {
               const sprite = transition.sprites[slot];
               sprite.scale.set(nextLayout.imageScale);
-              sprite.x = first + slot * span;
+              sprite.x = nextX;
               sprite.y = nextLayout.imageY;
-              sprite.visible = transitionAlpha > 0
-                && sprite.x + span > -4
-                && sprite.x < width + 4;
+              sprite.visible = slot === 0 && transitionAlpha > 0;
             }
           }
+
+          const nightAlpha = night.ready
+            ? nightMix(Number(element.dataset.localHour ?? "12")) * (1 - transitionAlpha)
+            : 0;
+          night.sprite.visible = nightAlpha > 0.01;
+          if (night.sprite.visible) {
+            night.sprite.position.set(activePaintingX, layout.imageY);
+            night.sprite.scale.set(layout.imageScale);
+            night.sprite.alpha = nightAlpha;
+          }
+          element.dataset.nightTextureAlpha = nightAlpha.toFixed(3);
 
           const groundCamera = state.reducedMotion ? 0 : groundPixels;
           groundLifeRoot.x = -groundCamera;
@@ -703,8 +801,8 @@ export function PixiScene({
           }
 
           // ---- The city's own life. Every schedule below is a pure function of
-          // the authoritative second, so two viewers see the same bird, the same
-          // cat and the same tram at the same moment.
+          // the authoritative second, so two viewers see the same bird and tram
+          // at the same moment. Decorative animals require reviewed artwork.
           const life = state.reducedMotion ? 0 : 1;
           const localHourNow = Number(element.dataset.localHour ?? "12");
 
@@ -723,24 +821,6 @@ export function PixiScene({
               .stroke({ color: 0x2c3a45, width: Math.max(1, 1.6 * flight.scale), alpha: 0.55 });
             bird.position.set(x, y);
             bird.visible = true;
-          }
-
-          // The cat sits on a wall in the lanes and nowhere else.
-          const catNow = life && activeZone.kind === "lanes"
-            ? catAppearance(displayedSeconds, pack.assetVersion)
-            : { visible: false, progress: 0, frame: 0, lane: 0 };
-          cat.visible = catNow.visible;
-          if (catNow.visible) {
-            const size = layout.personHeightPx * 0.16;
-            const tail = [0.9, 1.15, 0.95, 0.7][catNow.frame] ?? 1;
-            const colour = Number.parseInt((ambient?.catColor ?? "#3a3a3a").slice(1), 16);
-            cat.clear();
-            cat.roundRect(-size, -size * 0.55, size * 2, size * 1.1, size * 0.4).fill({ color: colour, alpha: 0.92 });
-            cat.circle(size * 0.95, -size * 0.5, size * 0.5).fill({ color: colour, alpha: 0.92 });
-            cat.moveTo(-size, -size * 0.3)
-              .lineTo(-size * 1.5, -size * tail)
-              .stroke({ color: colour, width: Math.max(1.5, size * 0.28), alpha: 0.92 });
-            cat.position.set(width * (0.12 + catNow.lane * 0.6), layout.groundY - layout.personHeightPx * 0.92);
           }
 
           // Steam from the cafe, rising and thinning as it goes.
@@ -830,7 +910,9 @@ export function PixiScene({
           }
           element.dataset.windowLightAlpha = lightAlpha.toFixed(3);
           element.dataset.birdsVisible = String(birds.filter((bird) => bird.visible).length);
-          element.dataset.catVisible = String(cat.visible);
+          // Kept as a diagnostic compatibility marker after the broken
+          // procedural animal was removed from the launch renderer.
+          element.dataset.catVisible = "false";
           element.dataset.buntingVisible = String(bunting.visible);
 
           for (const kind of ["traveler", "resident"] as const) {

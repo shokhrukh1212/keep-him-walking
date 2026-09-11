@@ -18,6 +18,28 @@ export type StageLayout = {
   imageScaleClamped: boolean;
 };
 
+/**
+ * Pans one identifiable painting from its left edge to its right edge exactly
+ * once. It never wraps; a painting narrower than the viewport is simply centred.
+ */
+export function boundedPanoramaLayout(
+  textureSpan: number,
+  viewportWidth: number,
+  progress: number,
+  reducedMotion = false,
+) {
+  if (![textureSpan, viewportWidth].every((value) => Number.isFinite(value) && value > 0)) {
+    throw new RangeError("Panorama dimensions must be finite and positive");
+  }
+  const availablePan = Math.max(0, textureSpan - viewportWidth);
+  const routeProgress = Math.min(1, Math.max(0, Number.isFinite(progress) ? progress : 0));
+  const offset = reducedMotion ? availablePan / 2 : availablePan * routeProgress;
+  return {
+    offset,
+    x: textureSpan >= viewportWidth ? -offset : (viewportWidth - textureSpan) / 2,
+  };
+}
+
 /** The painting scales to a stable actor size; stage fractions calibrate its perspective. */
 export function stageLayout(
   viewportW: number, viewportH: number, imageW: number, imageH: number, stage: ZoneStage,

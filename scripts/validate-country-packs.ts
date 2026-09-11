@@ -1,11 +1,15 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 import { registeredCountryPacks } from "../src/content/countries/registry";
 import { readableCountryPackSchema } from "../src/lib/content/schema";
+import { horizontalEdgeMismatch } from "../src/lib/content/seam-audit";
 
 const packs = registeredCountryPacks();
 const versions = new Set<string>();
 const assetOwners = new Map<string, string>();
+const auditedSeams = new Set<string>();
+const MAX_GROUND_EDGE_MISMATCH = 0.08;
 
 for (const candidate of packs) {
   const pack = readableCountryPackSchema.parse(candidate);
@@ -33,6 +37,9 @@ for (const candidate of packs) {
       zone.fallbackUrl,
       ...(zone.nightUrl ? [zone.nightUrl] : []),
       ...(zone.lightsUrl ? [zone.lightsUrl] : []),
+      ...(zone.continuousScene
+        ? Object.values(zone.continuousScene).filter((value): value is string => typeof value === "string")
+        : []),
       ...zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
       ...zone.props.flatMap((prop) => prop.assetUrl ? [prop.assetUrl] : []),
     ]),
@@ -41,7 +48,7 @@ for (const candidate of packs) {
     // The distant/architecture crops were retired with the parallax renderer in
     // P18. What the renderer needs now is a ground plane in every zone.
     const layerKinds = pack.route.zones.map((zone) => new Set(zone.layers.map((layer) => layer.id)));
-    if (layerKinds.some((kinds) => !kinds.has("ground"))) {
+    if (pack.route.zones.some((zone, index) => !zone.continuousScene && !layerKinds[index]!.has("ground"))) {
       throw new Error(`${pack.assetVersion} requires a ground layer in every zone`);
     }
     const metres = pack.storyBeats
@@ -58,13 +65,38 @@ for (const candidate of packs) {
     }
   }
   for (const url of urls) {
-    await access(path.join(process.cwd(), "public", url));
+    const assetPath = path.join(process.cwd(), "public", url);
+    await access(assetPath);
     if (url.includes("/scenes/")) {
       const owner = assetOwners.get(url);
       if (owner && owner !== pack.countryCode) {
         throw new Error(`Scene asset ${url} is reused by ${owner} and ${pack.countryCode}`);
       }
       assetOwners.set(url, pack.countryCode);
+    }
+  }
+  if (pack.schemaVersion === 3) {
+    for (const zone of pack.route.zones) {
+      const url = zone.continuousScene?.groundUrl;
+      if (!url || auditedSeams.has(url)) continue;
+      auditedSeams.add(url);
+      const { data, info } = await sharp(path.join(process.cwd(), "public", url))
+        .rotate()
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const mismatch = horizontalEdgeMismatch(
+        data,
+        info.width,
+        info.height,
+        info.channels,
+      );
+      if (mismatch > MAX_GROUND_EDGE_MISMATCH) {
+        throw new Error(
+          `${pack.assetVersion} ground ${url} is not horizontally seamless `
+          + `(edge mismatch ${(mismatch * 100).toFixed(1)}%, max ${MAX_GROUND_EDGE_MISMATCH * 100}%)`,
+        );
+      }
     }
   }
 }

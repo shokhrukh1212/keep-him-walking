@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Link from "next/link";
 import { CountryFlags } from "./CountryFlags";
 import { CountryLeaderboardSheet } from "./CountryLeaderboardSheet";
@@ -26,6 +25,9 @@ type Props = {
   liveCountries?: LiveCountryView[];
   todayTopCountries?: CountryWatchView[];
   launchCountdown?: string | null;
+  audienceOpen: boolean;
+  onAudienceOpen: () => void;
+  onAudienceClose: () => void;
 };
 
 export function JourneyHud({
@@ -43,8 +45,10 @@ export function JourneyHud({
   liveCountries = [],
   todayTopCountries = [],
   launchCountdown = null,
+  audienceOpen,
+  onAudienceOpen,
+  onAudienceClose,
 }: Props) {
-  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   return (
     <header className="journey-hud" data-hud-region="header">
       <Link className="day-mark" data-hud-region="where-when" href="/map" aria-label={`Open journey map from ${day.cityName}`}>
@@ -56,7 +60,7 @@ export function JourneyHud({
         </span>
       </Link>
       <div className="journey-hud-audience" data-hud-region="who">
-        <CountryFlags live={liveCountries} onOpen={() => setLeaderboardOpen(true)} />
+        <CountryFlags live={liveCountries} onOpen={onAudienceOpen} />
         <LiveStatus
           activeViewers={activeViewers}
           paceRate={paceRate}
@@ -70,9 +74,9 @@ export function JourneyHud({
         />
       </div>
       <CountryLeaderboardSheet
-        open={leaderboardOpen}
+        open={audienceOpen}
         todayTop={todayTopCountries}
-        onClose={() => setLeaderboardOpen(false)}
+        onClose={onAudienceClose}
       />
     </header>
   );

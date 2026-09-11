@@ -61,11 +61,11 @@ it("shows the rendered scale diagnostics and regeneration warning after the mast
   fireEvent.load(image);
 
   expect(screen.getByLabelText("Scale readouts")).toHaveTextContent("personHeightFrac0.200");
-  expect(screen.getByLabelText("Scale readouts")).toHaveTextContent("Resulting character216.0 px");
+  expect(screen.getByLabelText("Scale readouts")).toHaveTextContent("Resulting character270.0 px");
   expect(screen.getByRole("alert")).toHaveTextContent(
-    "pack test-pack/rustaveli-arrival: master composed too far away (needs imageScale 10.800); regenerate at eye level",
+    "pack test-pack/rustaveli-arrival: master composed too far away (needs imageScale 13.500); regenerate at eye level",
   );
-  expect(screen.getByLabelText("216.0 pixel target character")).toBeInTheDocument();
+  expect(screen.getByLabelText("270.0 pixel target character")).toBeInTheDocument();
   fireEvent.change(screen.getByRole("combobox", {name: "Rendered viewport"}), {target: {value: "mobile"}});
-  expect(screen.getByLabelText("Scale readouts")).toHaveTextContent("Resulting character168.8 px");
+  expect(screen.getByLabelText("Scale readouts")).toHaveTextContent("Resulting character236.3 px");
 });

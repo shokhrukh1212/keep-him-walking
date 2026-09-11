@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  birdFlights, buntingVisible, catAppearance, steamPuffs, tramPass,
+  birdFlights, buntingVisible, steamPuffs, tramPass,
   walkerPopulation, wavingWalker, windowLightAlpha,
 } from "./ambient";
 
@@ -55,56 +55,39 @@ describe("birdFlights", () => {
   });
 });
 
-describe("catAppearance", () => {
-  it("shows the cat for twenty seconds in each six-minute cycle", () => {
-    let visible = 0;
-    for (let second = 0; second < 360; second += 1) {
-      if (catAppearance(second, "tashkent-v4").visible) visible += 1;
-    }
-    expect(visible).toBe(20);
-  });
-
-  it("walks a four-frame loop while it is there", () => {
-    const frames = new Set<number>();
-    for (let second = 0; second < 360; second += 1) {
-      const cat = catAppearance(second, "tashkent-v4");
-      if (cat.visible) frames.add(cat.frame);
-    }
-    expect([...frames].every((frame) => frame >= 0 && frame < 4)).toBe(true);
-    expect(frames.size).toBe(4);
-  });
-
-  it("is identical for two viewers at the same second", () => {
-    expect(catAppearance(1_234, "tashkent-v4")).toEqual(catAppearance(1_234, "tashkent-v4"));
-  });
-});
-
 describe("walkerPopulation", () => {
-  it("empties the street in the dead of night", () => {
-    expect(walkerPopulation(2, 3)).toBe(0);
+  it("empties the street at night and when the scene opts out", () => {
+    expect(walkerPopulation(10, 2, "london-v1", 2)).toBe(0);
+    expect(walkerPopulation(10, 12, "london-v1", 2, false)).toBe(0);
   });
 
-  it("fills it in the early afternoon", () => {
-    expect(walkerPopulation(13, 3)).toBe(3);
-  });
-
-  it("never exceeds the tier ceiling", () => {
-    expect(walkerPopulation(13, 1)).toBe(1);
-    expect(walkerPopulation(13, 0)).toBe(0);
-  });
-
-  it("rises monotonically from the small hours to the afternoon", () => {
-    let previous = walkerPopulation(2, 3);
-    for (let hour = 2; hour <= 13; hour += 1) {
-      const current = walkerPopulation(hour, 3);
-      expect(current).toBeGreaterThanOrEqual(previous);
-      previous = current;
+  it("shows supporting people briefly, with long empty stretches", () => {
+    let visible = 0;
+    let longestEmpty = 0;
+    let empty = 0;
+    for (let second = 0; second < 600; second += 1) {
+      const count = walkerPopulation(second, 13, "london-v1", 2);
+      if (count > 0) {
+        visible += 1;
+        empty = 0;
+      } else {
+        empty += 1;
+        longestEmpty = Math.max(longestEmpty, empty);
+      }
     }
+    expect(visible).toBeGreaterThanOrEqual(60);
+    expect(visible).toBeLessThanOrEqual(90);
+    expect(longestEmpty).toBeGreaterThanOrEqual(80);
   });
 
-  it("wraps an out-of-range hour instead of failing", () => {
-    expect(walkerPopulation(26, 3)).toBe(walkerPopulation(2, 3));
-    expect(walkerPopulation(-1, 3)).toBe(walkerPopulation(23, 3));
+  it("never exceeds two or the tier ceiling and is deterministic", () => {
+    for (let second = 0; second < 600; second += 1) {
+      expect(walkerPopulation(second, 13, "london-v1", 8)).toBeLessThanOrEqual(2);
+      expect(walkerPopulation(second, 13, "london-v1", 1)).toBeLessThanOrEqual(1);
+      expect(walkerPopulation(second, 13, "london-v1", 0)).toBe(0);
+    }
+    expect(walkerPopulation(137, 13, "london-v1", 2))
+      .toBe(walkerPopulation(137, 13, "london-v1", 2));
   });
 });
 

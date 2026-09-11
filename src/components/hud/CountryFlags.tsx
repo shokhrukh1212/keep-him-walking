@@ -13,16 +13,19 @@ type Props = {
  * so the strip is empty rather than optimistic when nobody is confirmed.
  */
 export function CountryFlags({ live, onOpen }: Props) {
-  if (live.length === 0) return null;
   const shown = live.slice(0, VISIBLE_FLAGS);
   const overflow = live.length - shown.length;
-  const label = `Watching from ${live.length} ${live.length === 1 ? "country" : "countries"}`;
+  const label = live.length === 0
+    ? "No watching countries confirmed yet"
+    : `Watching from ${live.length} ${live.length === 1 ? "country" : "countries"}`;
   return (
     <button className="country-flags" type="button" onClick={onOpen} aria-label={`${label}. Open today’s leaderboard.`}>
       <span className="country-flags-emoji" aria-hidden="true">
-        {shown.map((row) => (
-          <span key={row.code} className="country-flag">{flagEmoji(row.code)}</span>
-        ))}
+        {shown.length === 0
+          ? <span className="country-flag">🌐</span>
+          : shown.map((row) => (
+              <span key={row.code} className="country-flag">{flagEmoji(row.code)}</span>
+            ))}
       </span>
       {overflow > 0 ? <span className="country-flags-overflow">+{overflow}</span> : null}
     </button>

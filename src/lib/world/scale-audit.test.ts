@@ -13,11 +13,11 @@ describe("content scale audit", () => {
     expect(SCALE_SANITY_VIEWPORTS.map((viewport) => viewport.width)).toEqual([320, 390, 768, 1440, 2560]);
     const row = auditZoneScale("Example", "example-v1", "square", 1600, 900,
       stageSchema.parse({personHeightFrac: 0.05}), DEFAULT_CHARACTER_HEIGHT_TARGETS);
-    expect(row.requiredImageScale).toBe(4.8);
-    expect(row.characterPx).toBe(216);
+    expect(row.requiredImageScale).toBe(6);
+    expect(row.characterPx).toBe(270);
     expect(row.needsRegeneration).toBe(true);
-    expect(row.sanityErrors).toHaveLength(4);
-    expect(row.sanityErrors[0]).toContain("example-v1/square at 390px");
+    expect(row.sanityErrors).toHaveLength(5);
+    expect(row.sanityErrors[0]).toContain("example-v1/square at 320px");
   });
 
   it("hard-errors outside the 1.6× target tolerance", () => {

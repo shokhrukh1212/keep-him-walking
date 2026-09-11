@@ -4,8 +4,8 @@ export type CharacterHeightTargets = Readonly<{
 }>;
 
 export const DEFAULT_CHARACTER_HEIGHT_TARGETS: CharacterHeightTargets = Object.freeze({
-  desktop: 0.24,
-  mobile: 0.20,
+  desktop: 0.30,
+  mobile: 0.28,
 });
 
 function fraction(value: string | undefined, fallback: number, name: string) {

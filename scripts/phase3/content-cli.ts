@@ -11,7 +11,16 @@ for (const candidate of registeredCountryPacks()) {
   const urls = new Set([
     pack.scene.fallbackUrl, pack.postcardBackgroundUrl,
     ...pack.audio.map((item) => item.url), ...Object.values(pack.npcAssets),
-    ...pack.route.zones.flatMap((zone) => [zone.fallbackUrl, ...zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)), ...zone.props.flatMap((prop) => prop.assetUrl ? [prop.assetUrl] : [])]),
+    ...pack.route.zones.flatMap((zone) => [
+      zone.fallbackUrl,
+      ...(zone.nightUrl ? [zone.nightUrl] : []),
+      ...(zone.lightsUrl ? [zone.lightsUrl] : []),
+      ...(zone.continuousScene
+        ? Object.values(zone.continuousScene).filter((value): value is string => typeof value === "string")
+        : []),
+      ...zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
+      ...zone.props.flatMap((prop) => prop.assetUrl ? [prop.assetUrl] : []),
+    ]),
   ]);
   let transferBytes = 0;
   for (const url of urls) transferBytes += (await stat(path.join(process.cwd(), "public", url))).size;
