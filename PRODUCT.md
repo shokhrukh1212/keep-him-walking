@@ -191,9 +191,11 @@ that is hashed before it ever reaches the database.
 - **Season sheet** — `/season/1` is the whole passport as one shareable poster: the stamp
   sheet, the confirmed totals, the route map and a share card.
 - **A city that lives** — subtle birds, café steam and an optional tram share the
-  authoritative clock. One or two rigged residents appear only during occasional short
-  windows; the unconvincing procedural cat was removed. When a hundred people are
-  watching at once, bunting goes up for the rest of the day.
+  authoritative clock. Every couple of minutes one or two rigged residents walk past on
+  his pavement, a little smaller than him, just behind him or just in front; each walks
+  in at one edge of the screen and out at the other. The unconvincing procedural cat was
+  removed. When a hundred people are watching at once, bunting goes up for the rest of
+  the day.
 - **Tomorrow** — only a committed next `country_days` row may name the next city, start
   time and walk/train/flight transfer. Registry order is never presented as a result.
 - **Sound** — per-zone ambient street audio, off until you ask for it.

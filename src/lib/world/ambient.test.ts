@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   birdFlights, buntingVisible, steamPuffs, tramPass,
-  walkerPopulation, wavingWalker, windowLightAlpha,
+  wavingWalker, windowLightAlpha,
 } from "./ambient";
 
 describe("birdFlights", () => {
@@ -52,42 +52,6 @@ describe("birdFlights", () => {
   it("gives two cities different skies over the same minutes", () => {
     const sky = (seed: string) => Array.from({ length: 400 }, (_unused, second) => birdFlights(second, seed, 4).length).join("");
     expect(sky("dushanbe-v1")).not.toBe(sky("tbilisi-v1"));
-  });
-});
-
-describe("walkerPopulation", () => {
-  it("empties the street at night and when the scene opts out", () => {
-    expect(walkerPopulation(10, 2, "london-v1", 2)).toBe(0);
-    expect(walkerPopulation(10, 12, "london-v1", 2, false)).toBe(0);
-  });
-
-  it("shows supporting people briefly, with long empty stretches", () => {
-    let visible = 0;
-    let longestEmpty = 0;
-    let empty = 0;
-    for (let second = 0; second < 600; second += 1) {
-      const count = walkerPopulation(second, 13, "london-v1", 2);
-      if (count > 0) {
-        visible += 1;
-        empty = 0;
-      } else {
-        empty += 1;
-        longestEmpty = Math.max(longestEmpty, empty);
-      }
-    }
-    expect(visible).toBeGreaterThanOrEqual(60);
-    expect(visible).toBeLessThanOrEqual(90);
-    expect(longestEmpty).toBeGreaterThanOrEqual(80);
-  });
-
-  it("never exceeds two or the tier ceiling and is deterministic", () => {
-    for (let second = 0; second < 600; second += 1) {
-      expect(walkerPopulation(second, 13, "london-v1", 8)).toBeLessThanOrEqual(2);
-      expect(walkerPopulation(second, 13, "london-v1", 1)).toBeLessThanOrEqual(1);
-      expect(walkerPopulation(second, 13, "london-v1", 0)).toBe(0);
-    }
-    expect(walkerPopulation(137, 13, "london-v1", 2))
-      .toBe(walkerPopulation(137, 13, "london-v1", 2));
   });
 });
 

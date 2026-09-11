@@ -8,17 +8,21 @@ import type { CountryPack } from "@/lib/content/schema";
 import { CharacterActor } from "@/lib/characters/actor";
 import { CharacterLights } from "@/lib/characters/toon";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
-import { CHARACTER_MANIFEST, CLIP_DURATIONS, RESIDENT_TYPES, type ResidentType } from "@/lib/characters/manifest";
+import { CHARACTER_MANIFEST, RESIDENT_TYPES, type ResidentType } from "@/lib/characters/manifest";
 import { loadCharacterGltf } from "@/lib/characters/loader";
 import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { packResidentType, walkerResidentType } from "@/lib/characters/residents";
 import { actorLayout } from "@/lib/traveler/actor-layout";
 import { frameFitsViewport, type StageFrame } from "@/lib/world/stage-layout";
 import { travelerMotionAt } from "@/lib/traveler/motion-clock";
-import { walkerPopulation, wavingWalker } from "@/lib/world/ambient";
+import { wavingWalker } from "@/lib/world/ambient";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
-import { deterministicVariant } from "@/lib/world/route-clock";
+import {
+  advanceWalker, enterWalker, walkerHasLeft, walkerPassesBetween, walkerPlacement, walkerScreenX,
+  type StreetWalker, type WalkerLane, type WalkerPlacement,
+} from "@/lib/world/walkers";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
+import type { CharacterContact } from "@/lib/world/visual-grade";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import type { QualityTier, RouteRuntime } from "@/lib/world/types";
 import type { ScheduledActionView } from "@/lib/contracts";
@@ -145,10 +149,20 @@ export function ProductCharacterStage3D(props: Props) {
     // built on its own skeleton clone. The other resident downloads the first time a
     // walker needs it, so a device that shows no walkers never fetches it.
     const residentModels = new Map<ResidentType, GLTF | "loading" | "failed">();
+    // People passing on his pavement. Each keeps its own street position and is
+    // removed only after walking out of view (src/lib/world/walkers.ts).
     type Walker = {
-      actor: CharacterActor; anchor: THREE.Group; lane: number; speed: number; depth: number; type: ResidentType;
+      actor: CharacterActor; anchor: THREE.Group; type: ResidentType; heightMetres: number;
+      lane: WalkerLane; placement: WalkerPlacement; street: StreetWalker;
     };
     let walkers: Walker[] = [];
+    // Where the watched clock and his distance stood when the walkers last moved.
+    let walkerClock: { seconds: number; distanceMetres: number; at: number } | undefined;
+    const removeWalker = (walker: Walker) => {
+      walkerRoot.remove(walker.anchor);
+      walker.actor.dispose();
+      disposeModel(walker.anchor);
+    };
     let last = 0;
     let lastRender = 0;
     let firstSample = true;
@@ -344,102 +358,116 @@ export function ProductCharacterStage3D(props: Props) {
       element.dataset.personHeight = String((head.y - foot.y) * height / 2);
       element.dataset.characterImageScale = String(frame.layout.characterImageScale);
       element.dataset.zoneId = frame.zoneId;
-      state.contacts.current = {
-        traveler: traveler ? { footX: (foot.x + 1) * width / 2, footY: (1 - foot.y) * height / 2,
-          scale: (head.y - foot.y) * height / 2 / 1.78 } : null,
-        resident: residentRoot.visible ? { footX: residentAnchor * width, footY: (1 - foot.y) * height / 2,
-          scale: frame.layout.pxPerMetre * CHARACTER_MANIFEST.residents[residentType ?? "resident-a"].heightMetres / 1.78 } : null,
-      };
       element.dataset.outline = String(state.qualityTier !== "low");
       element.dataset.grade = JSON.stringify(state.grade.current);
 
-      // ---- Background walkers. The count follows the city's own hour and the
-      // quality tier, and is adjusted here rather than at mount: this effect has
-      // an empty dependency list, so the tier it captured is not the live one.
-      const wanted = residentGltf
-        ? walkerPopulation(
+      // ---- People passing on his pavement. A pass starts on the shared watched clock,
+      // enters beyond one edge and is removed only once it has walked out beyond the
+      // other: nothing he does, no schedule window and no city hour takes anyone out of
+      // the middle of the street. New people set off only while he is plainly walking.
+      // The tier is read here, not at mount: this effect has an empty dependency list.
+      const walkerLimit = QUALITY_LIMITS[state.qualityTier].walkers;
+      const travelerHeight = CHARACTER_MANIFEST.traveler.heightMetres;
+      // The pavement moves under everyone exactly as fast as his distance grows.
+      const walkerSeconds = walkerClock ? (now - walkerClock.at) / 1000 : 0;
+      const groundSpeed = walkerClock && walkerSeconds > 0
+        ? Math.max(0, (sample.distanceMetres - walkerClock.distanceMetres) / walkerSeconds)
+        : 0;
+      // Nobody sets off before the conversation partner's model is in, so a walker's
+      // download never leaves the partner still loading.
+      const passes = walkerClock && residentGltf && sample.traveling && (state.command?.walking ?? true)
+        && !cue.conversation && !motion.action
+        ? walkerPassesBetween(
+            walkerClock.seconds,
             sample.rawSeconds,
             state.command?.localHour ?? 12,
             state.pack.assetVersion,
-            QUALITY_LIMITS[state.qualityTier].walkers,
-            sample.traveling && !cue.conversation && !motion.action,
+            walkerLimit,
           )
-        : 0;
-      while (walkers.length > wanted) {
-        const spare = walkers.pop();
-        if (!spare) break;
-        walkerRoot.remove(spare.anchor);
-        spare.actor.dispose();
-        disposeModel(spare.anchor);
+        : [];
+      walkerClock = { seconds: sample.rawSeconds, distanceMetres: sample.distanceMetres, at: now };
+      // Reduced motion forces the low tier, which shows nobody, so they stop at once.
+      if (walkerLimit <= 0) {
+        for (const walker of walkers) removeWalker(walker);
+        walkers = [];
       }
-      // One per frame: cloning a rig and building an actor is the most expensive
-      // thing this loop can do, and three of them at once shows up as a stutter.
-      // Never more walkers than residents, because two are never the same model;
-      // one whose model is still downloading waits rather than borrowing the other.
-      const nextWalker = walkers.length < Math.min(wanted, RESIDENT_TYPES.length) && residentGltf
-        ? walkerResidentType(walkers.map((walker) => walker.type), state.pack.assetVersion, sample.rawSeconds)
-        : undefined;
-      const nextWalkerModel = nextWalker ? residentModel(nextWalker) : undefined;
-      if (nextWalker && typeof nextWalkerModel === "object") {
-        const index = walkers.length;
-        const actor = residentActor(nextWalker, nextWalkerModel);
+      for (const pass of passes) {
+        // Never two in one lane, who would walk through each other, and never more
+        // walkers than residents, because two are never the same model.
+        if (walkers.length >= Math.min(walkerLimit, RESIDENT_TYPES.length)
+          || walkers.some((walker) => walker.lane === pass.lane)) continue;
+        const type = walkerResidentType(walkers.map((walker) => walker.type), state.pack.assetVersion, pass.startSecond);
+        // A model still downloading misses this pass rather than appearing late, mid-street.
+        const model = residentModel(type);
+        if (typeof model !== "object") continue;
+        const heightMetres = CHARACTER_MANIFEST.residents[type].heightMetres;
+        const placement = walkerPlacement(pass.lane, heightMetres, travelerHeight);
+        const street = enterWalker(pass, placement, sample.distanceMetres, groundSpeed, horizontal);
+        if (!street) continue;
+        const actor = residentActor(type, model);
         const anchor = new THREE.Group();
-        // Walking the other way, so the street reads as two-directional.
-        anchor.rotation.y = -0.68;
         anchor.add(actor.root);
+        anchor.scale.setScalar(placement.scale);
+        // Facing the way they walk, three-quarters to the camera as he is.
+        anchor.rotation.y = pass.direction > 0 ? 0.68 : -0.68;
         walkerRoot.add(anchor);
-        walkers.push({
-          actor,
-          anchor,
-          type: nextWalker,
-          // How far down the street this one is, as a fraction of the gap between
-          // his ground line and the horizon. Size and height in frame both follow
-          // from it below, because the camera is orthographic: scaling someone
-          // down without also lifting them toward the horizon does not read as
-          // distance, it reads as a small person standing next to him.
-          depth: 0.16 + deterministicVariant(`${state.pack.assetVersion}:walker-depth`, index, 5) * 0.05,
-          // Lanes are spread by index first and only nudged by the hash, so two
-          // walkers can never start on top of each other.
-          lane: index / Math.max(1, QUALITY_LIMITS[state.qualityTier].walkers)
-            + deterministicVariant(`${state.pack.assetVersion}:walker-lane`, index, 8) / 100,
-          speed: 0.55 + deterministicVariant(`${state.pack.assetVersion}:walker-speed`, index, 5) * 0.06,
-        });
+        walkers.push({ actor, anchor, type, heightMetres, lane: pass.lane, placement, street });
       }
 
-      // One of them waves back when the crowd waves, chosen deterministically so
-      // every viewer sees the same person answer.
-      const crowdWave = motion.action?.source === "crowd" && motion.action.kind === "wave"
-        && motion.action.elapsedSeconds < 0.8;
-      const waver = crowdWave ? wavingWalker(sample.rawSeconds, state.pack.assetVersion, walkers.length) : -1;
-      for (let index = 0; index < walkers.length; index += 1) {
-        const walker = walkers[index]!;
-        // Their own track across the street: seconds x speed, wrapped, so they
-        // never borrow the traveler's anchor or his viewport drift.
-        const cycle = (sample.rawSeconds * walker.speed * 0.06 + walker.lane) % 1;
-        walker.anchor.position.x = (0.5 - cycle) * horizontal;
-        // Smaller and higher in the frame together, on the same depth fraction,
-        // so the pair of cues agrees and he reads as nearer than they are.
-        const groundToHorizon = Math.max(1, frame.layout.groundY - height * frame.stage.horizonY);
-        walker.anchor.position.y = walker.depth * groundToHorizon * vertical / height;
-        walker.anchor.scale.setScalar(1 - walker.depth);
-        walker.anchor.position.z = -0.5 - walker.depth;
+      // One of them stops and waves back for as long as a crowd wave lasts, chosen from
+      // the wave's start second so every viewer sees the same person answer.
+      const crowdWave = motion.action?.source === "crowd" && motion.action.kind === "wave" ? motion.action : undefined;
+      const waver = crowdWave
+        ? wavingWalker(Math.round(sample.rawSeconds - crowdWave.elapsedSeconds), state.pack.assetVersion, walkers.length)
+        : -1;
+      let wavingBack = false;
+      const walkerContacts: CharacterContact[] = [];
+      const passing: Walker[] = [];
+      walkers.forEach((walker, index) => {
+        const waving = index === waver;
+        walker.street = advanceWalker(
+          walker.street, dt, walker.placement, walker.heightMetres, travelerHeight, waving,
+        );
+        if (walkerHasLeft(walker.street, sample.distanceMetres, horizontal)) {
+          removeWalker(walker);
+          return;
+        }
+        passing.push(walker);
+        wavingBack ||= waving;
+        const x = walkerScreenX(walker.street, sample.distanceMetres);
+        walker.anchor.position.set(x, walker.placement.footY, walker.placement.z);
         walker.actor.sample(
-          index === waver
-            ? { clip: "greet", seconds: motion.action?.elapsedSeconds ?? 0 }
-            // CharacterActor clamps a cue to the end of its clip, so a running
-            // clock would park every walker on the walk cycle's last frame and
-            // slide it across the street like a cutout. The phase must wrap.
-            : { clip: "walk", seconds: (sample.rawSeconds * walker.speed) % CLIP_DURATIONS.walk },
+          waving
+            ? { clip: "greet", seconds: crowdWave?.elapsedSeconds ?? 0 }
+            // The gait is advanced by their own steps, so it wraps inside the clip and
+            // the feet keep pace with the pavement rather than sliding over it.
+            : { clip: "walk", seconds: walker.street.gaitSeconds },
           dt,
           false,
           1.8,
         );
         walker.actor.toon.viewport.value.set(width, height);
         walker.actor.setAppearance(frame.stage, state.grade.current, state.qualityTier);
-      }
+        walkerContacts.push({
+          footX: (x / horizontal + 0.5) * width,
+          footY: frame.layout.groundY - walker.placement.footY * frame.layout.pxPerMetre,
+          scale: frame.layout.pxPerMetre * walker.placement.scale * walker.heightMetres / 1.78,
+        });
+      });
+      walkers = passing;
       element.dataset.walkers = String(walkers.length);
       element.dataset.walkerResidents = walkers.map((walker) => walker.type).join(" ");
-      element.dataset.walkerWaving = String(waver >= 0);
+      element.dataset.walkerLanes = walkers.map((walker) => walker.lane).join(" ");
+      element.dataset.walkerFootX = walkerContacts.map((contact) => contact.footX.toFixed(1)).join(" ");
+      element.dataset.walkerWaving = String(wavingBack);
+
+      state.contacts.current = {
+        traveler: traveler ? { footX: (foot.x + 1) * width / 2, footY: (1 - foot.y) * height / 2,
+          scale: (head.y - foot.y) * height / 2 / 1.78 } : null,
+        resident: residentRoot.visible ? { footX: residentAnchor * width, footY: (1 - foot.y) * height / 2,
+          scale: frame.layout.pxPerMetre * CHARACTER_MANIFEST.residents[residentType ?? "resident-a"].heightMetres / 1.78 } : null,
+        walkers: walkerContacts,
+      };
 
       renderer.render(scene, camera);
       // The drawing buffer is only guaranteed here, immediately after the draw,

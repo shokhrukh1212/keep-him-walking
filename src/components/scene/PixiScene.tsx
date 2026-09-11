@@ -170,8 +170,10 @@ export function PixiScene({
         const shadowTexture = Texture.from(shadowCanvas);
         shadowTexture.label = "character-contact-shadow";
         const shadows = { traveler: new Sprite(shadowTexture), resident: new Sprite(shadowTexture) };
-        for (const shadow of Object.values(shadows)) { shadow.anchor.set(0.5); shadow.visible = false; }
-        groundLifeRoot.addChild(groundDetailsRoot, shadows.traveler, shadows.resident);
+        // One for each person who can be passing on his pavement at once.
+        const walkerShadows = Array.from({ length: QUALITY_LIMITS.high.walkers }, () => new Sprite(shadowTexture));
+        for (const shadow of [...Object.values(shadows), ...walkerShadows]) { shadow.anchor.set(0.5); shadow.visible = false; }
+        groundLifeRoot.addChild(groundDetailsRoot, ...walkerShadows, shadows.traveler, shadows.resident);
         // Draw order, back to front: sky, the panorama (or the legacy parallax
         // layers), props, ground life, weather. Nothing composites over the
         // painting itself.
@@ -915,23 +917,28 @@ export function PixiScene({
           element.dataset.catVisible = "false";
           element.dataset.buntingVisible = String(bunting.visible);
 
-          for (const kind of ["traveler", "resident"] as const) {
-            const contact = contacts.current[kind];
-            const shadow = shadows[kind];
+          const placeShadow = (
+            shadow: InstanceType<typeof Sprite>, contact: CharacterContacts["traveler"] | undefined,
+          ) => {
             shadow.visible = Boolean(contact);
-            if (!contact) continue;
+            if (!contact) return null;
             const placement = contactShadowLayout(contact, groundCamera);
             shadow.position.set(placement.x, placement.y);
             shadow.width = placement.radiusX * 2;
             shadow.height = placement.radiusY * 2;
             shadow.alpha = placement.alpha;
-            if (kind === "traveler") {
-              element.dataset.shadowX = String(shadow.x + groundLifeRoot.x);
-              element.dataset.shadowY = String(shadow.y);
-              element.dataset.shadowRadiusX = String(placement.radiusX);
-            }
+            return placement;
+          };
+          const travelerShadow = placeShadow(shadows.traveler, contacts.current.traveler);
+          placeShadow(shadows.resident, contacts.current.resident);
+          if (travelerShadow) {
+            element.dataset.shadowX = String(shadows.traveler.x + groundLifeRoot.x);
+            element.dataset.shadowY = String(shadows.traveler.y);
+            element.dataset.shadowRadiusX = String(travelerShadow.radiusX);
           }
+          walkerShadows.forEach((shadow, index) => placeShadow(shadow, contacts.current.walkers?.[index]));
           element.dataset.shadowVisible = String(shadows.traveler.visible);
+          element.dataset.walkerShadows = String(walkerShadows.filter((shadow) => shadow.visible).length);
           const groundSpacing = width < 500 ? 170 : 240;
           const firstGround = Math.floor(groundCamera / groundSpacing) - 2;
           for (let index = 0; index < groundLife.length; index += 1) {
@@ -1047,7 +1054,7 @@ export function PixiScene({
             const visibleObjects = pools.flatMap((pool) => pool.sprites).filter((sprite) => sprite.visible).length
               + props.filter((item) => item.display.visible).length
               + groundLife.filter((item) => item.visible).length
-              + motes.length + Object.values(shadows).filter((shadow) => shadow.visible).length;
+              + motes.length + [...Object.values(shadows), ...walkerShadows].filter((shadow) => shadow.visible).length;
             // Test-observable inventory of every texture the world holds on the
             // stage. Assets.load stamps the resolved URL onto the texture label;
             // textures built in the browser (a canvas, a render target) have no

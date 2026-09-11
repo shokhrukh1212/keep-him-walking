@@ -1,12 +1,7 @@
 import type { CountryPack } from "@/lib/content/schema";
 import { deterministicVariant } from "@/lib/world/route-clock";
+import { WALKER_BLOCK_SECONDS } from "@/lib/world/walkers";
 import { RESIDENT_TYPES, type ResidentType } from "./manifest";
-
-/**
- * A walker appearance never crosses a two-minute block of active seconds
- * (`walkerPopulation` in src/lib/world/ambient.ts), so one choice covers it.
- */
-const WALKER_CHOICE_BLOCK_SECONDS = 120;
 
 /** The resident a city's conversation uses. The pack names it; nothing else decides. */
 export function packResidentType(pack: CountryPack): ResidentType {
@@ -30,6 +25,7 @@ export function walkerResidentType(
     return absent;
   }
   const second = Number.isFinite(activeSecond) ? Math.max(0, activeSecond) : 0;
-  const block = Math.floor(second / WALKER_CHOICE_BLOCK_SECONDS);
+  // Passes are scheduled per block, so one choice covers every pass of a block.
+  const block = Math.floor(second / WALKER_BLOCK_SECONDS);
   return RESIDENT_TYPES[deterministicVariant(`${seed}:walker-resident`, block, RESIDENT_TYPES.length)]!;
 }

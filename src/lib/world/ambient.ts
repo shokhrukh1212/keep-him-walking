@@ -52,32 +52,6 @@ export function birdFlights(activeSecond: number, seed: string, limit: number, w
   return birds;
 }
 
-/**
- * Occasional supporting walkers. A deterministic start inside each two-minute
- * block makes gaps vary from 90–150 seconds, while a 12–18 second window keeps
- * the traveler visually dominant. Low quality, night, waiting and scripted
- * actions opt out through the explicit inputs.
- */
-export function walkerPopulation(
-  activeSecond: number,
-  localHour: number,
-  seed: string,
-  tierLimit: number,
-  eligible = true,
-): number {
-  if (!eligible || tierLimit <= 0 || !Number.isFinite(activeSecond) || !Number.isFinite(localHour)) return 0;
-  const hour = ((localHour % 24) + 24) % 24;
-  if (hour < 5 || hour >= 22) return 0;
-  const second = Math.max(0, activeSecond);
-  const cycle = Math.floor(second / 120);
-  const offset = second - cycle * 120;
-  const start = deterministicVariant(`${seed}:walker-start`, cycle, 31);
-  const duration = 12 + deterministicVariant(`${seed}:walker-duration`, cycle, 7);
-  if (offset < start || offset >= start + duration) return 0;
-  const count = 1 + deterministicVariant(`${seed}:walker-count`, cycle, 2);
-  return Math.min(2, tierLimit, count);
-}
-
 /** Steam rises from the cafe continuously; three puffs share one rising cycle. */
 export type SteamPuff = { progress: number; drift: number };
 

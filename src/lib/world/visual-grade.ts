@@ -5,7 +5,12 @@ export type VisualGrade = { exposure: number; tint: { r: number; g: number; b: n
 
 /** Screen pixels; scale is pixels per metre (the standing reference is 1.78 m). */
 export type CharacterContact = { footX: number; footY: number; scale: number };
-export type CharacterContacts = { traveler: CharacterContact | null; resident: CharacterContact | null };
+/** `walkers` are the people passing on his pavement (src/lib/world/walkers.ts). */
+export type CharacterContacts = {
+  traveler: CharacterContact | null;
+  resident: CharacterContact | null;
+  walkers?: readonly CharacterContact[];
+};
 
 export function gradeMatrix({ exposure, tint }: VisualGrade): ColorMatrix {
   return [

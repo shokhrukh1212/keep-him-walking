@@ -1520,12 +1520,13 @@ on every request in the edge path, so it was not done here.
 
 ### The living world (P17)
 
-`src/lib/world/ambient.ts` is the whole schedule and it is pure: `birdFlights`,
-`walkerPopulation`, `steamPuffs`, `tramPass`, `buntingVisible`,
-`windowLightAlpha` and `wavingWalker` are functions of the authoritative second and a
-seed, through the existing `deterministicVariant`. Nothing calls `Math.random`, so two
-people watching at the same second see the same bird in the same place — which is what
-makes "you are watching the same thing" true rather than decorative.
+`src/lib/world/ambient.ts` schedules the sky and street details and it is pure:
+`birdFlights`, `steamPuffs`, `tramPass`, `buntingVisible`, `windowLightAlpha` and
+`wavingWalker` are functions of the authoritative second and a seed, through the
+existing `deterministicVariant`. Nothing calls `Math.random`, so two people watching at
+the same second see the same bird in the same place — which is what makes "you are
+watching the same thing" true rather than decorative. People passing on his pavement
+have their own module, `src/lib/world/walkers.ts`, described below.
 
 Birds cross in a loose skein every 40-90 s and wind carries them faster, using the same
 `effect.windScale` the rain and the motes already use. Steam rises in the `cafe` zone;
@@ -1547,25 +1548,67 @@ otherwise the fallback remains colour grading.
 Quality tiers use `walkers 0/1/2` and `birds 0/2/4`. Reduced motion already forces the
 low tier, so a reduced-motion viewer gets neither — the same rule the storm flash follows.
 
-Background walkers are the two residents, never two of the same model.
-`walkerResidentType` picks the first walker of an appearance by the shared active-seconds
-block, so every viewer sees the same person, and makes a second walker the other
-resident; the stage never creates more walkers than there are residents. Each is a
-`SkeletonUtils.clone` of an untouched copy of that resident's model, which the stage keeps
-for the purpose: cloning the conversation partner's converted scene, as walkers once did,
-copied its outline meshes and then outlined them again. `CharacterActor` mutates the scene
-it is given, so each walker needs its own rig. The pack's own resident downloads at mount
-and the other the first time a walker needs it, so a low-tier device, which shows no
-walkers, never fetches it; a walker whose model is still loading waits rather than
-borrowing the other resident's. They are
-built **one per frame**: cloning a rig and constructing an actor is the most expensive
-thing the draw loop can do, and three at once reads as a stutter. Their count follows the
-city's hour and is adjusted inside the loop, not at mount — that effect has an empty
-dependency list and the tier it captured is not the live one. They compute their own
-anchors and never inherit artificial traveler viewport drift, sit at negative `z`
-so the sort is unambiguous, and walk the other way at `rotation.y = -0.68`. When a crowd
-wave fires, `wavingWalker` picks the one who waves back, so every viewer sees the same
-person answer.
+**People passing on his pavement** (`src/lib/world/walkers.ts`, reworked 2026-09-11 at
+the owner's request). A *pass* is one person who walks in beyond one screen edge and out
+beyond the other. It replaces `walkerPopulation`, which gave walkers a 12–18 s window of
+existence while their position looped across the screen every 21–30 s, and which dropped
+to zero whenever he stopped, acted or talked. A replay of that code for an hour at 13:00
+had about 41 of 45 walkers appear and 40–43 of 45 vanish in the middle of the screen, plus
+two dozen jumps from one edge to the other with half a body in view.
+
+- **When.** `walkerPassesBetween(from, to, localHour, seed, tierLimit)` is pure. Each
+  120 s block leads one pass 0–30 s in (gaps 90–150 s); about half the blocks send a
+  second person 5–9 s later in the other lane where the tier allows two. Nobody starts
+  22:00–05:00 local, and a frame that skips more than 2 s of watched time starts nobody,
+  so a viewer who arrives mid-pass never sees someone materialise mid-street. Coin flips
+  are thresholds on a prime modulus: `deterministicVariant(key, index, 2^k)` depends only
+  on the index's low bits (its multiplier is odd), and a modulus of 2 simply alternated
+  the lane by block.
+- **Where.** Two lanes. `behind` has perspective 0.9: feet 0.16 m further up the
+  pavement, drawn behind him. `front` has 1.04: feet 0.06 m lower, drawn over him. Foot
+  height follows a 1.6 m eye-level horizon (02 §3); drawn scale is capped at 95% of his
+  height, so both residents show at 85–95% of him. Only people coming towards him use
+  the front lane, so they cover him for about half a second. Behind him, a quarter come
+  towards him at 1.2–1.36 m/s, a quarter stroll his way at 0.8–0.96 m/s (he catches them
+  up) and half overtake at 1.8–1.96 m/s. Nobody moves within 0.35 m/s of his 1.25 m/s on
+  screen, or they would hover beside him.
+- **How they move.** The stage keeps each walker's `streetMetres` on his distance axis,
+  and screen x is `streetMetres − distance`, so the pavement carries them exactly as the
+  Pixi ground tile scrolls (`distance × pxPerMetre`). `advanceWalker` adds their own
+  steps, and the gait advances by metres walked over his 1.25 m/s stride scaled to their
+  height, so their feet stay planted. `enterWalker` starts a pass beyond the side it is
+  moving away from, given his current ground speed. A pass that would drift across at
+  under 0.2 m/s is skipped.
+- **When they leave.** A walker is removed only once `walkerHasLeft` says it is past the
+  edge by 0.9 m plus 0.25 m, or when the tier drops to low (reduced motion). New passes
+  start only while he is walking with no action or conversation, and only after the
+  conversation partner's model has loaded. Someone already crossing walks on through his
+  stops, a crowd wave, waiting, a pace change and 22:00.
+- **Kept on purpose.** A pass's start is shared, but its path is integrated per viewer
+  from that viewer's frames and his extrapolated distance, because his pace history is
+  not an input. Viewers watching together see the same person within a fraction of a
+  metre. A viewer who reloads mid-pass does not see that person. A walker of the partner's
+  model who is already crossing when an encounter begins finishes crossing beside the
+  partner.
+
+Walkers are the two residents, never two of the same model. `walkerResidentType` picks
+a block's first walker by the shared active-seconds block, so every viewer sees the same
+person, and makes a second walker the other resident; the stage never creates more
+walkers than there are residents, or two in one lane. Each is a `SkeletonUtils.clone` of
+an untouched copy of that resident's model, which the stage keeps for the purpose:
+cloning the conversation partner's converted scene, as walkers once did, copied its
+outline meshes and then outlined them again. `CharacterActor` mutates the scene it is
+given, so each walker needs its own rig. The pack's own resident downloads at mount and
+the other the first time a pass needs it, so a low-tier device, which shows no walkers,
+never fetches it. A pass whose model is still loading is skipped, rather than borrowing
+the other resident's or arriving late mid-street. Walkers face the way they walk at
+`rotation.y = ±0.68` and get a contact shadow like his: the stage publishes
+`contacts.walkers`, and `PixiScene` draws up to two more ellipses on the ground layer.
+When a crowd wave fires, `wavingWalker`, keyed on the wave's start second, picks one
+person who stops and waves for the whole wave. The old window removed every walker the
+moment the wave began, so until now nobody ever waved back. Probes on the character
+stage: `data-walkers`, `data-walker-residents`, `data-walker-lanes`, `data-walker-foot-x`
+and `data-walker-waving`; on the world: `data-walker-shadows`.
 
 **Not shipped: awning flutter.** `props = coherentPanorama ? [] : …` disables foreground
 cutouts for every live pack; they were removed in Phase 3 because they rendered as a
