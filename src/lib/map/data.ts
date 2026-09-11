@@ -23,7 +23,7 @@ export type MapCity = {
   status: "completed" | "current";
   outcome: "unfinished" | "landmark" | "marathon" | "current";
   distanceMetres: number;
-  transferFromPrevious: "walk" | "flight" | null;
+  transferFromPrevious: "walk" | "train" | "flight" | null;
 };
 
 export type MapCandidate = {
@@ -33,7 +33,7 @@ export type MapCandidate = {
   lat: number;
   lon: number;
   percent: number;
-  transfer: "walk" | "flight";
+  transfer: "walk" | "train" | "flight";
 };
 
 export type JourneyMapData = {
@@ -72,7 +72,13 @@ export async function loadJourneyMap(): Promise<JourneyMapData | null> {
     if (!pack) return [];
     const outcome = outcomeByDay.get(day.id);
     const previous = index > 0 ? getCountryPack(dayRows[index - 1]!.scene_pack_id) : null;
-    const transfer = previous ? day.arrival_mode === "flight" || !previous.neighbours.includes(day.scene_pack_id) ? "flight" as const : "walk" as const : null;
+    const transfer = previous
+      ? day.arrival_mode === "flight" || day.arrival_mode === "train"
+        ? day.arrival_mode
+        : !previous.neighbours.includes(day.scene_pack_id)
+          ? "flight" as const
+          : "walk" as const
+      : null;
     return [{
       countryDayId: day.id,
       dayNumber: day.day_number,

@@ -40,7 +40,7 @@ test("the compact journey map renders three visited days and two live candidates
   test.setTimeout(120_000);
   await installJourneyApi(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Journey details" }).click();
+  await page.getByRole("button", { name: "Journey", exact: true }).click();
   const map = page.getByTestId("journey-map-compact");
   await expect(map).toBeVisible();
   await expect(map.locator(".map-city")).toHaveCount(3);

@@ -4,6 +4,7 @@ import { confirmedWeatherAgeSeconds, providerReadiness } from "@/lib/health/read
 import { packPrewarmPaths, prewarmUrl } from "@/lib/launch/prewarm";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { WEATHER_TTL_SECONDS } from "@/lib/weather/open-meteo";
+import { serverRuntimeConfig } from "@/lib/config/server";
 
 export const dynamic = "force-dynamic";
 
@@ -61,16 +62,18 @@ export async function GET(request: NextRequest) {
     }
   }
   const weatherAgeSeconds = confirmedWeatherAgeSeconds(weather, now);
-  const weatherStatus = weatherAgeSeconds === null
-    ? "missing"
-    : weatherAgeSeconds <= WEATHER_TTL_SECONDS * 2 ? "fresh" : "stale";
+  const weatherEnabled = serverRuntimeConfig().weatherEnabled;
+  const weatherStatus = !weatherEnabled
+    ? "disabled"
+    : weatherAgeSeconds === null
+      ? "missing"
+      : weatherAgeSeconds <= WEATHER_TTL_SECONDS * 2 ? "fresh" : "stale";
   const providers = providerReadiness(process.env);
   const contentReady = packs.length >= 15 && Boolean(pack);
   const ready = database === "ready"
     && contentReady
     && assetBase === "ready"
-    && weatherStatus === "fresh"
-    && providers.weather === "ready"
+    && (!weatherEnabled || (weatherStatus === "fresh" && providers.weather === "ready"))
     && providers.payments === "ready";
   const launchState = process.env.VERCEL_ENV === "production" && process.env.LAUNCH_ENABLED !== "true"
     ? "disabled"

@@ -107,7 +107,11 @@ async function createNextDay(
 
   const { data, error: createError } = await supabase.rpc("create_next_country_day", {
     p_real_now: now.toISOString(),
-    p_day: ticket ? { ...plan.day, arrivalMode: "flight", ticketId: ticket.id } : plan.day,
+    p_day: ticket
+      ? { ...plan.day, arrivalMode: "flight", ticketId: ticket.id }
+      : winner.kind === "name"
+        ? { ...plan.day, arrivalMode: "train" }
+        : plan.day,
     p_vote: followingTicket ? null : plan.vote,
   });
   if (createError) throw createError;

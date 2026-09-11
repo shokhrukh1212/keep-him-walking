@@ -1,5 +1,6 @@
 import type { CountryPack } from "@/lib/content/schema";
 import { assetUrl } from "@/lib/assets/url";
+import { SEASON1_DAY2_FALLBACK_PACK_ID } from "@/lib/story-clock/next-day";
 
 const WARMABLE_PREFIXES = ["/characters/", "/scenes/", "/audio/", "/npcs/", "/postcards/"];
 
@@ -30,6 +31,6 @@ export function ballotPrewarmPackIds(
   kind: string | null,
   options: ReadonlyArray<{ pack_id?: string | null }>,
 ): string[] {
-  if (kind === "name") return ["dushanbe-v1"];
+  if (kind === "name") return [SEASON1_DAY2_FALLBACK_PACK_ID];
   return [...new Set(options.flatMap((option) => option.pack_id ? [option.pack_id] : []))];
 }

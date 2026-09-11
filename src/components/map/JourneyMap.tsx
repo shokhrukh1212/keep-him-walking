@@ -17,7 +17,7 @@ export function JourneyMap({ data, compact = false }: { data: JourneyMapData; co
           {data.cities.length > 1 ? <polyline className="season-route" points={routePoints} /> : null}
           {data.cities.slice(1).map((city, index) => {
             const from = data.cities[index]!;
-            return <line key={`segment-${city.countryDayId}`} className={`route-segment ${city.transferFromPrevious === "flight" ? "flight" : "walk"}`} x1={projectEquirectangular(from).x} y1={projectEquirectangular(from).y} x2={projectEquirectangular(city).x} y2={projectEquirectangular(city).y} data-transfer={city.transferFromPrevious} />;
+            return <line key={`segment-${city.countryDayId}`} className={`route-segment ${city.transferFromPrevious ?? "walk"}`} x1={projectEquirectangular(from).x} y1={projectEquirectangular(from).y} x2={projectEquirectangular(city).x} y2={projectEquirectangular(city).y} data-transfer={city.transferFromPrevious} />;
           })}
           {current ? data.candidates.map((candidate) => {
             const start = projectEquirectangular(current);
@@ -28,7 +28,7 @@ export function JourneyMap({ data, compact = false }: { data: JourneyMapData; co
               <line x1={start.x} y1={start.y} x2={point.x} y2={point.y} />
               <circle cx={point.x} cy={point.y} r="6" />
               <text x={labelX} y={point.y - 9} textAnchor={textAnchor}>{flagEmoji(candidate.countryCode)} {candidate.percent}%</text>
-              {!compact ? <text className="candidate-name" x={labelX} y={point.y + 10} textAnchor={textAnchor}>{candidate.label}{candidate.transfer === "flight" ? " · flight" : ""}</text> : null}
+              {!compact ? <text className="candidate-name" x={labelX} y={point.y + 10} textAnchor={textAnchor}>{candidate.label}{candidate.transfer !== "walk" ? ` · ${candidate.transfer}` : ""}</text> : null}
             </g>;
           }) : null}
           {current ? data.ticketFlights.map((ticket) => {
@@ -59,7 +59,7 @@ export function JourneyMap({ data, compact = false }: { data: JourneyMapData; co
           <div><strong>{data.stats.landmarks}</strong><small>landmarks</small></div>
           <div><strong>{data.stats.marathons}</strong><small>marathons</small></div>
         </div>
-        <div className="map-legend" aria-label="Map legend"><span className="landmark">● landmark</span><span className="marathon">● marathon</span><span className="unfinished">● unfinished</span><span>┄ tomorrow&apos;s vote / Ticket flight</span></div>
+        <div className="map-legend" aria-label="Map legend"><span className="landmark">● landmark</span><span className="marathon">● marathon</span><span className="unfinished">● unfinished</span><span>— walk · ┄ train/flight</span></div>
         <small className="map-attribution">Map geometry: Natural Earth 1:110m · public domain</small>
       </> : null}
     </section>

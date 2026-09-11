@@ -9,6 +9,12 @@ describe("launch health facts", () => {
       .toBe("unconfigured");
   });
 
+  it("keeps weather dormant unless its launch flag is explicitly enabled", () => {
+    expect(providerReadiness({ WEATHER_PROVIDER: "open-meteo" }).weather).toBe("disabled");
+    expect(providerReadiness({ WEATHER_ENABLED: "true", WEATHER_PROVIDER: "open-meteo" }).weather)
+      .toBe("ready");
+  });
+
   it("measures only a confirmed weather timestamp", () => {
     expect(confirmedWeatherAgeSeconds({ fetchedAt: "2034-01-01T00:00:00Z" }, new Date("2034-01-01T00:10:01Z")))
       .toBe(601);

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(24);
 
 select has_table('public', 'tickets', 'Ticket purchases have their own lock table');
 select has_column('public', 'country_days', 'arrival_mode', 'country days name an authoritative transfer mode');
@@ -14,6 +14,16 @@ insert into public.journeys (id,slug,title,starts_at,total_days,status,phase2_en
 values ('22000000-0000-4000-8000-000000000001','phase22-ticket-test','Ticket test','2035-09-01T00:00:00Z',30,'active',true,22);
 insert into public.country_days (id,journey_id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,scene_pack_id,status)
 values ('22000000-0000-4000-8000-000000000008','22000000-0000-4000-8000-000000000001',8,'UZ','Uzbekistan','Tashkent','Asia/Tashkent','2035-09-08T00:00:00Z','2035-09-09T00:00:00Z','tashkent-v5','live');
+select lives_ok(
+  $$update public.country_days set arrival_mode = 'train' where id = '22000000-0000-4000-8000-000000000008'$$,
+  'a committed country day may arrive by train'
+);
+select throws_ok(
+  $$update public.country_days set arrival_mode = 'boat' where id = '22000000-0000-4000-8000-000000000008'$$,
+  '23514',
+  null,
+  'an unknown arrival mode remains invalid'
+);
 insert into public.sponsor_slots (id,journey_id,slot_date,price_cents,currency,status)
 values ('22000000-0000-4000-8000-000000000011','22000000-0000-4000-8000-000000000001','2035-09-11',4900,'USD','available');
 

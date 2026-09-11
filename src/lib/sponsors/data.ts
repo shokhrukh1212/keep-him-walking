@@ -54,10 +54,17 @@ export async function loadSponsorWindow(): Promise<SponsorWindow | null> {
     .order("starts_at", { ascending: false }).limit(1).maybeSingle();
   if (!journey) return null;
 
-  const { data: pricing } = await supabase.from("sponsor_pricing")
+  const { data: storyDate } = await supabase.rpc("journey_slot_date", {
+    p_journey_id: journey.id,
+    p_now: new Date().toISOString(),
+  });
+  let pricingQuery = supabase.from("sponsor_pricing")
     .select("day_date,price_cents,basis_uniques,founding")
     .eq("journey_id", journey.id)
-    .order("day_date", { ascending: true });
+    .order("day_date", { ascending: true })
+    .limit(7);
+  if (typeof storyDate === "string") pricingQuery = pricingQuery.gt("day_date", storyDate);
+  const { data: pricing } = await pricingQuery;
   if (!pricing?.length) return null;
 
   const dates = pricing.map((row) => row.day_date as string);

@@ -20,9 +20,9 @@ it("starts a ticket day from its fixed country and continues candidates from the
   expect(plan?.vote?.options.map((option) => option.packId)).toContain("istanbul-v1");
 });
 
-it("takes the fixed Dushanbe leg after the Day 1 name vote", () => {
+it("takes the fixed Paris train leg after the Day 1 name vote", () => {
   expect(nextDayPackIdForWinner({ state: "closed", kind: "name", winnerPackId: null }))
-    .toBe("dushanbe-v1");
+    .toBe("paris-v1");
   expect(nextDayPackIdForWinner({ state: "closed", kind: "destination", winnerPackId: "bishkek-v1" }))
     .toBe("bishkek-v1");
   expect(nextDayPackIdForWinner({ state: "no_closing_vote" })).toBeNull();

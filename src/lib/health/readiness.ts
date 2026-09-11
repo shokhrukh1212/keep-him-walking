@@ -1,9 +1,11 @@
-export type ProviderState = "ready" | "unconfigured" | "unavailable";
+export type ProviderState = "ready" | "disabled" | "unconfigured" | "unavailable";
 
 export function providerReadiness(environment: Record<string, string | undefined>) {
-  const weather = (environment.WEATHER_PROVIDER ?? "open-meteo") === "open-meteo"
-    ? "ready" as const
-    : "unavailable" as const;
+  const weather: ProviderState = environment.WEATHER_ENABLED !== "true"
+    ? "disabled"
+    : (environment.WEATHER_PROVIDER ?? "open-meteo") === "open-meteo"
+      ? "ready"
+      : "unavailable";
   const fixture = environment.SPONSOR_PAYMENT_PROVIDER === "fixture";
   const lemonConfigured = [
     environment.LEMON_SQUEEZY_API_KEY,

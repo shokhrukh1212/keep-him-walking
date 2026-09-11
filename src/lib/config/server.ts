@@ -30,6 +30,8 @@ export function serverRuntimeConfig() {
     phase2Enabled: phase2DeploymentAllowed(),
     phase2PreviewStartAt: process.env.PHASE2_PREVIEW_START_AT || null,
     phase2RehearsalScale: numericEnv("PHASE2_REHEARSAL_SCALE", 144),
+    // Launch-safe and reversible: no provider traffic and no public weather when false.
+    weatherEnabled: process.env.WEATHER_ENABLED === "true",
     postcardUnlockSeconds: Math.round(numericEnv("POSTCARD_UNLOCK_SECONDS", 60)),
     // Deliberately lower than the postcard unlock: a stamp records that he was
     // watched, a postcard records that someone stayed.
@@ -47,7 +49,9 @@ export function serverRuntimeConfig() {
     sponsorFoundingCents: Math.round(numericEnv("SPONSOR_FOUNDING_CENTS", 2_900)),
     sponsorCapCents: Math.round(numericEnv("SPONSOR_CAP_CENTS", 299_900)),
     sponsorPremiumMultiplier: numericEnv("SPONSOR_PREMIUM_MULTIPLIER", 1.5),
-    sponsorWindowDays: Math.min(30, Math.max(1, Math.round(numericEnv("SPONSOR_WINDOW_DAYS", 7)))),
+    // The commercial promise is one rolling week. Keep checkout, inventory and
+    // the public calendar on the same fixed horizon.
+    sponsorWindowDays: 7,
     ticketsEnabled: process.env.TICKETS_ENABLED === "true",
     ticketHorizonDays: Math.min(30, Math.max(3, Math.round(numericEnv("TICKET_HORIZON_DAYS", 7)))),
     sponsorPaymentProvider: process.env.SPONSOR_PAYMENT_PROVIDER === "fixture" ? "fixture" as const : "lemonsqueezy" as const,

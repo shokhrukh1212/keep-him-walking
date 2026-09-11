@@ -35,11 +35,13 @@ export type NextDayPlan = {
   } | null;
 };
 
+export const SEASON1_DAY2_FALLBACK_PACK_ID = "paris-v1";
+
 /** Day 1 names the traveler rather than choosing a country; its fixed onward
- * leg is Dushanbe. Every later winner carries its destination pack explicitly. */
+ * leg is the reviewed Paris pack. Every later winner carries its destination pack explicitly. */
 export function nextDayPackIdForWinner(winner: VoteWinner): string | null {
   if (winner.state !== "closed") return null;
-  if (winner.kind === "name") return "dushanbe-v1";
+  if (winner.kind === "name") return SEASON1_DAY2_FALLBACK_PACK_ID;
   return winner.winnerPackId ?? null;
 }
 

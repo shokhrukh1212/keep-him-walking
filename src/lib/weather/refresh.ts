@@ -1,5 +1,6 @@
 import "server-only";
 import { getCountryPack } from "@/content/countries/registry";
+import { serverRuntimeConfig } from "@/lib/config/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { weatherFromRow } from "@/lib/weather/payload";
 import {
@@ -21,6 +22,7 @@ export async function refreshWeatherIfStale(
   storedWeather: unknown,
   now = new Date(),
 ): Promise<boolean> {
+  if (!serverRuntimeConfig().weatherEnabled) return false;
   const supabase = getServerSupabase();
   if (!supabase) return false;
   if (!weatherIsStale(weatherFromRow(storedWeather), now)) return false;

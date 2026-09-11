@@ -17,4 +17,24 @@ describe("Season 1 launch plan", () => {
     expect(() => parseSeason1LaunchAt("2034-09-20T16:00:00")).toThrow("explicit UTC offset");
     expect(() => parseSeason1LaunchAt("2034-09-20T15:59:00Z")).toThrow("16:00 UTC");
   });
+
+  it("derives Day 1 identity from the reviewed pack instead of a fixed country", () => {
+    const london = {
+      ...tashkentCountryPackV5,
+      assetVersion: "london-v1",
+      countryCode: "GB",
+      countryName: "United Kingdom",
+      cityName: "London",
+      timeZone: "Europe/London",
+      postcardBackgroundUrl: "/postcards/london/v1/background.webp",
+    };
+    expect(buildSeason1LaunchPlan(
+      parseSeason1LaunchAt("2034-09-20T16:00:00Z"),
+      london,
+    ).day).toMatchObject({
+      countryCode: "GB",
+      cityName: "London",
+      scenePackId: "london-v1",
+    });
+  });
 });

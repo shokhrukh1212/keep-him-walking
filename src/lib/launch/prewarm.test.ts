@@ -11,7 +11,7 @@ describe("launch prewarming", () => {
   });
 
   it("uses the fixed onward pack after the name vote and every candidate thereafter", () => {
-    expect(ballotPrewarmPackIds("name", [])).toEqual(["dushanbe-v1"]);
+    expect(ballotPrewarmPackIds("name", [])).toEqual(["paris-v1"]);
     expect(ballotPrewarmPackIds("destination", [{ pack_id: "a-v1" }, { pack_id: "a-v1" }, { pack_id: "b-v1" }]))
       .toEqual(["a-v1", "b-v1"]);
   });
