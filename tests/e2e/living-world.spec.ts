@@ -24,6 +24,15 @@ test("the world stays quiet and error-free through minutes of its own life", asy
   page.on("response", (response) => {
     if (response.status() >= 400) missingResources.push(new URL(response.url()).pathname);
   });
+  // Keep this scene soak independent of database-backed side panels and telemetry.
+  // Its subject is the continuously rendered world below.
+  await page.route("**/api/me", (route) => route.fulfill({ json: { firstVisit: false } }));
+  await page.route("**/api/observability/vitals", (route) => route.fulfill({ status: 204 }));
+  await page.route("**/api/map", (route) => route.fulfill({ json: {
+    cities: [], candidates: [], ticketFlights: [],
+    stats: { days: 0, confirmedDistanceMetres: 0, landmarks: 0, marathons: 0 },
+    currentDayNumber: 1,
+  } }));
 
   // Twelve times real time: six simulated minutes inside a short test.
   const startedAt = Date.now();
