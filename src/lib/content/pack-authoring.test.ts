@@ -80,7 +80,7 @@ describe("pack authoring", () => {
     await expect(buildPack(root, "lisbon")).rejects.toThrow(/lisbon-arrival\/master.png[\s\S]*lisbon-landmark\/night.png/);
   });
 
-  it("normalizes, tiles and registers a complete pack deterministically", async () => {
+  it("builds bounded city art plus a seamless ground and registers the pack deterministically", async () => {
     const root = await fixtureRoot();
     await scaffoldPack(root, "lisbon", input);
     const width = 80;
@@ -104,7 +104,7 @@ describe("pack authoring", () => {
     expect(result.builtAt).toBe(builtAt.toISOString());
     expect(result.zones["lisbon-landmark"].night).toBe(true);
     expect(new Set(result.zones["lisbon-arrival"].palette).size).toBe(3);
-    const output = path.join(root, "public", "scenes", "lisbon", "v1", "zones", "lisbon-arrival", "fallback.webp");
+    const output = path.join(root, "public", "scenes", "lisbon", "v1", "zones", "lisbon-arrival", "ground.webp");
     const { data, info } = await sharp(output).raw().toBuffer({ resolveWithObject: true });
     for (let y = 0; y < info.height; y += 120) {
       const left = data.subarray(y * info.width * info.channels, y * info.width * info.channels + 3);
@@ -113,7 +113,10 @@ describe("pack authoring", () => {
       expect(Math.max(...left.map((value, index) => Math.abs(value - (right[index] ?? 0))))).toBeLessThanOrEqual(10);
     }
     expect(await readFile(path.join(root, "src", "content", "countries", "authored-packs.json"), "utf8")).toContain("lisbon");
-    expect(await readFile(path.join(root, "src", "content", "countries", "authored.ts"), "utf8")).toContain("lisbonCountryPackV1");
+    const authored = await readFile(path.join(root, "src", "content", "countries", "authored.ts"), "utf8");
+    expect(authored).toContain("lisbonCountryPackV1");
+    const module = await readFile(path.join(root, "src", "content", "countries", "lisbon.v1.ts"), "utf8");
+    expect(module).toContain('"continuousSceneZoneIds"');
   }, 60_000);
 });
 

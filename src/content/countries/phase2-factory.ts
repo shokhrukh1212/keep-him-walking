@@ -91,6 +91,7 @@ export type Phase2CountryDefinition = {
   authoredAssets?: {
     nightZoneIds?: string[];
     lightsZoneIds?: string[];
+    continuousSceneZoneIds?: string[];
   };
 };
 
@@ -158,6 +159,14 @@ function routeZone(
       backgroundLife: 0.4,
     },
     fallbackUrl: `${root}/fallback.webp`,
+    ...(authoredAssets?.continuousSceneZoneIds?.includes(zone.id) ? {
+      continuousScene: {
+        skyUrl: `${root}/sky.webp`,
+        cityUrl: `${root}/fallback.webp`,
+        groundUrl: `${root}/ground.webp`,
+        groundHeightFrac: 0.18,
+      },
+    } : {}),
     ...(authoredAssets?.nightZoneIds?.includes(zone.id) ? { nightUrl: `${root}/night.webp` } : {}),
     ...(authoredAssets?.lightsZoneIds?.includes(zone.id) ? { lightsUrl: `${root}/lights.webp` } : {}),
   };
@@ -170,6 +179,15 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
   const encounterId = `${city}-welcome`;
   const firstZone = zones[0];
   const sceneRoot = `/scenes/${city}/${version}/zones/${firstZone.id}`;
+  const sceneAssets = (zone: RouteZone) => [...new Set([
+    zone.fallbackUrl,
+    ...(zone.continuousScene ? [
+      zone.continuousScene.skyUrl,
+      zone.continuousScene.cityUrl,
+      zone.continuousScene.groundUrl,
+      ...(zone.continuousScene.foregroundUrl ? [zone.continuousScene.foregroundUrl] : []),
+    ] : []),
+  ])];
   return countryPackV3Schema.parse({
     schemaVersion: 3,
     packId: definition.packId,
@@ -247,10 +265,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     // The v3 renderer paints one coherent panorama per zone and no props, so the
     // ground crops and prop cutouts are never drawn and are not worth fetching.
     // The files stay on disk until P18 retires them.
-    preload: [
-      firstZone.fallbackUrl,
-      `${ACTION_ROOT}/idle.webp`,
-    ],
+    preload: [...sceneAssets(firstZone), `${ACTION_ROOT}/idle.webp`],
     route: { worldUnitsPerSecond: 92, travelerViewportAnchor: 0.61, zones },
     postcardBackgroundUrl: `/postcards/${city}/${version}/background.webp`,
     postcard: {
@@ -262,13 +277,11 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
     preloadGroups: [
       {
         id: `${city}-critical`, timing: "critical", zoneId: firstZone.id,
-        assets: [firstZone.fallbackUrl],
+        assets: sceneAssets(firstZone),
       },
       ...zones.slice(1).map((zone) => ({
         id: `${city}-${zone.id}-next`, timing: "next_zone" as const, zoneId: zone.id,
-        assets: zone.layers
-          .filter((layer) => layer.id !== "ground")
-          .flatMap((layer) => layer.segments.map((segment) => segment.url)),
+        assets: sceneAssets(zone),
       })),
     ],
     storyBeats: [
