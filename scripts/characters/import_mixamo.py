@@ -8,6 +8,17 @@ Run from the project root, then compress the result:
     .cache/character-authoring/mixamo/downloads/traveler
   node scripts/characters/compress-glb.mjs public/characters/v3/traveler-animations.glb
 
+A resident passes its runtime name after the takes folder, and `--model` to export
+its clip-free mesh from the same rig:
+
+  .cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background \
+    --factory-startup .cache/character-authoring/staged/v2/almaty-host.blend \
+    --python scripts/characters/import_mixamo.py -- almaty-host \
+    .cache/character-authoring/mixamo/downloads/resident-a resident-a --model
+  node scripts/characters/optimize-glb.mjs public/characters/v3/resident-a.glb
+  node scripts/characters/compress-glb.mjs public/characters/v3/resident-a.glb \
+    public/characters/v3/resident-a-animations.glb
+
 Takes are downloaded for the character uploaded from this same rig (FBX Binary,
 Without Skin, 30 fps, no keyframe reduction) and named either after the runtime
 clip (`walk.fbx`) or with the Mixamo name listed in TAKES. They stay in the
@@ -74,7 +85,14 @@ TAKES = {
 }
 
 arguments = sys.argv[sys.argv.index('--') + 1:]
-role, takes = arguments[0], ROOT / arguments[1]
+positional = [value for value in arguments if not value.startswith('--')]
+# The rig object name, the takes folder, and the runtime name the outputs take
+# when it differs from the rig (the Almaty host's rig ships as `resident-a`).
+role, takes = positional[0], ROOT / positional[1]
+output_name = positional[2] if len(positional) > 2 else role
+# `--model` also exports the character mesh carrying no clips, so every motion it
+# plays comes from these takes and its declared fallbacks, never a V2 procedural take.
+EXPORT_MODEL = '--model' in arguments
 manifest = (ROOT / 'src' / 'lib' / 'characters' / 'manifest.ts').read_text()
 DURATIONS = {match.group(1): float(match.group(2))
              for match in re.finditer(r'^\s+(\w+): \{ duration: ([\d.]+)', manifest, re.M)}
@@ -284,10 +302,19 @@ for pose_bone in rig.pose.bones:
 SOURCE.mkdir(parents=True, exist_ok=True)
 OUTPUT.mkdir(parents=True, exist_ok=True)
 bpy.context.preferences.filepaths.save_version = 0
-bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE / (role + '.blend')), compress=True)
+bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE / (output_name + '.blend')), compress=True)
 bpy.ops.object.select_all(action='DESELECT')
 rig.select_set(True)
-bpy.ops.export_scene.gltf(filepath=str(OUTPUT / (role + '-animations.glb')), export_format='GLB',
+bpy.ops.export_scene.gltf(filepath=str(OUTPUT / (output_name + '-animations.glb')), export_format='GLB',
     use_selection=True, export_animations=True, export_animation_mode='ACTIONS', export_frame_range=False,
     export_force_sampling=True, export_skins=True, export_morph=False, export_yup=True)
-print('MIXAMO_EXPORTED', role, sorted(action.name for action in baked), flush=True)
+print('MIXAMO_EXPORTED', output_name, sorted(action.name for action in baked), flush=True)
+if EXPORT_MODEL:
+    # Same mesh settings as build_models.py, in the rest pose, from the rig these takes were baked on.
+    for obj in rig.children_recursive:
+        obj.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=str(OUTPUT / (output_name + '.glb')), export_format='GLB',
+        use_selection=True, export_animations=False, export_morph=True, export_morph_normal=False,
+        export_image_format='JPEG', export_jpeg_quality=82, export_texcoords=True, export_normals=True,
+        export_skins=True, export_yup=True)
+    print('MIXAMO_MODEL_EXPORTED', output_name, flush=True)

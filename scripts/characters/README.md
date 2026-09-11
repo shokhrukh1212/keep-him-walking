@@ -79,12 +79,14 @@ them at `/preview/characters` before committing.
 
 ## Residents
 
-Two base residents carry every city. `resident-a` is the Almaty host
-(`art/characters/v2/almaty-host.blend`); `resident-b` is the male local, built by the
-same script with `-- resident-b`. Their body sliders are fixed, because Mixamo takes
-are made for their joints; per-city variants change hair, clothes and colours only.
+Two base residents carry every city. `resident-a` is the woman first built as the
+Almaty host (rig object `almaty-host`, `art/characters/v2/almaty-host.blend`);
+`resident-b` is the man, built by the same script with `-- resident-b`. A route pack
+names its conversation partner in `npcSystem.baseType`; background walkers use both and
+never two of the same. Their body sliders are fixed, because their Mixamo takes are
+made for their joints; a later variant may change hair, clothes and colours only.
 Rebuilding `almaty-host` reproduces her checked-in skeleton exactly (all 52 joints,
-checked 2026-09-11), so her variants can come from a rebuild without new takes.
+checked again after the 2026-09-11 garment repairs, which move no joint).
 
 Upload copies for Mixamo keep the full outfit and the 52-bone A-pose rig with leaf
 bones, and carry no actions or shape keys. The export script re-imports each file and
@@ -98,7 +100,25 @@ fails unless it finds exactly 52 `mixamorig` bones. The same script works for
 ```
 
 Their takes download into `.cache/character-authoring/mixamo/downloads/resident-a/`
-and `resident-b/` with the same settings as the traveler's.
+and `resident-b/` with the same settings as the traveler's, each named after its
+runtime clip: `idle`, `walk` (In Place), `greet`, `talk`, `listen` and `react`. The
+garment edits in `wardrobe.py` move no joint, so the takes still fit a rebuilt model.
+Rebuild both staged models, bake each resident's takes and export its clip-free model
+from the same rig, then optimise and compress all four files:
+
+```sh
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --threads 4 --factory-startup --python scripts/characters/build_models.py -- almaty-host --v2 --staged
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --threads 4 --factory-startup --python scripts/characters/build_models.py -- resident-b --v2 --staged
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --factory-startup .cache/character-authoring/staged/v2/almaty-host.blend --python scripts/characters/import_mixamo.py -- almaty-host .cache/character-authoring/mixamo/downloads/resident-a resident-a --model
+.cache/character-authoring/tools/blender-4.5.4-linux-x64/blender --background --factory-startup .cache/character-authoring/staged/v2/resident-b.blend --python scripts/characters/import_mixamo.py -- resident-b .cache/character-authoring/mixamo/downloads/resident-b resident-b --model
+node scripts/characters/optimize-glb.mjs public/characters/v3/resident-a.glb public/characters/v3/resident-b.glb
+node scripts/characters/compress-glb.mjs public/characters/v3/resident-a.glb public/characters/v3/resident-a-animations.glb public/characters/v3/resident-b.glb public/characters/v3/resident-b-animations.glb
+```
+
+The models carry no clips; each `-animations.glb` carries the six takes, and
+`src/lib/characters/resident-assets.test.ts` checks both. Review them at
+`/preview/characters`: choose one under Resident, then an action with Show local
+resident ticked, or Full conversation.
 
 ## Verification
 

@@ -3,7 +3,9 @@ import math
 from mathutils import Vector
 
 def tailor(bpy,rig,body,shirt,inner,pants,shoes,traveler,material,version='v1'):
-    # `traveler` selects his identity tailoring (open placket, cuffs); locals keep the plain cut.
+    # Every v2 character gets the garment repairs: no loose buttons, one continuous
+    # opening and a close fit. `traveler` adds his identity tailoring: a softened
+    # overshirt and turned-up cuffs.
     import bmesh
     unit=rig.data.bones["mixamorig:Head"].tail_local.z/1.441681
     # Retain skin underneath rolled sleeves and shortened trouser hems.
@@ -18,7 +20,7 @@ def tailor(bpy,rig,body,shirt,inner,pants,shoes,traveler,material,version='v1'):
     # Open the outer front panels. A complete, independently skinned T-shirt
     # remains behind them, so the opening never exposes fragmented geometry.
     mesh=bmesh.new();mesh.from_mesh(shirt.data)
-    if version=='v2' and traveler:
+    if version=='v2':
         # Remove the stock detached buttons/buttonholes before opening the
         # garment. Keeping fragments of them produced floating collar debris.
         pending=set(mesh.verts);components=[]
@@ -40,7 +42,7 @@ def tailor(bpy,rig,body,shirt,inner,pants,shoes,traveler,material,version='v1'):
     remove=[]
     for face in mesh.faces:
         c=face.calc_center_median()/unit
-        if version=='v2' and traveler:
+        if version=='v2':
             # Open one continuous, narrow placket from hem to neckline. The
             # former split thresholds left a closed chest band that read as a
             # bow and tore apart under shoulder motion.
@@ -69,11 +71,14 @@ def tailor(bpy,rig,body,shirt,inner,pants,shoes,traveler,material,version='v1'):
         dist=.0001,plane_co=(0,0,.84*unit),plane_no=(0,0,1),clear_inner=True,clear_outer=False)
     # Only the torso panel is needed beneath the overshirt. Removing the
     # concealed sleeves eliminates coplanar cloth intersections at shoulders.
-    bmesh.ops.delete(mesh,geom=[v for v in mesh.verts if abs(v.co.x)>.145*unit],context='VERTS')
+    # The locals keep only the strip their open jacket shows: under the closer v2
+    # fit, their contrasting panel surfaced through the jacket beside the lapels.
+    panel=.085 if version=='v2' and not traveler else .145
+    bmesh.ops.delete(mesh,geom=[v for v in mesh.verts if abs(v.co.x)>panel*unit],context='VERTS')
     mesh.normal_update()
     for v in mesh.verts: v.co-=v.normal*.006*unit
     mesh.to_mesh(inner.data);mesh.free()
-    if version=='v2' and traveler:
+    if version=='v2':
         # The concealed undershirt retained >7k vertices after trimming. Reduce
         # only that inner layer; preserve face, hands and outer deformation mesh.
         bpy.context.view_layer.objects.active=inner
@@ -83,7 +88,8 @@ def tailor(bpy,rig,body,shirt,inner,pants,shoes,traveler,material,version='v1'):
     # Preserve a small physical gap between the three deforming surfaces.
     # The clearance is below a real garment's thickness but prevents skin or
     # the inner shirt from surfacing through the outer layers at joints.
-    for obj,amount in [(shirt,.007 if version=='v2' and traveler else .011),(pants,.009)]:
+    # The v1 gap of 11 mm made the v2 locals' jackets read as padded.
+    for obj,amount in [(shirt,.007 if version=='v2' else .011),(pants,.009)]:
         mesh=bmesh.new();mesh.from_mesh(obj.data);mesh.normal_update()
         for v in mesh.verts: v.co+=v.normal*amount*unit
         mesh.to_mesh(obj.data);mesh.free()
