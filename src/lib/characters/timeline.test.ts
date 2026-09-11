@@ -34,6 +34,16 @@ describe("character scene timeline",()=>{
     expect(sampleScene("encounter",3).cameraZoom).toBeGreaterThan(1);
     expect(sampleScene("encounter",ENCOUNTER_DURATION-.1).cameraZoom).toBe(1);
   });
+  it("lets a resident be reviewed in each of the takes a resident carries",()=>{
+    for(const clip of ["idle","walk","greet","react","goodbye"] as const)expect(sampleScene(clip,1).resident.clip).toBe(clip);
+    expect(sampleScene("talk",1).resident.clip).toBe("listen");
+    expect(sampleScene("listen",1).resident.clip).toBe("talk");
+    expect(sampleScene("drink",1).resident.clip).toBe("idle");
+    for(const {value} of REVIEW_ACTIONS)if(value!=="encounter")for(const seconds of [0,3.9,reviewDuration(value)]) {
+      const cue=sampleScene(value,seconds).resident;
+      expect(cue.seconds).toBeLessThan(CLIP_DURATIONS[cue.clip]);
+    }
+  });
   it("clamps invalid and final-frame seeks without uncovered intervals",()=>{
     for(const {value} of REVIEW_ACTIONS)for(const seconds of [-1,NaN,Infinity,reviewDuration(value),999]) {
       const cue=sampleScene(value,seconds);

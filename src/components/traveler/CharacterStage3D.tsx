@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CharacterActor } from "@/lib/characters/actor";
-import { CHARACTER_CANDIDATES, CHARACTER_MANIFEST, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
+import { CHARACTER_CANDIDATES, candidateResident, type CharacterCandidate, type ResidentType, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, sampleScene, type SceneCue } from "@/lib/characters/timeline";
 import { CharacterLights } from "@/lib/characters/toon";
 import { loadCharacterGltf } from "@/lib/characters/loader";
@@ -14,7 +14,7 @@ import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 import type { QualityTier } from "@/lib/world/types";
 
 export type CharacterPlayback = { action: ReviewAction; playing: boolean; speed: number; seek: number; revision: number };
-type Props = { candidate: CharacterCandidate; view: string; showNpc: boolean; playback: CharacterPlayback;
+type Props = { candidate: CharacterCandidate; residentType: ResidentType; view: string; showNpc: boolean; playback: CharacterPlayback;
   stageFrame: RefObject<StageFrame | null>; contacts: RefObject<CharacterContacts>; grade: RefObject<VisualGrade>;
   composition: boolean; qualityTier: QualityTier;
   onStatus: (status:string)=>void; onProgress:(seconds:number,cue:SceneCue)=>void;
@@ -72,19 +72,20 @@ export function CharacterStage3D(props:Props) {
     const lights=new CharacterLights();scene.add(lights);
     const studioStage=stageSchema.parse({palette:["#fff3df","#a0a291","#535b68"]});
     const traveler=new THREE.Group(),resident=new THREE.Group(),seat=stool();scene.add(traveler,resident,seat);
-    const loader=new GLTFLoader();let actor:CharacterActor|undefined,npc:CharacterActor|undefined;
+    const loader=new GLTFLoader();let actor:CharacterActor|undefined,npc:CharacterActor|undefined,npcHeight=0;
     let seconds=0,last=0,lastRender=0,lastReport=-Infinity,revision=-1,action:ReviewAction="idle",npcRequested=false;
     const cpuFrames:number[]=[];
     const load=async(kind:"traveler"|"resident")=>{
       let root:THREE.Group|undefined;
       try{
-        const candidate=CHARACTER_CANDIDATES[latest.current.candidate];
-        const definition=kind==="traveler"?candidate.traveler:candidate.resident;
+        const definition=kind==="traveler"?CHARACTER_CANDIDATES[latest.current.candidate].traveler
+          :candidateResident(latest.current.candidate,latest.current.residentType);
+        if(!definition)throw new Error("This candidate has no such resident.");
         const gltf=await loadCharacterGltf(loader,definition);root=gltf.scene;
         if(disposed){disposeModel(root);return;}
         const model=new CharacterActor(gltf,definition.heightMetres,kind==="traveler");
         if(kind==="traveler"){actor=model;traveler.add(model.root);setCharacterReady(true);latest.current.onAvailability(true);latest.current.onClipAvailability?.(model.availableClips());}
-        else{npc=model;resident.add(model.root);element.dataset.residentReady="true";}
+        else{npc=model;npcHeight=definition.heightMetres;resident.add(model.root);element.dataset.residentReady="true";element.dataset.residentType=latest.current.residentType;}
         latest.current.onStatus("Model loaded. Character art and animation repairs are still in progress.");
       }catch(error){
         if(root)disposeModel(root);
@@ -157,7 +158,7 @@ export function CharacterStage3D(props:Props) {
       state.contacts.current={
         traveler:actor?{footX:(foot.x+1)*width/2,footY:(1-foot.y)*height/2,scale}:null,
         resident:pair&&npc?{footX:(residentFoot.x+1)*width/2,footY:(1-residentFoot.y)*height/2,
-          scale:scale*CHARACTER_MANIFEST.resident.heightMetres/1.78}:null,
+          scale:scale*npcHeight/1.78}:null,
       };
       element.dataset.footY=String((1-foot.y)*height/2);
       element.dataset.personHeight=String(scale*1.78);

@@ -8,11 +8,15 @@ export type CharacterDefinition = {
   animationUrl?: string;
 };
 
+/** The two base residents. A route pack names its own in `npcSystem.baseType`. */
+export const RESIDENT_TYPES = ["resident-a", "resident-b"] as const;
+export type ResidentType = (typeof RESIDENT_TYPES)[number];
+
 export const CHARACTER_MANIFEST: {
   version: number;
   approval: "visual-review-pending";
   traveler: CharacterDefinition;
-  resident: CharacterDefinition;
+  residents: Record<ResidentType, CharacterDefinition>;
   combinedBudgetBytes: number;
 } = {
   version: 3,
@@ -23,26 +27,53 @@ export const CHARACTER_MANIFEST: {
     animationUrl: "/characters/v3/traveler-animations.glb",
     heightMetres: 1.78,
   },
-  resident: { url: "/characters/v2/almaty-host.glb?rev=interactions-1", heightMetres: 1.68 },
-  // Both shipped models are meshopt-compressed: 2.48 MiB + 1.77 MiB measured.
-  // The budget leaves room for the V3 traveler without leaving room for a
-  // regression that ships an uncompressed rig again.
+  // Both residents carry only their own Mixamo takes (2026-09-11). Their models hold no
+  // clips, so a missing take plays its declared fallback rather than a V2 procedural one.
+  residents: {
+    // The woman: the Almaty host, rebuilt with the garment repairs.
+    "resident-a": {
+      url: "/characters/v3/resident-a.glb",
+      fallbackUrl: "/characters/v2/almaty-host.glb?rev=interactions-1",
+      animationUrl: "/characters/v3/resident-a-animations.glb",
+      heightMetres: 1.68,
+    },
+    // The man. A little shorter than the traveler, so he stays the tallest figure in frame.
+    "resident-b": {
+      url: "/characters/v3/resident-b.glb",
+      animationUrl: "/characters/v3/resident-b-animations.glb",
+      heightMetres: 1.75,
+    },
+  },
+  // Every shipped model is meshopt-compressed. Measured 2026-09-11: traveler 2.48 MiB
+  // model + 1.88 MiB takes; resident A 1.23 + 0.52 MiB; resident B 1.74 + 0.56 MiB.
+  // A page loads the traveler and its pack's resident, and the other resident only
+  // when a walker needs it. Nothing enforces this figure and the V3 traveler alone
+  // already passes it (AFTER-P22 D1); it stays as the line an uncompressed rig
+  // shipping again would be measured against.
   combinedBudgetBytes: 5 * 1024 * 1024,
 };
+
+type ResidentSet = Partial<Record<ResidentType, CharacterDefinition>>;
 
 export const CHARACTER_CANDIDATES = {
   v2: {
     label: "Active — v3 when installed, v2 fallback",
     traveler: CHARACTER_MANIFEST.traveler,
-    resident: CHARACTER_MANIFEST.resident,
+    residents: CHARACTER_MANIFEST.residents,
   },
   v1: {
     label: "Rejected baseline v1",
     traveler: { url: "/characters/v1/traveler.glb", heightMetres: 1.78 },
-    resident: { url: "/characters/v1/almaty-host.glb", heightMetres: 1.68 },
+    residents: { "resident-a": { url: "/characters/v1/almaty-host.glb", heightMetres: 1.68 } },
   },
-} satisfies Record<string, { label: string; traveler: CharacterDefinition; resident: CharacterDefinition }>;
+} satisfies Record<string, { label: string; traveler: CharacterDefinition; residents: ResidentSet }>;
 export type CharacterCandidate = keyof typeof CHARACTER_CANDIDATES;
+
+/** A candidate's resident of this type, or nothing when that candidate never had one. */
+export function candidateResident(candidate: CharacterCandidate, type: ResidentType): CharacterDefinition | undefined {
+  const residents: ResidentSet = CHARACTER_CANDIDATES[candidate].residents;
+  return residents[type];
+}
 
 /**
  * Runtime names, nominal durations, source aliases, and honest fallbacks for absent takes.

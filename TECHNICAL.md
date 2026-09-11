@@ -350,13 +350,25 @@ node scripts/characters/report.mjs
 
 `-- resident-b` builds the male local resident through the same steps, with his own
 fixed body sliders (gender 1, age 0.6, muscle and weight 0.5, proportions 0.6) and none
-of the traveler's identity work: no face targets, swept hair, backpack, watch, belt, open
-placket or cuffs. `wardrobe.tailor` takes a `traveler` flag for that tailoring; for the
-two earlier roles it equals the old `not female`, and a rebuilt Almaty host matches her
-checked-in skeleton joint for joint. `scripts/characters/export_mixamo_upload.py` writes
-the copy of any character that is uploaded to Mixamo (full outfit, leaf bones, no
-actions) and re-imports it to check the 52-bone rig. As of 2026-09-11 `resident-b` exists
-only as a staged build in the ignored cache; nothing loads him yet.
+of the traveler's identity work: no face targets, swept hair, backpack, watch, belt,
+softened overshirt or cuffs. `wardrobe.tailor` takes a `traveler` flag for that
+tailoring. Every v2 build gets the garment repairs first made for him: detached buttons
+removed, one continuous opening from hem to neckline, a 7 mm rather than 11 mm jacket
+clearance and a reduced hidden undershirt. The two residents also keep only the strip
+of undershirt their open jacket shows, because under the closer fit their contrasting
+inner shirts surfaced through the jacket beside the lapels. None of it moves a joint:
+both rebuilt residents match the skeletons they were uploaded to Mixamo with, joint for
+joint.
+`scripts/characters/export_mixamo_upload.py` writes the copy of any character that is
+uploaded to Mixamo (full outfit, leaf bones, no actions) and re-imports it to check the
+52-bone rig.
+
+The residents ship from `import_mixamo.py`, not from this script. Run on each staged
+`.blend` with a runtime name and `--model`, it bakes that resident's six Mixamo takes into
+`public/characters/v3/resident-{a,b}-animations.glb` and exports `resident-{a,b}.glb` from
+the same rig carrying no clips, so a take a resident lacks plays its declared fallback
+rather than a V2 procedural clip. `optimize-glb.mjs` and `compress-glb.mjs` then run on
+all four files; the commands are in `scripts/characters/README.md`.
 
 Step by step, in the order the script performs it:
 
@@ -679,9 +691,20 @@ gaze. A code-authored umbrella is visible only for confirmed rain when a direct
 
 ### 6.4 The resident and other characters
 
-- **3D resident** — `almaty-host.glb`, 1.68 m, female base, `braid01` hair, ochre jacket
-  and charcoal trousers, her own 11 clips. She appears only during a conversation
-  (`showResident`), positioned at anchor 0.72 (0.76 mobile).
+- **3D residents** — two base characters in `CHARACTER_MANIFEST.residents`. `resident-a`
+  (`v3/resident-a.glb`, 1.68 m) is the woman first built as the Almaty host: `braid01`
+  hair, ochre jacket and charcoal trousers, with the reviewed V2 `almaty-host.glb` as her
+  fallback. `resident-b` (`v3/resident-b.glb`, 1.75 m, a little shorter than the
+  traveler) is the man: `short02` hair, navy jacket and stone trousers. Each carries only
+  the six Mixamo takes downloaded for its own skeleton (`idle`, `walk`, `greet`, `talk`,
+  `listen`, `react`, in its `-animations.glb`); `goodbye` plays `greet` and every other
+  clip plays `idle`. The conversation partner is the resident the pack names
+  (`packResidentType`, from `npcSystem.baseType`). It appears only during a conversation
+  (`showResident`), at anchor 0.72 (0.76 mobile). If the day's pack changes while the
+  stage is mounted, the previous partner leaves at once and the next appears when its
+  model has loaded; `onResidentAvailability` reports both edges, so the 2D portrait
+  covers the gap. `/preview/characters` has a Resident selector, and in single-take
+  review the resident plays the same take, with talk and listen answering each other.
 - **2D NPCs** — every city ships `npcs/<city>/<version>/{neutral,talk,react}.webp`
   (~55 KB each), used for the dialogue portrait when the 3D resident is unavailable.
   Provenance differs by phase (see §8.1): Phase 2 cities split a per-city
@@ -691,9 +714,10 @@ gaze. A code-authored umbrella is visible only for confirmed rain when a direct
   flood-filling neutral bright pixels **inward from the crop edge** (so pale clothing
   inside the figure survives), then only the largest connected opaque component is kept
   (so a sliver of the neighbouring character in the tightly spaced sheet is discarded).
-- **NPC base systems** — `npcSystem.baseType` is `resident-a` or `resident-b`, with a
-  per-city `variantId` and six named states, so many people can be described from two
-  reusable rigs.
+- **NPC base systems** — `npcSystem.baseType` is `resident-a` or `resident-b`, and it
+  decides which 3D resident a city's conversation uses; the per-city `variantId` and the
+  six named states are still descriptive only. Of the registered packs, Dushanbe, Almaty
+  and Tbilisi name `resident-b` and every other city names `resident-a`.
 
 ### 6.5 The parallel paths, and their removal in P18
 
@@ -1492,9 +1516,17 @@ grade-only in practice.
 Quality tiers gained `walkers 0/1/3` and `birds 0/2/4`. Reduced motion already forces the
 low tier, so a reduced-motion viewer gets neither — the same rule the storm flash follows.
 
-Background walkers are `SkeletonUtils.clone`s of the resident GLB, which every page has
-already downloaded for the encounter, so they cost no extra bytes over the network.
-`CharacterActor` mutates `gltf.scene` in place, so each walker needs its own rig. They are
+Background walkers are the two residents, never two of the same model.
+`walkerResidentType` picks the first walker of an appearance by the shared active-seconds
+block, so every viewer sees the same person, and makes a second walker the other
+resident; the stage never creates more walkers than there are residents. Each is a
+`SkeletonUtils.clone` of an untouched copy of that resident's model, which the stage keeps
+for the purpose: cloning the conversation partner's converted scene, as walkers once did,
+copied its outline meshes and then outlined them again. `CharacterActor` mutates the scene
+it is given, so each walker needs its own rig. The pack's own resident downloads at mount
+and the other the first time a walker needs it, so a low-tier device, which shows no
+walkers, never fetches it; a walker whose model is still loading waits rather than
+borrowing the other resident's. They are
 built **one per frame**: cloning a rig and constructing an actor is the most expensive
 thing the draw loop can do, and three at once reads as a stutter. Their count follows the
 city's hour and is adjusted inside the loop, not at mount — that effect has an empty
@@ -1534,6 +1566,10 @@ fails the round trip is never written.
 |---|---:|---:|
 | `public/characters/v2/traveler.glb` | 4.43 MiB | **2.48 MiB** |
 | `public/characters/v2/almaty-host.glb` | 3.55 MiB | **1.77 MiB** |
+| `public/characters/v3/resident-a.glb` (no clips, 2026-09-11) | 2.48 MiB | **1.23 MiB** |
+| `public/characters/v3/resident-a-animations.glb` | 0.84 MiB | **0.52 MiB** |
+| `public/characters/v3/resident-b.glb` (no clips) | 2.88 MiB | **1.74 MiB** |
+| `public/characters/v3/resident-b-animations.glb` | 0.96 MiB | **0.56 MiB** |
 
 Measured worst-case error, printed by the script on every run: skin weights
 ≤ 5.6 × 10⁻³ (three quantisation steps, and they are renormalised to sum to exactly

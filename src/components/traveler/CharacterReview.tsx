@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
-import { CHARACTER_CANDIDATES, CLIP_SPECS, REVIEW_ACTIONS, type CharacterCandidate, type ReviewAction } from "@/lib/characters/manifest";
+import { CHARACTER_CANDIDATES, CLIP_SPECS, RESIDENT_TYPES, REVIEW_ACTIONS, candidateResident, type CharacterCandidate, type ResidentType, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, type SceneCue } from "@/lib/characters/timeline";
 import type { CharacterPlayback } from "./CharacterStage3D";
 import styles from "./character-review.module.css";
@@ -18,6 +18,7 @@ import { gradeForHour } from "@/lib/world/time-grade";
 const CharacterStage3D = dynamic(() => import("./CharacterStage3D").then(m => m.CharacterStage3D), { ssr: false });
 const PixiScene = dynamic(() => import("@/components/scene/PixiScene").then(m => m.PixiScene), { ssr: false });
 const noOp = () => {};
+const RESIDENT_LABELS: Record<ResidentType, string> = { "resident-a": "Resident A · woman", "resident-b": "Resident B · man" };
 const reviewRuntime = {
   globalActiveSeconds: 0,
   globalDistanceMetres: 0,
@@ -31,6 +32,7 @@ const reviewCommand = { walking: false, speedFactor: 0, encounterPhase: "none" a
 export function CharacterReview() {
   const [view,setView]=useState("front"),[background,setBackground]=useState("studio"),[npc,setNpc]=useState(false);
   const [candidate,setCandidate]=useState<CharacterCandidate>("v2");
+  const [residentType,setResidentType]=useState<ResidentType>("resident-a");
   const [status,setStatus]=useState("Loading the character…");
   const [playback,setPlayback]=useState<CharacterPlayback>({action:"idle",playing:false,speed:1,seek:0,revision:0});
   const [progress,setProgress]=useState<{seconds:number;cue?:SceneCue}>({seconds:0});
@@ -73,12 +75,12 @@ export function CharacterReview() {
     <CharacterStage3D candidate={candidate} stageFrame={stageFrame} contacts={contacts} grade={grade}
       composition={Boolean(reviewPack)} qualityTier={quality}
       onClipAvailability={setAvailableClips}
-      onAvailability={setAvailable} key={`${candidate}-${retry}`} view={view} showNpc={npc} playback={playback} onStatus={setStatus}
+      onAvailability={setAvailable} key={`${candidate}-${residentType}-${retry}`} residentType={residentType} view={view} showNpc={npc} playback={playback} onStatus={setStatus}
       onProgress={(seconds,cue)=>setProgress({seconds,cue})} />
     <aside className={styles.controls} aria-label="Character review controls">
       <strong>Character review · {reviewPack?.cityName??"Studio"}</strong>
       <small>Character repairs in progress — visual target not met</small>
-      <label>Candidate <select aria-label="Character candidate" value={candidate} onChange={e=>{setAvailable(false);setAvailableClips(new Set());setCandidate(e.target.value as CharacterCandidate);}}>
+      <label>Candidate <select aria-label="Character candidate" value={candidate} onChange={e=>{const next=e.target.value as CharacterCandidate;setAvailable(false);setAvailableClips(new Set());setCandidate(next);if(!candidateResident(next,residentType))setResidentType("resident-a");}}>
         {Object.entries(CHARACTER_CANDIDATES).map(([value,item])=><option key={value} value={value}>{item.label}</option>)}
       </select></label>
       <label>Action <select aria-label="Preview action" value={playback.action} onChange={e=>selectAction(e.target.value as ReviewAction)}>
@@ -111,6 +113,9 @@ export function CharacterReview() {
         <option value="high">High · outline</option><option value="medium">Medium · outline</option><option value="low">Low · no outline</option>
       </select></label>
       <label className={styles.checkbox}><input type="checkbox" checked={npc||playback.action==="encounter"} disabled={playback.action==="encounter"} onChange={e=>setNpc(e.target.checked)} /> Show local resident</label>
+      <label>Resident <select aria-label="Resident character" value={residentType} onChange={e=>{setAvailable(false);setAvailableClips(new Set());setNpc(true);setResidentType(e.target.value as ResidentType);}}>
+        {RESIDENT_TYPES.filter(type=>candidateResident(candidate,type)).map(type=><option key={type} value={type}>{RESIDENT_LABELS[type]}</option>)}
+      </select></label>
       <p role="status" aria-label="Renderer status" className={styles.status}>{status}</p>
       <details open><summary>Manifest clips</summary>
         <ul className={styles.clipList} data-testid="manifest-clip-list">

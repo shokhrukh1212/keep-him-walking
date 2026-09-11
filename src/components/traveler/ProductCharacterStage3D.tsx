@@ -2,15 +2,16 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import type { CountryPack } from "@/lib/content/schema";
 import { CharacterActor } from "@/lib/characters/actor";
 import { CharacterLights } from "@/lib/characters/toon";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
-import { CHARACTER_MANIFEST, CLIP_DURATIONS } from "@/lib/characters/manifest";
+import { CHARACTER_MANIFEST, CLIP_DURATIONS, RESIDENT_TYPES, type ResidentType } from "@/lib/characters/manifest";
 import { loadCharacterGltf } from "@/lib/characters/loader";
 import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
+import { packResidentType, walkerResidentType } from "@/lib/characters/residents";
 import { actorLayout } from "@/lib/traveler/actor-layout";
 import { frameFitsViewport, type StageFrame } from "@/lib/world/stage-layout";
 import { travelerMotionAt } from "@/lib/traveler/motion-clock";
@@ -134,50 +135,69 @@ export function ProductCharacterStage3D(props: Props) {
     const loader = new GLTFLoader();
     const clock = new PresentationClock();
     let traveler: CharacterActor | undefined;
+    // The conversation partner: the resident the current pack names.
     let resident: CharacterActor | undefined;
-    // The resident GLB is already downloaded for the encounter, so every walker
-    // is a skeleton clone of it and costs no extra bytes over the network.
-    let residentGltf: Awaited<ReturnType<typeof loadCharacterGltf>> | undefined;
-    type Walker = { actor: CharacterActor; anchor: THREE.Group; lane: number; speed: number; depth: number };
+    let residentType: ResidentType | undefined;
+    // Its model. Walkers wait for it, so the partner is never the one left loading.
+    let residentGltf: GLTF | undefined;
+    // One untouched copy of each resident model. CharacterActor converts materials and
+    // adds outlines to the scene it is given, so every actor, the partner included, is
+    // built on its own skeleton clone. The other resident downloads the first time a
+    // walker needs it, so a device that shows no walkers never fetches it.
+    const residentModels = new Map<ResidentType, GLTF | "loading" | "failed">();
+    type Walker = {
+      actor: CharacterActor; anchor: THREE.Group; lane: number; speed: number; depth: number; type: ResidentType;
+    };
     let walkers: Walker[] = [];
     let last = 0;
     let lastRender = 0;
     let firstSample = true;
     let previousConversation = false;
 
-    const load = async (kind: "traveler" | "resident") => {
+    const loadTraveler = async () => {
       let loadedRoot: THREE.Group | undefined;
       try {
-        const definition = CHARACTER_MANIFEST[kind];
+        const definition = CHARACTER_MANIFEST.traveler;
         const gltf = await loadCharacterGltf(loader, definition);
         loadedRoot = gltf.scene;
         if (disposed) {
           disposeModel(loadedRoot);
           return;
         }
-        const actor = new CharacterActor(gltf, definition.heightMetres, kind === "traveler");
-        if (kind === "traveler") {
-          traveler = actor;
-          travelerRoot.add(actor.root);
-          void actor.setSponsor(latest.current.command?.sponsorPatchUrl);
-          void actor.setBottle(latest.current.command?.sponsorBottleUrl);
-          element.dataset.characterReady = "true";
-          latest.current.onTravelerAvailability?.(true);
-        } else {
-          resident = actor;
-          residentGltf = gltf;
-          residentRoot.add(actor.root);
-          element.dataset.residentReady = "true";
-          latest.current.onResidentAvailability?.(true);
-        }
+        const actor = new CharacterActor(gltf, definition.heightMetres, true);
+        traveler = actor;
+        travelerRoot.add(actor.root);
+        void actor.setSponsor(latest.current.command?.sponsorPatchUrl);
+        void actor.setBottle(latest.current.command?.sponsorBottleUrl);
+        element.dataset.characterReady = "true";
+        latest.current.onTravelerAvailability?.(true);
       } catch {
         if (loadedRoot) disposeModel(loadedRoot);
-        if (kind === "traveler") latest.current.onTravelerAvailability?.(false);
-        else latest.current.onResidentAvailability?.(false);
+        latest.current.onTravelerAvailability?.(false);
       }
     };
-    void load("traveler");
-    void load("resident");
+    void loadTraveler();
+
+    /** Starts a resident's download once, and reports where it stands. */
+    const residentModel = (type: ResidentType) => {
+      const known = residentModels.get(type);
+      if (known) return known;
+      residentModels.set(type, "loading");
+      loadCharacterGltf(loader, CHARACTER_MANIFEST.residents[type]).then((gltf) => {
+        if (disposed) disposeModel(gltf.scene);
+        else residentModels.set(type, gltf);
+      }, () => {
+        residentModels.set(type, "failed");
+      });
+      return "loading" as const;
+    };
+    const residentActor = (type: ResidentType, gltf: GLTF) => new CharacterActor(
+      { ...gltf, scene: cloneSkinned(gltf.scene) as THREE.Group },
+      CHARACTER_MANIFEST.residents[type].heightMetres,
+      false,
+    );
+    // The first pack's resident downloads beside the traveler, not on the first frame.
+    residentModel(packResidentType(latest.current.pack));
 
     const resize = () => {
       const width = element.clientWidth;
@@ -240,6 +260,33 @@ export function ProductCharacterStage3D(props: Props) {
       traveler?.sample(cue.traveler, dt, snap);
       void traveler?.setSponsor(state.command?.sponsorPatchUrl);
       void traveler?.setBottle(state.command?.sponsorBottleUrl);
+      // The partner follows the pack, including a pack that changes while mounted: the
+      // previous city's resident leaves at once rather than standing in for the next.
+      const partnerType = packResidentType(state.pack);
+      const partnerModel = residentModel(partnerType);
+      if (residentType !== partnerType || (!resident && typeof partnerModel === "object")) {
+        if (resident) {
+          residentRoot.remove(resident.root);
+          resident.dispose();
+          resident = undefined;
+          residentGltf = undefined;
+          delete element.dataset.residentReady;
+          state.onResidentAvailability?.(false);
+        }
+        if (partnerModel !== "loading") {
+          residentType = partnerType;
+          element.dataset.residentType = partnerType;
+          if (partnerModel === "failed") {
+            state.onResidentAvailability?.(false);
+          } else {
+            resident = residentActor(partnerType, partnerModel);
+            residentGltf = partnerModel;
+            residentRoot.add(resident.root);
+            element.dataset.residentReady = "true";
+            state.onResidentAvailability?.(true);
+          }
+        }
+      }
       resident?.sample(cue.resident, dt, snap, 1.8);
 
       const width = Math.max(1, element.clientWidth);
@@ -301,7 +348,7 @@ export function ProductCharacterStage3D(props: Props) {
         traveler: traveler ? { footX: (foot.x + 1) * width / 2, footY: (1 - foot.y) * height / 2,
           scale: (head.y - foot.y) * height / 2 / 1.78 } : null,
         resident: residentRoot.visible ? { footX: residentAnchor * width, footY: (1 - foot.y) * height / 2,
-          scale: frame.layout.pxPerMetre * CHARACTER_MANIFEST.resident.heightMetres / 1.78 } : null,
+          scale: frame.layout.pxPerMetre * CHARACTER_MANIFEST.residents[residentType ?? "resident-a"].heightMetres / 1.78 } : null,
       };
       element.dataset.outline = String(state.qualityTier !== "low");
       element.dataset.grade = JSON.stringify(state.grade.current);
@@ -321,16 +368,15 @@ export function ProductCharacterStage3D(props: Props) {
       }
       // One per frame: cloning a rig and building an actor is the most expensive
       // thing this loop can do, and three of them at once shows up as a stutter.
-      if (walkers.length < wanted && residentGltf) {
+      // Never more walkers than residents, because two are never the same model;
+      // one whose model is still downloading waits rather than borrowing the other.
+      const nextWalker = walkers.length < Math.min(wanted, RESIDENT_TYPES.length) && residentGltf
+        ? walkerResidentType(walkers.map((walker) => walker.type), state.pack.assetVersion, sample.rawSeconds)
+        : undefined;
+      const nextWalkerModel = nextWalker ? residentModel(nextWalker) : undefined;
+      if (nextWalker && typeof nextWalkerModel === "object") {
         const index = walkers.length;
-        // A skeleton clone: CharacterActor mutates gltf.scene in place, so every
-        // walker needs its own rig rather than a shared one.
-        const cloned = cloneSkinned(residentGltf.scene) as THREE.Group;
-        const actor = new CharacterActor(
-          { ...residentGltf, scene: cloned } as typeof residentGltf,
-          CHARACTER_MANIFEST.resident.heightMetres,
-          false,
-        );
+        const actor = residentActor(nextWalker, nextWalkerModel);
         const anchor = new THREE.Group();
         // Walking the other way, so the street reads as two-directional.
         anchor.rotation.y = -0.68;
@@ -339,6 +385,7 @@ export function ProductCharacterStage3D(props: Props) {
         walkers.push({
           actor,
           anchor,
+          type: nextWalker,
           // How far down the street this one is, as a fraction of the gap between
           // his ground line and the horizon. Size and height in frame both follow
           // from it below, because the camera is orthographic: scaling someone
@@ -385,6 +432,7 @@ export function ProductCharacterStage3D(props: Props) {
         walker.actor.setAppearance(frame.stage, state.grade.current, state.qualityTier);
       }
       element.dataset.walkers = String(walkers.length);
+      element.dataset.walkerResidents = walkers.map((walker) => walker.type).join(" ");
       element.dataset.walkerWaving = String(waver >= 0);
 
       renderer.render(scene, camera);
@@ -428,6 +476,8 @@ export function ProductCharacterStage3D(props: Props) {
       resident?.dispose();
       for (const walker of walkers) walker.actor.dispose();
       walkers = [];
+      for (const model of residentModels.values()) if (typeof model === "object") disposeModel(model.scene);
+      residentModels.clear();
       renderer.domElement.removeEventListener("webglcontextlost", lost);
       renderer.domElement.removeEventListener("webglcontextrestored", restored);
       disposeModel(scene);

@@ -27,11 +27,17 @@ export const ENCOUNTER_DURATION = SEGMENTS.reduce((sum,s)=>sum+s.duration,0);
 export function reviewDuration(action: ReviewAction) {
   return action==="encounter" ? ENCOUNTER_DURATION : CLIP_DURATIONS[action];
 }
+/** In single-take review the resident plays the same take; talk and listen answer each other. */
+const MIRRORED_TAKES: ReadonlySet<CharacterClip> = new Set(["idle", "walk", "greet", "react", "goodbye"]);
+function residentReviewCue(action: CharacterClip, time: number): CharacterCue {
+  const clip: CharacterClip = action==="talk"?"listen":action==="listen"?"talk":MIRRORED_TAKES.has(action)?action:"idle";
+  return {clip,seconds:time%CLIP_DURATIONS[clip]};
+}
 export function sampleScene(action: ReviewAction, seconds: number): SceneCue {
   const duration=reviewDuration(action);
   const time=Math.max(0,Math.min(duration-1e-6,Number.isFinite(seconds)?seconds:0));
   if(action!=="encounter") return {
-    traveler:{clip:action,seconds:time}, resident:{clip:action==="talk"?"listen":action==="listen"?"talk":"idle",seconds:time%4},
+    traveler:{clip:action,seconds:time}, resident:residentReviewCue(action,time),
     phase:action,travelerX:-.5,travelerYaw:Math.PI/2,residentYaw:-Math.PI/2,cameraZoom:1,
   };
   let start=0;
