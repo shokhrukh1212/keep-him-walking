@@ -3,7 +3,9 @@
 > Companion to `PRODUCT.md`. Read that first for what the product is. This file covers
 > how it is built, with the character system as its centre, plus the image/scene
 > pipeline and the two rendering defects found in it — §8.3, fixed in `98e1c77`, and
-> §8.4, repaired with shared stage calibration on 2026-09-08.
+> §8.4, repaired with shared stage calibration on 2026-09-08. Post-P22 launch
+> refinements through migration 0034 are recorded inline below and in
+> `docs/plan/08-LAUNCH-READINESS.md`.
 >
 > Runtime numbers come from the repository. Stage calibration values are explicitly
 > identified visual estimates; historical measurements are labelled by their original version.
@@ -54,7 +56,7 @@ scripts/
   characters/             Blender/MPFB build pipeline (Python) + browser checks (mjs)
   process-phase*-art.mjs  sharp-based image derivation
   phase2/ phase3/         preflight, seeding, scheduling, rehearsal, reporting
-supabase/migrations/      30 forward migrations, 368 pgTAP assertions
+supabase/migrations/      34 forward migrations, 380 pgTAP assertions
 ```
 
 ---
@@ -230,8 +232,10 @@ ignored by route progress.
 
 `travelerMotionAt` separates **raw watched seconds**, authoritative distance and
 **locomotion seconds**. Route actions are selected by `atMetres`; each metre trigger is
-rounded to the distance corresponding to a 0.6 s planted-foot boundary. The gait holds
-for the action while the independently authoritative distance track continues. Because
+rounded to the distance corresponding to a 0.6 s planted-foot boundary. Crowd actions
+carry an authoritative `atActiveSecond`, `endsAtActiveSecond` and
+`frozenDistanceMetres`; heartbeat v12 and runtime read v6 accrue watched time but remove
+the action overlap from distance. The gait and street therefore hold together. Because
 the whole computation is pure in its explicit inputs:
 
 - Two viewers on different devices compute the identical frame.
@@ -256,8 +260,9 @@ Rather than dropping a swallowed action, its elapsed time is
 `min(seconds since it was scheduled, seconds since the last route beat ended)` — the
 second term is derived from distance, so it needs no history and stays pure, and a
 wave scheduled mid-encounter starts cleanly the moment the goodbye ends. Crowd actions
-deliberately do **not** feed the locomotion clock, so `plantIndex`, step counts and the
-gait are byte-identical with and without them.
+feed both renderers and the bounded browser distance projection as explicit inputs.
+Realtime broadcast is only an invalidation hint: a client always follows it with
+`GET /api/reactions`, which projects the authoritative rows server-side.
 
 **One divergence worth knowing:** the database's `global_steps` uses the configurable
 `STEPS_PER_ACTIVE_SECOND` (default **1.8**/s), while every displayed step count uses
@@ -853,21 +858,24 @@ All 15 registered packs are schema v3 and take this branch: the launch registrat
 `tashkent-v5`, its byte-identical calibrated `tashkent-v4` rollback target, the six
 other Phase 2 cities, and the seven Phase 3 cities. No schema-v2 pack remains registered.
 
-On the v3 panorama branch:
+On the v3 scene branch:
 
-- A six-sprite bounded panorama pool, all textured with `zone.fallbackUrl`, scaled from the stable
+- Existing packs use one bounded, non-wrapping `zone.fallbackUrl` sprite, scaled from the stable
   viewport-relative character target:
   ```
-  targetCharacterPx = viewportHeight * (width <= 600 ? 0.20 : 0.24)
+  targetCharacterPx = viewportHeight * (width <= 600 ? 0.28 : 0.30)
   requiredImageScale = targetCharacterPx / (stage.personHeightFrac * imageHeight)
   imageScale = min(requiredImageScale, 1.6)
   imageX = (viewportWidth - imageWidth * imageScale) / 2
   imageY = groundY - zone.stage.groundLineY * imageHeight * imageScale
   ```
-  There is no vertical centering. The repeated painting scrolls by
-  `metresIntoZone × pxPerMetre × 0.7`. Its horizontal position is reduced modulo one
-  scaled texture width. The legacy distant layer uses 0.35×, architecture uses 0.7×,
-  and ground/foreground use the 1× near track.
+  There is no vertical centering and no modulo wrap: `boundedPanoramaLayout` pans from
+  the painting's left edge to its right edge once, then stops. Identifiable buildings
+  cannot repeat.
+- New packs may provide default-compatible `continuousScene` with `skyUrl`, `cityUrl`,
+  `groundUrl`, optional `foregroundUrl`, and `groundHeightFrac` (default 0.22). Sky and
+  city are bounded; only the edge-audited ground texture tiles. `content:validate`
+  rejects a ground whose four-pixel edge strips differ by more than 8% mean RGB.
 - **Props are disabled entirely** (`props = []`).
 - `groundLifeRoot`: 7 (low tier) or 12 translucent ellipses/rounded-rects below the shared
   ground line, scrolled by `distanceMetres * layout.pxPerMetre` (the 1× near track).
@@ -885,7 +893,8 @@ On the v3 panorama branch:
   are deferred to the time-of-day work. Existing composite CSS grade/vignette remain.
 - `weatherRoot`: 0/14/22 drifting motes by tier.
 - A sky `Graphics` fill behind everything, next-zone preload beginning in the final
-  200 m, and a cross-dissolve between complete panoramas over the final 60 m. A
+  200 m, and a roughly one-second dissolve at the zone boundary. `nightUrl`, when
+  present, is aligned to the day painting and cross-faded on the local-time night ramp. A
   once-per-second diagnostics snapshot reports fps, p95 frame ms, live and
   pooled object counts, estimated decoded texture bytes, and a `data-scene-textures`
   inventory of every texture the stage holds).
@@ -1053,8 +1062,8 @@ stage: {
 ```
 
 Image-space fractions remain fractions of the full served image height. The character
-target comes from `TARGET_CHARACTER_HEIGHT_FRAC` (default 0.24 desktop) or
-`TARGET_CHARACTER_HEIGHT_FRAC_MOBILE` (default 0.20 at widths ≤600 px). The image then
+target comes from `TARGET_CHARACTER_HEIGHT_FRAC` (default 0.30 desktop) or
+`TARGET_CHARACTER_HEIGHT_FRAC_MOBILE` (default 0.28 at widths ≤600 px). The image then
 scales to that character:
 
 ```ts
@@ -1176,7 +1185,7 @@ The prop cutouts (1.36 MiB per city) are **not** deleted: see §6.5.
 
 ## 9. Data model and API surface
 
-### Tables (30 forward migrations)
+### Tables (34 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1201,11 +1210,22 @@ the public acknowledgement.
 
 **Season 1 migrations 0028-0029, launch:** `journeys.launch_at` is the real launch
 boundary and `rollover_utc_hour` stores 16 for Season 1. `seed_season1_launch` creates
-the 30-day journey, Tashkent v5 Day 1, its name vote and seven founding prices/slots in
-one retry-safe transaction. Heartbeat v11 rejects prelaunch advancement in Postgres;
-bootstrap v13 carries the stored rollover hour. `switch_country_day_pack` is the
-expected-current guarded v5→v4 rollback. Migration 0029 removes the loop-variable
-shadowing caught after 0028 was applied; it does not change seed behaviour.
+the 30-day journey, its selected Day-1 pack, the name vote and seven founding
+prices/slots in one retry-safe transaction. Heartbeat v11 rejects prelaunch advancement
+in Postgres; bootstrap v14 carries the stored rollover hour and the action-aware runtime.
+`switch_country_day_pack`
+is an expected-current guarded pointer rollback. Migration 0029 removes the
+loop-variable shadowing caught after 0028 was applied.
+
+**Post-P22 migrations 0031-0034:** 0031 lets exactly one confirmed watcher satisfy a
+reaction while an empty room still cannot. 0032 adds `train` to the authoritative
+arrival mode. 0033 removes Tashkent from the database seed invariant; the CLI requires
+a registered reviewed v3 `--pack` and defaults to the launch target `london-v1`. 0034
+gives scheduled actions server-owned end seconds and planted distance, adds action-aware
+heartbeat/runtime/bootstrap v12/v6/v14, and serializes overlapping reaction windows.
+All four migrations were applied to development project `tkntxptfhmjnqaaveddx` on
+11 September 2026. The resulting 19 pgTAP suites passed all 380 assertions and the
+remote database lint result was `{"results":[]}`.
 
 **Season 1 migration 0030, Tickets:** `tickets` links one future date, one Standard
 sponsorship and one curated versioned pack. `reserve_ticket` locks the date-keyed slot,
@@ -1243,7 +1263,8 @@ edge header is the whole of the location signal.
 `reaction_windows` (30-second buckets), `scheduled_actions` (unique per active second
 per day) and `day_photos` (unique per active second). `submit_reaction` rate-limits one
 reaction per kind per visitor per minute through `consume_mutation_rate_limit`,
-increments the live bucket, and — at `greatest(2, ceil(0.3 × live watchers))`, with no
+increments the live bucket, and — at one for a solo watcher, otherwise
+`greatest(2, ceil(0.3 × live watchers))`, with no
 same-kind action inside the last 120 active seconds — schedules the action at
 `global_active_seconds + 2` and resets the bucket. Heartbeat v6 and bootstrap v7 carry
 the bucket counts, the recent/next scheduled actions and the day's last six photographs.
@@ -1286,7 +1307,7 @@ bootstrap v9 carry it.
 pace and pace-weighted distance) → `_v5` (per-country watch aggregation) → `_v6`
 (reaction buckets and scheduled crowd actions) → `_v7` (weather) → `_v8` (exact daily
 peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval and lease)
-→ `_v11` (the launch boundary),
+→ `_v11` (the launch boundary) → `_v12` (authoritative action holds),
 `normalize_country_code`, `read_country_day_watch`, `reaction_threshold`,
 `close_and_pick_vote_winner`, `create_next_country_day`, `read_traveler_name`,
 `write_journey_weather`, `read_journey_weather`,
@@ -1298,10 +1319,10 @@ peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval a
 `aggregate_sponsor_metrics`, `enforce_sponsorship_transition`, `claim_operation`,
 `reconcile_phase2_state`, `reconcile_phase2_state_v2`, `finalize_day_outcome`,
 `cleanup_phase2_retention`, `journey_story_now`,
-`read_journey_runtime_v3` / `_v4` / `_v5`,
+`read_journey_runtime_v3` / `_v4` / `_v5` / `_v6`,
 `read_visitor_passport`, `presence_heartbeat_seconds`, `presence_lease_ttl_seconds`,
 `seed_season1_launch`, `switch_country_day_pack`,
-`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10` / `_v11` / `_v12` / `_v13`
+`read_bootstrap_bundle_v3` / `_v4` / `_v5` / `_v6` / `_v7` / `_v8` / `_v9` / `_v10` / `_v11` / `_v12` / `_v13` / `_v14`
 (one-call bootstrap with atomic admission control, the distance projection, the
 country aggregate, the reaction board, the ballot, the weather, the passport streak and
 the hundred-watcher moment),
@@ -1310,7 +1331,7 @@ the hundred-watcher moment),
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (34)
+### Route handlers (35)
 
 ```
 GET  /api/bootstrap                 the world only: day, event, vote, presence, steps,
@@ -1335,6 +1356,7 @@ GET  /api/cron/prewarm              15:55 asset, OG and weather warm-up (authori
 GET  /api/cron/rollover             16:00 daily reconciliation (authorized)
 GET  /api/health                    DB/content/provider/weather/asset/launch readiness
 POST /api/reactions                 enum reaction, per-kind cooldown, crowd threshold
+GET  /api/reactions                 authoritative counts/action projection after a Realtime hint
 POST /api/day-photos                the crowd's photograph for a scheduled moment
 POST /api/corrections               private correction, three per visitor per hour
 POST /api/observability/vitals
@@ -1488,32 +1510,30 @@ on every request in the edge path, so it was not done here.
 ### The living world (P17)
 
 `src/lib/world/ambient.ts` is the whole schedule and it is pure: `birdFlights`,
-`catAppearance`, `walkerPopulation`, `steamPuffs`, `tramPass`, `buntingVisible`,
+`walkerPopulation`, `steamPuffs`, `tramPass`, `buntingVisible`,
 `windowLightAlpha` and `wavingWalker` are functions of the authoritative second and a
 seed, through the existing `deterministicVariant`. Nothing calls `Math.random`, so two
 people watching at the same second see the same bird in the same place — which is what
 makes "you are watching the same thing" true rather than decorative.
 
 Birds cross in a loose skein every 40-90 s and wind carries them faster, using the same
-`effect.windScale` the rain and the motes already use. The cat sits on a wall for twenty
-seconds roughly every six minutes, and only in a `lanes` zone. Steam rises in the `cafe`
-zone; a tram crosses `arrival` for cities that opt in through `pack.ambient.tram`.
-Everything is drawn in code as simple shapes, so there are no sprite sheets to download,
-nothing to fall out of sync with a pack, and no new asset pipeline.
+`effect.windScale` the rain and the motes already use. Steam rises in the `cafe` zone;
+a tram crosses `arrival` for cities that opt in through `pack.ambient.tram`. The
+procedural cat was removed because the primitive silhouette did not read as credible
+art. Any future animal requires a reviewed asset and licence.
 
 Draw order gained two containers. `lifeRoot` sits between `propRoot` and
 `groundLifeRoot`; it is a **sibling of `weatherStaticRoot`, never a child of
 `weatherRoot`**, because `weatherRoot` is emptied and destroyed on every zone rebuild and
-would take the birds and the cat with it. `lightsRoot` sits directly above `layerRoot`
+would take the birds with it. `lightsRoot` sits directly above `layerRoot`
 with an additive blend, drawing a zone's optional `lightsUrl` on the same dusk ramp as
 the night grade — lit windows add light to the painting rather than covering it.
 
 **Honest gap:** no pack ships a `lightsUrl` yet, so the window-light path is code with no
-art behind it. That is the owner's to paint. The related P10 finding still stands:
-`nightUrl` is declared in the schema and no code reads it, so the night cross-fade is
-grade-only in practice.
+art behind it. That is the owner's to paint. `nightUrl` is now rendered when supplied;
+otherwise the fallback remains colour grading.
 
-Quality tiers gained `walkers 0/1/3` and `birds 0/2/4`. Reduced motion already forces the
+Quality tiers use `walkers 0/1/2` and `birds 0/2/4`. Reduced motion already forces the
 low tier, so a reduced-motion viewer gets neither — the same rule the storm flash follows.
 
 Background walkers are the two residents, never two of the same model.
@@ -1531,7 +1551,7 @@ built **one per frame**: cloning a rig and constructing an actor is the most exp
 thing the draw loop can do, and three at once reads as a stutter. Their count follows the
 city's hour and is adjusted inside the loop, not at mount — that effect has an empty
 dependency list and the tier it captured is not the live one. They compute their own
-anchors and never inherit the traveler's eight-second viewport drift, sit at negative `z`
+anchors and never inherit artificial traveler viewport drift, sit at negative `z`
 so the sort is unambiguous, and walk the other way at `rotation.y = -0.68`. When a crowd
 wave fires, `wavingWalker` picks the one who waves back, so every viewer sees the same
 person answer.
@@ -1688,12 +1708,15 @@ Production enters the Season 1 path only when both `PHASE2_ENABLED=true` and
 `launch_at`, `/api/bootstrap` returns the real Day 1 pack in `prelaunch` mode: the scene
 is idle, both visible status lines say “Starts …”, and presence, reactions, progress,
 postcards and visitor-private refreshes do not run. At the database boundary heartbeat
-v11 independently refuses an instant before `coalesce(launch_at, starts_at)`.
+v12 delegates to the launch guard and refuses an instant before
+`coalesce(launch_at, starts_at)`.
 
-`pnpm seed:season1 --launch-at <...>` is a no-write plan. `--apply` calls the atomic seed
-RPC; a same-data retry returns `exists`, while drift is rejected. The actual production
-date and launch switch remain unset. The Day 1 name winner is followed by the fixed
-Dushanbe leg; its Day 2 ballot then returns to neighbour-first destination voting.
+`pnpm seed:season1 --launch-at <...> --pack <reviewed-pack>` is a no-write plan. `--apply`
+calls the atomic seed RPC; a same-data retry returns `exists`, while drift is rejected.
+The default is `london-v1`, which intentionally fails until the owner-approved pack is
+registered. The actual production date and launch switch remain unset. The Day-1 name
+winner resolves to `paris-v1`; rollover records that transfer as `train`, then returns
+to reviewed neighbour-first destination voting.
 
 Vercel declares prewarm at 15:55 UTC and rollover at 16:00 UTC. Prewarm fetches the
 upcoming pack before Day 1, all possible vote-owned packs thereafter, the day OG image,
@@ -1775,10 +1798,12 @@ to night instead.
 paints a band on the zone's `horizonY`, rain and snow drive the particle field, wind
 above 30 km/h scales particle velocity up to 2×, and thunderstorms add an 80 ms white
 flash derived from the authoritative watched second — so every viewer sees the same
-lightning, and nobody with `prefers-reduced-motion` sees any. The reading itself is
-fetched server-side from Open-Meteo (no key, no paid service) at most once per city per
-ten minutes: the bootstrap route claims the ten-minute window in `operation_ledger` and
-refreshes inside `after()`, so no visitor ever waits on the request.
+lightning, and nobody with `prefers-reduced-motion` sees any. When
+`WEATHER_ENABLED=true`, the reading is fetched server-side from Open-Meteo at most once
+per city per ten minutes: the bootstrap route claims the window in `operation_ledger`
+and refreshes inside `after()`. The launch default is `false`; in that state refresh
+returns before any provider request and bootstrap, heartbeat, health readiness and HUD
+expose no weather.
 
 ### The destination vote
 
@@ -1878,11 +1903,14 @@ ROLLOVER_UTC_HOUR=16                     # when the day ends and the ballot clos
 SUPABASE_DAY_PHOTOS_BUCKET=khw-day-photos # public bucket for crowd photographs
 SUPABASE_RECAPS_BUCKET=khw-recaps          # public immutable day-recap PNGs
 ADMIN_ACCESS_SECRET=...                    # 48+ chars; exchanged for a 12-hour session
+WEATHER_ENABLED=false                      # provider and presentation disabled for launch
+TARGET_CHARACTER_HEIGHT_FRAC=0.30          # desktop viewport target
+TARGET_CHARACTER_HEIGHT_FRAC_MOBILE=0.28   # mobile viewport target
 ```
 
-`ROLLOVER_UTC_HOUR` is clamped to 0–23. The day-photo bucket must exist and be public
-before `/api/day-photos` can store anything; until then the route fails closed and the
-rest of the photo reaction still works. Open-Meteo needs no key and no configuration.
+`ROLLOVER_UTC_HOUR` is clamped to 0–23. Sponsor inventory is fixed in code at seven
+dates. The day-photo bucket must exist and be public before `/api/day-photos` can store
+anything; until then the route fails closed and the rest of the photo reaction works.
 
 
 `phase2DeploymentAllowed()` is the master switch. It returns false unless

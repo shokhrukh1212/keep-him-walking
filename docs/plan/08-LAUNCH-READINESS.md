@@ -63,6 +63,10 @@ not the route the owner wants to launch.
 
 ## Work packages
 
+Implementation status was audited on 11 September 2026. Checked items are in the
+repository now; unchecked items require owner-supplied art, owner acceptance or a
+deployed production-like environment.
+
 Every package has two independent completion marks:
 
 - **Verified** means automated checks and, for database work, the remote pgTAP/lint
@@ -72,75 +76,75 @@ Every package has two independent completion marks:
 
 ### R0 — make this handoff authoritative
 
-- [ ] Verified: update `DECISIONS.md`, `PRODUCT.md`, `TECHNICAL.md` and `AGENTS.md` when
+- [x] Verified: update `DECISIONS.md`, `PRODUCT.md`, `TECHNICAL.md` and `AGENTS.md` when
   the corresponding implementation changes land.
 - [ ] Accepted: none required.
 
 ### R1 — one London visual pilot
 
 - [ ] Owner supplies a London arrival painting in the new layered style.
-- [ ] Implement the shared 30% desktop / 28% mobile traveler scale, planted-foot
+- [x] Implement the shared 30% desktop / 28% mobile traveler scale, planted-foot
   placement and restrained lighting against that painting.
-- [ ] Remove the periodic artificial horizontal wander from the traveler.
+- [x] Remove the periodic artificial horizontal wander from the traveler.
 - [ ] Verify at 390×844, 768×1024, 1440×900 and 1920×1080, including panel-open states.
 - [ ] Accepted: owner approves this single frame before the other 23 paintings are made.
 
 ### R2 — continuous layered street
 
-- [ ] Extend the pack schema with optional, defaulted scene layers so all existing
+- [x] Extend the pack schema with optional, defaulted scene layers so all existing
   packs continue to validate.
-- [ ] Render one non-repeating sky, one bounded non-repeating city layer and only a
+- [x] Render one non-repeating sky, one bounded non-repeating city layer and only a
   seamless pavement/foreground texture as a horizontal tile.
-- [ ] Replace long full-frame dissolves with a short, foreground-covered transition.
-- [ ] Use a real night texture when a pack provides `nightUrl`; retain colour grading
+- [x] Replace long full-frame dissolves with a short, foreground-covered transition.
+- [x] Use a real night texture when a pack provides `nightUrl`; retain colour grading
   as fallback.
-- [ ] Add a content audit that rejects a supposedly seamless layer whose two edges do
+- [x] Add a content audit that rejects a supposedly seamless layer whose two edges do
   not match within tolerance.
 - [ ] Accepted: no repeated landmark is visible during a five-minute watch at 1× or 5×.
 
 ### R3 — one calm HUD
 
-- [ ] Put Wave, Water and Photo at top centre, each at least 44×44 CSS pixels.
-- [ ] Merge globe, watching-country summary, confirmed watcher count and pace into one
+- [x] Put Wave, Water and Photo at top centre, each at least 44×44 CSS pixels.
+- [x] Merge globe, watching-country summary, confirmed watcher count and pace into one
   top-right audience control.
-- [ ] Keep the current named action in a compact lower-centre status pill.
-- [ ] Give progress a dedicated full-width row above the footer.
-- [ ] Restrict the footer to Vote, Journey and Sponsor. Move contribution, map, share,
+- [x] Keep the current named action in a compact lower-centre status pill.
+- [x] Give progress a dedicated full-width row above the footer.
+- [x] Restrict the footer to Vote, Journey and Sponsor. Move contribution, map, share,
   sound and tomorrow into the Journey panel.
-- [ ] Permit only one open panel. Fit the map inside its panel without an internal
+- [x] Permit only one open panel. Fit the map inside its panel without an internal
   vertical scrollbar at 1440×900.
 - [ ] Accepted: the traveler and city remain the first things a new viewer notices.
 
 ### R4 — believable supporting life
 
-- [ ] Import and validate the owner-provided Mixamo resident clips; keep resident A and
+- [x] Import and validate the owner-provided Mixamo resident clips; keep resident A and
   B as distinct male/female characters.
-- [ ] Show one resident encounter roughly every 90–150 watched seconds, lasting
+- [x] Show one resident encounter roughly every 90–150 watched seconds, lasting
   12–18 seconds; never show more than two and show none in low-quality, prelaunch or
   scripted encounter states.
-- [ ] Remove the procedural cat. Birds may remain subtle; any future animal must be a
+- [x] Remove the procedural cat. Birds may remain subtle; any future animal must be a
   reviewed sprite/model with source and licence.
 
 ### R5 — honest actions and reactions
 
-- [ ] Make action windows authoritative in Postgres: a queued action has start/end
+- [x] Make action windows authoritative in Postgres: a queued action has start/end
   watched seconds and a frozen distance. Authority accrues watched time through the
   action but advances distance only outside it.
-- [ ] Keep `travelerMotionAt` and `routePositionAt` pure by passing the authoritative
+- [x] Keep `travelerMotionAt` and `routePositionAt` pure by passing the authoritative
   action timeline explicitly.
-- [ ] Select route events by `zone.kind`, never by text embedded in an id.
-- [ ] Allow one watcher to meet the reaction threshold. A confirmed reaction must be
+- [x] Select route events by `zone.kind`, never by text embedded in an id.
+- [x] Allow one watcher to meet the reaction threshold. A confirmed reaction must be
   visible to every connected viewer before it ends, using an invalidation hint followed
   by a server read; reconnecting during an action reconstructs the same state.
 
 ### R6 — London-first route and truthful tomorrow
 
-- [ ] Add `train` beside walk/flight in database checks, contracts, maps and copy.
-- [ ] Parameterise seed/reset tools; remove the Tashkent/Dushanbe assumptions from
+- [x] Add `train` beside walk/flight in database checks, contracts, maps and copy.
+- [x] Parameterise seed/reset tools; remove the Tashkent/Dushanbe assumptions from
   current launch validation without editing applied migrations.
 - [ ] Seed London Day 1 and announce Paris Day 2 as the reviewed fallback. Preserve the
   two-stage Day-1 name/destination vote and blocked-pair safety policy.
-- [ ] Read tomorrow from the scheduled `country_days` row or the committed vote result;
+- [x] Read tomorrow from the scheduled `country_days` row or the committed vote result;
   never from registry order.
 - [ ] Use the UK/Europe ready route for later ballots: France, Belgium, Germany, then
   other reviewed neighbouring packs. Audience geography informs outreach, not an
@@ -158,7 +162,7 @@ Every package has two independent completion marks:
 
 ### R8 — sell and launch honestly
 
-- [ ] Bound the sponsor calendar to exactly seven eligible dates and show each date's
+- [x] Bound the sponsor calendar to exactly seven eligible dates and show each date's
   lock/source clearly.
 - [ ] Complete the real Lemon Squeezy checkout, signed webhook, duplicate delivery and
   refund rehearsal after the owner supplies private credentials.
@@ -171,9 +175,9 @@ Every package has two independent completion marks:
 
 ### R9 — hide weather for launch
 
-- [ ] Add `WEATHER_ENABLED=false` by default. While false, do not request Open-Meteo and
+- [x] Add `WEATHER_ENABLED=false` by default. While false, do not request Open-Meteo and
   do not show weather temperature, icon, rain/snow or weather freshness.
-- [ ] Keep the existing provider/cache/rendering code so a later reviewed commercial
+- [x] Keep the existing provider/cache/rendering code so a later reviewed commercial
   provider or agreement can re-enable it with one flag.
 
 ## Launch gate

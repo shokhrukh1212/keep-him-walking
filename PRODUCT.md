@@ -39,7 +39,7 @@ Presence is the fuel. Nothing else moves him.
 - While at least one lease is alive, the server accrues **global active seconds** for the
   current country-day. While no lease is alive, it accrues nothing.
 - Distance, step count, which zone of the city he is in, and which action he is
-  performing are all derived from that one number.
+  performing are all derived from server-confirmed runtime and action windows.
 
 Three consequences make this feel real rather than decorative:
 
@@ -67,20 +67,12 @@ number the server has not confirmed. When something is unknown, the interface sa
 **Journey → country-days → route zones → story beats.**
 
 - A **journey** is a fixed-length run of consecutive country-days with a launch
-  timestamp. The built and rehearsed configuration is **7 days**:
-
-  | Day | City | Country |
-  |---|---|---|
-  | 1 | Tashkent | Uzbekistan |
-  | 2 | Dushanbe | Tajikistan |
-  | 3 | Bishkek | Kyrgyzstan |
-  | 4 | Almaty | Kazakhstan |
-  | 5 | Baku | Azerbaijan |
-  | 6 | Tbilisi | Georgia |
-  | 7 | Istanbul | Türkiye |
-
-  Seven further cities exist as an unpublished editorial buffer, ready but deliberately
-  not scheduled: Sofia, Belgrade, Zagreb, Ljubljana, Vienna, Bratislava, Prague.
+  timestamp. Season 1 is a 30-day journey. The approved launch route begins in
+  **London**; the Day-1 ballot names him Milo, Nur, Sami or Bek, and the reviewed
+  Day-2 fallback is **Paris by train**. Belgium and Germany are the first later route
+  priorities. A country is public only when its versioned art and cultural review are
+  ready—the older Central Asia and southeast-Europe packs remain rehearsal/rollback
+  content, not the current launch order.
 
 - A **country-day** is a 24-hour window with its own city, timezone, local clock
   display, content pack, sponsor slot, daily vote and postcard. Days cannot overlap —
@@ -166,15 +158,18 @@ that is hashed before it ever reaches the database.
 
 **Always visible**
 
-- **Day marker and city** — "DAY 6 / 7 · Tbilisi · Georgia · 13:43" in the city's own
+- **Day marker and city** — for example “DAY 1 · LONDON” with country and time in the city's own
   local time.
-- **Live watcher count** — "1 person watching" with a status dot, plus the honest
-  sub-line about whether that is keeping him moving.
+- **Audience control** — one top-right control combines the country summary, confirmed
+  watcher count and pace with the honest movement status.
+- **Reactions** — Wave, Water and Photo sit at top centre. One confirmed watcher can
+  trigger one; Realtime is only an update hint and every viewer then reads the action
+  window from the server.
 - **Walking rule status** — a small pill reading "→ Walking · Rustaveli Avenue", or the
   current action's label ("Taking a photograph", "Talking · A carved balcony"), or
   "Waiting for the internet".
-- **Sponsor card** — the day's sponsor with its disclosure label and call to action, or,
-  if the day is unsold, an invitation to sponsor.
+- **Footer** — only Vote, Journey and the disclosed Sponsor/invitation remain visible.
+  Progress has its own unobstructed row immediately above it.
 
 **On demand**
 
@@ -195,14 +190,17 @@ that is hashed before it ever reaches the database.
   collected days read as "4 days in a row".
 - **Season sheet** — `/season/1` is the whole passport as one shareable poster: the stamp
   sheet, the confirmed totals, the route map and a share card.
-- **A city that lives** — birds cross the sky, a cat appears on a wall in the lanes,
-  steam lifts off the cafe, a tram passes on the boulevard, and people walk by behind
-  him. Everything runs off the same clock he does, so everyone watching sees the same
-  bird at the same moment. When a hundred people are watching at once, bunting goes up
-  in the market for the rest of the day.
-- **Tomorrow** — the next city's name and start time, plus a downloadable `.ics`
-  calendar file so you can come back for it.
+- **A city that lives** — subtle birds, café steam and an optional tram share the
+  authoritative clock. One or two rigged residents appear only during occasional short
+  windows; the unconvincing procedural cat was removed. When a hundred people are
+  watching at once, bunting goes up for the rest of the day.
+- **Tomorrow** — only a committed next `country_days` row may name the next city, start
+  time and walk/train/flight transfer. Registry order is never presented as a result.
 - **Sound** — per-zone ambient street audio, off until you ask for it.
+
+Weather rendering and its cache remain implemented, but weather is disabled for launch
+by default. While disabled there is no provider request and no temperature, icon,
+precipitation or freshness claim in the interface.
 
 **Degradation is a feature, not an afterthought**
 

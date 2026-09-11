@@ -110,9 +110,8 @@ does today.
 - **Skip it.** Say so and it gets recorded as a deliberate choice rather than an
   unfinished feature.
 
-**Related, and still true:** `nightUrl` is declared in the pack schema and no code reads
-it, so P10's night cross-fade is colour-grading only. That belongs to P10 and is noted
-in `TECHNICAL.md` rather than silently absorbed here.
+`nightUrl` is now rendered when a pack supplies it; colour grading remains the honest
+fallback. This entry is only about the optional lit-window overlay.
 
 ---
 
