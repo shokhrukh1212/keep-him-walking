@@ -430,12 +430,12 @@ export function ProductCharacterStage3D(props: Props) {
           return;
         }
         passing.push(walker);
-        // Facing the way they move across the screen, three-quarters to the camera as he
-        // is. An overtaker he outpaces turns round here rather than drift backwards.
-        walker.anchor.rotation.y = walker.street.direction > 0 ? 0.68 : -0.68;
         wavingBack ||= waving;
         const x = walkerScreenX(walker.street, sample.distanceMetres);
         walker.anchor.position.set(x, walker.placement.footY, walker.placement.z);
+        // Facing the way they move across the screen, three-quarters to the camera as he
+        // is. An overtaker he outpaces turns round here rather than drift backwards.
+        walker.anchor.rotation.y = walker.street.direction > 0 ? 0.68 : -0.68;
         walker.actor.sample(
           waving
             ? { clip: "greet", seconds: crowdWave?.elapsedSeconds ?? 0 }
