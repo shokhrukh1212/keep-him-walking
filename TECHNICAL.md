@@ -569,23 +569,15 @@ change.
   alpha-cutout (`alphaTest 0.4`, `depthWrite true`) so they stop sorting through the
   head; the `high-poly` eye material keeps blending but stops writing depth; the stock
   hair map is tinted dark brown at runtime.
-- **P3 toon treatment (2026-09-09):** after those corrections, GLB standard materials
-  (skin, cloth, hair, shoes, backpack and patch) become `MeshToonMaterial`, preserving
-  colours, colour/normal/bump/alpha maps and other supported texture inputs. Eyes keep
-  their original material. Each actor owns one code-generated 3×1 red-channel
-  `DataTexture` with values 128/199/255, nearest filtering and no mipmaps. Every
-  directional light adds at least the lowest band everywhere; the original 72 left the
-  side away from the key at 28% and read as dirt on the face (raised 2026-09-11).
-  The shader multiplies exposure/tint **after sRGB encoding**, matching Pixi's
-  `ColorMatrixFilter` display-space operation without modifying texture colours.
-- **Outline:** cloned mesh siblings use BackSide, `stage.palette[2]`, alpha 0.7 and
-  depth writing. Their transforms and bind matrices match the source. After skinning
-  and morphing, the vertex shader expands the silhouette along its projected normal by
-  1.5 CSS pixels. This replaces the origin-based 1.018 scale that displaced the grey
-  hull above the head and shoulders. Hair hulls retain texture alpha cutouts. Brows,
-  lashes and teeth get no hull (`FACE_DETAIL`): they are a few pixels wide at live size,
-  and a 1.5 px hull painted dark smudges over the eyes. Low quality hides all hulls;
-  medium/high show them. Geometry and skeletons are shared, not duplicated.
+- **Natural shading (owner direction, 12 September 2026):** after those corrections every
+  GLB `MeshStandardMaterial`, eyes included, is replaced by an actor-owned copy
+  (`CharacterAppearance` in `src/lib/characters/appearance.ts`). The copy keeps the
+  model's own smooth physically based shading, colours, maps and roughness, so he reads as
+  a real person. The P3 toon bands and outline hulls are gone: the bands read as
+  painted-on shadows, and the palette-coloured hulls as pale or dark lines around every
+  garment piece. The copy's shader multiplies exposure/tint **after sRGB encoding**,
+  matching Pixi's `ColorMatrixFilter` display-space operation without modifying texture
+  colours. The eyes were previously left ungraded and stayed daylight-white at night.
 - **Props.** A capsule water bottle and a boxed phone are built in code (no asset).
   `sampleProp()` returns a deterministic `{visible, contact, progress}` from
   retrieve/contact/release/stow windows per clip — e.g. `drink` retrieves at 0.28 s,
@@ -602,8 +594,8 @@ change.
   a newer one. On failure the sewn patch stays visible in its base colour — the character
   never shows a hole where a logo failed to load.
 - **`dispose()`** stops all actions, uncaches the root, disposes the sponsor texture,
-  removes/disposes hulls and toon materials plus their gradient, then leaves the
-  original materials attached for the host to dispose all original GLB resources.
+  puts the original materials back and disposes the graded copies, leaving the host to
+  dispose all original GLB resources.
 
 ### 6.2 `ProductCharacterStage3D` (`src/components/traveler/ProductCharacterStage3D.tsx`)
 
@@ -611,21 +603,21 @@ The live host component. Mounted once with an empty dependency array; all changi
 are read through a ref so the renderer is never torn down mid-journey.
 
 - Own `WebGLRenderer` with `alpha: true` over the world canvas. Antialias, pixel ratio
-  (1.5 / 1.25 cap), outlines and the frame cap (30 vs 60 fps) come from the quality tier.
+  (1.5 / 1.25 cap) and the frame cap (30 vs 60 fps) come from the quality tier.
 - `SRGBColorSpace` output, `NoToneMapping`, exposure 1.0. No shadow maps or shadow floor.
 - Shared `CharacterLights` in live and review stages: hemisphere palette[0]/palette[2]
-  at 1.1, key palette[0] at 1.6 from `(−3,5,4)`, `(3,5,4)` or `(0,5,4)` for
-  left/right/top, fill palette[2] at 0.4 from the opposite side. Lights and outline
-  colour follow the actually rendered zone's stage frame.
+  at 1.4, key palette[0] at 1.8 from `(−3,5,4)`, `(3,5,4)` or `(0,5,4)` for
+  left/right/top, fill palette[2] at 0.45 from the opposite side. Lights follow the
+  actually rendered zone's stage frame.
   Pack palettes are a painting's dominant colours (Paris arrival: sky blue and grey), so
   a light keeps only 15% of its palette colour's hue, at full brightness; the hemisphere
   ground colour is that ×0.55. three divides diffuse light by π, and the earlier
-  palette-coloured 1.55/0.9 left a Paris face at 30–50% of its texture, tinted blue.
-  Now a camera-facing face shows about 90% of its own colour in daylight and the side
-  away from the key about 65%; `toon.test.ts` pins both for grey, sky-blue and default
-  palettes. Below daylight exposure, a warm front lamp (up to 0.5) and back rim (up to
-  1.0) increase gradually so the face and silhouette remain readable while both
-  renderers retain the same night grade.
+  palette-coloured 1.55/0.9 left a Paris face at 30–50% of its texture, tinted blue. With
+  smooth shading a camera-facing face now shows about 75% of its own colour in daylight,
+  the side away from the key about 45% and the underside of the chin about 25%;
+  `appearance.test.ts` pins these for grey, sky-blue and default palettes. There is no
+  night lamp or rim light: on 11 September they made him glow against the darkened
+  painting. The shared grade alone dims him with the world.
 - **Orthographic camera**, updated from the current stage frame: 1.78 m maps to
   `stageLayout().personHeightPx` and world y=0 projects to `stageLayout().groundY`.
   `actorLayout(viewportHeight, layout)` adapts these to height/bottom (§8.4).
@@ -654,12 +646,12 @@ are read through a ref so the renderer is never torn down mid-journey.
   `data-resident-visible`, `data-character-ready` to the host element — these are what
   the Playwright suites assert against.
 
-`CharacterStage3D` uses the same toon and lighting implementation on
+`CharacterStage3D` uses the same materials and lighting on
 `/preview/characters`. Setting includes the studio, Almaty promenade and all five
 Tbilisi zones, using their real fallback paintings, metadata and the same Pixi renderer.
 The studio retains its close inspection camera; painted settings use the product's
 calibrated camera and foot plane. View, timeline, both candidates, resident and reload
-controls remain available; Quality makes the low-tier outline difference reviewable.
+controls remain available; Quality previews the world's low-tier settings.
 The studio adds Daylight, Dusk and Night lighting presets. Controls and manifest badges
 are constrained to one vertical scroll area without a horizontal scrollbar.
 

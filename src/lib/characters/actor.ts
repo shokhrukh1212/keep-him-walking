@@ -3,11 +3,9 @@ import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { CLIP_DURATIONS, CLIP_SPECS, clipFallbackChain, normalizedClipName, type CharacterClip } from "./manifest";
 import type { CharacterCue } from "./timeline";
 import { sampleProp } from "./props";
-import { CharacterToon } from "./toon";
+import { CharacterAppearance } from "./appearance";
 import { clampedLookDelta } from "./gaze";
-import type { ZoneStage } from "../content/schema";
 import type { VisualGrade } from "../world/visual-grade";
-import type { QualityTier } from "../world/types";
 
 function box(w:number,h:number,d:number,color:number,r=.65) {
   return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:r}));
@@ -30,11 +28,11 @@ function umbrella() {
   const group = new THREE.Group();
   const canopy = new THREE.Mesh(
     new THREE.ConeGeometry(.48, .18, 24, 1, true),
-    new THREE.MeshToonMaterial({ color: 0xd8b34d, side: THREE.DoubleSide }),
+    new THREE.MeshStandardMaterial({ color: 0xd8b34d, side: THREE.DoubleSide, roughness: .8 }),
   );
   const stick = new THREE.Mesh(
     new THREE.CylinderGeometry(.008, .008, 1.25, 8),
-    new THREE.MeshToonMaterial({ color: 0x59422f }),
+    new THREE.MeshStandardMaterial({ color: 0x59422f, roughness: .7 }),
   );
   canopy.position.y = 1.72;
   canopy.rotation.x = Math.PI;
@@ -67,9 +65,9 @@ export class CharacterActor {
   private handOrientation=new THREE.Quaternion();
   private interactionUnit=1;
   private grips=new Map<string,{position:THREE.Vector3;rotation:THREE.Quaternion}>();
-  readonly toon = new CharacterToon();
+  readonly appearance = new CharacterAppearance();
   private sourceMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
-  private sponsorMaterial?:THREE.MeshToonMaterial;
+  private sponsorMaterial?:THREE.MeshStandardMaterial;
   private sponsorTexture?:THREE.Texture;
   private sponsorUrl?:string;
   private sponsorRevision=0;
@@ -129,15 +127,13 @@ export class CharacterActor {
         }
         this.sourceMaterials.set(object, object.material);
         object.material = Array.isArray(object.material)
-          ? object.material.map((material) => this.toon.convert(material)) : this.toon.convert(object.material);
+          ? object.material.map((material) => this.appearance.convert(material)) : this.appearance.convert(object.material);
         if(object.name.replace(/[^a-z0-9]/gi,"").toLowerCase()==="sponsorpatch") {
           const material = Array.isArray(object.material) ? object.material[0] : object.material;
-          if (material instanceof THREE.MeshToonMaterial) this.sponsorMaterial = material;
+          if (material instanceof THREE.MeshStandardMaterial) this.sponsorMaterial = material;
         }
       }
     });
-    // Add siblings only after traversal so outlines cannot recursively clone themselves.
-    for (const mesh of this.sourceMaterials.keys()) this.toon.addOutline(mesh);
     this.root.add(this.water,this.device,this.umbrella);
     this.water.visible=this.device.visible=this.umbrella.visible=false;
     if(withProps&&this.hand) {
@@ -146,8 +142,8 @@ export class CharacterActor {
       this.water.visible=this.device.visible=false;
     }
   }
-  setAppearance(stage: ZoneStage, grade: VisualGrade, quality: QualityTier) {
-    this.toon.update(stage, grade, quality);
+  setAppearance(grade: VisualGrade) {
+    this.appearance.update(grade);
   }
   hasClip(clip: CharacterClip) { return this.actions.has(clip); }
   availableClips() { return new Set(this.actions.keys()); }
@@ -277,6 +273,6 @@ export class CharacterActor {
     this.sponsorRevision+=1;this.sponsorTexture?.dispose();
     this.bottleRevision+=1;this.bottleTexture?.dispose();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.root);
     this.sourceMaterials.forEach((material, mesh) => { mesh.material = material; });
-    this.toon.dispose();
+    this.appearance.dispose();
   }
 }

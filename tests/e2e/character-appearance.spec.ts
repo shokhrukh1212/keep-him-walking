@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { tbilisiCountryPackV1 } from "../../src/content/countries/tbilisi.v1";
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
-  test(`toon composition, contacts and quality at ${viewport.width}px`, async ({ page }, testInfo) => {
+  test(`character composition, contacts and quality at ${viewport.width}px`, async ({ page }, testInfo) => {
     test.setTimeout(240_000);
     await page.setViewportSize(viewport);
     const errors: string[] = [];
@@ -11,7 +11,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.goto("/preview/characters");
     const actor = page.getByTestId("character-stage-3d");
     await expect(actor).toHaveAttribute("data-character-ready", "true", { timeout: 60_000 });
-    await expect.poll(async () => Number(await actor.getAttribute("data-toon-materials"))).toBeGreaterThan(0);
+    await expect.poll(async () => Number(await actor.getAttribute("data-graded-materials"))).toBeGreaterThan(0);
     for (const zone of tbilisiCountryPackV1.route.zones) {
       await page.getByLabel("Review setting").selectOption(zone.id);
       const world = page.locator(".pixi-scene");
@@ -33,17 +33,15 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await expect(world).toHaveAttribute("data-scene-textures", new RegExp(zone.id));
     }
     await page.getByLabel("Review quality").selectOption("low");
-    await expect(actor).toHaveAttribute("data-outline", "false");
     await expect(page.locator(".pixi-scene")).toHaveAttribute("data-shadow-visible", "true");
     await page.getByLabel("Review quality").selectOption("high");
-    await expect(actor).toHaveAttribute("data-outline", "true");
     await page.getByLabel("Preview action").selectOption("encounter");
     await expect(actor).toHaveAttribute("data-resident-ready", "true", { timeout: 60_000 });
     await page.getByLabel("Animation timeline").fill("8");
     await expect(page.locator(".pixi-scene")).toHaveAttribute("data-shadow-visible", "true");
     await expect.poll(async () => Number(await page.locator(".pixi-scene").getAttribute("data-shadow-x")))
       .toBeCloseTo(viewport.width * (viewport.width <= 600 ? 0.34 : 0.43), 0);
-    await page.screenshot({ path: testInfo.outputPath(`tbilisi-toon-${viewport.width}.png`) });
+    await page.screenshot({ path: testInfo.outputPath(`tbilisi-character-${viewport.width}.png`) });
     await page.getByRole("button", { name: "Reload characters" }).click();
     await expect(actor).toHaveAttribute("data-character-ready", "true", { timeout: 60_000 });
     await expect(page.locator(".pixi-scene")).toHaveAttribute("data-shadow-visible", "true");

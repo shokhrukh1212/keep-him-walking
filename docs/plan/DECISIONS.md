@@ -58,6 +58,7 @@ route order conflict. The safety rules and two-stage Day-1 vote remain in force.
 | Launch art | Build London, Paris, Brussels and Berlin only: five day-zone paintings and one night landmark per city. Owner makes the paintings after accepting one London pilot. | `08-LAUNCH-READINESS.md` R1/R7 |
 | UI | Reactions at top centre, one audience control top right, status/progress low centre and Vote/Journey/Sponsor in the footer. | `08-LAUNCH-READINESS.md` R3 |
 | Weather | Keep the implementation but hide it and stop provider requests for launch behind a reversible flag. | `08-LAUNCH-READINESS.md` R9 |
+| Character look | **12 September 2026:** he and the residents must look like real, natural people. Implemented as smooth shading with no toon bands, no outlines and no extra night lights; the owner's visual acceptance is still pending. This supersedes the toon-shading and outline steps in `01-PRODUCT.md`, `03-CHARACTERS.md` and prompt P3 of `07-CODEX-PROMPTS.md`. | `TECHNICAL.md` §6.1–6.2 |
 
 ## Owner work still needed before launch
 

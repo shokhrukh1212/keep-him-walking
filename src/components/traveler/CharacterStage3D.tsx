@@ -6,7 +6,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CharacterActor } from "@/lib/characters/actor";
 import { CHARACTER_CANDIDATES, candidateResident, type CharacterCandidate, type ResidentType, type ReviewAction } from "@/lib/characters/manifest";
 import { reviewDuration, sampleScene, type SceneCue } from "@/lib/characters/timeline";
-import { CharacterLights } from "@/lib/characters/toon";
+import { CharacterLights } from "@/lib/characters/appearance";
 import { loadCharacterGltf } from "@/lib/characters/loader";
 import { stageSchema } from "@/lib/content/schema";
 import { frameFitsViewport, type StageFrame } from "@/lib/world/stage-layout";
@@ -124,11 +124,9 @@ export function CharacterStage3D(props:Props) {
         return;
       }
       const stage=frame?.stage??studioStage;
-      lights.update(stage,state.grade.current);
-      actor?.toon.viewport.value.set(element.clientWidth,element.clientHeight);
-      npc?.toon.viewport.value.set(element.clientWidth,element.clientHeight);
-      actor?.setAppearance(stage,state.grade.current,state.qualityTier);
-      npc?.setAppearance(stage,state.grade.current,state.qualityTier);
+      lights.update(stage);
+      actor?.setAppearance(state.grade.current);
+      npc?.setAppearance(state.grade.current);
       camera.zoom=frame?1:cue.cameraZoom;
       // Focus must not push the shared floor below the mobile viewport.
       const width=element.clientWidth,height=element.clientHeight;
@@ -163,9 +161,8 @@ export function CharacterStage3D(props:Props) {
       element.dataset.footY=String((1-foot.y)*height/2);
       element.dataset.personHeight=String(scale*1.78);
       element.dataset.zoneId=frame?.zoneId??"studio";
-      element.dataset.outline=String(state.qualityTier!=="low");
       element.dataset.grade=JSON.stringify(state.grade.current);
-      element.dataset.toonMaterials=String(actor?.toon.materials.size??0);
+      element.dataset.gradedMaterials=String(actor?.appearance.materials.size??0);
       renderer.render(scene,camera);
       cpuFrames.push(performance.now()-frameStart);if(cpuFrames.length>120)cpuFrames.shift();
       if(snap||now-lastReport>100){

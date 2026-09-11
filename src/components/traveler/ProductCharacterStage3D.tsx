@@ -6,7 +6,7 @@ import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import type { CountryPack } from "@/lib/content/schema";
 import { CharacterActor } from "@/lib/characters/actor";
-import { CharacterLights } from "@/lib/characters/toon";
+import { CharacterLights } from "@/lib/characters/appearance";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 import { CHARACTER_MANIFEST, RESIDENT_TYPES, type ResidentType } from "@/lib/characters/manifest";
 import { loadCharacterGltf } from "@/lib/characters/loader";
@@ -315,11 +315,9 @@ export function ProductCharacterStage3D(props: Props) {
         return;
       }
       updateCamera(width, height, frame);
-      lights.update(frame.stage, state.grade.current);
-      traveler?.toon.viewport.value.set(element.clientWidth, element.clientHeight);
-      resident?.toon.viewport.value.set(element.clientWidth, element.clientHeight);
-      traveler?.setAppearance(frame.stage, state.grade.current, state.qualityTier);
-      resident?.setAppearance(frame.stage, state.grade.current, state.qualityTier);
+      lights.update(frame.stage);
+      traveler?.setAppearance(state.grade.current);
+      resident?.setAppearance(state.grade.current);
       const vertical = CHARACTER_MANIFEST.traveler.heightMetres * height / frame.layout.personHeightPx;
       const horizontal = vertical * width / height;
       const defaultAnchor = state.pack.schemaVersion === 3 ? state.pack.route.travelerViewportAnchor : 0.61;
@@ -358,7 +356,6 @@ export function ProductCharacterStage3D(props: Props) {
       element.dataset.personHeight = String((head.y - foot.y) * height / 2);
       element.dataset.characterImageScale = String(frame.layout.characterImageScale);
       element.dataset.zoneId = frame.zoneId;
-      element.dataset.outline = String(state.qualityTier !== "low");
       element.dataset.grade = JSON.stringify(state.grade.current);
 
       // ---- People passing on his pavement. A pass starts on the shared watched clock,
@@ -449,8 +446,7 @@ export function ProductCharacterStage3D(props: Props) {
           false,
           1.8,
         );
-        walker.actor.toon.viewport.value.set(width, height);
-        walker.actor.setAppearance(frame.stage, state.grade.current, state.qualityTier);
+        walker.actor.setAppearance(state.grade.current);
         walkerContacts.push({
           footX: (x / horizontal + 0.5) * width,
           footY: frame.layout.groundY - walker.placement.footY * frame.layout.pxPerMetre,

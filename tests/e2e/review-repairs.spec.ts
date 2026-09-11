@@ -4,7 +4,7 @@ import sharp from "sharp";
 // The sign-in test uses a real local secret: never record its request in a trace.
 test.use({ trace: "off", screenshot: "off", video: "off" });
 
-test("the outline stays within three pixels of the idle silhouette", async ({ page }, testInfo) => {
+test("changing quality leaves the idle silhouette within three pixels", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   const errors: string[] = [];
@@ -29,14 +29,12 @@ test("the outline stays within three pixels of the idle silhouette", async ({ pa
     return { top, bottom, left, right };
   };
   await page.getByLabel("Review quality").selectOption("low");
-  await expect(stage).toHaveAttribute("data-outline", "false");
   const low = await bounds();
   await page.getByLabel("Review quality").selectOption("high");
-  await expect(stage).toHaveAttribute("data-outline", "true");
   const high = await bounds();
   expect(low.bottom - low.top).toBeGreaterThan(400);
   for (const edge of ["top", "bottom", "left", "right"] as const) expect(Math.abs(high[edge] - low[edge])).toBeLessThanOrEqual(3);
-  await page.screenshot({ path: testInfo.outputPath("character-outline.png") });
+  await page.screenshot({ path: testInfo.outputPath("character-quality.png") });
   await page.getByLabel("Studio lighting").selectOption("23");
   await expect(stage).toHaveAttribute("data-grade", /0.62/);
   await page.screenshot({ path: testInfo.outputPath("character-night.png") });
