@@ -17,7 +17,7 @@ finish rather than what it got wrong.
 | # | Item | Blocks launch? | Whose call |
 |---|---|---|---|
 | D1 | His 3D model is bigger than the target | No | Owner (visual) |
-| D2 | The 1,000-viewer load test has not been run on current code | **Yes, effectively** | Owner (needs a deployed Preview) |
+| D2 | The 1,000-viewer load test has not been run on current code | No — owner deferred it to after launch (11 Sep 2026) | Owner (needs a deployed Preview) |
 | D3 | Lit windows at dusk have no artwork | No | Owner (art) |
 | D4 | Sofia has one source painting instead of the six the pack builder needs | No | Owner (art) |
 | D5 | The production scheduler may run launch jobs late | **Yes** | Owner (hosting) |
@@ -56,6 +56,10 @@ visitor, which matters only if a day goes viral on a free-tier host.
 ---
 
 ## D2 — The 1,000-viewer load test has never been run against this code
+
+**Owner decision, 11 September 2026:** launch without this test. The owner will watch
+how the first real audience behaves and run the full 1,000-viewer test after launch.
+Everything below still stands until the test is run.
 
 **What it is.** The test that answers "does the site survive 1,000 people watching at
 the same time". The numbers currently in `docs/phase-3-results.md` were measured on

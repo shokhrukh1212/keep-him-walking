@@ -168,8 +168,9 @@ Every package has two independent completion marks:
   refund rehearsal after the owner supplies private credentials.
 - [ ] Set the production launch timestamp only after gates pass. Before then the public
   page shows the exact start time and zero simulated progress.
-- [ ] Record 10–20 stranger comprehension sessions, physical low/mid phone evidence,
-  and a current 1,000-viewer Preview load run.
+- [ ] Record 10–20 stranger comprehension sessions and physical low/mid phone evidence.
+  The 1,000-viewer Preview load run is deferred to after launch by owner decision
+  (11 September 2026); see `AFTER-P22.md` D2.
 - [ ] Record the launch and fallback screen video only after the visual pilot and HUD
   are accepted.
 
@@ -185,5 +186,6 @@ Every package has two independent completion marks:
 Launch is allowed only when every **Verified** item that affects the London/Paris path
 is complete, R1/R3/R7 are owner-accepted, the payment and scheduler gates are resolved,
 all public launch packs are culturally approved, physical-phone evidence is recorded,
-the current 1,000-viewer test passes, and the seed is rehearsed against a protected
-Preview. Anything else remains in `AFTER-P22.md` in its three-part owner form.
+and the seed is rehearsed against a protected Preview. The 1,000-viewer test is deferred
+to after launch by owner decision (`AFTER-P22.md` D2). Anything else remains in
+`AFTER-P22.md` in its three-part owner form.
