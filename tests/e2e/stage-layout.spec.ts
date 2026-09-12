@@ -5,8 +5,8 @@ import { tbilisiCountryPackV1 } from "../../src/content/countries/tbilisi.v1";
 import { tashkentCountryPackV4 } from "../../src/content/countries/tashkent.v4";
 import { stageLayout } from "../../src/lib/world/stage-layout";
 import { DEFAULT_CHARACTER_HEIGHT_TARGETS } from "../../src/lib/world/stage-targets";
-import { dailyActiveWalkingSecondsAt, travelerMotionAt } from "../../src/lib/traveler/motion-clock";
-import { scenePositionAt } from "../../src/lib/world/route-clock";
+import { travelerMotionAt } from "../../src/lib/traveler/motion-clock";
+import { activeWalkingSecondsAt, scenePositionAt } from "../../src/lib/world/route-clock";
 
 // Geometric assertions only: no screenshots, recordings, remote database or live writes.
 test.use({ trace: "off", screenshot: "off", video: "off", deviceScaleFactor: 1 });
@@ -14,14 +14,14 @@ test.use({ trace: "off", screenshot: "off", video: "off", deviceScaleFactor: 1 }
 for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
   for (const viewport of [{width: 390, height: 844}, {width: 1440, height: 900}]) {
     test(`${pack.assetVersion} shares the painted ground at ${viewport.width} × ${viewport.height}`, async ({ page }) => {
-      // Software WebGL on CI is much slower at desktop resolution; cover all five
-      // zones plus resize without treating total render time as a layout failure.
+      // Software WebGL on CI is much slower at desktop resolution; cover every
+      // place plus resize without treating total render time as a layout failure.
       test.setTimeout(240_000);
       await page.setViewportSize(viewport);
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
-      // Start in a walking interval clear of the first action; freeze the authority
-      // so camera agreement isn't confused with network/extrapolation timing.
+      // Freeze the authority so camera agreement isn't confused with
+      // network/extrapolation timing. No stops are scheduled in this fixture.
       let rawSeconds = 60;
       await page.route("**/api/**", async (route) => {
         const now = new Date().toISOString();
@@ -46,11 +46,11 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
       await expect(actor).toHaveAttribute("data-character-ready", "true", {timeout: 60_000});
       await expect(page.locator(".scene-stage")).toHaveAttribute("data-renderer", "pixi", {timeout: 30_000});
       for (const [index, zone] of pack.route.zones.entries()) {
-        // Locate a raw authoritative time in this 18-minute scene visit. Distance
+        // Locate a raw authoritative time in this place's visit. Distance
         // intentionally does not select paintings anymore.
-        for (let seconds = 60; seconds < 7_000; seconds += 1) {
+        for (let seconds = 60; seconds < 20_000; seconds += 1) {
           const motion = travelerMotionAt(pack, seconds);
-          const scene = scenePositionAt(pack, dailyActiveWalkingSecondsAt(pack, seconds));
+          const scene = scenePositionAt(pack, activeWalkingSecondsAt(seconds));
           if (scene.zoneIndex === index && scene.secondsIntoVisit > 10 && !motion.action) { rawSeconds = seconds; break; }
         }
         await expect(world).toHaveAttribute("data-zone-id", zone.id, {timeout: 30_000});

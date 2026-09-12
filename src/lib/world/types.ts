@@ -23,6 +23,23 @@ export type ScenePosition = {
   cycleIndex: number;
   secondsIntoVisit: number;
   visitProgress: number;
+  /** How many places the pinned manifest loops through. */
+  placeCount: number;
+  /** Active-walking seconds each place is shown for. */
+  visitSeconds: number;
+  nextZoneIndex: number;
+  /** Active-walking seconds until the next place; it pauses while he stops or waits. */
+  secondsToNextVisit: number;
+};
+
+/**
+ * The server's walking-clock anchor: at `anchorActiveSeconds` of watched time,
+ * `heldActiveSeconds` had been spent inside stop windows. Every later second is
+ * derived from the rows around it, so old rows never need to be resent.
+ */
+export type WalkingClock = {
+  anchorActiveSeconds: number;
+  heldActiveSeconds: number;
 };
 
 export type MotionPhase = Extract<

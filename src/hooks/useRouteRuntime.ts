@@ -2,9 +2,10 @@
 
 import { useMemo } from "react";
 import type { BootstrapSnapshot, HeartbeatResponse } from "@/lib/contracts";
-import { dailyActiveWalkingSecondsAt, travelerMotionAt } from "@/lib/traveler/motion-clock";
-import { mergeScheduledActions } from "@/lib/reactions/payload";
+import { travelerMotionAt } from "@/lib/traveler/motion-clock";
+import { mergeScheduledActions, newestWalkingClock } from "@/lib/reactions/payload";
 import {
+  activeWalkingSecondsAt,
   extrapolatedRouteDistance,
   extrapolatedRouteSeconds,
   scenePositionAt,
@@ -25,29 +26,35 @@ export function useRouteRuntime(
           walking: heartbeat.walking,
         }
       : snapshot.route;
-    // Crowd actions the server has already committed to, from whichever of the
-    // two authoritative payloads carried them.
+    // Stops the server has already committed to, from whichever of the two
+    // authoritative payloads carried them.
     const scheduledActions = mergeScheduledActions(
       snapshot.reactions.scheduled,
       heartbeat?.reactions?.scheduled,
     );
+    const walkingClock = newestWalkingClock(
+      snapshot.reactions.walkingClock,
+      heartbeat?.reactions?.walkingClock,
+    );
     const rawSeconds = extrapolatedRouteSeconds(runtime, serverNowMs);
-    const walkingSeconds = dailyActiveWalkingSecondsAt(snapshot.assets, rawSeconds, scheduledActions);
+    const walkingSeconds = activeWalkingSecondsAt(rawSeconds, scheduledActions, walkingClock);
     const distanceMetres = extrapolatedRouteDistance(runtime, serverNowMs, scheduledActions);
     const motion = travelerMotionAt(
       snapshot.assets,
       rawSeconds,
       distanceMetres,
       scheduledActions,
+      walkingClock,
     );
     return {
       runtime,
       rawSeconds,
       distanceMetres,
       scheduledActions,
+      walkingClock,
       motion,
       seconds: walkingSeconds,
       position: scenePositionAt(snapshot.assets, walkingSeconds),
     };
-  }, [heartbeat, serverNowMs, snapshot.assets, snapshot.reactions.scheduled, snapshot.route]);
+  }, [heartbeat, serverNowMs, snapshot.assets, snapshot.reactions.scheduled, snapshot.reactions.walkingClock, snapshot.route]);
 }

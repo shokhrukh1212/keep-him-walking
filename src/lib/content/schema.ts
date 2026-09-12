@@ -48,6 +48,8 @@ export const travelerStateSchema = z.enum([
   "tie_shoe",
   "cheer",
   "stumble",
+  "stretch",
+  "yawn",
   "goodbye",
   "resume_walk",
 ]);
@@ -177,17 +179,50 @@ export const continuousSceneSchema = z.object({
   groundHeightFrac: z.number().min(0.08).max(0.45).default(0.22),
 }).strict();
 
+/** A semantic place tag: `cafe`, `landmark`, `river`. Stories and scripts select by tag, never by id. */
+export const placeTagSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(40);
+
+/**
+ * One compressed rendition of a place layer. `crop: "center"` keeps the full
+ * height and the middle of the painting, so a portrait screen that only ever
+ * shows the middle never downloads or decodes the edges.
+ */
+export const sceneVariantSchema = z.object({
+  url: z.string().startsWith("/"),
+  width: z.number().int().positive().max(8_192),
+  height: z.number().int().positive().max(8_192),
+  bytes: z.number().int().nonnegative(),
+  crop: z.enum(["full", "center"]).default("full"),
+}).strict();
+
+/**
+ * Immutable, content-addressed renditions of one place. Layout always uses the
+ * nominal full-painting size, so swapping a smaller rendition never moves the
+ * painting, the pavement or the traveler.
+ */
+export const zoneVariantsSchema = z.object({
+  nominalWidth: z.number().int().positive().max(8_192),
+  nominalHeight: z.number().int().positive().max(8_192),
+  city: z.array(sceneVariantSchema).min(1),
+  sky: z.array(sceneVariantSchema).default([]),
+  ground: z.array(sceneVariantSchema).default([]),
+  night: z.array(sceneVariantSchema).default([]),
+}).strict();
+
 export const DEFAULT_ZONE_LENGTH_METRES = [1_200, 1_600, 1_600, 1_400, 2_200] as const;
 
 /**
  * Zone ids are city-specific slugs (`plov-cafe`, `riverside-cafe`, `chaikhana`), so
  * only the ordinal position is canonical. `kind` names it once instead of leaving
- * every consumer to match substrings.
+ * every consumer to match substrings. `tags` carry the semantics for manifests
+ * with more (or fewer) than five places.
  */
 export const ZONE_KINDS = ["arrival", "lanes", "market", "cafe", "landmark"] as const;
 export const DEFAULT_ZONE_KINDS = ZONE_KINDS;
 export const DEFAULT_DAY_ROUTE_METRES = 8_000;
 export const DEFAULT_MARATHON_METRES = 42_195;
+/** Each place is shown for this many authoritative active-walking seconds before the next. */
+export const DEFAULT_SCENE_VISIT_SECONDS = 7 * 60;
 
 export const routeZoneSchema = z.object({
   stage: stageSchema.prefault({}),
@@ -195,6 +230,10 @@ export const routeZoneSchema = z.object({
   label: z.string().min(1),
   /** What this zone is, independent of its city-specific id. Defaults by position. */
   kind: z.enum(ZONE_KINDS).default("arrival"),
+  /** Semantic tags for stories and scripts. Defaults to `[kind]`. */
+  tags: z.array(placeTagSchema).max(12).default([]),
+  /** One short reviewed sentence shown when a visitor asks about the place. */
+  description: z.string().min(1).max(160).optional(),
   lengthMetres: z.number().positive().max(100_000).default(DEFAULT_ZONE_LENGTH_METRES[0]),
   /** @deprecated Kept so older packs validate; route progress no longer reads it. */
   durationActiveSeconds: z.number().int().min(45).max(21_600),
@@ -217,6 +256,8 @@ export const routeZoneSchema = z.object({
   }).strict(),
   fallbackUrl: z.string().startsWith("/"),
   continuousScene: continuousSceneSchema.optional(),
+  /** Content-addressed renditions; absent on packs built before variable manifests. */
+  variants: zoneVariantsSchema.optional(),
   /**
    * The night master for this zone, when one has been painted. Present zones
    * cross-fade to it across dusk; absent ones are graded to night instead.
@@ -239,21 +280,25 @@ function routeSchemaWithDistanceDefaults() {
       zones: route.zones.map((zone, index) => {
         if (!zone || typeof zone !== "object" || Array.isArray(zone)) return zone;
         const value = zone as Record<string, unknown>;
+        const kind = value.kind
+          ?? DEFAULT_ZONE_KINDS[index]
+          ?? DEFAULT_ZONE_KINDS[DEFAULT_ZONE_KINDS.length - 1];
         return {
           ...value,
           lengthMetres: value.lengthMetres
             ?? DEFAULT_ZONE_LENGTH_METRES[index]
             ?? DEFAULT_ZONE_LENGTH_METRES[DEFAULT_ZONE_LENGTH_METRES.length - 1],
-          kind: value.kind
-            ?? DEFAULT_ZONE_KINDS[index]
-            ?? DEFAULT_ZONE_KINDS[DEFAULT_ZONE_KINDS.length - 1],
+          kind,
+          tags: Array.isArray(value.tags) && value.tags.length > 0 ? value.tags : [kind],
         };
       }),
     };
   }, z.object({
     worldUnitsPerSecond: z.number().positive().max(300),
     travelerViewportAnchor: z.number().min(0.55).max(0.65),
-    zones: z.array(routeZoneSchema).min(4).max(6),
+    /** A variable-length, ordered manifest of places; the day loops through all of them. */
+    zones: z.array(routeZoneSchema).min(1).max(24),
+    sceneVisitSeconds: z.number().int().min(60).max(3_600).default(DEFAULT_SCENE_VISIT_SECONDS),
   }).strict());
 }
 
@@ -321,7 +366,10 @@ export const storyBeatSchema = z.preprocess((candidate) => {
 }, z.object({
   id: z.string().min(1),
   kind: z.enum(["arrival", "encounter", "food", "landmark", "departure"]),
+  /** @deprecated Legacy distance anchor. Stories now happen on the first visit to `placeTag`. */
   atMetres: z.number().nonnegative().max(1_000_000).nullable(),
+  /** The place a story belongs to. Defaults by kind (arrival, lanes, cafe, landmark). */
+  placeTag: placeTagSchema.optional(),
   durationSeconds: z.number().int().min(15).max(1_800),
   title: z.string().min(1),
   summary: z.string().min(1).max(360),
@@ -331,6 +379,25 @@ export const storyBeatSchema = z.preprocess((candidate) => {
 }).refine((beat) => beat.kind === "departure" ? beat.atMetres === null : beat.atMetres !== null, {
   message: "Only departure remains time-based; all other story beats require atMetres",
 });
+
+/**
+ * A short reviewed exchange a resident can have with him. An empty `lines`
+ * array is never valid here: a wordless greeting is chosen by the scheduler,
+ * not authored as a script.
+ */
+export const conversationScriptSchema = z.object({
+  id: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80),
+  /** The resident model who speaks. Defaults to the pack's `npcSystem.baseType`. */
+  residentType: z.enum(["resident-a", "resident-b"]).optional(),
+  /** The fictional resident's name. Defaults to `resident.name`. */
+  speakerName: z.string().min(1).max(80).optional(),
+  /** Places where the words make sense. Empty means anywhere. */
+  placeTags: z.array(placeTagSchema).max(12).default([]),
+  /** `story` is the once-a-day scripted encounter; `ambient` joins the rotation. */
+  role: z.enum(["story", "ambient"]).default("ambient"),
+  review: z.enum(["pending", "creator_reviewed", "approved"]).default("pending"),
+  lines: z.array(dialogueLineSchema).min(1).max(8),
+}).strict();
 
 export const preloadGroupSchema = z.object({
   id: z.string().min(1),
@@ -384,6 +451,11 @@ export const countryPackV3Schema = baseCountryPackSchema
       variantId: z.string().min(2).default("resident-a"),
     }).strict().prefault({}),
     notebookLines: z.array(z.string().min(1).max(240)).max(8).default([]),
+    /**
+     * Reviewed exchanges for the conversation rotation. Empty means the pack's
+     * single encounter is the only script, as it was before rotations existed.
+     */
+    conversations: z.array(conversationScriptSchema).max(40).default([]),
     npcSystem: z.object({
       baseType: z.enum(["resident-a", "resident-b"]),
       variantId: z.string().min(2),
@@ -412,6 +484,13 @@ export const countryPackV3Schema = baseCountryPackSchema
       });
     }
     const zoneIds = new Set(pack.route.zones.map((zone) => zone.id));
+    if (zoneIds.size !== pack.route.zones.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["route", "zones"],
+        message: "Place ids must be unique within a manifest",
+      });
+    }
     for (const group of pack.preloadGroups) {
       if (group.zoneId && !zoneIds.has(group.zoneId)) {
         context.addIssue({
@@ -430,6 +509,17 @@ export const countryPackV3Schema = baseCountryPackSchema
           message: `Unknown encounter ${beat.encounterId}`,
         });
       }
+    }
+    const scriptIds = new Set<string>();
+    for (const script of pack.conversations) {
+      if (scriptIds.has(script.id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["conversations"],
+          message: `Duplicate conversation ${script.id}`,
+        });
+      }
+      scriptIds.add(script.id);
     }
   });
 
@@ -451,6 +541,10 @@ export type RouteLayer = z.infer<typeof routeLayerSchema>;
 export type RouteProp = z.infer<typeof routePropSchema>;
 export type RouteZone = z.infer<typeof routeZoneSchema>;
 export type TravelerState = z.infer<typeof travelerStateSchema>;
+export type SceneVariant = z.infer<typeof sceneVariantSchema>;
+export type ZoneVariants = z.infer<typeof zoneVariantsSchema>;
+export type ConversationScript = z.infer<typeof conversationScriptSchema>;
+export type StoryBeat = CountryPackV3["storyBeats"][number];
 
 /** Packs a destination vote may offer: reviewed by the creator or a qualified local. */
 export const VOTE_READY_REVIEW_STATUSES = ["approved", "creator_reviewed"] as const;
@@ -459,4 +553,17 @@ export function isVoteReadyPack(pack: CountryPack): boolean {
   if (pack.schemaVersion !== 3) return false;
   return (VOTE_READY_REVIEW_STATUSES as readonly string[])
     .includes(pack.culturalReview.status);
+}
+
+/** The place tag a story belongs to when the pack does not name one. */
+const DEFAULT_BEAT_PLACE_TAGS = {
+  arrival: "arrival",
+  encounter: "lanes",
+  food: "cafe",
+  landmark: "landmark",
+  departure: null,
+} as const;
+
+export function storyBeatPlaceTag(beat: StoryBeat): string | null {
+  return beat.placeTag ?? DEFAULT_BEAT_PLACE_TAGS[beat.kind];
 }

@@ -1,224 +1,148 @@
 import { describe, expect, it } from "vitest";
 import { tashkentCountryPackV4 } from "@/content/countries/tashkent.v4";
+import type { ScheduledActionView } from "@/lib/contracts";
 import {
-  ACTION_DURATIONS,
+  actionDurationSeconds,
+  conversationDurationSeconds,
+  conversationScripts,
+  conversationSpeakerName,
+} from "@/lib/world/activities";
+import {
   METRES_PER_SECOND,
   METRES_PER_STEP,
+  crowdActionKindOf,
   travelerMotionAt,
-  systemActionAt,
   visibleStepsBetween,
 } from "./motion-clock";
 
+const pack = tashkentCountryPackV4;
+
+function stop(kind: ScheduledActionView["kind"], at: number, extra: Partial<ScheduledActionView> = {}): ScheduledActionView {
+  const duration = kind === "conversation" || kind === "greeting" ? 20 : actionDurationSeconds(kind);
+  return { kind, atActiveSecond: at, endsAtActiveSecond: at + duration, source: "system", ...extra };
+}
+
 describe("traveler motion clock", () => {
   it("counts one step per 600ms plant and travels 750mm per plant", () => {
-    // Start after the short arrival action so this interval is uninterrupted.
     const start = 20;
-    const before = travelerMotionAt(tashkentCountryPackV4, start);
-    const after = travelerMotionAt(tashkentCountryPackV4, start + 12);
+    const before = travelerMotionAt(pack, start);
+    const after = travelerMotionAt(pack, start + 12);
     expect(after.plantIndex - before.plantIndex).toBe(20);
     expect(after.distanceMetres - before.distanceMetres).toBeCloseTo(20 * METRES_PER_STEP, 5);
-    expect(visibleStepsBetween(tashkentCountryPackV4, start, start + 12)).toBe(20);
-  });
-
-  it("schedules the arrival story on its first matching scene visit", () => {
-    const arrivalAt = 15;
-    const before = travelerMotionAt(tashkentCountryPackV4, arrivalAt - 0.01);
-    const during = travelerMotionAt(tashkentCountryPackV4, arrivalAt + ACTION_DURATIONS.wave - 0.01);
-    expect(during.action?.kind).toBe("wave");
-    expect(during.routeSeconds).toBeGreaterThan(before.routeSeconds);
-    expect(during.plantIndex-before.plantIndex).toBeLessThanOrEqual(2);
-    expect(during.distanceMetres).toBeGreaterThan(before.distanceMetres);
-  });
-
-  it("uses exact bounded action durations and resumes walking immediately", () => {
-    let raw = 4 * 18 * 60;
-    while (travelerMotionAt(tashkentCountryPackV4, raw).action?.kind !== "photo") raw += 0.25;
-    const start = travelerMotionAt(tashkentCountryPackV4, raw);
-    expect(start.action?.kind).toBe("photo");
-    expect(start.action?.durationSeconds).toBe(ACTION_DURATIONS.photo);
-    const resumed = travelerMotionAt(
-      tashkentCountryPackV4,
-      raw + ACTION_DURATIONS.photo + 0.05,
-    );
-    expect(resumed.action).toBeNull();
-    expect(resumed.locomotionSeconds).toBeGreaterThan(start.locomotionSeconds);
+    expect(visibleStepsBetween(pack, start, start + 12)).toBe(20);
   });
 
   it("always returns one of the six approved gait poses", () => {
     for (let sample = 0; sample < 120; sample += 1) {
-      expect(travelerMotionAt(tashkentCountryPackV4, 20 + sample / 20).gaitFrameIndex)
-        .toBeGreaterThanOrEqual(0);
-      expect(travelerMotionAt(tashkentCountryPackV4, 20 + sample / 20).gaitFrameIndex)
-        .toBeLessThan(6);
+      const frame = travelerMotionAt(pack, 20 + sample / 20).gaitFrameIndex;
+      expect(frame).toBeGreaterThanOrEqual(0);
+      expect(frame).toBeLessThan(6);
+    }
+  });
+
+  it("does not invent a stop the server has not scheduled", () => {
+    for (let seconds = 0; seconds < 7_200; seconds += 7) {
+      expect(travelerMotionAt(pack, seconds).action).toBeNull();
     }
   });
 });
 
-describe("deterministic system actions", () => {
-  it("chooses one daily stumble and cheers at the marathon", () => {
-    let stumble: ReturnType<typeof systemActionAt> = null;
-    for (let metres = 2_000; metres < 6_000 && !stumble; metres += .25) {
-      const action = systemActionAt(tashkentCountryPackV4, 10_000, metres);
-      if (action?.kind === "stumble") stumble = action;
-    }
-    expect(stumble).toMatchObject({ kind: "stumble", source: "system" });
-    expect(systemActionAt(tashkentCountryPackV4, 40_000, tashkentCountryPackV4.marathonMetres + 1))
-      .toMatchObject({ kind: "cheer", source: "system" });
-  });
-
-  it("is identical for repeated inputs", () => {
-    for (let seconds = 0; seconds < 2_000; seconds += 13) {
-      expect(systemActionAt(tashkentCountryPackV4, seconds, 3_000))
-        .toEqual(systemActionAt(tashkentCountryPackV4, seconds, 3_000));
-    }
-  });
-
-  it("selects look-up moments from the authored zone kind, never words in its id", () => {
-    const lanesPack = {
-      ...tashkentCountryPackV4,
-      route: {
-        ...tashkentCountryPackV4.route,
-        zones: tashkentCountryPackV4.route.zones.map((zone, index) => index === 1
-          ? { ...zone, id: "quiet-street", kind: "lanes" as const }
-          : zone),
-      },
-    };
-    const misleadingPack = {
-      ...lanesPack,
-      route: {
-        ...lanesPack.route,
-        zones: lanesPack.route.zones.map((zone, index) => index === 1
-          ? { ...zone, id: "looks-like-landmark", kind: "arrival" as const }
-          : zone),
-      },
-    };
-    const metresInSecondZone = lanesPack.route.zones[0]!.lengthMetres + 100;
-    let lookSecond: number | null = null;
-    for (let seconds = 0; seconds < 540 && lookSecond === null; seconds += 0.25) {
-      if (systemActionAt(lanesPack, seconds, metresInSecondZone)?.kind === "look_up") {
-        lookSecond = seconds;
-      }
-    }
-    expect(lookSecond).not.toBeNull();
-    expect(systemActionAt(misleadingPack, lookSecond!, metresInSecondZone)?.kind).not.toBe("look_up");
-  });
-});
-
-describe("crowd-scheduled actions", () => {
-  const pack = tashkentCountryPackV4;
-  // Far past the last route beat (7,900 m), so the route timeline is quiet.
+describe("server-scheduled stops", () => {
   const quietDistance = 9_000;
-  const quietRaw = quietDistance / METRES_PER_SECOND;
 
-  it("plays a scheduled wave on the plant grid for the full duration", () => {
-    const at = Math.round(quietRaw);
-    const during = travelerMotionAt(pack, at + 1, quietDistance + METRES_PER_SECOND, [
-      { kind: "wave", atActiveSecond: at },
-    ]);
-    expect(during.action?.kind).toBe("wave");
-    expect(during.action?.source).toBe("crowd");
-    expect(during.action?.durationSeconds).toBe(ACTION_DURATIONS.wave);
+  it("plays a stop on the planted-foot grid for its natural length", () => {
+    const rows = [stop("drink", 100)];
+    const during = travelerMotionAt(pack, 101, quietDistance, rows);
+    expect(during.action).toMatchObject({
+      kind: "drink",
+      source: "system",
+      state: "drink",
+      clip: "drink",
+      label: "Taking a drink",
+      durationSeconds: actionDurationSeconds("drink"),
+    });
+    // 100 s is not a plant boundary: it snaps to 100.2 s, the 167th footfall.
+    expect(during.action?.elapsedSeconds).toBeCloseTo(0.8, 5);
   });
 
-  it("does not play before the scheduled second or after it elapses", () => {
-    const at = Math.round(quietRaw) + 10;
-    const before = travelerMotionAt(pack, at - 1, quietDistance, [
-      { kind: "wave", atActiveSecond: at },
-    ]);
-    expect(before.action).toBeNull();
+  it("does not play before its window or after it ends", () => {
+    const rows = [stop("look_around", 200)];
+    expect(travelerMotionAt(pack, 199, quietDistance, rows).action).toBeNull();
+    expect(travelerMotionAt(pack, 200 + actionDurationSeconds("look_around") + 1, quietDistance, rows).action).toBeNull();
+  });
 
-    const after = travelerMotionAt(
-      pack,
-      at + ACTION_DURATIONS.wave + 1,
-      quietDistance + (ACTION_DURATIONS.wave + 1) * METRES_PER_SECOND,
-      [{ kind: "wave", atActiveSecond: at }],
-    );
+  it("holds the gait and the walking clock through a stop, then resumes on the same foot", () => {
+    const rows = [stop("phone", 300)];
+    const atStart = travelerMotionAt(pack, 300, quietDistance, rows);
+    const during = travelerMotionAt(pack, 310, quietDistance, rows);
+    const after = travelerMotionAt(pack, 300 + actionDurationSeconds("phone") + 1.2, quietDistance, rows);
+    expect(during.routeSeconds).toBe(atStart.routeSeconds);
+    expect(during.plantIndex).toBe(atStart.plantIndex);
+    expect(during.speedFactor).toBe(0);
     expect(after.action).toBeNull();
+    expect(after.routeSeconds).toBeCloseTo(atStart.routeSeconds + 1.2, 5);
+    expect(after.plantIndex).toBe(atStart.plantIndex + 2);
+    expect(after.plantedFoot).toBe(atStart.plantedFoot);
   });
 
-  it("aligns the scheduled second onto the 0.6 s planted-foot grid", () => {
-    // A whole second is not a plant boundary: 100 s snaps forward to 100.2 s,
-    // which is the 167th footfall. Everyone therefore starts on the same foot.
-    const snapshot = travelerMotionAt(pack, 100.5, quietDistance, [
-      { kind: "wave", atActiveSecond: 100 },
-    ]);
-    expect(snapshot.action?.kind).toBe("wave");
-    expect(snapshot.action?.elapsedSeconds).toBeCloseTo(0.3, 5);
-    expect(snapshot.action?.elapsedSeconds).not.toBeCloseTo(0.5, 5);
+  it("ignores cancelled and malformed rows rather than inventing a stop", () => {
+    expect(travelerMotionAt(pack, 101, quietDistance, [stop("yawn", 100, { cancelled: true })]).action).toBeNull();
+    expect(travelerMotionAt(pack, 101, quietDistance, [stop("yawn", Number.NaN)]).action).toBeNull();
   });
 
-  it("holds the world while he performs and releases it afterwards", () => {
-    const at = Math.round(quietRaw);
-    const mid = travelerMotionAt(pack, at + 1.5, quietDistance + 1.5 * METRES_PER_SECOND, [
-      { kind: "drink", atActiveSecond: at },
-    ]);
-    expect(mid.action?.kind).toBe("drink");
-    expect(mid.speedFactor).toBe(0);
-
-    const done = travelerMotionAt(pack, at + 20, quietDistance + 20 * METRES_PER_SECOND, [
-      { kind: "drink", atActiveSecond: at },
-    ]);
-    expect(done.action).toBeNull();
-    expect(done.speedFactor).toBe(1);
-  });
-
-  it("never interrupts an encounter and resumes once the goodbye ends", () => {
-    // The encounter starts shortly into the first lanes visit.
-    const insideRaw = 18 * 60 + 15 + ACTION_DURATIONS.wave + 1;
-    const insideDistance = insideRaw * METRES_PER_SECOND;
-    const scheduled = [{ kind: "wave" as const, atActiveSecond: insideRaw }];
-
-    const during = travelerMotionAt(pack, insideRaw + 1, insideDistance, scheduled);
-    expect(during.action?.kind).toBe("encounter");
-    expect(during.action?.source).toBe("route");
-
-    // Once distance carries him past the encounter, the deferred wave starts
-    // from the beginning rather than being dropped.
-    const encounterDuration = during.action!.durationSeconds;
-    const afterRaw = insideRaw + encounterDuration + ACTION_DURATIONS.wave + 0.5;
-    const after = travelerMotionAt(pack, afterRaw, afterRaw * METRES_PER_SECOND, scheduled);
-    expect(after.action?.kind).toBe("wave");
-    expect(after.action?.source).toBe("crowd");
-    // Measured from the end of the goodbye, not from the scheduled second 400 s
-    // earlier — otherwise the wave would have been silently dropped.
-    expect(after.action?.elapsedSeconds).toBeGreaterThanOrEqual(0);
-    expect(after.action?.elapsedSeconds).toBeLessThan(ACTION_DURATIONS.wave);
-  });
-
-  it("pauses the walking clock and step count during a stopping action", () => {
-    const at = Math.round(quietRaw);
-    const withoutCrowd = travelerMotionAt(pack, at + 1, quietDistance + METRES_PER_SECOND);
-    const withCrowd = travelerMotionAt(pack, at + 1, quietDistance + METRES_PER_SECOND, [
-      { kind: "photo", atActiveSecond: at },
-    ]);
-    expect(withCrowd.plantIndex).toBeLessThan(withoutCrowd.plantIndex);
-    expect(withCrowd.locomotionSeconds).toBeLessThan(withoutCrowd.locomotionSeconds);
-    expect(withCrowd.action?.kind).toBe("photo");
-    expect(withoutCrowd.action).toBeNull();
-  });
-
-  it("computes the identical frame for two clients with the same inputs", () => {
-    const at = Math.round(quietRaw);
-    const scheduled = [
-      { kind: "photo" as const, atActiveSecond: at },
-      { kind: "wave" as const, atActiveSecond: at + 200 },
-    ];
-    // The second client receives the same rows in a different order, as an
-    // out-of-order response or a differently sorted bundle would deliver them.
-    const reversed = [...scheduled].reverse();
+  it("computes the identical frame for two clients with the same rows in any order", () => {
+    const rows = [stop("photo", 400, { source: undefined }), stop("stretch", 600)];
+    const reversed = [...rows].reverse();
     for (let offset = 0; offset <= 12; offset += 0.25) {
-      const raw = at + offset;
-      const distance = quietDistance + offset * METRES_PER_SECOND;
-      expect(travelerMotionAt(pack, raw, distance, scheduled))
-        .toEqual(travelerMotionAt(pack, raw, distance, reversed));
+      expect(travelerMotionAt(pack, 400 + offset, quietDistance, rows))
+        .toEqual(travelerMotionAt(pack, 400 + offset, quietDistance, reversed));
     }
   });
 
-  it("ignores malformed rows rather than inventing an action", () => {
-    const at = Math.round(quietRaw);
-    const snapshot = travelerMotionAt(pack, at + 1, quietDistance + METRES_PER_SECOND, [
-      { kind: "wave", atActiveSecond: Number.NaN },
-    ]);
-    expect(snapshot.action).toBeNull();
+  it("names crowd reactions separately from his own actions", () => {
+    const crowd = travelerMotionAt(pack, 101, quietDistance, [stop("wave", 100, { source: undefined })]);
+    expect(crowdActionKindOf(crowd.action)).toBe("wave");
+    expect(crowd.action?.label).toBe("Waving back");
+    const own = travelerMotionAt(pack, 101, quietDistance, [stop("drink", 100)]);
+    expect(crowdActionKindOf(own.action)).toBeNull();
+  });
+
+  it("stays on the server's walking-clock anchor after old rows age out", () => {
+    const clock = { anchorActiveSeconds: 5_000, heldActiveSeconds: 1_200 };
+    expect(travelerMotionAt(pack, 5_010, quietDistance, [], clock).routeSeconds).toBe(3_810);
+  });
+});
+
+describe("conversations", () => {
+  const script = conversationScripts(pack)[0]!;
+  const duration = conversationDurationSeconds(script.lines);
+  const rows = [stop("conversation", 300, { variant: script.id, endsAtActiveSecond: 300 + duration })];
+
+  it("follows the reviewed script, phase by phase, at natural lengths", () => {
+    const at = (seconds: number) => travelerMotionAt(pack, 300 + seconds, 9_000, rows).action!;
+    expect(at(0.5)).toMatchObject({ kind: "conversation", conversationPhase: "notice", state: "notice" });
+    expect(at(1.5).conversationPhase).toBe("stop");
+    expect(at(3.2)).toMatchObject({ conversationPhase: "greet", state: "greet" });
+    const firstLine = at(2.2 + 4.73 + 0.1);
+    expect(firstLine.dialogueLineIndex).toBe(0);
+    expect(firstLine.conversationPhase).toBe(script.lines[0]!.speaker === "traveler" ? "talk" : "listen");
+    expect(firstLine.conversation?.lines).toEqual(script.lines);
+    expect(firstLine.label).toBe(`Talking with ${conversationSpeakerName(pack, script)}`);
+    expect(at(duration - 0.5).conversationPhase).toBe("goodbye");
+  });
+
+  it("labels a wordless greeting honestly and plays a missing script as one", () => {
+    const greeting = travelerMotionAt(pack, 400.5, 9_000, [stop("greeting", 400)]).action!;
+    expect(greeting.label).toBe("Saying hello");
+    expect(greeting.conversation?.lines).toEqual([]);
+    const missing = travelerMotionAt(pack, 500.5, 9_000, [stop("conversation", 500, { variant: "retired-script" })]).action!;
+    expect(missing.label).toBe("Saying hello");
+    expect(missing.conversation?.lines).toEqual([]);
+  });
+
+  it("walks the pavement at his own speed outside every stop", () => {
+    const walking = travelerMotionAt(pack, 50, 50 * METRES_PER_SECOND, rows);
+    expect(walking.action).toBeNull();
+    expect(walking.speedFactor).toBe(1);
   });
 });

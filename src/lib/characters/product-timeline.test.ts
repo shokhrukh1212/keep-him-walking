@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { almatyCountryPackV1 } from "@/content/countries/almaty.v1";
-import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import type { TravelerMotionAction, TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { actionDurationSeconds } from "@/lib/world/activities";
 import { CLIP_DURATIONS } from "./manifest";
-import { productCharacterSceneAt } from "./product-timeline";
+import { clipForState, productCharacterSceneAt } from "./product-timeline";
 
 const baseMotion: TravelerMotionSnapshot = {
   rawActiveSeconds: 12,
@@ -17,6 +18,25 @@ const baseMotion: TravelerMotionSnapshot = {
   speedFactor: 1,
   action: null,
 };
+
+function withAction(action: Partial<TravelerMotionAction>): TravelerMotionSnapshot {
+  return {
+    ...baseMotion,
+    action: {
+      kind: "drink",
+      state: "drink",
+      source: "system",
+      label: "Taking a drink",
+      elapsedSeconds: 0,
+      durationSeconds: actionDurationSeconds("drink"),
+      progress: 0,
+      atActiveSecond: 0,
+      occurrenceKey: null,
+      clip: "drink",
+      ...action,
+    },
+  };
+}
 
 describe("product character timeline", () => {
   it("uses the GLB walk while traveling and a deterministic wait take when stopped", () => {
@@ -114,42 +134,56 @@ describe("product character timeline", () => {
     expect(atPlant.traveler.seconds).toBeCloseTo(0.6, 5);
   });
 
-  it("plays a full prop animation between the stop and resume transitions", () => {
-    const motion = {
-      ...baseMotion,
-      action: {
-        kind: "drink" as const,
-        state: "drink" as const,
-        source: "route" as const,
-        label: "Taking a short drink",
-        elapsedSeconds: 2.75,
-        durationSeconds: 5.5,
-        progress: 0.5,
-      },
-    };
-    const scene = productCharacterSceneAt(almatyCountryPackV1, motion, true, undefined, 0);
-    expect(scene.traveler.clip).toBe("drink");
-    expect(scene.traveler.seconds).toBeGreaterThan(2);
-    expect(scene.showResident).toBe(false);
+  it("steps out of the walk, then plays the whole take at its recorded speed", () => {
+    const entering = productCharacterSceneAt(almatyCountryPackV1, withAction({ elapsedSeconds: 0.5 }), true, undefined, 0);
+    expect(entering.traveler).toEqual({ clip: "walk_stop", seconds: 0.5 });
+    const drinking = productCharacterSceneAt(almatyCountryPackV1, withAction({ elapsedSeconds: 3.2 }), true, undefined, 0);
+    expect(drinking.traveler.clip).toBe("drink");
+    expect(drinking.traveler.seconds).toBeCloseTo(2, 5);
+    expect(drinking.showResident).toBe(false);
+    const holding = productCharacterSceneAt(almatyCountryPackV1, withAction({ elapsedSeconds: 20 }), true, undefined, 0);
+    expect(holding.traveler.seconds).toBeCloseTo(CLIP_DURATIONS.drink, 3);
+    expect(holding.traveler.seconds).toBeLessThan(CLIP_DURATIONS.drink);
   });
 
-  it("keeps traveler and resident dialogue roles complementary", () => {
-    const motion = {
-      ...baseMotion,
-      action: {
-        kind: "encounter" as const,
-        state: "talk" as const,
-        source: "route" as const,
-        label: "Talking",
-        elapsedSeconds: 5.5,
-        durationSeconds: 30,
-        progress: 0.2,
-        encounterPhase: "talk" as const,
-        dialogueLineIndex: 0,
-      },
-    };
+  it("maps every owner-chosen action to its approved take", () => {
+    expect(clipForState("stretch")).toBe("wait_stretch");
+    expect(clipForState("yawn")).toBe("wait_yawn");
+    const laugh = productCharacterSceneAt(
+      almatyCountryPackV1,
+      withAction({ kind: "laugh", state: "react", clip: "react", elapsedSeconds: 5 }),
+      true, undefined, 0,
+    );
+    expect(laugh.traveler).toMatchObject({ clip: "react" });
+    expect(laugh.traveler.seconds).toBeCloseTo(3.8, 5);
+  });
+
+  it("keeps traveler and resident dialogue roles complementary at natural speed", () => {
+    const motion = withAction({
+      kind: "conversation",
+      state: "talk",
+      conversationPhase: "talk",
+      conversationPhaseSeconds: 5.5,
+      dialogueLineIndex: 0,
+      conversation: { scriptId: "sample", speakerName: "Aigerim", residentType: "resident-b", lines: [] },
+    });
     const scene = productCharacterSceneAt(almatyCountryPackV1, motion, true, undefined, 0);
     expect(scene.showResident).toBe(true);
+    expect(scene.residentType).toBe("resident-b");
     expect([scene.traveler.clip, scene.resident.clip].sort()).toEqual(["listen", "talk"]);
+    expect(scene.traveler.seconds).toBeCloseTo(5.5 % CLIP_DURATIONS.talk, 5);
+  });
+
+  it("lets the resident answer his greeting a moment after he offers it", () => {
+    const scene = productCharacterSceneAt(
+      almatyCountryPackV1,
+      withAction({ kind: "greeting", state: "greet", conversationPhase: "greet", conversationPhaseSeconds: 1, conversation: {
+        scriptId: null, speakerName: "Aigerim", residentType: "resident-a", lines: [],
+      } }),
+      true, undefined, 0,
+    );
+    expect(scene.traveler).toEqual({ clip: "greet", seconds: 1 });
+    expect(scene.resident.clip).toBe("greet");
+    expect(scene.resident.seconds).toBeCloseTo(0.65, 5);
   });
 });

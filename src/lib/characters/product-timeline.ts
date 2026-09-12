@@ -2,7 +2,8 @@ import type { CountryPack, TravelerState } from "@/lib/content/schema";
 import type { ActionReview } from "@/lib/traveler/action-preview";
 import { reviewPoseAt } from "@/lib/traveler/action-preview";
 import { STEP_DURATION_SECONDS, type TravelerMotionAction, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
-import { CLIP_DURATIONS, type CharacterClip } from "./manifest";
+import { packBaseResident, STOP_ENTRY_CLIP, STOP_ENTRY_SECONDS } from "@/lib/world/activities";
+import { CLIP_DURATIONS, type CharacterClip, type ResidentType } from "./manifest";
 import type { CharacterCue } from "./timeline";
 import { waitingBehaviorAt } from "@/lib/presence/waiting";
 
@@ -11,6 +12,8 @@ export type ProductCharacterScene = {
   resident: CharacterCue;
   showResident: boolean;
   conversation: boolean;
+  /** The resident model this conversation's script names. */
+  residentType?: ResidentType;
   travelerLeanRadians?: number;
 };
 
@@ -43,6 +46,8 @@ export const clipForState = (state: TravelerState): CharacterClip => {
     tie_shoe: "tie_shoe",
     cheer: "cheer",
     stumble: "stumble",
+    stretch: "wait_stretch",
+    yawn: "wait_yawn",
     goodbye: "goodbye",
     resume_walk: "resume",
   };
@@ -53,6 +58,19 @@ const scaledCue = (clip: CharacterClip, elapsed: number, duration: number): Char
   clip,
   seconds: Math.max(0, Math.min(CLIP_DURATIONS[clip] - 1e-5, elapsed / Math.max(1e-5, duration) * CLIP_DURATIONS[clip])),
 });
+
+/** A take at its recorded speed, holding its last frame rather than being squeezed. */
+const naturalCue = (clip: CharacterClip, seconds: number): CharacterCue => ({
+  clip,
+  seconds: Math.max(0, Math.min(CLIP_DURATIONS[clip] - 1e-5, Number.isFinite(seconds) ? seconds : 0)),
+});
+
+/** A looping take (talking, listening, idling) at its recorded speed. */
+const loopedCue = (clip: CharacterClip, seconds: number): CharacterCue => {
+  const duration = CLIP_DURATIONS[clip];
+  const value = Number.isFinite(seconds) ? seconds : 0;
+  return { clip, seconds: ((value % duration) + duration) % duration };
+};
 
 const oppositeCue = (traveler: CharacterCue): CharacterCue => {
   const clip = traveler.clip === "talk"
@@ -65,62 +83,56 @@ const oppositeCue = (traveler: CharacterCue): CharacterCue => {
   return { clip, seconds: traveler.seconds % CLIP_DURATIONS[clip] };
 };
 
-function encounterCue(pack: CountryPack, action: TravelerMotionAction): ProductCharacterScene {
-  const lines = pack.encounters[0]?.lines ?? [];
-  const elapsed = action.elapsedSeconds;
-  let cursor = 0;
-  const segment = (duration: number, travelerClip: CharacterClip, residentClip: CharacterClip) => {
-    const local = elapsed - cursor;
-    cursor += duration;
-    if (elapsed >= cursor) return null;
-    return {
-      traveler: scaledCue(travelerClip, local, duration),
-      resident: scaledCue(residentClip, local, duration),
-      showResident: true,
-      conversation: true,
-    } satisfies ProductCharacterScene;
-  };
-
-  let cue = segment(0.6, "notice", "idle");
-  if (cue) return cue;
-  cue = segment(0.6, "stop", "idle");
-  if (cue) return cue;
-  cue = segment(1.2, "walk", "idle");
-  if (cue) return cue;
-  cue = segment(2.5, "greet", "greet");
-  if (cue) return cue;
-
-  for (const line of lines) {
-    const duration = (line.durationMs ?? 4_500) / 1_000;
-    cue = segment(duration, line.speaker === "traveler" ? "talk" : "listen", line.speaker === "traveler" ? "listen" : "talk");
-    if (cue) return cue;
+/**
+ * She answers his greeting slightly after he offers it, and his goodbye slightly
+ * before hers (PRODUCT §5). Every take plays at its own length.
+ */
+function conversationCue(pack: CountryPack, action: TravelerMotionAction): ProductCharacterScene {
+  const local = action.conversationPhaseSeconds ?? 0;
+  let traveler: CharacterCue;
+  let resident: CharacterCue;
+  switch (action.conversationPhase) {
+    case "notice":
+      traveler = naturalCue("notice", local);
+      resident = loopedCue("idle", local);
+      break;
+    case "stop":
+      traveler = naturalCue(STOP_ENTRY_CLIP, local);
+      resident = loopedCue("idle", local + CLIP_DURATIONS.notice);
+      break;
+    case "talk":
+      traveler = loopedCue("talk", local);
+      resident = loopedCue("listen", local);
+      break;
+    case "listen":
+      traveler = loopedCue("listen", local);
+      resident = loopedCue("talk", local);
+      break;
+    case "goodbye":
+      traveler = naturalCue("goodbye", local);
+      resident = naturalCue("goodbye", Math.max(0, local - 0.25));
+      break;
+    case "greet":
+    default:
+      traveler = naturalCue("greet", local);
+      resident = naturalCue("greet", Math.max(0, local - 0.35));
+      break;
   }
-  cue = segment(2.5, "react", "listen");
-  if (cue) return cue;
-  cue = segment(2.5, "goodbye", "goodbye");
-  if (cue) return cue;
-
   return {
-    traveler: scaledCue("resume", Math.max(0, elapsed - cursor), Math.max(0.1, action.durationSeconds - cursor)),
-    resident: { clip: "idle", seconds: 0 },
+    traveler,
+    resident,
     showResident: true,
     conversation: true,
+    residentType: action.conversation?.residentType ?? packBaseResident(pack),
   };
 }
 
+/** He steps out of the walk, then plays the whole take; the mixer crossfades back into the walk. */
 function actionCue(action: TravelerMotionAction): ProductCharacterScene {
-  const entryDuration = 0.45;
-  const exitDuration = 0.65;
   const elapsed = action.elapsedSeconds;
-  let traveler: CharacterCue;
-  if (elapsed < entryDuration) {
-    traveler = scaledCue("stop", elapsed, entryDuration);
-  } else if (elapsed >= action.durationSeconds - exitDuration) {
-    traveler = scaledCue("resume", elapsed - action.durationSeconds + exitDuration, exitDuration);
-  } else {
-    const clip = action.kind === "wave" ? "greet" : clipForState(action.state);
-    traveler = scaledCue(clip, elapsed - entryDuration, Math.max(0.1, action.durationSeconds - entryDuration - exitDuration));
-  }
+  const traveler = elapsed < STOP_ENTRY_SECONDS
+    ? naturalCue(STOP_ENTRY_CLIP, elapsed)
+    : naturalCue(action.clip ?? clipForState(action.state), elapsed - STOP_ENTRY_SECONDS);
   return { traveler, resident: { clip: "idle", seconds: 0 }, showResident: false, conversation: false };
 }
 
@@ -196,7 +208,9 @@ export function productCharacterSceneAt(
       conversation: false,
     };
   }
-  if (motion.action?.kind === "encounter") return encounterCue(pack, motion.action);
+  if (motion.action?.kind === "conversation" || motion.action?.kind === "greeting") {
+    return conversationCue(pack, motion.action);
+  }
   if (motion.action) return actionCue(motion.action);
   const brisk = paceRate >= BRISK_PACE_THRESHOLD;
   const stepStart = Math.floor(motion.locomotionSeconds / STEP_DURATION_SECONDS)

@@ -3,8 +3,8 @@ import type {
   DialogueLine,
   TravelerState,
 } from "@/lib/content/schema";
-import type { RouteRuntime } from "@/lib/world/types";
-import type { CrowdActionKind } from "@/lib/traveler/motion-clock";
+import type { RouteRuntime, WalkingClock } from "@/lib/world/types";
+import type { ActivityKind, ActivitySource } from "@/lib/world/activities";
 import type { JourneyWeather } from "@/lib/weather/open-meteo";
 
 export type ConnectionStatus = "live" | "reconnecting" | "offline" | "scheduled";
@@ -75,12 +75,24 @@ export type ReactionCounts = {
   photo: number;
 };
 
+/**
+ * One server-owned stop window: a crowd reaction, a story beat or one of his own
+ * scheduled activities. Distance and the road pause inside it for every viewer.
+ */
 export type ScheduledActionView = {
-  kind: CrowdActionKind;
+  kind: ActivityKind;
   atActiveSecond: number;
   /** Server-owned action boundary and planted route position. */
   endsAtActiveSecond?: number;
   frozenDistanceMetres?: number | null;
+  /** Absent means a crowd reaction, as every row was before migration 0036. */
+  source?: ActivitySource;
+  /** The reviewed conversation script, when the stop is a conversation. */
+  variant?: string;
+  /** Stable per-day identity of a scheduled occurrence. */
+  occurrenceKey?: string;
+  /** A not-yet-started activity a crowd reaction displaced. It never plays. */
+  cancelled?: boolean;
 };
 
 export type DayPhotoView = {
@@ -90,9 +102,11 @@ export type DayPhotoView = {
 
 export type ReactionsView = {
   counts: ReactionCounts;
-  /** Recent and upcoming crowd actions, fed straight into travelerMotionAt. */
+  /** Recent and upcoming stops, fed straight into travelerMotionAt. */
   scheduled: ScheduledActionView[];
   nextScheduledAction: ScheduledActionView | null;
+  /** The walking-clock anchor these rows were read at. */
+  walkingClock?: WalkingClock;
 };
 
 export type BootstrapSnapshot = {
@@ -210,4 +224,6 @@ export type HeartbeatResponse = {
   countryCode: string;
   reactions: ReactionsView;
   weather: JourneyWeather | null;
+  /** True when this heartbeat scheduled the next stop; the client hints other viewers to re-read. */
+  activityScheduled?: boolean;
 };

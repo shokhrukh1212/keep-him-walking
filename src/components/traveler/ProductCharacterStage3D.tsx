@@ -24,10 +24,15 @@ import {
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import type { CharacterContact } from "@/lib/world/visual-grade";
 import type { TravelerCommand } from "@/lib/traveler/types";
-import type { QualityTier, RouteRuntime } from "@/lib/world/types";
+import type { QualityTier, RouteRuntime, WalkingClock } from "@/lib/world/types";
 import type { ScheduledActionView } from "@/lib/contracts";
+import { activityWindow, conversationResident, conversationScript } from "@/lib/world/activities";
 
 const EMPTY_SCHEDULED_ACTIONS: readonly ScheduledActionView[] = [];
+/** Nobody new sets off this close to a stop, so a pass never crowds a conversation or an action. */
+const WALKER_STOP_CLEARANCE_SECONDS = 12;
+/** A conversation's resident starts downloading once its stop is this close. */
+const PARTNER_PRELOAD_SECONDS = 90;
 
 /** Hands the parent a way to copy this canvas at a point where it is intact. */
 /** Copies this canvas at a point where its drawing buffer is known to be intact. */
@@ -51,6 +56,7 @@ type Props = {
   grade: RefObject<VisualGrade>;
   routeRuntime: RouteRuntime;
   scheduledActions?: readonly ScheduledActionView[];
+  walkingClock?: WalkingClock | null;
   onCaptureReady?: (capture: CanvasCapture | null) => void;
   command?: TravelerCommand;
   qualityTier: QualityTier;
@@ -106,6 +112,7 @@ export function ProductCharacterStage3D(props: Props) {
     let raf = 0;
     let contextLost = false;
     let renderer: THREE.WebGLRenderer;
+    element.dataset.mountCount = String(Number(element.dataset.mountCount ?? "0") + 1);
     try {
       renderer = new THREE.WebGLRenderer({
         alpha: true,
@@ -139,7 +146,7 @@ export function ProductCharacterStage3D(props: Props) {
     const loader = new GLTFLoader();
     const clock = new PresentationClock();
     let traveler: CharacterActor | undefined;
-    // The conversation partner: the resident the current pack names.
+    // The conversation partner: the resident the current script (or pack) names.
     let resident: CharacterActor | undefined;
     let residentType: ResidentType | undefined;
     // Its model. Walkers wait for it, so the partner is never the one left loading.
@@ -147,7 +154,7 @@ export function ProductCharacterStage3D(props: Props) {
     // One untouched copy of each resident model. CharacterActor converts materials and
     // adds outlines to the scene it is given, so every actor, the partner included, is
     // built on its own skeleton clone. The other resident downloads the first time a
-    // walker needs it, so a device that shows no walkers never fetches it.
+    // walker or a conversation needs it, so a device that shows neither never fetches it.
     const residentModels = new Map<ResidentType, GLTF | "loading" | "failed">();
     // People passing on his pavement. Each keeps its own street position and is
     // removed only after walking out of view (src/lib/world/walkers.ts).
@@ -156,7 +163,7 @@ export function ProductCharacterStage3D(props: Props) {
       lane: WalkerLane; placement: WalkerPlacement; street: StreetWalker;
     };
     let walkers: Walker[] = [];
-    // The watched second the walkers last moved at; passes start in the interval since.
+    // The walking second the walkers last moved at; passes start in the interval since.
     let walkerSecond: number | undefined;
     const removeWalker = (walker: Walker) => {
       walkerRoot.remove(walker.anchor);
@@ -246,13 +253,15 @@ export function ProductCharacterStage3D(props: Props) {
       const dt = last ? Math.min(0.1, Math.max(0, (now - last) / 1000)) : 0;
       last = now;
       lastRender = now;
+      const rows = state.scheduledActions ?? EMPTY_SCHEDULED_ACTIONS;
       clock.accept(state.routeRuntime, state.command?.presenceTtlMs ?? 50_000, now);
-      const sample = clock.sample(now, state.scheduledActions ?? EMPTY_SCHEDULED_ACTIONS);
+      const sample = clock.sample(now, rows);
       const motion = travelerMotionAt(
         state.pack,
         sample.rawSeconds,
         sample.distanceMetres,
-        state.scheduledActions ?? EMPTY_SCHEDULED_ACTIONS,
+        rows,
+        state.walkingClock ?? null,
       );
       const cue = productCharacterSceneAt(
         state.pack,
@@ -274,9 +283,16 @@ export function ProductCharacterStage3D(props: Props) {
       traveler?.sample(cue.traveler, dt, snap);
       void traveler?.setSponsor(state.command?.sponsorPatchUrl);
       void traveler?.setBottle(state.command?.sponsorBottleUrl);
-      // The partner follows the pack, including a pack that changes while mounted: the
-      // previous city's resident leaves at once rather than standing in for the next.
-      const partnerType = packResidentType(state.pack);
+      // Start downloading an upcoming conversation's resident before it arrives.
+      for (const row of rows) {
+        const window = activityWindow(row);
+        if (!window || row.kind !== "conversation" || window[1] <= sample.rawSeconds
+          || window[0] - sample.rawSeconds > PARTNER_PRELOAD_SECONDS) continue;
+        residentModel(conversationResident(state.pack, conversationScript(state.pack, row.variant)));
+      }
+      // The partner follows the conversation's script, then the pack, including a pack that
+      // changes while mounted: the previous resident leaves at once rather than standing in.
+      const partnerType = cue.conversation && cue.residentType ? cue.residentType : packResidentType(state.pack);
       const partnerModel = residentModel(partnerType);
       if (residentType !== partnerType || (!resident && typeof partnerModel === "object")) {
         if (resident) {
@@ -321,10 +337,10 @@ export function ProductCharacterStage3D(props: Props) {
       const vertical = CHARACTER_MANIFEST.traveler.heightMetres * height / frame.layout.personHeightPx;
       const horizontal = vertical * width / height;
       const mobile = width <= 600;
-      const defaultAnchor = state.command?.panelOpen && !mobile ? 0.36 : 0.5;
       const [left, right] = frame.stage.walkableX;
+      // Panels are overlays: opening one never moves him.
       const travelerAnchor = Math.min(right, Math.max(left,
-        cue.conversation ? (mobile ? 0.34 : 0.43) : defaultAnchor,
+        cue.conversation ? (mobile ? 0.34 : 0.43) : 0.5,
       ));
       const residentAnchor = Math.min(right, Math.max(left, mobile ? 0.76 : 0.72));
       travelerRoot.position.x = (travelerAnchor - 0.5) * horizontal;
@@ -332,7 +348,7 @@ export function ProductCharacterStage3D(props: Props) {
       travelerRoot.rotation.x = cue.travelerLeanRadians ?? 0;
       travelerRoot.rotation.y = cue.conversation ? Math.PI / 2 : state.command?.facing === "left" ? -0.68 : 0.68;
       residentRoot.rotation.y = -Math.PI / 2;
-      residentRoot.visible = cue.showResident && Boolean(resident);
+      residentRoot.visible = cue.showResident && Boolean(resident) && residentType === partnerType;
       if (cue.conversation && traveler && resident) {
         traveler.gazeAt(resident.headPosition(), .6);
         resident.gazeAt(traveler.headPosition(), .6);
@@ -348,20 +364,23 @@ export function ProductCharacterStage3D(props: Props) {
       element.dataset.walkTimeScale = String(cue.traveler.timeScale ?? 1);
       element.dataset.forwardLeanDegrees = String((cue.travelerLeanRadians ?? 0) * 180 / Math.PI);
       element.dataset.residentVisible = String(residentRoot.visible);
+      element.dataset.activityKind = motion.action?.kind ?? "";
       // Measured through the actual camera, not just echoed from the input metadata.
       camera.updateMatrixWorld();
       const foot = new THREE.Vector3(travelerRoot.position.x, 0, 0).project(camera);
       const head = new THREE.Vector3(travelerRoot.position.x, 1.78, 0).project(camera);
+      element.dataset.footX = String((foot.x + 1) * width / 2);
       element.dataset.footY = String((1 - foot.y) * height / 2);
       element.dataset.personHeight = String((head.y - foot.y) * height / 2);
       element.dataset.characterImageScale = String(frame.layout.characterImageScale);
       element.dataset.zoneId = frame.zoneId;
       element.dataset.grade = JSON.stringify(state.grade.current);
 
-      // ---- People passing on his pavement. A pass starts on the shared watched clock,
+      // ---- People passing on his pavement. A pass starts on the shared walking clock,
       // enters beyond one edge and is removed only once it has walked out beyond the
       // other: nothing he does, no schedule window and no city hour takes anyone out of
-      // the middle of the street. New people set off only while he is plainly walking.
+      // the middle of the street. New people set off only while he is plainly walking
+      // and no stop is about to begin.
       // The tier is read here, not at mount: this effect has an empty dependency list.
       const walkerLimit = QUALITY_LIMITS[state.qualityTier].walkers;
       const travelerHeight = CHARACTER_MANIFEST.traveler.heightMetres;
@@ -372,19 +391,24 @@ export function ProductCharacterStage3D(props: Props) {
       const groundSpeed = sample.traveling && !motion.action
         ? METRES_PER_SECOND * Math.max(0, state.routeRuntime.paceRate)
         : 0;
+      const stopSoon = rows.some((row) => {
+        const window = activityWindow(row);
+        return window !== null && window[1] > sample.rawSeconds
+          && window[0] - sample.rawSeconds < WALKER_STOP_CLEARANCE_SECONDS;
+      });
       // Nobody sets off before the conversation partner's model is in, so a walker's
       // download never leaves the partner still loading.
       const passes = walkerSecond !== undefined && residentGltf && sample.traveling
-        && (state.command?.walking ?? true) && !cue.conversation && !motion.action
+        && (state.command?.walking ?? true) && !cue.conversation && !motion.action && !stopSoon
         ? walkerPassesBetween(
             walkerSecond,
-            sample.rawSeconds,
+            motion.routeSeconds,
             state.command?.localHour ?? 12,
             state.pack.assetVersion,
             walkerLimit,
           )
         : [];
-      walkerSecond = sample.rawSeconds;
+      walkerSecond = motion.routeSeconds;
       // Reduced motion forces the low tier, which shows nobody, so they stop at once.
       if (walkerLimit <= 0) {
         for (const walker of walkers) removeWalker(walker);

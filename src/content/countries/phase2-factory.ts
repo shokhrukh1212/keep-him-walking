@@ -3,9 +3,12 @@ import {
   stageSchema,
   DEFAULT_ZONE_KINDS,
   DEFAULT_ZONE_LENGTH_METRES,
+  type ConversationScript,
   type CountryPackV3,
   type RouteProp,
   type RouteZone,
+  type SceneVariant,
+  type ZoneVariants,
 } from "@/lib/content/schema";
 
 
@@ -53,7 +56,14 @@ type ZoneDefinition = {
   label: string;
   weather: RouteZone["weather"];
   palette: [string, string, string];
+  /** Legacy position name; `tags` carry the semantics for longer manifests. */
+  kind?: RouteZone["kind"];
+  tags?: string[];
+  description?: string;
 };
+
+type ConversationDefinition = Omit<ConversationScript, "placeTags" | "role" | "review">
+  & Partial<Pick<ConversationScript, "placeTags" | "role" | "review">>;
 
 export type Phase2CountryDefinition = {
   packId: string;
@@ -65,7 +75,10 @@ export type Phase2CountryDefinition = {
   lon?: number;
   neighbours?: string[];
   voteBlurb?: string;
-  zones: [ZoneDefinition, ZoneDefinition, ZoneDefinition, ZoneDefinition, ZoneDefinition];
+  /** The ordered place manifest. The day loops through every entry. */
+  zones: ZoneDefinition[];
+  /** Active-walking seconds per place; the schema default applies when omitted. */
+  sceneVisitSeconds?: number;
   encounter: {
     npcId: string;
     locationLabel: string;
@@ -78,6 +91,8 @@ export type Phase2CountryDefinition = {
     exchange: [string, string, ...string[]];
     dialogue?: CountryPackV3["encounters"][number]["lines"];
   };
+  /** Reviewed short exchanges for the conversation rotation. */
+  conversations?: ConversationDefinition[];
   resident?: { name: string; role: string; variantId: string };
   notebookLines?: string[];
   /** What the city does on its own; omitted cities get the quiet default. */
@@ -92,6 +107,8 @@ export type Phase2CountryDefinition = {
     nightZoneIds?: string[];
     lightsZoneIds?: string[];
     continuousSceneZoneIds?: string[];
+    /** Content-addressed renditions per place id, written by `pnpm scenes:build`. */
+    variants?: Record<string, ZoneVariants>;
   };
 };
 
@@ -113,6 +130,12 @@ function routeProps(city: string, version: string, zoneId: string, authored = fa
   ];
 }
 
+/** The rendition a full-quality desktop draws; used for legacy fields and prewarming. */
+export function largestVariant(variants: readonly SceneVariant[], crop: SceneVariant["crop"] = "full"): SceneVariant | null {
+  return [...variants].filter((variant) => variant.crop === crop)
+    .sort((left, right) => right.width - left.width)[0] ?? null;
+}
+
 function routeZone(
   city: string,
   version: string,
@@ -121,12 +144,21 @@ function routeZone(
   authoredAssets?: Phase2CountryDefinition["authoredAssets"],
 ): RouteZone {
   const root = `/scenes/${city}/${version}/zones/${zone.id}`;
+  const kind = zone.kind ?? DEFAULT_ZONE_KINDS[index] ?? "lanes";
+  const variants = authoredAssets?.variants?.[zone.id];
+  const cityVariant = variants ? largestVariant(variants.city) : null;
+  const skyVariant = variants ? largestVariant(variants.sky) : null;
+  const groundVariant = variants ? largestVariant(variants.ground) : null;
+  const nightVariant = variants ? largestVariant(variants.night) : null;
+  const fallbackUrl = cityVariant?.url ?? `${root}/fallback.webp`;
   return {
     stage: stageSchema.parse(zone.stage ?? {}),
     id: zone.id,
     label: zone.label,
     lengthMetres: DEFAULT_ZONE_LENGTH_METRES[index] ?? DEFAULT_ZONE_LENGTH_METRES[DEFAULT_ZONE_LENGTH_METRES.length - 1],
-    kind: DEFAULT_ZONE_KINDS[index] ?? DEFAULT_ZONE_KINDS[DEFAULT_ZONE_KINDS.length - 1],
+    kind,
+    tags: zone.tags && zone.tags.length > 0 ? zone.tags : [kind],
+    ...(zone.description ? { description: zone.description } : {}),
     durationActiveSeconds: 150,
     // Schema-v3 zones are drawn as one coherent painting; the stacked parallax
     // crops that used to live here have not reached a screen since Phase 3, and
@@ -135,11 +167,11 @@ function routeZone(
     layers: [
       {
         id: "architecture", depth: 0.52, speed: 0.7, y: 0, height: 1,
-        segments: [{ id: `${zone.id}-painting`, url: `${root}/fallback.webp`, worldWidth: 2_400 }],
+        segments: [{ id: `${zone.id}-painting`, url: fallbackUrl, worldWidth: 2_400 }],
       },
       {
         id: "ground", depth: 0.98, speed: 1, y: 0.76, height: 0.24,
-        segments: [{ id: `${zone.id}-ground`, url: `${root}/fallback.webp`, worldWidth: 1_200 }],
+        segments: [{ id: `${zone.id}-ground`, url: fallbackUrl, worldWidth: 1_200 }],
       },
     ],
     props: routeProps(city, version, zone.id, Boolean(authoredAssets)),
@@ -147,7 +179,7 @@ function routeZone(
       skyTop: zone.palette[0],
       skyBottom: zone.palette[1],
       grade: zone.palette[2],
-      intensity: 0.2 + index * 0.11,
+      intensity: Math.min(1, 0.2 + index * 0.11),
     },
     weather: zone.weather,
     audioIds: authoredAssets ? [] : [`${city}-${zone.id}`],
@@ -158,26 +190,40 @@ function routeZone(
       npcAnchor: 0.78,
       backgroundLife: 0.4,
     },
-    fallbackUrl: `${root}/fallback.webp`,
-    ...(authoredAssets?.continuousSceneZoneIds?.includes(zone.id) ? {
+    fallbackUrl,
+    ...(variants && cityVariant && skyVariant && groundVariant ? {
+      variants,
       continuousScene: {
-        skyUrl: `${root}/sky.webp`,
-        cityUrl: `${root}/fallback.webp`,
-        groundUrl: `${root}/ground.webp`,
+        skyUrl: skyVariant.url,
+        cityUrl: cityVariant.url,
+        groundUrl: groundVariant.url,
         groundHeightFrac: 0.18,
       },
-    } : {}),
-    ...(authoredAssets?.nightZoneIds?.includes(zone.id) ? { nightUrl: `${root}/night.webp` } : {}),
+      ...(nightVariant ? { nightUrl: nightVariant.url } : {}),
+    } : {
+      ...(authoredAssets?.continuousSceneZoneIds?.includes(zone.id) ? {
+        continuousScene: {
+          skyUrl: `${root}/sky.webp`,
+          cityUrl: `${root}/fallback.webp`,
+          groundUrl: `${root}/ground.webp`,
+          groundHeightFrac: 0.18,
+        },
+      } : {}),
+      ...(authoredAssets?.nightZoneIds?.includes(zone.id) ? { nightUrl: `${root}/night.webp` } : {}),
+    }),
     ...(authoredAssets?.lightsZoneIds?.includes(zone.id) ? { lightsUrl: `${root}/lights.webp` } : {}),
   };
 }
 
 export function createPhase2CountryPack(definition: Phase2CountryDefinition): CountryPackV3 {
+  if (definition.zones.length < 1) throw new RangeError(`${definition.packId} needs at least one place`);
   const city = definition.packId.replace(/-v\d+$/, "");
   const version = definition.packId.match(/-(v\d+)$/)?.[1] ?? "v1";
   const zones = definition.zones.map((zone, index) => routeZone(city, version, zone, index, definition.authoredAssets));
   const encounterId = `${city}-welcome`;
-  const firstZone = zones[0];
+  const firstZone = zones[0]!;
+  const byTag = (tag: string, fallbackIndex: number) => zones.find((zone) => zone.tags.includes(tag))
+    ?? zones[Math.min(fallbackIndex, zones.length - 1)]!;
   const sceneRoot = `/scenes/${city}/${version}/zones/${firstZone.id}`;
   const sceneAssets = (zone: RouteZone) => [...new Set([
     zone.fallbackUrl,
@@ -188,6 +234,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
       ...(zone.continuousScene.foregroundUrl ? [zone.continuousScene.foregroundUrl] : []),
     ] : []),
   ])];
+  const followingZones = zones.length > 1 ? zones.slice(1) : zones;
   return countryPackV3Schema.parse({
     schemaVersion: 3,
     packId: definition.packId,
@@ -210,8 +257,8 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         { id: "ground", url: definition.authoredAssets ? firstZone.fallbackUrl : `${sceneRoot}/ground-1.webp`, depth: 0.98, speed: 1 },
       ],
       palette: {
-        day: [definition.zones[0].palette[0], definition.zones[0].palette[1]],
-        night: [definition.zones[4].palette[0], definition.zones[4].palette[2]],
+        day: [definition.zones[0]!.palette[0], definition.zones[0]!.palette[1]],
+        night: [definition.zones.at(-1)!.palette[0], definition.zones.at(-1)!.palette[2]],
       },
     },
     traveler: {
@@ -262,11 +309,17 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         })),
       ],
     }],
+    conversations: definition.conversations,
     // The v3 renderer paints one coherent panorama per zone and no props, so the
     // ground crops and prop cutouts are never drawn and are not worth fetching.
     // The files stay on disk until P18 retires them.
     preload: [...sceneAssets(firstZone), `${ACTION_ROOT}/idle.webp`],
-    route: { worldUnitsPerSecond: 92, travelerViewportAnchor: 0.61, zones },
+    route: {
+      worldUnitsPerSecond: 92,
+      travelerViewportAnchor: 0.61,
+      zones,
+      ...(definition.sceneVisitSeconds ? { sceneVisitSeconds: definition.sceneVisitSeconds } : {}),
+    },
     postcardBackgroundUrl: `/postcards/${city}/${version}/background.webp`,
     postcard: {
       title: definition.postcardTitle,
@@ -279,16 +332,16 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
         id: `${city}-critical`, timing: "critical", zoneId: firstZone.id,
         assets: sceneAssets(firstZone),
       },
-      ...zones.slice(1).map((zone) => ({
+      ...followingZones.map((zone) => ({
         id: `${city}-${zone.id}-next`, timing: "next_zone" as const, zoneId: zone.id,
         assets: sceneAssets(zone),
       })),
     ],
     storyBeats: [
-      { id: `${city}-arrival`, kind: "arrival", atMetres: 150, durationSeconds: 90, title: `Arrival in ${definition.cityName}`, summary: `The first steps through ${definition.zones[0].label}.` },
+      { id: `${city}-arrival`, kind: "arrival", atMetres: 150, durationSeconds: 90, title: `Arrival in ${definition.cityName}`, summary: `The first steps through ${firstZone.label}.` },
       { id: `${city}-encounter`, kind: "encounter", atMetres: 1_900, durationSeconds: 120, title: "A local welcome", summary: definition.encounter.phrase.gloss, encounterId },
-      { id: `${city}-food`, kind: "food", atMetres: 4_800, durationSeconds: 120, title: definition.zones[3].label, summary: `A pause for the tastes and rituals of ${definition.cityName}.` },
-      { id: `${city}-landmark`, kind: "landmark", atMetres: 7_900, durationSeconds: 150, title: definition.zones[4].label, summary: `The route opens onto one of ${definition.cityName}'s defining views.` },
+      { id: `${city}-food`, kind: "food", atMetres: 4_800, durationSeconds: 120, title: byTag("cafe", 3).label, summary: `A pause for the tastes and rituals of ${definition.cityName}.` },
+      { id: `${city}-landmark`, kind: "landmark", atMetres: 7_900, durationSeconds: 150, title: byTag("landmark", zones.length - 1).label, summary: `The route opens onto one of ${definition.cityName}'s defining views.` },
       { id: `${city}-departure`, kind: "departure", atMetres: null, durationSeconds: 90, title: "Until tomorrow", summary: `The road turns toward the next country.` },
     ],
     localPhrases: [definition.encounter.phrase],

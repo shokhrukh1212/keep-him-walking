@@ -43,13 +43,13 @@ describe("walkerPassesBetween", () => {
     expect(walkerPassesBetween(Number.NaN, first.startSecond, 13, SEED, 2)).toEqual([]);
   });
 
-  it("leads one pass per block, 90 to 150 watched seconds apart", () => {
+  it("leads one pass per block, two to three walking minutes apart", () => {
     const leads = passesOver(3600, 2).filter((pass) => pass.slot === 0);
-    expect(leads).toHaveLength(30);
+    expect(leads).toHaveLength(24);
     for (let index = 1; index < leads.length; index += 1) {
       const gap = leads[index]!.startSecond - leads[index - 1]!.startSecond;
-      expect(gap).toBeGreaterThanOrEqual(90);
-      expect(gap).toBeLessThanOrEqual(150);
+      expect(gap).toBeGreaterThanOrEqual(120);
+      expect(gap).toBeLessThanOrEqual(180);
     }
   });
 

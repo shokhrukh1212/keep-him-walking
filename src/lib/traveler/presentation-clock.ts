@@ -1,5 +1,6 @@
 import type { RouteRuntime } from "@/lib/world/types";
 import type { ScheduledActionView } from "@/lib/contracts";
+import { activityWindow } from "@/lib/world/activities";
 import { projectedRouteDistance } from "@/lib/world/route-clock";
 
 /** Two monotonic tracks shared by the scene and rig. Network updates change targets, not origins. */
@@ -59,9 +60,8 @@ export class PresentationClock {
       walking: this.walking,
     }, elapsed, scheduledActions);
     const actionActive = scheduledActions.some((action) => {
-      const end = action.endsAtActiveSecond ?? action.atActiveSecond
-        + ({ wave: 2.5, drink: 5.5, photo: 4 } as const)[action.kind];
-      return secondsTarget >= action.atActiveSecond && secondsTarget < end;
+      const window = activityWindow(action);
+      return window !== null && secondsTarget >= window[0] && secondsTarget < window[1];
     });
     const secondsDifference = secondsTarget - this.seconds;
     const distanceDifference = distanceTarget - this.distance;

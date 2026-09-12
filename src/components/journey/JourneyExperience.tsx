@@ -493,6 +493,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     distanceMetres,
     position: routePosition,
     scheduledActions,
+    walkingClock,
   } =
     useRouteRuntime(
       snapshot,
@@ -507,27 +508,22 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const { enabled: soundEnabled, available: soundAvailable, toggle: toggleSound } =
     useJourneyAudio(walking, ambientAudioUrl);
   const motion=puppetReady && presentationFrame?.assetVersion===snapshot.assets.assetVersion ? presentationFrame.motion : estimatedMotion;
-  const routeEncounter = snapshot.assets.schemaVersion === 3 && motion.action?.kind === "encounter"
-    ? snapshot.assets.encounters[0]
+  const activeConversation = motion.action?.conversation ?? null;
+  const routeEncounter = activeConversation ? { locationLabel: activeConversation.speakerName } : null;
+  const activeLine = activeConversation && motion.action?.dialogueLineIndex !== undefined
+    ? activeConversation.lines[motion.action.dialogueLineIndex] ?? null
     : null;
-  const activeLine = routeEncounter && motion.action?.dialogueLineIndex !== undefined
-    ? routeEncounter.lines[motion.action.dialogueLineIndex] ?? null
-    : null;
-  const encounterPhase = motion.action?.kind !== "encounter"
+  const encounterPhase = !activeConversation
     ? "none"
-    : motion.action.encounterPhase === "notice"
+    : motion.action?.conversationPhase === "notice"
       ? "notice"
-      : motion.action.encounterPhase === "slow_walk"
+      : motion.action?.conversationPhase === "stop"
         ? "decelerate"
-        : motion.action.encounterPhase === "approach"
-          ? "approach"
-          : motion.action.encounterPhase === "greet"
-            ? "greeting"
-            : motion.action.encounterPhase === "goodbye"
-              ? "goodbye"
-              : motion.action.encounterPhase === "resume_walk"
-                ? "restore"
-                : "dialogue";
+        : motion.action?.conversationPhase === "greet"
+          ? "greeting"
+          : motion.action?.conversationPhase === "goodbye"
+            ? "goodbye"
+            : "dialogue";
   const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
   const activeRouteZone = snapshot.assets.route.zones[routePosition.zoneIndex];
   const eventStage = activeRouteZone?.eventStage;
@@ -816,6 +812,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     <main className="journey-shell" data-motion={reducedMotion ? "reduced" : "full"} data-panel={openPanel ?? ""}>
       <SceneStage
         scheduledActions={scheduledActions}
+        walkingClock={walkingClock}
         weather={weather}
         // Premium only, and only once the creative is approved and live.
         sponsorSignUrl={sponsor?.bottle ?? null}

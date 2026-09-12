@@ -1,61 +1,59 @@
+import type { CharacterClip, ResidentType } from "@/lib/characters/manifest";
 import type { CountryPack, DialogueLine, TravelerState } from "@/lib/content/schema";
-import { activeWalkingSecondsAt, deterministicVariant, routePositionAt, SCENE_VISIT_SECONDS } from "@/lib/world/route-clock";
+import type { ScheduledActionView } from "@/lib/contracts";
+import {
+  ACTION_CLIPS,
+  ACTION_STATES,
+  activityLabel,
+  activityWindow,
+  conversationResident,
+  conversationScript,
+  conversationSegments,
+  conversationSpeakerName,
+  isCrowdActivityKind,
+  type ActivityKind,
+  type ActivitySource,
+  type ConversationPhase,
+  type CrowdActivityKind,
+} from "@/lib/world/activities";
+import { activeWalkingSecondsAt } from "@/lib/world/route-clock";
+import type { WalkingClock } from "@/lib/world/types";
 
 export const STEP_DURATION_SECONDS = 0.6;
 export const GAIT_CYCLE_SECONDS = STEP_DURATION_SECONDS * 2;
 export const METRES_PER_STEP = 0.75;
 export const METRES_PER_SECOND = METRES_PER_STEP / STEP_DURATION_SECONDS;
 
-export const ACTION_DURATIONS = {
-  photo: 4,
-  drink: 5.5,
-  phone: 4.5,
-  wave: 2.5,
-  react: 2.5,
-  look_up: 3,
-  tie_shoe: 4,
-  stumble: 2.5,
-  cheer: 3,
-} as const;
-
-type RouteActionKind = keyof typeof ACTION_DURATIONS | "encounter";
-
 /** The three things the crowd can ask for. Server-side these are enums. */
-export type CrowdActionKind = "wave" | "drink" | "photo";
+export type CrowdActionKind = CrowdActivityKind;
 
-/** One crowd action the server has already committed to, on the raw-second clock. */
-export type ScheduledCrowdAction = {
-  kind: CrowdActionKind;
-  atActiveSecond: number;
-  endsAtActiveSecond?: number;
-  frozenDistanceMetres?: number | null;
-};
+/** Any server-owned stop row. Crowd reactions were the first; every stop is one now. */
+export type ScheduledCrowdAction = ScheduledActionView;
 
-const CROWD_ACTION_LABELS: Record<CrowdActionKind, string> = {
-  wave: "Waving back",
-  drink: "Taking a drink",
-  photo: "Taking a photograph",
+export type TravelerConversation = {
+  scriptId: string | null;
+  speakerName: string;
+  residentType: ResidentType;
+  lines: DialogueLine[];
 };
 
 export type TravelerMotionAction = {
-  kind: RouteActionKind;
+  kind: ActivityKind;
   state: TravelerState;
   label: string;
   elapsedSeconds: number;
   durationSeconds: number;
   progress: number;
-  /** Route beats come from the pack; crowd actions come from the watchers. */
-  source: "route" | "crowd" | "system";
-  encounterPhase?:
-    | "notice"
-    | "slow_walk"
-    | "approach"
-    | "greet"
-    | "talk"
-    | "listen"
-    | "react"
-    | "goodbye"
-    | "resume_walk";
+  /** Crowd reactions come from the watchers; beats and system stops from the server schedule. */
+  source: ActivitySource;
+  atActiveSecond: number;
+  occurrenceKey: string | null;
+  /** The whole take a solo stop plays after stepping out of the walk. */
+  clip?: CharacterClip;
+  conversation?: TravelerConversation;
+  conversationPhase?: ConversationPhase;
+  /** Seconds into the current conversation phase, so each take plays at its own speed. */
+  conversationPhaseSeconds?: number;
   dialogueLineIndex?: number;
 };
 
@@ -73,15 +71,16 @@ export type TravelerMotionSnapshot = {
   action: TravelerMotionAction | null;
 };
 
-type ScheduledAction = {
-  atWalkingSecond: number;
-  kind: RouteActionKind;
-  durationSeconds: number;
-  label: string;
-  lines?: DialogueLine[];
-};
-
 const WALK_FRAME_PHASES = [0, 1 / 6, 2 / 6, 0.5, 4 / 6, 5 / 6];
+
+const CONVERSATION_STATES: Record<ConversationPhase, TravelerState> = {
+  notice: "notice",
+  stop: "stop",
+  greet: "greet",
+  talk: "talk",
+  listen: "listen",
+  goodbye: "goodbye",
+};
 
 export function actionTravel(elapsed: number, duration: number) {
   const entry = Math.min(1, Math.max(0, elapsed / 1.2));
@@ -94,159 +93,6 @@ function alignedStep(seconds: number) {
   return Math.round(seconds / STEP_DURATION_SECONDS) * STEP_DURATION_SECONDS;
 }
 
-function dialogueDuration(lines: DialogueLine[]) {
-  return lines.reduce((total, line) => total + (line.durationMs ?? 4_500) / 1_000, 0);
-}
-
-function actionsForPack(pack: CountryPack): ScheduledAction[] {
-  if (pack.schemaVersion !== 3) return [];
-  const encounter = pack.encounters[0];
-  const byKind: Partial<Record<string, ScheduledAction>> = {
-    arrival: {
-      atWalkingSecond: 15,
-      kind: "wave",
-      durationSeconds: ACTION_DURATIONS.wave,
-      label: "Waving hello",
-    },
-    encounter: encounter
-      ? {
-          atWalkingSecond: SCENE_VISIT_SECONDS + 15,
-          kind: "encounter",
-          durationSeconds: 11.1 + dialogueDuration(encounter.lines),
-          label: `Talking · ${encounter.locationLabel}`,
-          lines: encounter.lines,
-        }
-      : undefined,
-    food: {
-      atWalkingSecond: SCENE_VISIT_SECONDS * 3 + 15,
-      kind: "drink",
-      durationSeconds: ACTION_DURATIONS.drink,
-      label: "Taking a short drink",
-    },
-    landmark: {
-      atWalkingSecond: SCENE_VISIT_SECONDS * 4 + 15,
-      kind: "photo",
-      durationSeconds: ACTION_DURATIONS.photo,
-      label: "Taking a photograph",
-    },
-    departure: {
-      atWalkingSecond: SCENE_VISIT_SECONDS * 5 - 15,
-      kind: "phone",
-      durationSeconds: ACTION_DURATIONS.phone,
-      label: "Checking tomorrow’s route",
-    },
-  };
-
-  return pack.storyBeats.flatMap((beat) => {
-    const action = byKind[beat.kind];
-    // Departure is deliberately absent: it remains the one rollover-time event.
-    if (!action || beat.kind === "departure") return [];
-    return [action];
-  }).sort((left, right) => left.atWalkingSecond - right.atWalkingSecond);
-}
-
-function storyTimelineAt(
-  pack: CountryPack,
-  baseWalkingSeconds: number,
-): { walkingSeconds: number; action: TravelerMotionAction | null; pausedSeconds: number; lastCompletedBaseSecond: number } {
-  const base = Math.max(0, baseWalkingSeconds);
-  let completedPause = 0;
-  let lastCompletedBaseSecond = Number.NEGATIVE_INFINITY;
-  for (const action of actionsForPack(pack)) {
-    const startsAt = action.atWalkingSecond + completedPause;
-    if (base < startsAt) break;
-    const elapsed = base - startsAt;
-    if (elapsed < action.durationSeconds) {
-      return {
-        walkingSeconds: action.atWalkingSecond,
-        action: actionState(action, elapsed),
-        pausedSeconds: completedPause + elapsed,
-        lastCompletedBaseSecond,
-      };
-    }
-    completedPause += action.durationSeconds;
-    lastCompletedBaseSecond = startsAt + action.durationSeconds;
-  }
-  return {
-    walkingSeconds: Math.max(0, base - completedPause),
-    action: null,
-    pausedSeconds: completedPause,
-    lastCompletedBaseSecond,
-  };
-}
-
-/**
- * Authoritative watched time minus server action windows and deterministic
- * first-visit story stops. It never reads pace or viewer count.
- */
-export function dailyActiveWalkingSecondsAt(
-  pack: CountryPack,
-  rawActiveSeconds: number,
-  scheduledActions: readonly ScheduledCrowdAction[] = [],
-) {
-  return storyTimelineAt(
-    pack,
-    activeWalkingSecondsAt(rawActiveSeconds, scheduledActions),
-  ).walkingSeconds;
-}
-
-function actionState(
-  action: ScheduledAction,
-  elapsedSeconds: number,
-  source: TravelerMotionAction["source"] = "route",
-): TravelerMotionAction {
-  const progress = Math.min(1, Math.max(0, elapsedSeconds / action.durationSeconds));
-  if (action.kind !== "encounter") {
-    const transitionIn = 0.45;
-    const transitionOut = 0.65;
-    const state = elapsedSeconds < transitionIn
-      ? "stop"
-      : elapsedSeconds >= action.durationSeconds - transitionOut
-        ? "resume_walk"
-        : action.kind;
-    return { ...action, source, state, elapsedSeconds, progress };
-  }
-
-  const lines = action.lines ?? [];
-  let cursor = 0;
-  const fixed: Array<[number, TravelerMotionAction["encounterPhase"]]> = [
-    [0.6, "notice"],
-    [0.6, "slow_walk"],
-    [1.2, "approach"],
-    [2.5, "greet"],
-  ];
-  for (const [duration, phase] of fixed) {
-    cursor += duration;
-    if (elapsedSeconds < cursor) {
-      return { ...action, source, state: phase!, encounterPhase: phase, elapsedSeconds, progress };
-    }
-  }
-  for (let index = 0; index < lines.length; index += 1) {
-    cursor += (lines[index]?.durationMs ?? 4_500) / 1_000;
-    if (elapsedSeconds < cursor) {
-      const phase = lines[index]?.speaker === "traveler" ? "talk" : "listen";
-      return {
-        ...action,
-        source,
-        state: phase,
-        encounterPhase: phase,
-        dialogueLineIndex: index,
-        elapsedSeconds,
-        progress,
-      };
-    }
-  }
-  cursor += 2.5;
-  if (elapsedSeconds < cursor) {
-    return { ...action, source, state: "react", encounterPhase: "react", elapsedSeconds, progress };
-  }
-  cursor += 2.5;
-  if (elapsedSeconds < cursor) {
-    return { ...action, source, state: "goodbye", encounterPhase: "goodbye", elapsedSeconds, progress };
-  }
-  return { ...action, source, state: "resume_walk", encounterPhase: "resume_walk", elapsedSeconds, progress };
-}
-
 function gaitFrameAt(cyclePhase: number) {
   for (let index = WALK_FRAME_PHASES.length - 1; index >= 0; index -= 1) {
     if (cyclePhase >= WALK_FRAME_PHASES[index]!) return index;
@@ -254,148 +100,96 @@ function gaitFrameAt(cyclePhase: number) {
   return 0;
 }
 
-/**
- * Resolves which crowd action, if any, the traveler is performing right now.
- *
- * Crowd actions are scheduled by the server on the raw watched-second clock and
- * are pinned to the same 0.6 s planted-foot grid the route beats use, so every
- * viewer performs them on the same footfall.
- *
- * A crowd action never interrupts a route beat: the beat always wins. To make
- * that a deferral rather than a silent drop, the elapsed time is the smaller of
- * the time since the action was scheduled and the time since the last route beat
- * finished. Both are derived from the authoritative inputs alone — the second
- * from distance, which is why it works without any history — so an action that
- * was scheduled mid-encounter starts cleanly the moment the goodbye ends.
- */
-function crowdActionAt(
-  rawActiveSeconds: number,
-  distanceMetres: number,
-  scheduled: readonly ScheduledCrowdAction[],
-  routeBeatActive: boolean,
-  lastCompletedBeatEndRawSecond: number,
-): TravelerMotionAction | null {
-  if (routeBeatActive || scheduled.length === 0) return null;
-  const sinceLastBeat = Number.isFinite(lastCompletedBeatEndRawSecond)
-    ? Math.max(0, rawActiveSeconds - lastCompletedBeatEndRawSecond)
-    : Number.POSITIVE_INFINITY;
-
-  const ordered = [...scheduled]
-    .filter((entry) => Number.isFinite(entry.atActiveSecond) && entry.kind in CROWD_ACTION_LABELS)
-    .sort((left, right) => left.atActiveSecond - right.atActiveSecond
-      || left.kind.localeCompare(right.kind));
-
-  let best: { entry: ScheduledCrowdAction; elapsed: number } | null = null;
-  for (const entry of ordered) {
-    const sinceScheduled = rawActiveSeconds - alignedStep(entry.atActiveSecond);
-    if (sinceScheduled < 0) continue;
-    const elapsed = Math.min(sinceScheduled, sinceLastBeat);
-    const duration = Number.isFinite(entry.endsAtActiveSecond)
-      ? Math.max(0, entry.endsAtActiveSecond! - entry.atActiveSecond)
-      : ACTION_DURATIONS[entry.kind];
-    if (elapsed >= duration) continue;
-    if (best === null || elapsed < best.elapsed) best = { entry, elapsed };
-  }
-  if (best === null) return null;
-
-  return actionState(
-    {
-      atWalkingSecond: 0,
-      kind: best.entry.kind,
-      durationSeconds: Number.isFinite(best.entry.endsAtActiveSecond)
-        ? Math.max(0, best.entry.endsAtActiveSecond! - best.entry.atActiveSecond)
-        : ACTION_DURATIONS[best.entry.kind],
-      label: CROWD_ACTION_LABELS[best.entry.kind],
-    },
-    best.elapsed,
-    "crowd",
-  );
-}
-
-function systemAction(
-  kind: Extract<RouteActionKind, "look_up" | "tie_shoe" | "stumble" | "cheer">,
+function actionForRow(
+  pack: CountryPack,
+  row: ScheduledActionView,
   elapsedSeconds: number,
-  label: string,
-): TravelerMotionAction | null {
-  const durationSeconds = ACTION_DURATIONS[kind];
-  if (elapsedSeconds < 0 || elapsedSeconds >= durationSeconds) return null;
-  return actionState({ atWalkingSecond: 0, kind, durationSeconds, label }, elapsedSeconds, "system");
+  durationSeconds: number,
+): TravelerMotionAction {
+  const source = row.source ?? "crowd";
+  const base = {
+    kind: row.kind,
+    elapsedSeconds,
+    durationSeconds,
+    progress: Math.min(1, Math.max(0, elapsedSeconds / Math.max(1e-6, durationSeconds))),
+    source,
+    atActiveSecond: row.atActiveSecond,
+    occurrenceKey: row.occurrenceKey ?? null,
+  };
+  if (row.kind === "conversation" || row.kind === "greeting") {
+    const script = row.kind === "conversation" ? conversationScript(pack, row.variant) : null;
+    const lines = script?.lines ?? [];
+    const speakerName = conversationSpeakerName(pack, script);
+    const segments = conversationSegments(lines);
+    const segment = [...segments].reverse().find((candidate) => elapsedSeconds >= candidate.start) ?? segments[0]!;
+    return {
+      ...base,
+      state: CONVERSATION_STATES[segment.phase],
+      // A script the pinned pack no longer carries plays as the wordless greeting it can honour.
+      label: activityLabel(script ? "conversation" : "greeting", source, speakerName),
+      conversation: {
+        scriptId: script?.id ?? null,
+        speakerName,
+        residentType: conversationResident(pack, script),
+        lines,
+      },
+      conversationPhase: segment.phase,
+      conversationPhaseSeconds: Math.max(0, elapsedSeconds - segment.start),
+      ...(segment.lineIndex === undefined ? {} : { dialogueLineIndex: segment.lineIndex }),
+    };
+  }
+  return {
+    ...base,
+    state: ACTION_STATES[row.kind],
+    label: activityLabel(row.kind, source),
+    clip: ACTION_CLIPS[row.kind],
+  };
 }
 
-/** Deterministic ambient actions from explicit authority; no timer or module state participates. */
-export function systemActionAt(
+/**
+ * The stop he is performing right now, if any. Every stop is a server window
+ * pinned to the 0.6 s planted-foot grid, so every viewer starts it on the same
+ * footfall. The server never lets two live windows overlap; should legacy rows
+ * overlap, the one that started first finishes.
+ */
+export function activityAt(
   pack: CountryPack,
   rawActiveSeconds: number,
-  distanceMetres: number,
+  scheduledActions: readonly ScheduledActionView[] = [],
 ): TravelerMotionAction | null {
-  if (pack.schemaVersion !== 3) return null;
-  const route = routePositionAt(pack, distanceMetres);
-  const zone = pack.route.zones[route.zoneIndex];
-  const seed = pack.assetVersion;
-
-  const stumbleAt = pack.dayRouteMetres * .25
-    + deterministicVariant(`${seed}:stumble`, 0, Math.max(1, Math.floor(pack.dayRouteMetres * .5)));
-  const stumble = systemAction("stumble", (distanceMetres - stumbleAt) / METRES_PER_SECOND, "Stumbling, then finding his feet");
-  if (stumble) return stumble;
-
-  const cheer = systemAction("cheer", (distanceMetres - pack.marathonMetres) / METRES_PER_SECOND, "Celebrating a marathon");
-  if (cheer) return cheer;
-
-  const tiePeriod = 15 * 60;
-  const tieOffset = deterministicVariant(`${seed}:tie-shoe`, 0, tiePeriod - ACTION_DURATIONS.tie_shoe);
-  const tie = systemAction("tie_shoe", (rawActiveSeconds - tieOffset + tiePeriod) % tiePeriod, "Tying a shoe");
-  if (rawActiveSeconds >= tieOffset && tie) return tie;
-
-  if (zone?.kind === "lanes" || zone?.kind === "landmark") {
-    const lookPeriod = 9 * 60;
-    const lookOffset = deterministicVariant(`${seed}:look-up`, 0, lookPeriod - ACTION_DURATIONS.look_up);
-    const look = systemAction("look_up", (rawActiveSeconds - lookOffset + lookPeriod) % lookPeriod, "Looking up at the city");
-    if (rawActiveSeconds >= lookOffset && look) return look;
+  const raw = Math.max(0, Number.isFinite(rawActiveSeconds) ? rawActiveSeconds : 0);
+  let best: { row: ScheduledActionView; start: number; duration: number } | null = null;
+  for (const row of scheduledActions) {
+    const window = activityWindow(row);
+    if (!window) continue;
+    const start = alignedStep(window[0]);
+    // Windows are stored to the millisecond; do not let float subtraction add noise.
+    const duration = Math.round((window[1] - window[0]) * 1_000) / 1_000;
+    if (raw < start || raw >= start + duration) continue;
+    if (!best || start < best.start || (start === best.start && row.kind.localeCompare(best.row.kind) < 0)) {
+      best = { row, start, duration };
+    }
   }
-  return null;
+  return best ? actionForRow(pack, best.row, raw - best.start, best.duration) : null;
 }
 
 /**
- * Converts server-owned watcher time and distance into the canonical motion
- * timeline. Metre beats are rounded onto a planted-foot boundary; distance
- * remains the authoritative world track while the gait holds for an action.
- *
- * Crowd actions the server has already scheduled are merged in as a fourth
- * authoritative input. They never displace a route beat and never alter the
- * locomotion clock, so step counts and the gait stay exactly as they were.
+ * Converts server-owned watched time, distance and stop windows into the
+ * canonical motion timeline. Walking time is watched time minus every stop, so
+ * the gait holds exactly while he stops and resumes on the same foot.
  */
 export function travelerMotionAt(
   pack: CountryPack,
   rawActiveSeconds: number,
   distanceMetres = rawActiveSeconds * METRES_PER_SECOND,
-  scheduledActions: readonly ScheduledCrowdAction[] = [],
+  scheduledActions: readonly ScheduledActionView[] = [],
+  walkingClock: WalkingClock | null = null,
 ): TravelerMotionSnapshot {
   const raw = Math.max(0, Number.isFinite(rawActiveSeconds) ? rawActiveSeconds : 0);
   const distance = Math.max(0, Number.isFinite(distanceMetres) ? distanceMetres : 0);
-  const baseWalkingSeconds = activeWalkingSecondsAt(raw, scheduledActions);
-  const story = storyTimelineAt(pack, baseWalkingSeconds);
-  const activeAction = story.action;
-  const actionSeconds = activeAction
-    ? actionTravel(activeAction.elapsedSeconds, activeAction.durationSeconds).seconds
-    : actionsForPack(pack).filter((action) => story.walkingSeconds > action.atWalkingSecond)
-      .length * 1.2;
-
-  const crowdAction = crowdActionAt(
-    raw,
-    distance,
-    scheduledActions,
-    activeAction !== null,
-    Number.isFinite(story.lastCompletedBaseSecond)
-      ? Math.max(0, raw - (baseWalkingSeconds - story.lastCompletedBaseSecond))
-      : Number.NEGATIVE_INFINITY,
-  );
-  const ambientAction = activeAction || crowdAction
-    ? null
-    : systemActionAt(pack, raw, distance);
-  const resolvedAction = activeAction ?? crowdAction ?? ambientAction;
-
-  const routeSeconds = story.walkingSeconds;
-  const locomotionSeconds = Math.max(0, story.walkingSeconds + actionSeconds);
+  const routeSeconds = activeWalkingSecondsAt(raw, scheduledActions, walkingClock);
+  const action = activityAt(pack, raw, scheduledActions);
+  const locomotionSeconds = routeSeconds;
   const plantIndex = Math.floor((locomotionSeconds + 1e-7) / STEP_DURATION_SECONDS);
   const cyclePhase = (locomotionSeconds % GAIT_CYCLE_SECONDS) / GAIT_CYCLE_SECONDS;
   const stepPhase = (locomotionSeconds % STEP_DURATION_SECONDS) / STEP_DURATION_SECONDS;
@@ -409,22 +203,22 @@ export function travelerMotionAt(
     cyclePhase,
     stepPhase,
     gaitFrameIndex: gaitFrameAt(cyclePhase),
-    speedFactor: resolvedAction
-      ? actionTravel(resolvedAction.elapsedSeconds, resolvedAction.durationSeconds).speed
+    speedFactor: action
+      ? actionTravel(action.elapsedSeconds, action.durationSeconds).speed
       : 1,
-    action: resolvedAction,
+    action,
   };
 }
 
 /**
- * The crowd action he is performing right now, if the current action came from
- * the watchers rather than from the pack's own story beats.
+ * The crowd action he is performing right now, if the current stop came from
+ * the watchers rather than from the server's own schedule.
  */
 export function crowdActionKindOf(
   action: TravelerMotionAction | null | undefined,
 ): CrowdActionKind | null {
   if (!action || action.source !== "crowd") return null;
-  return action.kind in CROWD_ACTION_LABELS ? (action.kind as CrowdActionKind) : null;
+  return isCrowdActivityKind(action.kind) ? action.kind : null;
 }
 
 export function visibleStepsBetween(

@@ -4,7 +4,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import type { Texture as PixiTexture } from "pixi.js";
 import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
-import { dailyActiveWalkingSecondsAt, travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import {
   stageLayout,
@@ -15,10 +15,10 @@ import {
 import { CHARACTER_HEIGHT_TARGETS } from "@/lib/world/stage-targets";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
-import { deterministicVariant, scenePositionAt, SCENE_VISIT_SECONDS } from "@/lib/world/route-clock";
+import { activeWalkingSecondsAt, deterministicVariant, scenePositionAt } from "@/lib/world/route-clock";
 import { segmentVariant } from "@/lib/world/segment-sequencer";
 import { composedSegmentSignature } from "@/lib/world/segment-sequencer";
-import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
+import type { QualityTier, RouteRuntime, WalkingClock, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import { contactShadowLayout, gradeMatrix, type CharacterContacts, type VisualGrade } from "@/lib/world/visual-grade";
 import type { ScheduledActionView } from "@/lib/contracts";
 import type { JourneyWeather } from "@/lib/weather/open-meteo";
@@ -37,6 +37,7 @@ type Props = {
   routeSeconds: number;
   routeRuntime: RouteRuntime;
   scheduledActions?: readonly ScheduledActionView[];
+  walkingClock?: WalkingClock | null;
   weather?: JourneyWeather | null;
   /** Premium placement only: an approved sign texture drawn in the cafe zone. */
   sponsorSignUrl?: string | null;
@@ -55,8 +56,8 @@ type Props = {
 };
 
 type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">
-  & { scheduledActions: readonly ScheduledActionView[]; weather: JourneyWeather | null; sponsorSignUrl: string | null;
-      hundredWatchersAt: string | null };
+  & { scheduledActions: readonly ScheduledActionView[]; walkingClock: WalkingClock | null; weather: JourneyWeather | null;
+      sponsorSignUrl: string | null; hundredWatchersAt: string | null };
 
 export function PixiScene({
   pack,
@@ -66,6 +67,7 @@ export function PixiScene({
   routeSeconds,
   routeRuntime,
   scheduledActions = EMPTY_SCHEDULED_ACTIONS,
+  walkingClock = null,
   weather = null,
   sponsorSignUrl = null,
   hundredWatchersAt = null,
@@ -81,19 +83,19 @@ export function PixiScene({
   onFailure,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather, sponsorSignUrl, hundredWatchersAt });
+  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt });
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const diagnosticsCallback = useRef(onDiagnostics);
   const captureCallback = useRef(onCaptureReady);
 
   useEffect(() => {
-    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, weather, sponsorSignUrl, hundredWatchersAt };
+    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     diagnosticsCallback.current = onDiagnostics;
     captureCallback.current = onCaptureReady;
-  }, [command, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, onMotionSample]);
+  }, [command, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, walkingClock, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -590,10 +592,10 @@ export function PixiScene({
           if (frameSamples.length > 180) frameSamples.shift();
           clock.accept(state.routeRuntime, state.travelerCommand?.presenceTtlMs ?? 50_000, tickAt);
           const sample = clock.sample(tickAt, state.scheduledActions);
-          const motion = travelerMotionAt(pack, sample.rawSeconds, sample.distanceMetres, state.scheduledActions);
+          const motion = travelerMotionAt(pack, sample.rawSeconds, sample.distanceMetres, state.scheduledActions, state.walkingClock);
           if(tickAt-lastMotionAt>=250) {lastMotionAt=tickAt;motionCallback.current?.({assetVersion:pack.assetVersion,motion});}
           displayedSeconds = sample.rawSeconds;
-          displayedWalkingSeconds = dailyActiveWalkingSecondsAt(pack, sample.rawSeconds, state.scheduledActions);
+          displayedWalkingSeconds = activeWalkingSecondsAt(sample.rawSeconds, state.scheduledActions, state.walkingClock);
           displayedDistance = sample.distanceMetres;
 
           const position = scenePositionAt(pack, displayedWalkingSeconds);
@@ -613,7 +615,7 @@ export function PixiScene({
           if (coherentPanorama) {
             const nextZoneIndex = (activeZoneIndex + 1) % pack.route.zones.length;
             if (position.zoneIndex === activeZoneIndex) {
-              const remaining = Math.max(0, SCENE_VISIT_SECONDS - position.secondsIntoVisit);
+              const remaining = Math.max(0, position.secondsToNextVisit);
               if (remaining <= 15) void prepareTransition(nextZoneIndex).catch(() => undefined);
               if (remaining <= 1 && transition?.zoneIndex === nextZoneIndex) {
                 transitionAlpha = 1 - remaining;

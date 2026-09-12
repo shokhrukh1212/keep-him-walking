@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CountryPack } from "@/lib/content/schema";
 import { scenePositionAt } from "@/lib/world/route-clock";
-import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
+import type { QualityTier, RouteRuntime, WalkingClock, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { StaticScene } from "./StaticScene";
@@ -28,6 +28,7 @@ type Props = {
   routeSeconds: number;
   routeRuntime: RouteRuntime;
   scheduledActions?: readonly ScheduledActionView[];
+  walkingClock?: WalkingClock | null;
   weather?: JourneyWeather | null;
   sponsorSignUrl?: string | null;
   hundredWatchersAt?: string | null;
@@ -51,6 +52,7 @@ export function SceneStage({
   routeSeconds,
   routeRuntime,
   scheduledActions,
+  walkingClock = null,
   weather,
   sponsorSignUrl = null,
   hundredWatchersAt = null,
@@ -131,6 +133,7 @@ export function SceneStage({
           routeSeconds={routeSeconds}
           routeRuntime={routeRuntime}
           scheduledActions={scheduledActions}
+          walkingClock={walkingClock}
           weather={weather}
           sponsorSignUrl={sponsorSignUrl}
           hundredWatchersAt={hundredWatchersAt}
@@ -153,6 +156,7 @@ export function SceneStage({
         stageFrame={stageFrame}
         routeRuntime={routeRuntime}
         scheduledActions={scheduledActions}
+        walkingClock={walkingClock}
         onCaptureReady={onCharacterCaptureReady}
         command={travelerCommand}
         qualityTier={qualityTier}

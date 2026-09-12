@@ -1,71 +1,101 @@
-import type { CountryPack } from "@/lib/content/schema";
-import type { ScheduledActionView } from "@/lib/contracts";
-import type { RoutePosition, RouteRuntime, ScenePosition } from "./types";
+import { DEFAULT_SCENE_VISIT_SECONDS, type CountryPack } from "@/lib/content/schema";
+import { activityWindow, type ActivityWindowRow } from "./activities";
+import type { RoutePosition, RouteRuntime, ScenePosition, WalkingClock } from "./types";
 
-const CROWD_ACTION_DURATION_SECONDS = { wave: 2.5, drink: 5.5, photo: 4 } as const;
-export const SCENE_VISIT_SECONDS = 18 * 60;
+type DistanceRow = ActivityWindowRow & { frozenDistanceMetres?: number | null };
+
+/** Live stop windows, unioned so overlapping or legacy rows never pause the clock twice. */
+function mergedWindows(rows: readonly ActivityWindowRow[]): Array<[number, number]> {
+  const windows = rows.flatMap((row) => {
+    const window = activityWindow(row);
+    return window ? [[window[0], window[1]] as [number, number]] : [];
+  }).sort((left, right) => left[0] - right[0]);
+  const merged: Array<[number, number]> = [];
+  for (const [start, end] of windows) {
+    const last = merged.at(-1);
+    if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+    else merged.push([start, end]);
+  }
+  return merged;
+}
+
+function heldBetween(windows: ReadonlyArray<readonly [number, number]>, from: number, to: number): number {
+  if (!(to > from)) return 0;
+  let held = 0;
+  for (const [start, end] of windows) held += Math.max(0, Math.min(to, end) - Math.max(from, start));
+  return held;
+}
+
+export function validWalkingClock(clock: WalkingClock | null | undefined): clock is WalkingClock {
+  return Boolean(clock)
+    && Number.isFinite(clock!.anchorActiveSeconds)
+    && Number.isFinite(clock!.heldActiveSeconds)
+    && clock!.anchorActiveSeconds >= 0
+    && clock!.heldActiveSeconds >= 0
+    && clock!.heldActiveSeconds <= clock!.anchorActiveSeconds + 1e-6;
+}
 
 /**
- * Derives the shared walking clock from server-owned watched time and action
- * windows. Overlapping windows are unioned so corrupt/legacy rows cannot pause
- * the clock twice. This clock is global: viewer count and pace never enter it.
+ * Derives the shared walking clock from server-owned watched time and stop
+ * windows. With the server's anchor, only the rows around the anchor matter, so
+ * a long day of stops never drifts as old rows age out of the payload. Without
+ * one (rollback payloads, tests), the given rows are the whole history. This clock
+ * is global: viewer count and pace never enter it.
  */
 export function activeWalkingSecondsAt(
   globalActiveSeconds: number,
-  scheduledActions: readonly ScheduledActionView[] = [],
+  scheduledActions: readonly ActivityWindowRow[] = [],
+  clock: WalkingClock | null = null,
 ): number {
-  const end = Math.max(0, Number.isFinite(globalActiveSeconds) ? globalActiveSeconds : 0);
-  const windows = scheduledActions.flatMap((action) => {
-    const start = Math.max(0, Number.isFinite(action.atActiveSecond) ? action.atActiveSecond : 0);
-    const rawEnd = action.endsAtActiveSecond
-      ?? start + CROWD_ACTION_DURATION_SECONDS[action.kind];
-    const stop = Math.max(start, Number.isFinite(rawEnd) ? rawEnd : start);
-    if (start >= end || stop <= 0 || stop <= start) return [];
-    return [[Math.max(0, start), Math.min(end, stop)] as const];
-  }).sort((left, right) => left[0] - right[0]);
-
-  let held = 0;
-  let mergedStart = -1;
-  let mergedEnd = -1;
-  for (const [start, stop] of windows) {
-    if (mergedStart < 0) {
-      mergedStart = start;
-      mergedEnd = stop;
-    } else if (start <= mergedEnd) {
-      mergedEnd = Math.max(mergedEnd, stop);
-    } else {
-      held += mergedEnd - mergedStart;
-      mergedStart = start;
-      mergedEnd = stop;
-    }
+  const raw = Math.max(0, Number.isFinite(globalActiveSeconds) ? globalActiveSeconds : 0);
+  const windows = mergedWindows(scheduledActions);
+  if (validWalkingClock(clock)) {
+    const anchor = clock.anchorActiveSeconds;
+    const walkingAtAnchor = anchor - Math.min(anchor, clock.heldActiveSeconds);
+    const delta = raw >= anchor
+      ? (raw - anchor) - heldBetween(windows, anchor, raw)
+      : -((anchor - raw) - heldBetween(windows, raw, anchor));
+    return Math.max(0, walkingAtAnchor + delta);
   }
-  if (mergedStart >= 0) held += mergedEnd - mergedStart;
-  return Math.max(0, end - held);
+  return Math.max(0, raw - heldBetween(windows, 0, raw));
 }
 
-/** Five authored paintings repeat indefinitely, one per 18 walking minutes. */
+export function sceneVisitSecondsFor(pack: CountryPack): number {
+  const value = pack.route.sceneVisitSeconds;
+  return Number.isFinite(value) && value >= 60 ? value : DEFAULT_SCENE_VISIT_SECONDS;
+}
+
+/** Every place in the pinned manifest, in order, one visit per `sceneVisitSeconds` of walking, looping all day. */
 export function scenePositionAt(
   pack: CountryPack,
   dailyActiveWalkingSeconds: number,
 ): ScenePosition {
-  if (pack.route.zones.length !== 5) {
-    throw new RangeError(`pack ${pack.assetVersion} must declare exactly five launch scenes`);
+  const placeCount = pack.route.zones.length;
+  if (placeCount < 1) {
+    throw new RangeError(`pack ${pack.assetVersion} must declare at least one place`);
   }
+  const visitSeconds = sceneVisitSecondsFor(pack);
   const seconds = Math.max(
     0,
     Number.isFinite(dailyActiveWalkingSeconds) ? dailyActiveWalkingSeconds : 0,
   );
-  const visitIndex = Math.floor(seconds / SCENE_VISIT_SECONDS);
-  const secondsIntoVisit = seconds - visitIndex * SCENE_VISIT_SECONDS;
+  const visitIndex = Math.floor(seconds / visitSeconds);
+  const secondsIntoVisit = seconds - visitIndex * visitSeconds;
+  const zoneIndex = visitIndex % placeCount;
   return {
-    zoneIndex: visitIndex % pack.route.zones.length,
+    zoneIndex,
     visitIndex,
-    cycleIndex: Math.floor(visitIndex / pack.route.zones.length),
+    cycleIndex: Math.floor(visitIndex / placeCount),
     secondsIntoVisit,
-    visitProgress: secondsIntoVisit / SCENE_VISIT_SECONDS,
+    visitProgress: secondsIntoVisit / visitSeconds,
+    placeCount,
+    visitSeconds,
+    nextZoneIndex: (zoneIndex + 1) % placeCount,
+    secondsToNextVisit: visitSeconds - secondsIntoVisit,
   };
 }
 
+/** Legacy metre position. Scenery no longer follows distance; kept for the map and history. */
 export function routePositionAt(
   pack: CountryPack,
   distanceMetres: number,
@@ -124,7 +154,7 @@ export function extrapolatedRouteSeconds(runtime: RouteRuntime, nowMs: number): 
 export function extrapolatedRouteDistance(
   runtime: RouteRuntime,
   nowMs: number,
-  scheduledActions: readonly ScheduledActionView[] = [],
+  scheduledActions: readonly DistanceRow[] = [],
 ): number {
   if (!runtime.walking) return runtime.globalDistanceMetres;
   const authoritativeMs = new Date(runtime.authoritativeAt).getTime();
@@ -137,22 +167,21 @@ export function extrapolatedRouteDistance(
 export function projectedRouteDistance(
   runtime: RouteRuntime,
   elapsedSeconds: number,
-  scheduledActions: readonly ScheduledActionView[] = [],
+  scheduledActions: readonly DistanceRow[] = [],
 ): number {
   const elapsed = Math.min(60, Math.max(0, Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0));
   const projectedActiveSecond = runtime.globalActiveSeconds + elapsed;
-  let heldSeconds = 0;
+  const heldSeconds = heldBetween(
+    mergedWindows(scheduledActions),
+    runtime.globalActiveSeconds,
+    projectedActiveSecond,
+  );
   let frozenDistance: number | null = null;
   for (const action of scheduledActions) {
-    const end = action.endsAtActiveSecond
-      ?? action.atActiveSecond + CROWD_ACTION_DURATION_SECONDS[action.kind];
-    heldSeconds += Math.max(
-      0,
-      Math.min(projectedActiveSecond, end)
-        - Math.max(runtime.globalActiveSeconds, action.atActiveSecond),
-    );
-    if (projectedActiveSecond >= action.atActiveSecond
-      && projectedActiveSecond < end
+    const window = activityWindow(action);
+    if (window
+      && projectedActiveSecond >= window[0]
+      && projectedActiveSecond < window[1]
       && Number.isFinite(action.frozenDistanceMetres)) {
       frozenDistance = Math.max(0, action.frozenDistanceMetres!);
     }

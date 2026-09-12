@@ -42,12 +42,12 @@ describe("background walker residents", () => {
   });
 
   it("gives every viewer the same first walker for a whole appearance", () => {
-    const first = walkerResidentType([], seed, 240);
-    for (const second of [240.5, 270, 359.9]) expect(walkerResidentType([], seed, second)).toBe(first);
+    const first = walkerResidentType([], seed, 300);
+    for (const second of [300.5, 330, 449.9]) expect(walkerResidentType([], seed, second)).toBe(first);
   });
 
   it("lets both residents lead across a watch", () => {
-    const leaders = new Set(Array.from({ length: 24 }, (_, block) => walkerResidentType([], seed, block * 120 + 10)));
+    const leaders = new Set(Array.from({ length: 24 }, (_, block) => walkerResidentType([], seed, block * 150 + 10)));
     expect([...leaders].sort()).toEqual([...RESIDENT_TYPES]);
   });
 

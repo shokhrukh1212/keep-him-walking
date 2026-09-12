@@ -11,9 +11,94 @@ import { heartbeatBodySchema } from "@/lib/validation/api";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
 import { withRouteTelemetry } from "@/lib/observability/route";
-import { reactionsFromRow } from "@/lib/reactions/payload";
+import { writeOperationalLog } from "@/lib/observability/logger";
+import { mergeScheduledActions, reactionsFromRow } from "@/lib/reactions/payload";
 import { weatherFromRow } from "@/lib/weather/payload";
 import { issueShareToken } from "@/lib/share/server-token";
+import { nextActivityToSchedule } from "@/lib/world/activity-plan";
+import { activeWalkingSecondsAt } from "@/lib/world/route-clock";
+import type { CountryPack } from "@/lib/content/schema";
+import type { ReactionsView } from "@/lib/contracts";
+
+/** The database re-checks the lead a little below the planner's, to absorb rounding. */
+const SCHEDULE_RPC_MIN_LEAD_SECONDS = 15;
+
+type ScheduleRow = {
+  out_scheduled?: boolean;
+  out_reason?: string;
+  out_at_active_second?: number | string | null;
+  out_end_active_second?: number | string | null;
+};
+
+/**
+ * Writes the next planned stop once it is close enough that every viewer's next
+ * heartbeat will carry it. The plan is a pure function of the pinned pack and the
+ * day, and Postgres serializes the write under the authority lock, so concurrent
+ * heartbeats converge on one row. A failure never fails the heartbeat.
+ */
+async function scheduleNextActivity(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  input: {
+    pack: CountryPack;
+    countryDayId: string;
+    now: Date;
+    globalActiveSeconds: number;
+    distanceMetres: number;
+    paceRate: number;
+    reactions: ReactionsView;
+    config: ReturnType<typeof serverRuntimeConfig>;
+  },
+): Promise<ReactionsView | null> {
+  const { pack, reactions } = input;
+  const candidate = nextActivityToSchedule({
+    pack,
+    seed: input.countryDayId,
+    globalActiveSeconds: input.globalActiveSeconds,
+    walkingSeconds: activeWalkingSecondsAt(input.globalActiveSeconds, reactions.scheduled, reactions.walkingClock ?? null),
+    distanceMetres: input.distanceMetres,
+    paceRate: input.paceRate,
+    rows: reactions.scheduled,
+  });
+  if (!candidate) return null;
+  const { data, error } = await supabase.rpc("schedule_journey_activity", {
+    p_country_day_id: input.countryDayId,
+    p_occurrence_key: candidate.occurrenceKey,
+    p_kind: candidate.kind,
+    p_source: candidate.source,
+    p_variant: candidate.variant,
+    p_at_active_second: candidate.atActiveSecond,
+    p_duration_seconds: candidate.durationSeconds,
+    p_min_lead_seconds: SCHEDULE_RPC_MIN_LEAD_SECONDS,
+    p_now: input.now.toISOString(),
+    p_ttl_seconds: input.config.presenceTtlSeconds,
+    p_steps_per_second: input.config.stepsPerActiveSecond,
+    p_pace_cap: input.config.paceCap,
+  });
+  if (error) {
+    void writeOperationalLog("warning", "journey_activity_schedule_failed", {
+      kind: candidate.kind,
+      code: error.code ?? "rpc_error",
+    });
+    return null;
+  }
+  const row = (Array.isArray(data) ? data[0] : data) as ScheduleRow | null;
+  if (row?.out_scheduled !== true) return null;
+  const atActiveSecond = Number(row.out_at_active_second);
+  const endsAtActiveSecond = Number(row.out_end_active_second);
+  if (!Number.isFinite(atActiveSecond) || !Number.isFinite(endsAtActiveSecond)) return null;
+  return {
+    ...reactions,
+    scheduled: mergeScheduledActions(reactions.scheduled, [{
+      kind: candidate.kind,
+      atActiveSecond,
+      endsAtActiveSecond,
+      frozenDistanceMetres: null,
+      source: candidate.source,
+      ...(candidate.variant ? { variant: candidate.variant } : {}),
+      occurrenceKey: candidate.occurrenceKey,
+    }]),
+  };
+}
 
 async function handlePost(request: NextRequest) {
   if (!hasTrustedOrigin(request)) {
@@ -81,6 +166,27 @@ async function handlePost(request: NextRequest) {
         waited: Math.max(0, Math.floor((accountedAtMs - waitingSinceMs) / 1_000)),
       }, new Date(accountedAtMs))
     : null;
+  const globalActiveSeconds = Number(row?.out_global_active_seconds ?? 0);
+  const globalDistanceMetres = Number(row?.out_global_distance_metres ?? 0);
+  const paceRate = Number(row?.out_pace_rate ?? 1);
+  let reactions = reactionsFromRow(row?.out_reactions);
+  let activityScheduled = false;
+  if (pack?.schemaVersion === 3 && activeViewers > 0 && parsed.data.state === "active") {
+    const scheduled = await scheduleNextActivity(supabase, {
+      pack,
+      countryDayId: countryDay.id,
+      now,
+      globalActiveSeconds,
+      distanceMetres: globalDistanceMetres,
+      paceRate,
+      reactions,
+      config,
+    }).catch(() => null);
+    if (scheduled) {
+      reactions = scheduled;
+      activityScheduled = true;
+    }
+  }
   const response = NextResponse.json({
     countryDayId: countryDay.id,
     serverNow: countryDay.story_now ?? now.toISOString(),
@@ -98,15 +204,16 @@ async function handlePost(request: NextRequest) {
       Math.random,
       Number(row?.out_heartbeat_seconds ?? 0) * 1_000 || undefined,
     ),
-    globalActiveSeconds: Number(row?.out_global_active_seconds ?? 0),
-    globalDistanceMetres: Number(row?.out_global_distance_metres ?? 0),
-    paceRate: Number(row?.out_pace_rate ?? 1),
+    globalActiveSeconds,
+    globalDistanceMetres,
+    paceRate,
     routeAuthoritativeAt: String(row?.out_accounted_at ?? now.toISOString()),
     waitingSince: row?.out_waiting_since ? String(row.out_waiting_since) : null,
     wokeHim: row?.out_woke_him === true,
     firstWatcherShareToken,
     countryCode: String(row?.out_country_code ?? countryCode),
-    reactions: reactionsFromRow(row?.out_reactions),
+    reactions,
+    activityScheduled,
     weather: config.weatherEnabled ? weatherFromRow(row?.out_weather) : null,
     // The bunting goes up only once the server has confirmed the moment.
     hundredWatchersAt: row?.out_hundred_watchers_at ? String(row.out_hundred_watchers_at) : null,

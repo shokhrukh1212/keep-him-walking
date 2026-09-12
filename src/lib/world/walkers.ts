@@ -15,8 +15,11 @@ import { deterministicVariant } from "./route-clock";
  * doing, which is what once made people vanish in the middle of the screen.
  */
 
-/** Passes are scheduled per two-minute block of watched time. */
-export const WALKER_BLOCK_SECONDS = 120;
+/**
+ * Passes are scheduled per 150-second block of active-walking time, so someone
+ * passes every two to three walking minutes and nobody sets off while he is stopped.
+ */
+export const WALKER_BLOCK_SECONDS = 150;
 /** A frame that skips more watched time than this starts nobody, who would otherwise enter late. */
 export const WALKER_MAX_CATCH_UP_SECONDS = 2;
 /** How far past the screen edge, in metres at his depth, a whole body with a swinging arm is out of view. */
@@ -103,8 +106,8 @@ function passInBlock(block: number, slot: 0 | 1, seed: string): WalkerPass {
 }
 
 /**
- * Passes whose start falls in (fromSecond, toSecond]. The lead of each block starts
- * 0–30 s into it, so gaps run 90–150 s; about half the blocks send a second person
+ * Passes whose start falls in (fromSecond, toSecond] of active-walking time. The lead
+ * of each block starts 0–30 s into it, so gaps run 120–180 s; about half the blocks send a second person
  * where the tier allows two. Nobody sets off at night, and a jump in the clock starts
  * nobody: a pass that began before this viewer saw the street is not shown at all.
  */
