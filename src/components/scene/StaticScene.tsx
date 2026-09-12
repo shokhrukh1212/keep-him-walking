@@ -18,21 +18,37 @@ type Props = {
   active: boolean;
   /** The device pixels per CSS pixel the live world draws at; null until the device tier is known. */
   resolution: number | null;
+  /**
+   * The live world is expected to draw this painting. The poster then waits, so a
+   * normal start downloads the painting once, and appears only if the world is slow.
+   */
+  defer?: boolean;
   onStageFrame: (frame: StageFrame, source: "static" | "pixi") => void;
   onReady: () => void;
 };
+
+/** How long a starting world may take before the poster fetches its own copy. */
+const POSTER_DELAY_MS = 2_500;
 
 /**
  * The poster under the live world, and the whole world when WebGL is unavailable.
  * It asks for the same rendition the live world will, so a first visit downloads
  * each painting once, and it stops following the route once the live world is up.
  */
-export function StaticScene({ zone, assetVersion, active, resolution, onStageFrame, onReady }: Props) {
+export function StaticScene({ zone, assetVersion, active, resolution, defer = false, onStageFrame, onReady }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const picture = useRef<HTMLImageElement>(null);
   const reported = useRef(false);
   const onReadyRef = useRef(onReady);
   const [rendition, setRendition] = useState<{ zoneId: string; choice: RenditionChoice } | null>(null);
+  const [delayElapsed, setDelayElapsed] = useState(false);
+  const posterAllowed = !defer || delayElapsed;
+
+  useEffect(() => {
+    if (!defer || delayElapsed || resolution === null) return;
+    const timer = window.setTimeout(() => setDelayElapsed(true), POSTER_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [defer, delayElapsed, resolution]);
 
   useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
 
@@ -53,7 +69,7 @@ export function StaticScene({ zone, assetVersion, active, resolution, onStageFra
 
   useEffect(() => {
     const element = host.current;
-    if (!element || resolution === null) return;
+    if (!element || resolution === null || !posterAllowed) return;
     let frame = 0;
     const choose = () => {
       const width = element.clientWidth;
@@ -61,8 +77,8 @@ export function StaticScene({ zone, assetVersion, active, resolution, onStageFra
       if (!width || !height) return;
       const next = placeRenditions(zone, renditionRequestFor(zone, width, height, resolution)).city;
       setRendition((current) => {
-        // Behind a running world the poster keeps what it has.
-        if (current && !active) return current;
+        // Behind a running world the poster keeps what it has, and fetches nothing new.
+        if (!active) return current;
         if (current?.zoneId === zone.id
           && (current.choice.url === next.url || !shouldReplaceRendition(current.choice, next))) {
           return current;
@@ -80,7 +96,7 @@ export function StaticScene({ zone, assetVersion, active, resolution, onStageFra
       observer.disconnect();
       window.cancelAnimationFrame(frame);
     };
-  }, [active, resolution, zone]);
+  }, [active, posterAllowed, resolution, zone]);
 
   const shown = rendition?.zoneId === zone.id ? rendition.choice : null;
 

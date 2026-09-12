@@ -37,6 +37,16 @@ describe("walking status", () => {
     expect(walkingStatusLabel({ ...base, walking: false, lastConfirmedWalking: false }).text).toBe("Waiting for the internet");
   });
 
+  it("says Joining before this browser's first confirmation, unless it is really offline", () => {
+    const fresh = { ...base, walking: false, lastConfirmedWalking: false, connection: "reconnecting" as const, joining: true };
+    expect(walkingStatusLabel(fresh)).toEqual({ text: "Joining the walk…", tone: "reconnecting" });
+    // Someone else is already watching: he is simply walking.
+    expect(walkingStatusLabel({ ...fresh, walking: true }).text).toBe("Walking · Marais market");
+    // An empty audience is not announced before this visitor has been counted.
+    expect(walkingStatusLabel({ ...fresh, waitingSinceLocalTime: "11:17" }).text).toBe("Joining the walk…");
+    expect(walkingStatusLabel({ ...fresh, connection: "offline" }).text).toBe("You're offline · reconnecting when you're back");
+  });
+
   it("keeps prelaunch, preview and waking states explicit", () => {
     expect(walkingStatusLabel({ ...base, journeyState: "prelaunch", startsIn: "in 3 days" }).text).toBe("Starts in 3 days");
     expect(walkingStatusLabel({ ...base, mode: "offline_preview" }).tone).toBe("preview");

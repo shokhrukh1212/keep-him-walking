@@ -18,6 +18,8 @@ export type WalkingStatusInput = {
   /** The server confirmed nobody is watching, and since when (local time). */
   waitingSinceLocalTime: string | null;
   sleeping: boolean;
+  /** This browser is live but has not had its own presence confirmed yet. */
+  joining?: boolean;
 };
 
 export type WalkingStatus = {
@@ -45,6 +47,9 @@ export function walkingStatusLabel(input: WalkingStatusInput): WalkingStatus {
     };
   }
   if (input.connection === "offline") return { text: "You're offline · reconnecting when you're back", tone: "reconnecting" };
+  // Before this visitor's first heartbeat nothing about them is known yet: they
+  // are neither reconnecting nor proof of an empty audience.
+  if (input.joining) return { text: "Joining the walk…", tone: "reconnecting" };
   // The last word from the server was "walking" but it has not been renewed: that
   // is this browser's connection, not an empty audience.
   if (input.connection === "reconnecting" || (input.lastConfirmedWalking && !input.waitingSinceLocalTime)) {

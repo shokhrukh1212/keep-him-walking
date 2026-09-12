@@ -21,7 +21,11 @@ type Props = {
 const WATCHDOG_INTERVAL_MS = 2_000;
 
 export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat, onReactionHint }: Props) {
-  const [status, setStatus] = useState<ConnectionStatus>(snapshot.presence.status);
+  // The server-rendered placeholder says "offline"; a live page that has not
+  // heard back yet is still connecting, not offline.
+  const [status, setStatus] = useState<ConnectionStatus>(
+    snapshot.mode === "live" ? snapshot.presence.status : "reconnecting",
+  );
   const sessionId = useRef<string | null>(null);
   const timer = useRef<number | null>(null);
   const nextDueAt = useRef<number | null>(null);

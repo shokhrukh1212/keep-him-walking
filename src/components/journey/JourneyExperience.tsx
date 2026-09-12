@@ -812,6 +812,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         lastConfirmedWalking,
         waitingSinceLocalTime: waitingLocalTime,
         sleeping: waitingBehavior.phase === "sleep",
+        joining: snapshot.mode === "live" && heartbeat === null,
       });
   const distanceFreshness = snapshot.mode === "live" && connectionStatus !== "live"
     ? "reconnecting" as const
@@ -832,6 +833,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   return (
     <main className="journey-shell" data-motion={reducedMotion ? "reduced" : "full"} data-panel={openPanel ?? ""}>
       <SceneStage
+        // The first render is a placeholder at second zero; loading its place would
+        // download a painting the live journey is not showing.
+        settled={!loadingLive}
         scheduledActions={scheduledActions}
         walkingClock={walkingClock}
         weather={weather}

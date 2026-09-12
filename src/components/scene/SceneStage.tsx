@@ -45,6 +45,8 @@ type Props = {
   command: WorldCommand;
   /** Null until the device has been measured; the canvases wait so they mount once. */
   qualityTier: QualityTier | null;
+  /** The journey snapshot is the real one (or confirmed unavailable), so its place is worth loading. */
+  settled?: boolean;
   reducedMotion: boolean;
   travelerCommand?: TravelerCommand;
   onTravelerReady?: (ready: boolean) => void;
@@ -70,6 +72,7 @@ export function SceneStage({
   onCharacterCaptureReady,
   command,
   qualityTier,
+  settled = true,
   reducedMotion,
   travelerCommand,
   onTravelerReady,
@@ -132,15 +135,15 @@ export function SceneStage({
   const zone = pack.route.zones[route.zoneIndex] ?? pack.route.zones[0]!;
   // The same resolution the live world renders at, so the poster and the world
   // choose the same rendition.
-  const resolution = qualityTier
+  const resolution = qualityTier && settled
     ? Math.min(window.devicePixelRatio || 1, QUALITY_LIMITS[qualityTier].resolution)
     : null;
 
   return (
     <div ref={container} className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"}>
       <StaticScene zone={zone} assetVersion={pack.assetVersion} resolution={resolution}
-        active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
-      {qualityTier && !pixiFailed ? (
+        defer={!pixiFailed} active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
+      {qualityTier && settled && !pixiFailed ? (
         <PixiScene
           contacts={contacts}
           grade={grade}
