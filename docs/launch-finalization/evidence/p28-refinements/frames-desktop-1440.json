@@ -1,0 +1,31 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "deviceScaleFactor": 1.5,
+  "renderer": "headless Chromium (software GL); not a physical device",
+  "modalOpenClose": {
+    "samples": 12,
+    "p95Ms": 616.7,
+    "maxMs": 616.7,
+    "over50Ms": 12,
+    "longAnimationFrames": 1
+  },
+  "placeChange": {
+    "samples": 6,
+    "p95Ms": 866.6,
+    "maxMs": 866.6,
+    "over50Ms": 6,
+    "longAnimationFrames": 0
+  },
+  "steadyWalk": {
+    "samples": 12,
+    "p95Ms": 799.9,
+    "maxMs": 799.9,
+    "over50Ms": 12,
+    "longAnimationFrames": 3
+  },
+  "worldMountCount": "1",
+  "presenceSessions": 1
+}

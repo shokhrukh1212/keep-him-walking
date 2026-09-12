@@ -1,0 +1,234 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "deviceScaleFactor": 1.5,
+  "cold": {
+    "placesLoaded": 1,
+    "texturesHeld": 3,
+    "textureBytes": 26150400,
+    "variant": "full-3600",
+    "requests": 4,
+    "files": [
+      "city-full-3600.609a458a53.webp",
+      "sky-full-1600.53c0a6baa7.webp",
+      "ground-full-3600.c17dc5c232.webp"
+    ]
+  },
+  "transferBytesByPlace": {
+    "paris-arrival": 642354,
+    "paris-lanes": 745490,
+    "paris-market": 777152,
+    "paris-cafe": 788990,
+    "paris-landmark": 672414
+  },
+  "distinctFiles": 15,
+  "totalRequests": 49,
+  "maxTexturesHeld": 6,
+  "maxDecodedTextureBytes": 26150400,
+  "firstTransitionFrames": {
+    "samples": 2,
+    "p95Ms": 2816.6,
+    "maxMs": 2816.6,
+    "over50Ms": 2,
+    "longAnimationFrames": 1
+  },
+  "steps": [
+    {
+      "loop": 0,
+      "from": "paris-arrival",
+      "to": "paris-lanes",
+      "placesLoaded": 1,
+      "texturesHeld": 4,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-lanes"
+      ]
+    },
+    {
+      "loop": 0,
+      "from": "paris-lanes",
+      "to": "paris-market",
+      "placesLoaded": 1,
+      "texturesHeld": 4,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-market"
+      ]
+    },
+    {
+      "loop": 0,
+      "from": "paris-market",
+      "to": "paris-cafe",
+      "placesLoaded": 1,
+      "texturesHeld": 4,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-cafe"
+      ]
+    },
+    {
+      "loop": 0,
+      "from": "paris-cafe",
+      "to": "paris-landmark",
+      "placesLoaded": 1,
+      "texturesHeld": 5,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-landmark"
+      ]
+    },
+    {
+      "loop": 0,
+      "from": "paris-landmark",
+      "to": "paris-arrival",
+      "placesLoaded": 1,
+      "texturesHeld": 5,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-arrival"
+      ]
+    },
+    {
+      "loop": 1,
+      "from": "paris-arrival",
+      "to": "paris-lanes",
+      "placesLoaded": 1,
+      "texturesHeld": 5,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-lanes"
+      ]
+    },
+    {
+      "loop": 1,
+      "from": "paris-lanes",
+      "to": "paris-market",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-market"
+      ]
+    },
+    {
+      "loop": 1,
+      "from": "paris-market",
+      "to": "paris-cafe",
+      "placesLoaded": 1,
+      "texturesHeld": 4,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-cafe"
+      ]
+    },
+    {
+      "loop": 1,
+      "from": "paris-cafe",
+      "to": "paris-landmark",
+      "placesLoaded": 1,
+      "texturesHeld": 5,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-landmark"
+      ]
+    },
+    {
+      "loop": 1,
+      "from": "paris-landmark",
+      "to": "paris-arrival",
+      "placesLoaded": 1,
+      "texturesHeld": 4,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-arrival"
+      ]
+    },
+    {
+      "loop": 2,
+      "from": "paris-arrival",
+      "to": "paris-lanes",
+      "placesLoaded": 1,
+      "texturesHeld": 4,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-lanes"
+      ]
+    },
+    {
+      "loop": 2,
+      "from": "paris-lanes",
+      "to": "paris-market",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-market"
+      ]
+    },
+    {
+      "loop": 2,
+      "from": "paris-market",
+      "to": "paris-cafe",
+      "placesLoaded": 1,
+      "texturesHeld": 6,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-cafe"
+      ]
+    },
+    {
+      "loop": 2,
+      "from": "paris-cafe",
+      "to": "paris-landmark",
+      "placesLoaded": 1,
+      "texturesHeld": 5,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-landmark"
+      ]
+    },
+    {
+      "loop": 2,
+      "from": "paris-landmark",
+      "to": "paris-arrival",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "textureBytes": 26150400,
+      "variant": "full-3600",
+      "newRequests": 3,
+      "fetchedPlaces": [
+        "paris-arrival"
+      ]
+    }
+  ]
+}

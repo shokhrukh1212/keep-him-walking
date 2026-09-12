@@ -1333,6 +1333,12 @@ following the route once the world is up.
 - Night art is fetched only once dusk begins.
 - Tomorrow's first place is fetched only in the last 20 minutes before
   `countryDay.endsAt`, at today's rendition size.
+- The server-rendered page is a placeholder at second zero, so `SceneStage` loads no
+  place until the first `/api/bootstrap` answer (`settled`). The static poster waits
+  2.5 s for the world before fetching its own copy, and appears at once only when WebGL
+  fails. A cold visit therefore downloads each painting once.
+- Until this browser's first heartbeat the status line reads "Joining the walk…". It
+  is neither "Reconnecting…" nor a claim that nobody is watching.
 
 **Failure.**
 - A place that fails keeps the last good painting on screen
@@ -2122,11 +2128,43 @@ pnpm verify:phase2       + isolated-project preflight, phase-2 pgTAP, full e2e
 pnpm verify:phase3       the current full gate
 ```
 
-Current P27 evidence (12 September 2026): remote dev has 381 passing pgTAP
-assertions and zero database-lint findings; the production build and targeted
-production-browser launch suite are recorded in
-`docs/launch-finalization/04-P27-HANDOFF.md`. The current-code 1,000-viewer run remains
-deliberately after launch and there is no capacity claim from the evidence below.
+Current P28 evidence (12 September 2026), in
+`docs/launch-finalization/evidence/p28-refinements/`:
+
+- **Database.** Migration 0036 is applied to dev `tkntxptfhmjnqaaveddx`. All 20 pgTAP
+  suites pass, including 28 new activity assertions, and remote lint is
+  `{"results":[]}`.
+- **Unit tests, lint, typecheck.** Unit tests cover the clock, planner, motion,
+  timeline, walkers, scene assets, texture cache, scene build, progress copy, panel
+  history, heartbeat recovery, the status line, the encounter log, upload and verify
+  parsing, and the modal, sound, goal and vote components. Two heartbeat-chain
+  reproductions failed on the old hook and pass on the fixed one. `pnpm lint` and
+  `pnpm typecheck` are clean.
+- **Content.** `content:validate` reports 17 packs, 346 uniquely owned scene assets, and
+  "paris-v2: 5 of 10 target places".
+- **Browser.** Production-build specs are `modal-continuity`, `scene-loading` and
+  `launch-candidate`, run in headless Chromium at device scale 1.5. Results and
+  measurements are in `measurements.json`.
+- **Live development probe.** The dev day was switched to `paris-v2` with the guarded
+  RPC. As one real watcher over nine minutes:
+  - Every heartbeat returned 200.
+  - The server scheduled a greeting, a lean, the café conversation and a shoe-tie, and
+    each played with its label.
+  - One world mount; at most two places and six textures held; no page errors.
+  - It found the two startup flaws fixed in `a6752fe`.
+
+  The probe advanced the shared development journey while it ran.
+- **Frames are not a performance claim.** Software GL makes rAF intervals range from
+  67 ms (320 px canvas) to about 1 s (1440 px at scale 1.5). The P27 baseline in the
+  same environment was 2,233 ms p95. No freeze is claimed fixed or present, and no
+  physical device was available.
+
+The current-code 1,000-viewer run remains deliberately after launch (D2), and nothing
+below is a capacity claim.
+
+Previous P27 evidence: remote dev had 381 passing pgTAP assertions and zero
+database-lint findings; the production build and targeted production-browser launch
+suite are recorded in `docs/launch-finalization/04-P27-HANDOFF.md`.
 
 Historical results (`docs/phase-3-results.md`, 2026-09-06; not current launch gates):
 

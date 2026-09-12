@@ -1,0 +1,322 @@
+{
+  "recordedAt": "2026-09-12T15:45:04.711Z",
+  "environment": "Local production build (next start) on WSL, headless Chromium, software GL, deviceScaleFactor 1.5. Not a physical device.",
+  "modalContinuity": {
+    "1440x900": {
+      "openFrames": {
+        "samples": 3,
+        "p95Ms": 966.7,
+        "maxMs": 966.7,
+        "over50Ms": 3,
+        "longAnimationFrames": 1
+      },
+      "worldMountCount": "1",
+      "presenceSessions": 1
+    },
+    "320x568": {
+      "openFrames": {
+        "samples": 16,
+        "p95Ms": 216.6,
+        "maxMs": 216.6,
+        "over50Ms": 16,
+        "longAnimationFrames": 1
+      },
+      "worldMountCount": "1",
+      "presenceSessions": 1
+    },
+    "390x844": {
+      "openFrames": {
+        "samples": 11,
+        "p95Ms": 266.7,
+        "maxMs": 266.7,
+        "over50Ms": 11,
+        "longAnimationFrames": 1
+      },
+      "worldMountCount": "1",
+      "presenceSessions": 1
+    },
+    "667x375": {
+      "openFrames": {
+        "samples": 7,
+        "p95Ms": 433.3,
+        "maxMs": 433.3,
+        "over50Ms": 7,
+        "longAnimationFrames": 0
+      },
+      "worldMountCount": "1",
+      "presenceSessions": 1
+    },
+    "768x1024": {
+      "openFrames": {
+        "samples": 4,
+        "p95Ms": 649.9,
+        "maxMs": 649.9,
+        "over50Ms": 4,
+        "longAnimationFrames": 0
+      },
+      "worldMountCount": "1",
+      "presenceSessions": 1
+    }
+  },
+  "sceneLoading": {
+    "1440x900": {
+      "coldLoad": {
+        "placesLoaded": 1,
+        "texturesHeld": 3,
+        "textureBytes": 26150400,
+        "variant": "full-3600",
+        "requests": 4,
+        "files": [
+          "city-full-3600.609a458a53.webp",
+          "sky-full-1600.53c0a6baa7.webp",
+          "ground-full-3600.c17dc5c232.webp"
+        ]
+      },
+      "transferBytesByPlace": {
+        "paris-arrival": 642354,
+        "paris-lanes": 745490,
+        "paris-market": 777152,
+        "paris-cafe": 788990,
+        "paris-landmark": 672414
+      },
+      "distinctRenditionFiles": 15,
+      "totalRenditionRequestsOverThreeLoops": 49,
+      "placeChanges": 15,
+      "maxPlacesHeld": 1,
+      "maxTexturesHeld": 6,
+      "maxDecodedTextureBytes": 26150400,
+      "decodedBytesAfterEachLoop": [
+        26150400,
+        26150400,
+        26150400
+      ],
+      "requestsAfterFirstLoop": 30,
+      "firstPlaceChangeFrames": {
+        "samples": 2,
+        "p95Ms": 2816.6,
+        "maxMs": 2816.6,
+        "over50Ms": 2,
+        "longAnimationFrames": 1
+      }
+    },
+    "390x844": {
+      "coldLoad": {
+        "placesLoaded": 1,
+        "texturesHeld": 3,
+        "textureBytes": 7110400,
+        "variant": "center-800",
+        "requests": 4,
+        "files": [
+          "city-center-800.1b08210e6b.webp",
+          "sky-full-800.6ac25de359.webp",
+          "ground-full-3600.c17dc5c232.webp"
+        ]
+      },
+      "transferBytesByPlace": {
+        "paris-arrival": 164038,
+        "paris-lanes": 209066,
+        "paris-market": 232828,
+        "paris-cafe": 216278,
+        "paris-landmark": 180830
+      },
+      "distinctRenditionFiles": 15,
+      "totalRenditionRequestsOverThreeLoops": 49,
+      "placeChanges": 15,
+      "maxPlacesHeld": 1,
+      "maxTexturesHeld": 3,
+      "maxDecodedTextureBytes": 7110400,
+      "decodedBytesAfterEachLoop": [
+        7110400,
+        7110400,
+        7110400
+      ],
+      "requestsAfterFirstLoop": 30,
+      "firstPlaceChangeFrames": {
+        "samples": 22,
+        "p95Ms": 233.3,
+        "maxMs": 233.4,
+        "over50Ms": 22,
+        "longAnimationFrames": 0
+      }
+    }
+  },
+  "desktopFrames": {
+    "modalOpenClose": {
+      "samples": 12,
+      "p95Ms": 616.7,
+      "maxMs": 616.7,
+      "over50Ms": 12,
+      "longAnimationFrames": 1
+    },
+    "placeChange": {
+      "samples": 6,
+      "p95Ms": 866.6,
+      "maxMs": 866.6,
+      "over50Ms": 6,
+      "longAnimationFrames": 0
+    },
+    "steadyWalk": {
+      "samples": 12,
+      "p95Ms": 799.9,
+      "maxMs": 799.9,
+      "over50Ms": 12,
+      "longAnimationFrames": 3
+    },
+    "worldMountCount": "1",
+    "presenceSessions": 1
+  },
+  "liveDevProbe": {
+    "note": "Real watcher on the shared development journey (project tkntxptfhmjnqaaveddx); it advanced that journey while running. Headless Chromium with software GL, not a physical device.",
+    "minutes": 6,
+    "bootstrap": {
+      "status": 200,
+      "dayId": "10000000-0000-4000-8000-000000000001",
+      "pack": "paris-v2",
+      "assetVersion": "paris-v2",
+      "mode": "live"
+    },
+    "heartbeats": 16,
+    "heartbeatStatuses": [
+      200
+    ],
+    "heartbeatsThatScheduledAStop": 3,
+    "scheduledRowsSeen": [
+      {
+        "kind": "greeting",
+        "atActiveSecond": 3441,
+        "endsAtActiveSecond": 3447.93,
+        "variant": null,
+        "source": "system",
+        "cancelled": false
+      },
+      {
+        "kind": "lean",
+        "atActiveSecond": 3618,
+        "endsAtActiveSecond": 3622.53,
+        "variant": null,
+        "source": "system",
+        "cancelled": false
+      },
+      {
+        "kind": "conversation",
+        "atActiveSecond": 3759,
+        "endsAtActiveSecond": 3779.66,
+        "variant": "paris-cafe-minute",
+        "source": "system",
+        "cancelled": false
+      }
+    ],
+    "statusTexts": [
+      "↻You're offline · reconnecting when you're back",
+      "•Waking up · starts walking in 3…",
+      "→Walking · Left Bank café",
+      "→Saying hello"
+    ],
+    "renditionRequests": [
+      "paris/v2/places/paris-arrival/city-full-3600.609a458a53.webp",
+      "paris/v2/places/paris-arrival/sky-full-1600.53c0a6baa7.webp",
+      "paris/v2/places/paris-arrival/city-full-3600.609a458a53.webp",
+      "paris/v2/places/paris-arrival/ground-full-3600.c17dc5c232.webp",
+      "paris/v2/places/paris-cafe/city-full-3600.cc6b2b4101.webp",
+      "paris/v2/places/paris-cafe/sky-full-1600.e8df8a8779.webp",
+      "paris/v2/places/paris-cafe/ground-full-3600.01bb792370.webp",
+      "paris/v2/places/paris-landmark/city-full-3600.1b5d0ad2b0.webp",
+      "paris/v2/places/paris-landmark/sky-full-1600.ed767ec90d.webp",
+      "paris/v2/places/paris-landmark/ground-full-3600.159e5c24ac.webp"
+    ],
+    "placesSeen": [
+      "paris-arrival",
+      "paris-cafe"
+    ],
+    "maxTexturesHeld": 3,
+    "worldMountCounts": [
+      "1"
+    ],
+    "steadyFrames": {
+      "samples": 14,
+      "p95Ms": 866.5,
+      "maxMs": 866.5,
+      "over50Ms": 14
+    },
+    "pageErrors": []
+  },
+  "liveDevProbeAfterStartupFix": {
+    "note": "Real watcher on the shared development journey (project tkntxptfhmjnqaaveddx); it advanced that journey while running. Headless Chromium with software GL, not a physical device.",
+    "minutes": 3,
+    "bootstrap": {
+      "status": 200,
+      "dayId": "10000000-0000-4000-8000-000000000001",
+      "pack": "paris-v2",
+      "assetVersion": "paris-v2",
+      "mode": "live"
+    },
+    "heartbeats": 10,
+    "heartbeatStatuses": [
+      200
+    ],
+    "heartbeatsThatScheduledAStop": 1,
+    "scheduledRowsSeen": [
+      {
+        "kind": "greeting",
+        "atActiveSecond": 3441,
+        "endsAtActiveSecond": 3447.93,
+        "variant": null,
+        "source": "system",
+        "cancelled": false
+      },
+      {
+        "kind": "lean",
+        "atActiveSecond": 3618,
+        "endsAtActiveSecond": 3622.53,
+        "variant": null,
+        "source": "system",
+        "cancelled": false
+      },
+      {
+        "kind": "conversation",
+        "atActiveSecond": 3759,
+        "endsAtActiveSecond": 3779.66,
+        "variant": "paris-cafe-minute",
+        "source": "system",
+        "cancelled": false
+      },
+      {
+        "kind": "tie_shoe",
+        "atActiveSecond": 3932,
+        "endsAtActiveSecond": 3935.97,
+        "variant": null,
+        "source": "system",
+        "cancelled": false
+      }
+    ],
+    "statusTexts": [
+      "•Waking up · starts walking in 3…",
+      "→Walking · Left Bank café",
+      "→Walking · The Seine and the Eiffel Tower",
+      "→Tying a shoe"
+    ],
+    "renditionRequests": [
+      "paris/v2/places/paris-cafe/ground-full-3600.01bb792370.webp",
+      "paris/v2/places/paris-cafe/sky-full-1600.e8df8a8779.webp",
+      "paris/v2/places/paris-landmark/city-full-3600.1b5d0ad2b0.webp",
+      "paris/v2/places/paris-landmark/ground-full-3600.159e5c24ac.webp",
+      "paris/v2/places/paris-landmark/sky-full-1600.ed767ec90d.webp",
+      "paris/v2/places/paris-cafe/city-full-3600.cc6b2b4101.webp"
+    ],
+    "placesSeen": [
+      "paris-cafe",
+      "paris-landmark"
+    ],
+    "maxTexturesHeld": 6,
+    "worldMountCounts": [
+      "1"
+    ],
+    "steadyFrames": {
+      "samples": 14,
+      "p95Ms": 933.2,
+      "maxMs": 933.2,
+      "over50Ms": 14
+    },
+    "pageErrors": []
+  }
+}

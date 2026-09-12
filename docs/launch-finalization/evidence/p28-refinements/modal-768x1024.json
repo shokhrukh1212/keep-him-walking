@@ -1,0 +1,16 @@
+{
+  "viewport": {
+    "width": 768,
+    "height": 1024
+  },
+  "deviceScaleFactor": 1.5,
+  "openFrames": {
+    "samples": 4,
+    "p95Ms": 649.9,
+    "maxMs": 649.9,
+    "over50Ms": 4,
+    "longAnimationFrames": 0
+  },
+  "worldMounts": "1",
+  "presenceSessions": 1
+}
