@@ -9,8 +9,11 @@ const MIME: Record<string, string> = {
   ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".md": "text/markdown; charset=utf-8",
 };
 const MAX_BYTES = 100 * 1024 * 1024;
+/** Scene renditions carry a content hash in their name, so their bytes can never change. */
+const CONTENT_ADDRESSED = /\.[0-9a-f]{10}\.(?:webp|avif|png|jpe?g)$/;
 export type AssetFile = { key: string; file: string; bytes: number; contentType: string };
 export type UploadConfig = { endpoint: string; bucket: string; region: string; accessKeyId: string; secretAccessKey: string };
+export type UploadArguments = { upload: boolean; prefix: string | null; skipExisting: boolean };
 
 export function uploadConfig(env: Readonly<Record<string, string | undefined>>): UploadConfig {
   const required = ["ASSET_S3_ENDPOINT", "ASSET_S3_BUCKET", "ASSET_S3_ACCESS_KEY_ID", "ASSET_S3_SECRET_ACCESS_KEY"];
@@ -21,6 +24,35 @@ export function uploadConfig(env: Readonly<Record<string, string | undefined>>):
   if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket)) throw new Error("Invalid R2 bucket name");
   if (!/^[a-z0-9-]+$/.test(region) || /[\r\n]/.test(env.ASSET_S3_ACCESS_KEY_ID!)) throw new Error("Invalid upload configuration");
   return { endpoint, bucket, region, accessKeyId: env.ASSET_S3_ACCESS_KEY_ID!, secretAccessKey: env.ASSET_S3_SECRET_ACCESS_KEY! };
+}
+
+/** A year for content-addressed renditions; an hour for files that may be repaired in place. */
+export function cacheControlFor(key: string): string {
+  return CONTENT_ADDRESSED.test(key) ? "public, max-age=31536000, immutable" : "public, max-age=3600";
+}
+
+export function parseUploadArguments(args: readonly string[]): UploadArguments {
+  const usage = "Usage: pnpm assets:upload [--dry-run | --upload] [--prefix scenes/<city>/<version>] [--skip-existing]";
+  let upload = false;
+  let dryRun = false;
+  let skipExisting = false;
+  let prefix: string | null = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--upload") upload = true;
+    else if (argument === "--dry-run") dryRun = true;
+    else if (argument === "--skip-existing") skipExisting = true;
+    else if (argument === "--prefix" && args[index + 1]) prefix = args[++index]!.replace(/^\/+|\/+$/g, "");
+    else throw new Error(usage);
+  }
+  if (upload && dryRun) throw new Error(usage);
+  if (prefix !== null && (
+    !ASSET_ROOTS.some((root) => prefix === root || prefix!.startsWith(`${root}/`))
+    || prefix.split("/").some((part) => !part || part === "." || part === "..")
+  )) {
+    throw new Error("Upload prefix must be inside a public asset tree");
+  }
+  return { upload, prefix, skipExisting };
 }
 
 /** Collect only runtime assets already intended for public delivery. Never follow symlinks. */
@@ -61,7 +93,7 @@ export function signAssetPut(config: UploadConfig, key: string, body: Uint8Array
   const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
   const hmac = (secret: string | Uint8Array, value: string) => createHmac("sha256", secret).update(value).digest();
   const headers: Record<string, string> = {
-    "cache-control": "public, max-age=3600", // Existing version URLs can be repaired in place.
+    "cache-control": cacheControlFor(key),
     "content-type": contentType,
     host: new URL(config.endpoint).host,
     "x-amz-content-sha256": hash(body),
@@ -78,18 +110,27 @@ export function signAssetPut(config: UploadConfig, key: string, body: Uint8Array
 }
 
 export async function runAssetUpload(args: string[], env: Readonly<Record<string, string | undefined>>, publicDirectory: string, fetcher: typeof fetch = fetch) {
-  if (args.some((arg) => arg !== "--upload" && arg !== "--dry-run") || args.length > 1) {
-    throw new Error("Usage: pnpm assets:upload [--dry-run | --upload]");
-  }
-  const upload = args[0] === "--upload";
+  const options = parseUploadArguments(args);
   // Validate everything before the first network write. Dry run needs no credentials.
-  const config = upload ? uploadConfig(env) : undefined;
-  const files = await collectAssets(publicDirectory);
+  const config = options.upload ? uploadConfig(env) : undefined;
+  const publicBase = options.skipExisting ? validateAssetBaseUrl(env.ASSET_BASE_URL) : "";
+  if (options.skipExisting && !publicBase) throw new Error("--skip-existing reads the public asset origin; set ASSET_BASE_URL");
+  const files = (await collectAssets(publicDirectory))
+    .filter((asset) => !options.prefix || asset.key === options.prefix || asset.key.startsWith(`${options.prefix}/`));
   if (!files.length) throw new Error("No public runtime assets found");
   let uploaded = 0;
+  let skipped = 0;
   if (config) for (const asset of files) {
     const info = await lstat(asset.file);
     if (!info.isFile() || info.isSymbolicLink() || info.size !== asset.bytes) throw new Error(`Asset changed after preflight: ${asset.key}`);
+    if (publicBase) {
+      const existing = await fetcher(`${publicBase}/${asset.key}`, { method: "HEAD", redirect: "error", signal: AbortSignal.timeout(10_000) })
+        .catch(() => null);
+      if (existing?.ok && Number(existing.headers.get("content-length")) === asset.bytes) {
+        skipped++;
+        continue;
+      }
+    }
     const body = await readFile(asset.file);
     const request = signAssetPut(config, asset.key, body, asset.contentType, new Date());
     let response: Response;
@@ -102,5 +143,13 @@ export async function runAssetUpload(args: string[], env: Readonly<Record<string
     await response.body?.cancel();
     uploaded++;
   }
-  return { mode: upload ? "upload" : "dry-run", files: files.length, bytes: files.reduce((sum, asset) => sum + asset.bytes, 0), uploaded, roots: ASSET_ROOTS };
+  return {
+    mode: options.upload ? "upload" : "dry-run",
+    files: files.length,
+    bytes: files.reduce((sum, asset) => sum + asset.bytes, 0),
+    uploaded,
+    skipped,
+    prefix: options.prefix,
+    roots: ASSET_ROOTS,
+  };
 }

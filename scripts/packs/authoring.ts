@@ -76,7 +76,7 @@ export function zoneId(slug: string, kind: typeof PACK_ZONE_KINDS[number]): stri
   return `${slug}-${kind}`;
 }
 
-function exportName(slug: string, version: number): string {
+export function exportName(slug: string, version: number): string {
   return `${slug.replace(/-([a-z0-9])/g, (_, letter: string) => letter.toUpperCase())}CountryPackV${version}`;
 }
 
@@ -198,7 +198,8 @@ export async function scaffoldPack(root: string, rawSlug: string, candidate: unk
   await writeFile(modulePath, renderPackModule(slug, input), "utf8");
 }
 
-function blendTileEdges(data: Buffer, width: number, height: number, channels: number): Buffer {
+/** Cross-fades the outer 8% of both edges onto their shared mean so the strip tiles without a seam. */
+export function blendTileEdges(data: Buffer, width: number, height: number, channels: number): Buffer {
   const result = Buffer.from(data);
   const blend = Math.max(1, Math.round(width * 0.08));
   for (let y = 0; y < height; y += 1) {
@@ -243,7 +244,7 @@ export function dominantPalette(data: Buffer, channels: number): [string, string
   return picked.map((color) => `#${color.map((part) => part.toString(16).padStart(2, "0")).join("")}`) as [string, string, string];
 }
 
-async function writeAtomic(target: string, data: Buffer | string): Promise<void> {
+export async function writeAtomic(target: string, data: Buffer | string): Promise<void> {
   await mkdir(path.dirname(target), { recursive: true });
   const temporary = `${target}.tmp-${process.pid}`;
   await writeFile(temporary, data);
@@ -304,7 +305,7 @@ async function processOptional(source: string, target: string, preserveAlpha = f
   return output.byteLength;
 }
 
-async function updateAuthoredRegistry(root: string, slug: string, version: number): Promise<void> {
+export async function updateAuthoredRegistry(root: string, slug: string, version: number): Promise<void> {
   const manifestPath = path.join(root, "src", "content", "countries", "authored-packs.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as { packs: string[] };
   const packId = `${slug}-v${version}`;

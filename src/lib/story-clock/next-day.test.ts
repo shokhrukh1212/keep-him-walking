@@ -22,7 +22,7 @@ it("starts a ticket day from its fixed country and continues candidates from the
 
 it("takes the fixed Paris train leg after the Day 1 name vote", () => {
   expect(nextDayPackIdForWinner({ state: "closed", kind: "name", winnerPackId: null }))
-    .toBe("paris-v1");
+    .toBe("paris-v2");
   expect(nextDayPackIdForWinner({ state: "closed", kind: "destination", winnerPackId: "bishkek-v1" }))
     .toBe("bishkek-v1");
   expect(nextDayPackIdForWinner({ state: "no_closing_vote" })).toBeNull();

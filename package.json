@@ -57,6 +57,8 @@
     "pack:new": "node --import tsx scripts/packs/new.ts",
     "pack:build": "node --import tsx scripts/packs/build.ts",
     "pack:lint": "node --import tsx scripts/packs/lint.ts",
+    "scenes:build": "node --import tsx scripts/scenes/build.ts",
+    "assets:verify": "node --import tsx --env-file-if-exists=.env.local scripts/verify-assets.ts",
     "content:audit-scale": "node --import tsx --env-file-if-exists=.env.local scripts/audit-content-scale.ts",
     "assets:report": "node --import tsx scripts/report-phase15-assets.ts",
     "assets:upload": "node --import tsx --env-file-if-exists=.env.local scripts/upload-assets.mjs",

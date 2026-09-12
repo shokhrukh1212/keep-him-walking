@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { collectAssets, runAssetUpload, signAssetPut, uploadConfig } from "../../../scripts/assets/upload";
+import { cacheControlFor, collectAssets, runAssetUpload, signAssetPut, uploadConfig } from "../../../scripts/assets/upload";
 
 const directories: string[] = [];
 const env = {
@@ -73,6 +73,30 @@ describe("asset upload", () => {
     expect(url).toBe(`${env.ASSET_S3_ENDPOINT}/walking-assets/scenes/image.webp`);
     expect(options).toMatchObject({ method: "PUT", redirect: "error", body: Buffer.from("abc"), headers: { "content-type": "image/webp", "cache-control": "public, max-age=3600" } });
     expect(options?.signal).toBeInstanceOf(AbortSignal);
+  });
+  it("caches content-addressed renditions for a year and repairable files for an hour", () => {
+    expect(cacheControlFor("scenes/paris/v2/places/paris-cafe/city-full-2560.0123456789.webp"))
+      .toBe("public, max-age=31536000, immutable");
+    expect(cacheControlFor("characters/v3/traveler.glb")).toBe("public, max-age=3600");
+    expect(cacheControlFor("scenes/paris/v1/zones/paris-cafe/fallback.webp")).toBe("public, max-age=3600");
+    const signed = signAssetPut(uploadConfig(env), "scenes/p/city-full-360.0123456789.webp", Buffer.from("x"), "image/webp", new Date());
+    expect(signed.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+  });
+  it("limits an upload to one prefix and skips objects the CDN already serves", async () => {
+    const directory = await fixture();
+    await mkdir(path.join(directory, "characters"));
+    await writeFile(path.join(directory, "characters", "a.glb"), "glb");
+    await expect(runAssetUpload(["--dry-run", "--prefix", "scenes"], {}, directory)).resolves.toMatchObject({ files: 1, prefix: "scenes" });
+    await expect(runAssetUpload(["--prefix", "../private"], {}, directory)).rejects.toThrow("inside a public asset tree");
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 200, headers: { "content-length": "3" } }));
+    await expect(runAssetUpload(
+      ["--upload", "--prefix", "scenes", "--skip-existing"],
+      { ...env, ASSET_BASE_URL: "https://assets.example.com" },
+      directory,
+      request,
+    )).resolves.toMatchObject({ uploaded: 0, skipped: 1 });
+    expect(request).toHaveBeenCalledWith("https://assets.example.com/scenes/image.webp", expect.objectContaining({ method: "HEAD" }));
+    await expect(runAssetUpload(["--upload", "--skip-existing"], env, directory, request)).rejects.toThrow("ASSET_BASE_URL");
   });
   it("stops on HTTP failure without exposing remote response bodies or credentials", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response("remote secret details", { status: 403 }));

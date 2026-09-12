@@ -1,0 +1,48 @@
+{
+  "packVersion": 2,
+  "sceneVisitSeconds": 420,
+  "targetPlaceCount": 10,
+  "places": [
+    {
+      "id": "paris-arrival",
+      "label": "Gare du Nord",
+      "tags": ["arrival", "station"],
+      "description": "First steps outside the station, on pale stone and a long morning pavement.",
+      "day": "zones/paris-arrival/master.png",
+      "weather": "clear"
+    },
+    {
+      "id": "paris-lanes",
+      "label": "Canal Saint-Martin",
+      "tags": ["lanes", "canal"],
+      "description": "A quiet canal promenade under plane trees, with an iron footbridge.",
+      "day": "zones/paris-lanes/master.png",
+      "weather": "breeze"
+    },
+    {
+      "id": "paris-market",
+      "label": "Marais market street",
+      "tags": ["market"],
+      "description": "Covered stalls, flowers and small doors in the Marais.",
+      "day": "zones/paris-market/master.png",
+      "weather": "haze"
+    },
+    {
+      "id": "paris-cafe",
+      "label": "Left Bank café",
+      "tags": ["cafe"],
+      "description": "A calm corner café with empty tables on a Left Bank side street.",
+      "day": "zones/paris-cafe/master.png",
+      "weather": "golden"
+    },
+    {
+      "id": "paris-landmark",
+      "label": "The Seine and the Eiffel Tower",
+      "tags": ["landmark", "river"],
+      "description": "The river widens and the tower comes into view as the light softens.",
+      "day": "zones/paris-landmark/master.png",
+      "night": "zones/paris-landmark/night.png",
+      "weather": "evening"
+    }
+  ]
+}

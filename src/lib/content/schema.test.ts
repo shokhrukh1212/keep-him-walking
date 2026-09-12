@@ -42,7 +42,7 @@ describe("Phase 2 country packs", () => {
   it("registers the immutable launch route and its Tashkent rollback", () => {
     expect(packs.map((pack) => pack.assetVersion)).toEqual([
       "tashkent-v4", "tashkent-v5", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1",
-      "paris-v1",
+      "paris-v1", "paris-v2",
     ]);
     for (const pack of packs) expect(countryPackV3Schema.parse(pack)).toBeTruthy();
   });
@@ -53,12 +53,13 @@ describe("Phase 2 country packs", () => {
         zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
       ),
     );
-    expect(new Set(sceneUrls).size).toBe(40);
+    expect(new Set(sceneUrls).size).toBe(45);
     expect(packs.every((pack) => pack.storyBeats.length >= 4)).toBe(true);
     expect(packs.slice(0, 2).every((pack) => pack.culturalReview.status === "approved")).toBe(true);
-    expect(packs.slice(2, -1).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
-    expect(packs.at(-1)?.culturalReview.status).toBe("pending");
-    expect(packs.at(-1)?.route.zones.every((zone) => zone.continuousScene)).toBe(true);
+    expect(packs.slice(2, -2).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
+    expect(packs.slice(-2).every((pack) => pack.culturalReview.status === "pending")).toBe(true);
+    expect(packs.slice(-2).every((pack) => pack.route.zones.every((zone) => zone.continuousScene))).toBe(true);
+    expect(packs.at(-1)?.route.zones.every((zone) => zone.variants && zone.tags.length > 0)).toBe(true);
     expect(new Set(packs.map((pack) => pack.npcSystem.baseType))).toEqual(new Set(["resident-a", "resident-b"]));
   });
 
@@ -124,5 +125,69 @@ describe("continuous scene layers", () => {
     };
     expect(countryPackV3Schema.parse(source).route.zones[0]!.continuousScene)
       .toMatchObject({ groundHeightFrac: 0.22 });
+  });
+});
+
+describe("variable place manifests", () => {
+  function withPlaces(count: number) {
+    const source = JSON.parse(JSON.stringify(tashkentCountryPackV4)) as Record<string, unknown>;
+    const route = source.route as { zones: Record<string, unknown>[]; sceneVisitSeconds?: number };
+    const template = route.zones;
+    delete route.sceneVisitSeconds;
+    route.zones = Array.from({ length: count }, (_, index) => {
+      const zone = JSON.parse(JSON.stringify(template[index % template.length])) as Record<string, unknown>;
+      delete zone.kind;
+      delete zone.tags;
+      return { ...zone, id: `place-${index}` };
+    });
+    source.preloadGroups = [
+      { id: "critical", timing: "critical", zoneId: count > 0 ? "place-0" : undefined, assets: ["/scenes/a.webp"] },
+      { id: "next", timing: "next_zone", assets: ["/scenes/b.webp"] },
+    ];
+    return source;
+  }
+
+  it("accepts an ordered manifest of one to twenty-four places", () => {
+    for (const count of [1, 5, 10, 24]) {
+      expect(countryPackV3Schema.parse(withPlaces(count)).route.zones).toHaveLength(count);
+    }
+    expect(() => countryPackV3Schema.parse(withPlaces(0))).toThrow();
+    expect(() => countryPackV3Schema.parse(withPlaces(25))).toThrow();
+  });
+
+  it("refuses two places with the same id", () => {
+    const source = withPlaces(3);
+    (source.route as { zones: Record<string, unknown>[] }).zones[2]!.id = "place-0";
+    expect(() => countryPackV3Schema.parse(source)).toThrow(/Place ids must be unique/);
+  });
+
+  it("defaults tags to the kind and each visit to seven walking minutes", () => {
+    const parsed = countryPackV3Schema.parse(withPlaces(10));
+    expect(parsed.route.sceneVisitSeconds).toBe(420);
+    expect(parsed.route.zones[3]!.tags).toEqual(["cafe"]);
+    expect(parsed.route.zones[7]!.tags).toEqual(["landmark"]);
+  });
+
+  it("keeps explicit tags, a description and content-addressed renditions", () => {
+    const source = withPlaces(2);
+    Object.assign((source.route as { zones: Record<string, unknown>[] }).zones[1]!, {
+      tags: ["canal", "lanes"],
+      description: "A quiet canal with an iron footbridge.",
+      variants: {
+        nominalWidth: 3_600,
+        nominalHeight: 1_200,
+        city: [{ url: "/scenes/paris/v2/places/p/city-full-1920.0123456789.webp", width: 1_920, height: 640, bytes: 190_000 }],
+      },
+    });
+    const zone = countryPackV3Schema.parse(source).route.zones[1]!;
+    expect(zone.tags).toEqual(["canal", "lanes"]);
+    expect(zone.description).toBe("A quiet canal with an iron footbridge.");
+    expect(zone.variants).toMatchObject({ city: [{ crop: "full" }], sky: [], ground: [], night: [] });
+  });
+
+  it("rejects duplicate conversation scripts", () => {
+    const script = { id: "hello", lines: [{ speaker: "npc", text: "Hello.", mood: "neutral" }] };
+    expect(() => countryPackV3Schema.parse({ ...tashkentCountryPackV4, conversations: [script, script] }))
+      .toThrow(/Duplicate conversation/);
   });
 });

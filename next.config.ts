@@ -32,7 +32,15 @@ const nextConfig: NextConfig = {
     useTypeScriptCli: false,
   },
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      {
+        // Scene renditions are content-addressed (`city-full-2560.<hash>.webp`), so a
+        // URL's bytes can never change and browsers may keep them for a year.
+        source: "/scenes/:city/:version/places/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+    ];
   },
 };
 

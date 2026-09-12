@@ -1,0 +1,108 @@
+{
+  "conversations": [
+    {
+      "id": "paris-welcome",
+      "role": "story",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["lanes"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! Are you finding your way from the station?", "mood": "curious" },
+        { "speaker": "traveler", "text": "Bonjour. Yes, I am discovering Paris on foot.", "mood": "amused" },
+        { "speaker": "npc", "text": "Follow the canal for a quieter start; the city changes pace beside the water.", "mood": "thoughtful" },
+        { "speaker": "traveler", "text": "That sounds better than rushing straight to the famous view.", "mood": "thoughtful" },
+        { "speaker": "npc", "text": "There is time for the market, a café, and the river before evening.", "mood": "neutral" },
+        { "speaker": "traveler", "text": "Merci, Camille. I will let the streets lead me there.", "mood": "amused" }
+      ]
+    },
+    {
+      "id": "paris-station-hello",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["arrival", "station"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! Are you finding your way from the station?", "mood": "curious" },
+        { "speaker": "traveler", "text": "Bonjour. Yes, I am discovering Paris on foot.", "mood": "amused" }
+      ]
+    },
+    {
+      "id": "paris-canal-advice",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["arrival", "lanes", "canal"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Follow the canal for a quieter start; the city changes pace beside the water.", "mood": "thoughtful" },
+        { "speaker": "traveler", "text": "That sounds better than rushing straight to the famous view.", "mood": "thoughtful" }
+      ]
+    },
+    {
+      "id": "paris-before-evening",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["lanes", "market", "cafe"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "There is time for the market, a café, and the river before evening.", "mood": "neutral" },
+        { "speaker": "traveler", "text": "Merci, Camille. I will let the streets lead me there.", "mood": "amused" }
+      ]
+    },
+    {
+      "id": "paris-market-peaches",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["market"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Take a look at the peaches before they sell out.", "mood": "curious" },
+        { "speaker": "traveler", "text": "They smell like the end of summer. Merci!", "mood": "amused" }
+      ]
+    },
+    {
+      "id": "paris-cafe-minute",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["cafe"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Nobody rushes a coffee here. Sit for a minute if you can.", "mood": "neutral" },
+        { "speaker": "traveler", "text": "A minute is exactly what my feet wanted.", "mood": "amused" }
+      ]
+    },
+    {
+      "id": "paris-footbridge-view",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["lanes", "canal"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Stop halfway across the footbridge. The water looks best from the middle.", "mood": "thoughtful" },
+        { "speaker": "traveler", "text": "Then I will stop halfway. Thank you.", "mood": "neutral" }
+      ]
+    },
+    {
+      "id": "paris-quay-bookstalls",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["river", "landmark"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "The green bookstalls along the quay are worth a slow look.", "mood": "curious" },
+        { "speaker": "traveler", "text": "Then I will walk slowly and look twice.", "mood": "thoughtful" }
+      ]
+    },
+    {
+      "id": "paris-tower-lights",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["landmark"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "After dark the tower sparkles for a few minutes every hour.", "mood": "surprised" },
+        { "speaker": "traveler", "text": "Then I have a good reason to come back tonight.", "mood": "amused" }
+      ]
+    }
+  ]
+}

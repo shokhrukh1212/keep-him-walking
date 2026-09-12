@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const supabase = getServerSupabase();
   let database: "ready" | "unconfigured" | "unavailable" = supabase ? "unavailable" : "unconfigured";
-  let scenePackId = "paris-v1";
+  let scenePackId = "paris-v2";
   let weather: unknown = null;
   let launchAt: string | null = null;
   if (supabase) {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
   }
   const packs = registeredCountryPacks();
-  const pack = getCountryPack(scenePackId) ?? getCountryPack("paris-v1");
+  const pack = getCountryPack(scenePackId) ?? getCountryPack("paris-v2");
   const representativePath = pack ? packPrewarmPaths(pack)[0] : null;
   let assetUrlValue: string | null = null;
   let assetBase: "ready" | "unavailable" = "unavailable";

@@ -1,4 +1,4 @@
-import { parisCountryPackV1 } from "@/content/countries/paris.v1";
+import { parisCountryPackV2 } from "@/content/countries/paris.v2";
 import type { BootstrapSnapshot } from "@/lib/contracts";
 import { DEFAULT_PRESENCE_TTL_SECONDS } from "@/lib/presence";
 import { DEFAULT_ROLLOVER_UTC_HOUR } from "@/lib/story-clock/rollover-hour";
@@ -23,14 +23,14 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
       id: "00000000-0000-4000-8000-000000000001",
       dayNumber: 1,
       totalDays: 195,
-      countryCode: parisCountryPackV1.countryCode,
-      countryName: parisCountryPackV1.countryName,
-      cityName: parisCountryPackV1.cityName,
-      timeZone: parisCountryPackV1.timeZone,
+      countryCode: parisCountryPackV2.countryCode,
+      countryName: parisCountryPackV2.countryName,
+      cityName: parisCountryPackV2.cityName,
+      timeZone: parisCountryPackV2.timeZone,
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
       storySummary: "The journey begins in Paris.",
-      scenePackId: parisCountryPackV1.assetVersion,
+      scenePackId: parisCountryPackV2.assetVersion,
     },
     activeEvent: null,
     nextEvent: null,
@@ -57,6 +57,6 @@ export function offlineBootstrapSnapshot(now = new Date()): BootstrapSnapshot {
     postcard: { eligible: false, unlockSeconds: 60, contributedSeconds: 0, url: null },
     passport: { streak: 0, collectedToday: false, collectSeconds: 30 },
     milestones: { hundredWatchersAt: null },
-    assets: parisCountryPackV1,
+    assets: parisCountryPackV2,
   };
 }

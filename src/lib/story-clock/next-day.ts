@@ -35,7 +35,7 @@ export type NextDayPlan = {
   } | null;
 };
 
-export const SEASON1_DAY2_FALLBACK_PACK_ID = "paris-v1";
+export const SEASON1_DAY2_FALLBACK_PACK_ID = "paris-v2";
 
 /** Day 1 names the traveler rather than choosing a country; its fixed onward
  * leg is the reviewed Paris pack. Every later winner carries its destination pack explicitly. */
