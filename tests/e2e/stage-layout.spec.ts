@@ -5,8 +5,8 @@ import { tbilisiCountryPackV1 } from "../../src/content/countries/tbilisi.v1";
 import { tashkentCountryPackV4 } from "../../src/content/countries/tashkent.v4";
 import { stageLayout } from "../../src/lib/world/stage-layout";
 import { DEFAULT_CHARACTER_HEIGHT_TARGETS } from "../../src/lib/world/stage-targets";
-import { travelerMotionAt } from "../../src/lib/traveler/motion-clock";
-import { routePositionAt } from "../../src/lib/world/route-clock";
+import { dailyActiveWalkingSecondsAt, travelerMotionAt } from "../../src/lib/traveler/motion-clock";
+import { scenePositionAt } from "../../src/lib/world/route-clock";
 
 // Geometric assertions only: no screenshots, recordings, remote database or live writes.
 test.use({ trace: "off", screenshot: "off", video: "off", deviceScaleFactor: 1 });
@@ -46,11 +46,12 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
       await expect(actor).toHaveAttribute("data-character-ready", "true", {timeout: 60_000});
       await expect(page.locator(".scene-stage")).toHaveAttribute("data-renderer", "pixi", {timeout: 30_000});
       for (const [index, zone] of pack.route.zones.entries()) {
-        // Locate a raw authoritative time in this zone without changing pure motion semantics.
+        // Locate a raw authoritative time in this 18-minute scene visit. Distance
+        // intentionally does not select paintings anymore.
         for (let seconds = 60; seconds < 7_000; seconds += 1) {
           const motion = travelerMotionAt(pack, seconds);
-          const route = routePositionAt(pack, motion.distanceMetres);
-          if (route.zoneIndex === index && route.metresIntoZone > 10 && !motion.action) { rawSeconds = seconds; break; }
+          const scene = scenePositionAt(pack, dailyActiveWalkingSecondsAt(pack, seconds));
+          if (scene.zoneIndex === index && scene.secondsIntoVisit > 10 && !motion.action) { rawSeconds = seconds; break; }
         }
         await expect(world).toHaveAttribute("data-zone-id", zone.id, {timeout: 30_000});
         await expect(actor).toHaveAttribute("data-zone-id", zone.id);

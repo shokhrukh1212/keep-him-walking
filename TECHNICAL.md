@@ -4,7 +4,7 @@
 > how it is built, with the character system as its centre, plus the image/scene
 > pipeline and the two rendering defects found in it — §8.3, fixed in `98e1c77`, and
 > §8.4, repaired with shared stage calibration on 2026-09-08. Post-P22 launch
-> refinements through migration 0034 are recorded inline below and in
+> refinements through migration 0035 are recorded inline below and in
 > `docs/plan/08-LAUNCH-READINESS.md`.
 >
 > Runtime numbers come from the repository. Stage calibration values are explicitly
@@ -23,9 +23,9 @@
 | Interface | React + plain CSS (`globals.css`), Tailwind v4 available but the journey UI is hand-written CSS |
 | Audio | Web Audio via a `useJourneyAudio` hook, per-zone `.wav` ambience |
 | Validation | Zod 4 for every content pack and every API body |
-| Payments | Lemon Squeezy (hosted checkout + signed webhooks), plus a deterministic no-money fixture adapter for rehearsals |
+| Payments | Existing Lemon Squeezy adapter and records retained, but public paid booking defaults **off** pending a provider that permits the advertising offer; deterministic no-money fixture remains rehearsal-only |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest (85 test files, 393 tests) + Playwright (32 spec files across 8 config profiles) + pgTAP (368 assertions) |
+| Testing | Vitest + Playwright production-browser flows + pgTAP (**381 assertions** on the current dev schema) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
@@ -48,7 +48,7 @@ src/
 art/                      editable sources: .blend character files, master art PNGs
 public/
   characters/v1|v2/       traveler.glb, almaty-host.glb, CREDITS.md
-  scenes/<city>/<ver>/    per-zone webp derivatives (Tashkent v2/v3/v4, others v1)
+  scenes/<city>/<ver>/    per-zone webp derivatives (Paris v1 is the current Day-1 validation pack; legacy packs remain)
   npcs/<city>/<ver>/      neutral | talk | react webp
   traveler/production/v2/ 24 sprite frames (only idle + walk-1 still fetched)
   audio/<city>/<ver>/     per-zone ambience
@@ -56,7 +56,7 @@ scripts/
   characters/             Blender/MPFB build pipeline (Python) + browser checks (mjs)
   process-phase*-art.mjs  sharp-based image derivation
   phase2/ phase3/         preflight, seeding, scheduling, rehearsal, reporting
-supabase/migrations/      34 forward migrations, 380 pgTAP assertions
+supabase/migrations/      35 forward migrations, 381 pgTAP assertions
 ```
 
 ---
@@ -102,8 +102,9 @@ through a ref (§8.4), so their scale and ground plane agree without merging ren
 ## 3. Authority and the clock chain
 
 This is the most important mechanism in the codebase. Two authority tracks flow from
-Postgres to every animated frame: watched seconds for animation and metres for route
-progress.
+Postgres to every animated frame: global watched seconds and collective distance.
+They deliberately serve different purposes. Global active **walking** seconds select
+the painting; collective metres drive the road and numerical rewards.
 
 ```
 presence_leases (per browser session, 50 s TTL, requires visible && scene_ready)
@@ -121,11 +122,37 @@ PresentationClock        two monotonic client tracks, drift-corrected
       ▼
 travelerMotionAt(pack, rawSeconds, distanceMetres) → TravelerMotionSnapshot
       │
-      ├──► routePositionAt(pack, distanceMetres)   route/evening position
-      ├──► PixiScene                  panorama offset, ground scroll
+      ├──► activeWalkingSecondsAt(actions)         subtract server-owned stop windows
+      ├──► dailyActiveWalkingSecondsAt(pack, ...)  subtract first-visit story stops
+      ├──► scenePositionAt(pack, walkingSeconds)   five repeating 1,080 s visits
+      ├──► routePositionAt(pack, distanceMetres)   reward/distance position only
+      ├──► PixiScene                  stationary painting, moving ground/road
       ├──► productCharacterSceneAt()  which clip, at which second
       └──► HUD                        status label, step counts
 ```
+
+### P23–P27 scene and continuity contract (current)
+
+- The server's `global_active_seconds` is elapsed shared journey time, not summed
+  visitor time and not distance divided by the current pace. No eligible viewer means
+  it does not advance.
+- `activeWalkingSecondsAt` unions scheduled crowd-action stop windows so overlaps never
+  subtract twice. `dailyActiveWalkingSecondsAt` also holds during deterministic story
+  actions. Five scene visits repeat modulo five; every visit is exactly 1,080 active
+  walking seconds regardless of pace.
+- Story arrival/encounter/food/landmark actions occur on the first matching scene visit.
+  Distance continues to accumulate outside stop windows and still drives the 8 km daily
+  collective goal and 42.195 km marathon rewards.
+- The Paris painting never pans. Only an authored repeating ground layer, or bounded
+  ground-life details for a legacy pack, moves with distance. `stageLayout` uses cover
+  sizing, so neither desktop nor portrait viewports reveal a background strip.
+- `JourneyExperience` keeps the Pixi application, Three mixer and presence session
+  mounted while URL-addressed Journey/Passport/Sponsor/Vote panels open. Presentation
+  callbacks are held in refs; ordinary snapshot changes no longer recreate the realtime
+  presence channel. The root clock publishes React state once per second and the Pixi
+  motion sample at most four times per second instead of 10 times per second.
+- The first server-rendered snapshot, loading label and live seed all identify Paris and
+  the approved GLB. No Tashkent illustration is a current startup fallback.
 
 ### The server side
 
@@ -1782,49 +1809,59 @@ registered. The actual production date and launch switch remain unset. The Day-1
 winner resolves to `paris-v1`; rollover records that transfer as `train`, then returns
 to reviewed neighbour-first destination voting.
 
-Vercel declares prewarm at 15:55 UTC and rollover at 16:00 UTC. Prewarm fetches the
-upcoming pack before Day 1, all possible vote-owned packs thereafter, the day OG image,
-and a current weather reading. `/api/health` now reports database/content state, weather
-and payment provider configuration, confirmed weather age, representative asset-origin
-reachability, and the stored launch state. The minute-accuracy limitation of free Vercel
-cron is recorded as launch-blocking D5, with the operational checklist and rollback in
-`docs/runbooks/launch-day.md`.
+Vercel now declares one authenticated `/api/cron/reconcile` invocation every minute.
+The reconciler derives its work from immutable UTC boundaries: prewarm is due only from
+15:55 through 15:59, and rollover is always stamped at the most recent exact 16:00 UTC
+boundary. A late or duplicate invocation therefore cannot shift the logical day. The
+operation ledger and RPC row locks make it idempotent, and an authoritative bootstrap
+read runs the same catch-up when it finds no active day. Prewarm reuses the existing
+service function. Production still needs Vercel Pro minute scheduling and `CRON_SECRET`;
+neither an account upgrade nor deployment is claimed here. `/api/health` reports the
+free-validation and paid-booking modes separately.
 
 Migrations `202609100028_season1_launch.sql` and
 `202609100029_fix_launch_seed_lint.sql` were applied on 2026-09-10 to dev project
 `tkntxptfhmjnqaaveddx`. All 346 remote pgTAP assertions passed, including P21's 30, and
 remote database lint returned `{"results":[]}`.
 
+Migration `202609120035_launch_reaction_and_pricing.sql` was applied on 2026-09-12 to
+dev project `tkntxptfhmjnqaaveddx`. It schedules a newly accepted reaction after the
+server's request-time projection (so it cannot already be behind a client's bounded
+extrapolation) and fixes premium multiplication to exact cents. All **381** remote
+pgTAP assertions passed and remote database lint returned `{"results":[]}`.
+
 ### Sponsor pricing and placements (P15)
 
 `P(day) = clamp(yesterday_unique_watchers x SPONSOR_CENTS_PER_UNIQUE, floor, cap)`, with
 the owner-approved floor 4,900, cap 299,900 and premium multiplier 1.5 (DECISIONS Q11).
-`src/lib/sponsors/pricing.ts` mirrors the two SQL functions so `/sponsors` can render and
-explain a price without a round trip; the database still prices every reservation, and a
-client never sends an amount. Premium is rounded to a whole dollar, so the published pair
-is Standard $49 / Premium $74.
+`src/lib/sponsors/pricing.ts` mirrors the two SQL functions so the internal Sponsor panel
+can explain the offer without a critical-path inventory read; the database still prices
+every reservation, and a client never sends an amount. Premium is rounded to the nearest
+cent, so the published example is Standard $49 / Premium **$73.50**.
 
-`/sponsors` is the public price board: the rolling window, sold days by sponsor name, open
-days by price, and the sentence naming the audience that set it. It reads the **stored**
-`basis_uniques`, never a recomputed number, and a founding or floor-priced day says so
-instead of claiming an audience it did not have. `/sponsor` permanently redirects there.
-The dock shows the cheapest genuinely open day and, when nothing is for sale, no number at
-all. The landing page stays statically rendered with a 60-second revalidate: the price is
-one indexed read, and nothing visitor-specific was added to it.
+The launch shell keeps Sponsor a day as an internal informational panel. `/sponsors` and
+`/sponsor` redirect into that panel so opening it does not recreate either renderer or the
+presence session. Pricing can move down as well as up with the previous completed day's
+confirmed audience; no monotonic-price claim remains. The landing page performs no
+sponsor-inventory read on its critical path.
 
 Only a *paid* purchase counts as sold on the board; an abandoned checkout is not social
 proof. `/sponsor/<publicId>/report` renders that sponsorship's stored daily aggregates,
 reached through the unguessable public id exactly like the disclosure redirect.
 
-**Payment.** The purchase snapshot (`expected_price_cents`) remains the payment authority,
+**Payment.** Public booking is fail-closed unless both `SPONSOR_BOOKING_ENABLED=true` and
+`SPONSOR_PROVIDER_APPROVED=true`; the default is off because the researched Lemon
+Squeezy policy conflicts with website/social advertising. Existing purchase records and
+the purchase snapshot (`expected_price_cents`) remain intact and authoritative,
 and `validateLemonOrder` is unchanged. The webhook additionally recomputes what the day is
 published at now; a difference is recorded as `price_basis.mismatch` with a
 `sponsor_price_mismatch` log and blocks `approve-sponsor.ts` until someone passes
 `--accept-price-mismatch`. It never re-prices, auto-approves or auto-refunds: a sponsor who
 paid what they were quoted has bought the day.
 
-**Premium placements** are drawn only for `tier = 'premium'` on a sponsorship that is
-`live`, so an unapproved creative can never reach the screen. `CharacterActor.setBottle`
+**Premium placements** are not offered unless `SPONSOR_PREMIUM_FULFILLED=true`, and are
+drawn only for `tier = 'premium'` on a sponsorship that is `live`, so an unapproved
+creative can never reach the screen. `CharacterActor.setBottle`
 mirrors `setSponsor` (same texture settings, generation guard and disposal) to label the
 bottle he drinks from; PixiScene draws the cafe sign in a `signRoot` between the props and
 the ground life, shown only where `zone.kind === "cafe"`. `zone.kind` is a new schema field
@@ -1911,13 +1948,19 @@ pnpm verify:phase2       + isolated-project preflight, phase-2 pgTAP, full e2e
 pnpm verify:phase3       the current full gate
 ```
 
-Recorded results (`docs/phase-3-results.md`, 2026-09-06):
+Current P27 evidence (12 September 2026): remote dev has 381 passing pgTAP
+assertions and zero database-lint findings; the production build and targeted
+production-browser launch suite are recorded in
+`docs/launch-finalization/04-P27-HANDOFF.md`. The current-code 1,000-viewer run remains
+deliberately after launch and there is no capacity claim from the evidence below.
+
+Historical results (`docs/phase-3-results.md`, 2026-09-06; not current launch gates):
 
 - **61 pgTAP assertions** pass (Phase 1: 10, Phase 1.5: 4, Phase 2: 24, Phase 3: 23),
   covering RLS, grants and storage policies.
 - **Unit tests:** 27 files / 66 tests were recorded at the Phase 3 gate with 84.1 %
   statements, 71.7 % branches and 93.9 % functions on the scoped coverage set. The
-  current suite is **47 files / 185 tests**.
+  then-current suite was **47 files / 185 tests**.
 - P4 adds 15 pgTAP assertions for columns, RLS/grants, v4 accrual/persistence and the
   v5 bootstrap projection. They require a migrated Postgres instance; this workspace
   has no Docker/Podman runtime, so they were not executed locally in this change.
@@ -1944,7 +1987,7 @@ Recorded results (`docs/phase-3-results.md`, 2026-09-06):
   rigid translation of it. Derivation, measured pre/post-fix figures and thresholds are
   in §8.3. It was confirmed to fail on the pre-fix renderer on each assertion
   independently, so it is not a vacuous test.
-- A **1,000-viewer load gate** passes: 30 s arrival ramp + 60 s sustained, 7,188
+- **Historical only:** the September 6 code passed a 1,000-viewer load run: 30 s arrival ramp + 60 s sustained, 7,188
   requests, zero errors, 560 ms overall p95. A deliberately unrealistic zero-ramp
   100-viewer cold burst also produced zero errors but 2,849 ms p95 — documented as an
   open capacity caveat rather than hidden behind the passing sustained test.
@@ -1978,13 +2021,14 @@ anything; until then the route fails closed and the rest of the photo reaction w
 
 
 `phase2DeploymentAllowed()` is the master switch. It returns false unless
-`PHASE2_ENABLED === "true"`, **always** returns false when `VERCEL_ENV === "production"`,
-and on Preview only allows an explicit branch allowlist:
+`PHASE2_ENABLED === "true"`; Production additionally requires `LAUNCH_ENABLED=true`.
+Preview allows only an explicit branch allowlist:
 
 ```
 phase-2-seven-day-mvp
 phase-3-launch-hardening
 traveler-finalization-v2      ← the current branch
+main                          ← public-validation candidate
 ```
 
 Off Vercel it additionally requires `PHASE2_REHEARSAL_MODE === "true"`.
@@ -2010,6 +2054,10 @@ Runtime configuration (`serverRuntimeConfig()`):
 | `POSTCARD_RETENTION_DAYS` | 365 | Postcard expiry |
 | `SPONSOR_RESERVATION_MINUTES` | 30 | Slot hold during checkout |
 | `SPONSOR_PAYMENT_PROVIDER` | `lemonsqueezy` | Or `fixture` |
+| `SPONSOR_BOOKING_ENABLED` | unset / false | First half of the paid-booking fail-closed gate |
+| `SPONSOR_PROVIDER_APPROVED` | unset / false | Confirms the provider permits this offer and merchant |
+| `SPONSOR_PREMIUM_FULFILLED` | unset / false | Allows Premium only after bottle and café fulfillment is verified |
+| `CRON_SECRET` | unset | Required bearer secret for the minute reconciler in Production |
 | `PHASE2_REHEARSAL_SCALE` | 144 | Story-clock multiplier, rehearsal only |
 
 ### Optional asset origin and upload command (2026-09-08)
@@ -2040,8 +2088,9 @@ cache TTL, rejects redirects and stops on errors without printing remote bodies 
 signed headers. Upload replaces matching remote keys and never deletes objects.
 
 Local assets remain checked in. Same-origin fallback means clearing the origin and
-rebuilding; no automatic CDN-failure retry is added. R2 provisioning, live upload and
-CORS acceptance await the owner's bucket. See [asset hosting runbook](docs/runbooks/asset-hosting.md).
+rebuilding; no automatic CDN-failure retry is added. R2 provisioning is optional for
+the free validation while the same-origin CDN meets the immutable-cache requirement.
+See [asset hosting runbook](docs/runbooks/asset-hosting.md).
 
 Hard rules stated in the repository and worth repeating: never use the analytics
 provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or
@@ -2052,14 +2101,17 @@ provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or
 ## Appendix — the ten-second orientation
 
 - **Two authority tracks** (`global_active_seconds`, `global_distance_metres`) only grow
-  while someone is watching. Seconds animate; metres select route progress.
-- **Pure functions** (`travelerMotionAt`, `routePositionAt`) turn explicit authority
-  inputs into a pose and route position, so every viewer agrees and reloads are free.
+  while someone is watching. Active walking seconds select the repeating scene; metres
+  move the road and award collective distance goals.
+- **Pure functions** (`travelerMotionAt`, `scenePositionAt`, `routePositionAt`) turn
+  explicit authority inputs into a pose, scene visit and numerical route position, so
+  every viewer agrees and reloads are deterministic.
 - **One skeleton** (`traveler.glb`, 52 joints, 15 clips, 6 face morphs) performs every
   action; only clip weights, face weights and hand-socket props change.
 - **Two art pipelines.** Phase 2 cities (including Tbilisi) have five separate master
   paintings; Phase 3 cities have one master cropped five ways. Either way only one of the
   six derived files per zone is actually drawn (§8.5).
-- **The character is a work-in-progress candidate.** The duplicated ground layer is gone
+- **The character is the accepted validation traveler.** The duplicated ground layer is gone
   (§8.3, `98e1c77`), and both canvases now share the painted
-  pavement and person scale (§8.4). Calibration and character quality still need owner review.
+  pavement and person scale (§8.4). Its exact accepted transfer budgets are 2,598,064
+  bytes model + 1,973,112 bytes animations = 4,571,176 bytes total.

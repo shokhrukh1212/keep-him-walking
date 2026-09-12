@@ -26,10 +26,14 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat, onReacti
   const heartbeatRef = useRef<(forceInactive?: boolean) => Promise<void>>(async () => undefined);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reactionHintRef = useRef(onReactionHint);
+  const onHeartbeatRef = useRef(onHeartbeat);
+  const snapshotRef = useRef(snapshot);
 
   useEffect(() => {
     reactionHintRef.current = onReactionHint;
-  }, [onReactionHint]);
+    onHeartbeatRef.current = onHeartbeat;
+    snapshotRef.current = snapshot;
+  }, [onHeartbeat, onReactionHint, snapshot]);
 
   const broadcastReactionHint = useCallback(() => {
     const channel = channelRef.current;
@@ -38,7 +42,8 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat, onReacti
   }, []);
 
   const heartbeat = useCallback(async (forceInactive = false) => {
-    if (snapshot.mode !== "live" || !sceneReady || !sessionId.current) return;
+    const current = snapshotRef.current;
+    if (current.mode !== "live" || !sceneReady || !sessionId.current) return;
     if (requestInFlight.current && !forceInactive) return;
     if (forceInactive) requestController.current?.abort();
     const requestGeneration = ++generation.current;
@@ -62,7 +67,7 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat, onReacti
       if (!response.ok) throw new Error("Presence update failed");
       const result = (await response.json()) as HeartbeatResponse;
       if (requestGeneration !== generation.current) return;
-      if (result.countryDayId && result.countryDayId !== snapshot.countryDay.id) {
+      if (result.countryDayId && result.countryDayId !== current.countryDay.id) {
         throw new Error("Country changed during heartbeat");
       }
       if (!Number.isFinite(result.activeViewers) || typeof result.walking !== "boolean"
@@ -79,14 +84,14 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat, onReacti
       // where an older heartbeat route may not yet return the newer optional
       // presentation fields. Presence/progress still come only from this
       // heartbeat; nothing is invented in the browser.
-      onHeartbeat({
+      onHeartbeatRef.current({
         ...result,
         realServerNow: result.realServerNow ?? result.serverNow,
         waitingSince: result.waitingSince ?? null,
         wokeHim: result.wokeHim ?? false,
-        countryCode: result.countryCode ?? snapshot.countryDay.countryCode,
-        reactions: result.reactions ?? snapshot.reactions,
-        weather: result.weather ?? snapshot.weather,
+        countryCode: result.countryCode ?? current.countryDay.countryCode,
+        reactions: result.reactions ?? current.reactions,
+        weather: result.weather ?? current.weather,
       });
       setStatus("live");
       if (!forceInactive) {
@@ -107,15 +112,7 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat, onReacti
       window.clearTimeout(timeout);
       if (requestGeneration === generation.current) requestInFlight.current = false;
     }
-  }, [
-    onHeartbeat,
-    sceneReady,
-    snapshot.mode,
-    snapshot.countryDay.id,
-    snapshot.countryDay.countryCode,
-    snapshot.reactions,
-    snapshot.weather,
-  ]);
+  }, [sceneReady]);
 
   useEffect(() => {
     heartbeatRef.current = heartbeat;

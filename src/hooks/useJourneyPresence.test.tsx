@@ -125,4 +125,23 @@ describe("useJourneyPresence country rollover", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body)).state).toBe("inactive");
     unmount();
   });
+
+  it("keeps one presence lifecycle while presentation payloads refresh", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => heartbeatResponse });
+    vi.stubGlobal("fetch", fetchMock);
+    const onHeartbeat = vi.fn();
+    const { rerender, unmount } = renderHook(
+      ({ reactionCount }) => {
+        const current = snapshot("day-1");
+        current.reactions.counts.wave = reactionCount;
+        return useJourneyPresence({ snapshot: current, sceneReady: true, onHeartbeat });
+      },
+      { initialProps: { reactionCount: 0 } },
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    rerender({ reactionCount: 1 });
+    await new Promise((resolve) => window.setTimeout(resolve, 20));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    unmount();
+  });
 });

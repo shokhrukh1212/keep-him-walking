@@ -16,6 +16,7 @@ export function GoalBar({ distanceMetres, landmarkMetres, marathonMetres, freshn
   const marathonProgress = Math.min(1, distance / marathonMetres);
   const fill = Math.min(1, distance / landmarkMetres);
   const marathon = distance >= marathonMetres;
+  const goalReached = distance >= landmarkMetres;
   return (
     <section
       className="goal-bar"
@@ -27,9 +28,11 @@ export function GoalBar({ distanceMetres, landmarkMetres, marathonMetres, freshn
         <span style={{ width: `${fill * 100}%` }} />
       </div>
       <div className="goal-copy">
-        <strong>{kilometres(distance)} <small>{freshness}</small></strong>
-        <span>landmark at {kilometres(landmarkMetres)}</span>
-        <span>marathon {Math.floor(marathonProgress * 100)}%</span>
+        <strong>{goalReached ? `${kilometres(landmarkMetres)} reached` : `${kilometres(distance)} together`} <small>{freshness}</small></strong>
+        <span>{goalReached
+          ? `next: ${kilometres(marathonMetres)}`
+          : `${kilometres(landmarkMetres - distance)} to today’s collective goal`}</span>
+        <span>{Math.floor(marathonProgress * 100)}% of a marathon</span>
       </div>
     </section>
   );

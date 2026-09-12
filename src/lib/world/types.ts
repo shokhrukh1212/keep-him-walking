@@ -17,6 +17,14 @@ export type RoutePosition = {
   marathonProgress: number;
 };
 
+export type ScenePosition = {
+  zoneIndex: number;
+  visitIndex: number;
+  cycleIndex: number;
+  secondsIntoVisit: number;
+  visitProgress: number;
+};
+
 export type MotionPhase = Extract<
   TravelerState,
   "idle" | "start_walk" | "walk" | "slow_walk" | "stop" | "rest" | "resume_walk"

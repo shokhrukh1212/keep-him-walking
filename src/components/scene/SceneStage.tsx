@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CountryPack } from "@/lib/content/schema";
-import { routePositionAt } from "@/lib/world/route-clock";
+import { scenePositionAt } from "@/lib/world/route-clock";
 import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
@@ -26,7 +26,6 @@ const ProductCharacterStage3D = dynamic(
 type Props = {
   pack: CountryPack;
   routeSeconds: number;
-  routeDistanceMetres: number;
   routeRuntime: RouteRuntime;
   scheduledActions?: readonly ScheduledActionView[];
   weather?: JourneyWeather | null;
@@ -50,7 +49,6 @@ type Props = {
 export function SceneStage({
   pack,
   routeSeconds,
-  routeDistanceMetres,
   routeRuntime,
   scheduledActions,
   weather,
@@ -117,7 +115,7 @@ export function SceneStage({
     }, 0);
     return () => window.clearTimeout(update);
   }, [onReady, pixiFailed]);
-  const route = routePositionAt(pack, routeDistanceMetres);
+  const route = scenePositionAt(pack, routeSeconds);
   const fallbackUrl = pack.route.zones[route.zoneIndex]?.fallbackUrl ?? pack.scene.fallbackUrl;
 
   return (

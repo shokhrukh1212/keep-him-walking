@@ -17,7 +17,11 @@ export const CHARACTER_MANIFEST: {
   approval: "visual-review-pending";
   traveler: CharacterDefinition;
   residents: Record<ResidentType, CharacterDefinition>;
-  combinedBudgetBytes: number;
+  travelerBudgetBytes: {
+    model: number;
+    animations: number;
+    total: number;
+  };
 } = {
   version: 3,
   approval: "visual-review-pending",
@@ -44,13 +48,13 @@ export const CHARACTER_MANIFEST: {
       heightMetres: 1.75,
     },
   },
-  // Every shipped model is meshopt-compressed. Measured 2026-09-11: traveler 2.48 MiB
-  // model + 1.88 MiB takes; resident A 1.23 + 0.52 MiB; resident B 1.74 + 0.56 MiB.
-  // A page loads the traveler and its pack's resident, and the other resident only
-  // when a walker needs it. Nothing enforces this figure and the V3 traveler alone
-  // already passes it (AFTER-P22 D1); it stays as the line an uncompressed rig
-  // shipping again would be measured against.
-  combinedBudgetBytes: 5 * 1024 * 1024,
+  // D1 accepts the reviewed model as-is. Keep exact, separate budgets so a future
+  // animation change cannot hide a model regression (or vice versa).
+  travelerBudgetBytes: {
+    model: 2_598_064,
+    animations: 1_973_112,
+    total: 4_571_176,
+  },
 };
 
 type ResidentSet = Partial<Record<ResidentType, CharacterDefinition>>;

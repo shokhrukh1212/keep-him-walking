@@ -43,13 +43,13 @@ export function DailyVote({ vote, open, onClose, onAccepted }: Props) {
   };
 
   return (
-    <section className="vote-panel" aria-label="Daily vote">
+    <section className="vote-panel" data-panel-root tabIndex={-1} role="dialog" aria-modal="true" aria-label="Daily vote">
       <div className="panel-heading">
         <div>
           <span className="eyebrow">TODAY’S CHOICE</span>
           <h2>{vote?.question ?? "Voting is unavailable while offline"}</h2>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close vote">×</button>
+        <button type="button" data-panel-close onClick={onClose} aria-label="Close vote">×</button>
       </div>
       {vote ? (
         <div className="vote-options">

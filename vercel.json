@@ -3,12 +3,8 @@
   "regions": ["syd1"],
   "crons": [
     {
-      "path": "/api/cron/rollover",
-      "schedule": "0 16 * * *"
-    },
-    {
-      "path": "/api/cron/prewarm",
-      "schedule": "55 15 * * *"
+      "path": "/api/cron/reconcile",
+      "schedule": "* * * * *"
     }
   ]
 }

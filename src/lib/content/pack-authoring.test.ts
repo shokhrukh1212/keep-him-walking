@@ -115,8 +115,8 @@ describe("pack authoring", () => {
     expect(await readFile(path.join(root, "src", "content", "countries", "authored-packs.json"), "utf8")).toContain("lisbon");
     const authored = await readFile(path.join(root, "src", "content", "countries", "authored.ts"), "utf8");
     expect(authored).toContain("lisbonCountryPackV1");
-    const module = await readFile(path.join(root, "src", "content", "countries", "lisbon.v1.ts"), "utf8");
-    expect(module).toContain('"continuousSceneZoneIds"');
+    const sourceModule = await readFile(path.join(root, "src", "content", "countries", "lisbon.v1.ts"), "utf8");
+    expect(sourceModule).toContain('"continuousSceneZoneIds"');
   }, 60_000);
 });
 

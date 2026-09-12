@@ -1,5 +1,5 @@
 import type { CountryPack, DialogueLine, TravelerState } from "@/lib/content/schema";
-import { deterministicVariant, routePositionAt } from "@/lib/world/route-clock";
+import { activeWalkingSecondsAt, deterministicVariant, routePositionAt, SCENE_VISIT_SECONDS } from "@/lib/world/route-clock";
 
 export const STEP_DURATION_SECONDS = 0.6;
 export const GAIT_CYCLE_SECONDS = STEP_DURATION_SECONDS * 2;
@@ -74,7 +74,7 @@ export type TravelerMotionSnapshot = {
 };
 
 type ScheduledAction = {
-  atMetres: number;
+  atWalkingSecond: number;
   kind: RouteActionKind;
   durationSeconds: number;
   label: string;
@@ -94,10 +94,6 @@ function alignedStep(seconds: number) {
   return Math.round(seconds / STEP_DURATION_SECONDS) * STEP_DURATION_SECONDS;
 }
 
-function alignedMetres(metres: number) {
-  return alignedStep(metres / METRES_PER_SECOND) * METRES_PER_SECOND;
-}
-
 function dialogueDuration(lines: DialogueLine[]) {
   return lines.reduce((total, line) => total + (line.durationMs ?? 4_500) / 1_000, 0);
 }
@@ -107,14 +103,14 @@ function actionsForPack(pack: CountryPack): ScheduledAction[] {
   const encounter = pack.encounters[0];
   const byKind: Partial<Record<string, ScheduledAction>> = {
     arrival: {
-      atMetres: 0,
+      atWalkingSecond: 15,
       kind: "wave",
       durationSeconds: ACTION_DURATIONS.wave,
       label: "Waving hello",
     },
     encounter: encounter
       ? {
-          atMetres: 0,
+          atWalkingSecond: SCENE_VISIT_SECONDS + 15,
           kind: "encounter",
           durationSeconds: 11.1 + dialogueDuration(encounter.lines),
           label: `Talking · ${encounter.locationLabel}`,
@@ -122,19 +118,19 @@ function actionsForPack(pack: CountryPack): ScheduledAction[] {
         }
       : undefined,
     food: {
-      atMetres: 0,
+      atWalkingSecond: SCENE_VISIT_SECONDS * 3 + 15,
       kind: "drink",
       durationSeconds: ACTION_DURATIONS.drink,
       label: "Taking a short drink",
     },
     landmark: {
-      atMetres: 0,
+      atWalkingSecond: SCENE_VISIT_SECONDS * 4 + 15,
       kind: "photo",
       durationSeconds: ACTION_DURATIONS.photo,
       label: "Taking a photograph",
     },
     departure: {
-      atMetres: 0,
+      atWalkingSecond: SCENE_VISIT_SECONDS * 5 - 15,
       kind: "phone",
       durationSeconds: ACTION_DURATIONS.phone,
       label: "Checking tomorrow’s route",
@@ -144,12 +140,54 @@ function actionsForPack(pack: CountryPack): ScheduledAction[] {
   return pack.storyBeats.flatMap((beat) => {
     const action = byKind[beat.kind];
     // Departure is deliberately absent: it remains the one rollover-time event.
-    if (!action || beat.atMetres === null) return [];
-    return [{
-      ...action,
-      atMetres: alignedMetres(beat.atMetres),
-    }];
-  }).sort((left, right) => left.atMetres - right.atMetres);
+    if (!action || beat.kind === "departure") return [];
+    return [action];
+  }).sort((left, right) => left.atWalkingSecond - right.atWalkingSecond);
+}
+
+function storyTimelineAt(
+  pack: CountryPack,
+  baseWalkingSeconds: number,
+): { walkingSeconds: number; action: TravelerMotionAction | null; pausedSeconds: number; lastCompletedBaseSecond: number } {
+  const base = Math.max(0, baseWalkingSeconds);
+  let completedPause = 0;
+  let lastCompletedBaseSecond = Number.NEGATIVE_INFINITY;
+  for (const action of actionsForPack(pack)) {
+    const startsAt = action.atWalkingSecond + completedPause;
+    if (base < startsAt) break;
+    const elapsed = base - startsAt;
+    if (elapsed < action.durationSeconds) {
+      return {
+        walkingSeconds: action.atWalkingSecond,
+        action: actionState(action, elapsed),
+        pausedSeconds: completedPause + elapsed,
+        lastCompletedBaseSecond,
+      };
+    }
+    completedPause += action.durationSeconds;
+    lastCompletedBaseSecond = startsAt + action.durationSeconds;
+  }
+  return {
+    walkingSeconds: Math.max(0, base - completedPause),
+    action: null,
+    pausedSeconds: completedPause,
+    lastCompletedBaseSecond,
+  };
+}
+
+/**
+ * Authoritative watched time minus server action windows and deterministic
+ * first-visit story stops. It never reads pace or viewer count.
+ */
+export function dailyActiveWalkingSecondsAt(
+  pack: CountryPack,
+  rawActiveSeconds: number,
+  scheduledActions: readonly ScheduledCrowdAction[] = [],
+) {
+  return storyTimelineAt(
+    pack,
+    activeWalkingSecondsAt(rawActiveSeconds, scheduledActions),
+  ).walkingSeconds;
 }
 
 function actionState(
@@ -235,11 +273,11 @@ function crowdActionAt(
   distanceMetres: number,
   scheduled: readonly ScheduledCrowdAction[],
   routeBeatActive: boolean,
-  lastCompletedBeatEndMetres: number,
+  lastCompletedBeatEndRawSecond: number,
 ): TravelerMotionAction | null {
   if (routeBeatActive || scheduled.length === 0) return null;
-  const sinceLastBeat = Number.isFinite(lastCompletedBeatEndMetres)
-    ? Math.max(0, (distanceMetres - lastCompletedBeatEndMetres) / METRES_PER_SECOND)
+  const sinceLastBeat = Number.isFinite(lastCompletedBeatEndRawSecond)
+    ? Math.max(0, rawActiveSeconds - lastCompletedBeatEndRawSecond)
     : Number.POSITIVE_INFINITY;
 
   const ordered = [...scheduled]
@@ -262,7 +300,7 @@ function crowdActionAt(
 
   return actionState(
     {
-      atMetres: distanceMetres,
+      atWalkingSecond: 0,
       kind: best.entry.kind,
       durationSeconds: Number.isFinite(best.entry.endsAtActiveSecond)
         ? Math.max(0, best.entry.endsAtActiveSecond! - best.entry.atActiveSecond)
@@ -281,7 +319,7 @@ function systemAction(
 ): TravelerMotionAction | null {
   const durationSeconds = ACTION_DURATIONS[kind];
   if (elapsedSeconds < 0 || elapsedSeconds >= durationSeconds) return null;
-  return actionState({ atMetres: 0, kind, durationSeconds, label }, elapsedSeconds, "system");
+  return actionState({ atWalkingSecond: 0, kind, durationSeconds, label }, elapsedSeconds, "system");
 }
 
 /** Deterministic ambient actions from explicit authority; no timer or module state participates. */
@@ -334,41 +372,30 @@ export function travelerMotionAt(
 ): TravelerMotionSnapshot {
   const raw = Math.max(0, Number.isFinite(rawActiveSeconds) ? rawActiveSeconds : 0);
   const distance = Math.max(0, Number.isFinite(distanceMetres) ? distanceMetres : 0);
-  const actions = actionsForPack(pack);
-  let pausedSeconds = 0;
-  let activeAction: TravelerMotionAction | null = null;
-  let actionSeconds = 0;
-  let lastCompletedBeatEndMetres = Number.NEGATIVE_INFINITY;
-
-  for (const action of actions) {
-    if (distance < action.atMetres) break;
-    const elapsed = (distance - action.atMetres) / METRES_PER_SECOND;
-    if (elapsed < action.durationSeconds) {
-      activeAction = actionState(action, elapsed);
-      pausedSeconds += elapsed;
-      actionSeconds += actionTravel(elapsed, action.durationSeconds).seconds;
-      break;
-    }
-    pausedSeconds += action.durationSeconds;
-    actionSeconds += 1.2;
-    lastCompletedBeatEndMetres = action.atMetres
-      + action.durationSeconds * METRES_PER_SECOND;
-  }
+  const baseWalkingSeconds = activeWalkingSecondsAt(raw, scheduledActions);
+  const story = storyTimelineAt(pack, baseWalkingSeconds);
+  const activeAction = story.action;
+  const actionSeconds = activeAction
+    ? actionTravel(activeAction.elapsedSeconds, activeAction.durationSeconds).seconds
+    : actionsForPack(pack).filter((action) => story.walkingSeconds > action.atWalkingSecond)
+      .length * 1.2;
 
   const crowdAction = crowdActionAt(
     raw,
     distance,
     scheduledActions,
     activeAction !== null,
-    lastCompletedBeatEndMetres,
+    Number.isFinite(story.lastCompletedBaseSecond)
+      ? Math.max(0, raw - (baseWalkingSeconds - story.lastCompletedBaseSecond))
+      : Number.NEGATIVE_INFINITY,
   );
   const ambientAction = activeAction || crowdAction
     ? null
     : systemActionAt(pack, raw, distance);
   const resolvedAction = activeAction ?? crowdAction ?? ambientAction;
 
-  const routeSeconds = distance / METRES_PER_SECOND;
-  const locomotionSeconds = Math.max(0, raw - pausedSeconds + actionSeconds);
+  const routeSeconds = story.walkingSeconds;
+  const locomotionSeconds = Math.max(0, story.walkingSeconds + actionSeconds);
   const plantIndex = Math.floor((locomotionSeconds + 1e-7) / STEP_DURATION_SECONDS);
   const cyclePhase = (locomotionSeconds % GAIT_CYCLE_SECONDS) / GAIT_CYCLE_SECONDS;
   const stepPhase = (locomotionSeconds % STEP_DURATION_SECONDS) / STEP_DURATION_SECONDS;

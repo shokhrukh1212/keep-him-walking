@@ -52,6 +52,11 @@ export function serverRuntimeConfig() {
     // The commercial promise is one rolling week. Keep checkout, inventory and
     // the public calendar on the same fixed horizon.
     sponsorWindowDays: 7,
+    // Advertising payment-provider review is still open. Both switches are
+    // required so a stray deployment variable cannot expose checkout.
+    sponsorBookingEnabled: process.env.SPONSOR_BOOKING_ENABLED === "true"
+      && process.env.SPONSOR_PROVIDER_APPROVED === "true",
+    sponsorPremiumFulfilled: process.env.SPONSOR_PREMIUM_FULFILLED === "true",
     ticketsEnabled: process.env.TICKETS_ENABLED === "true",
     ticketHorizonDays: Math.min(30, Math.max(3, Math.round(numericEnv("TICKET_HORIZON_DAYS", 7)))),
     sponsorPaymentProvider: process.env.SPONSOR_PAYMENT_PROVIDER === "fixture" ? "fixture" as const : "lemonsqueezy" as const,

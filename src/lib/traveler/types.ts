@@ -25,6 +25,8 @@ export type TravelerCommand = {
   /** Premium placement only: the label on the bottle he drinks from. */
   sponsorBottleUrl?: string;
   actionReview?: ActionReview;
+  /** Local panel layout only; the renderer keeps the same actor and mixer. */
+  panelOpen?: boolean;
 };
 
 export const DEFAULT_TRAVELER_COMMAND: TravelerCommand = {

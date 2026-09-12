@@ -8,8 +8,8 @@ describe("GoalBar", () => {
       <GoalBar distanceMetres={4_600} landmarkMetres={8_000} marathonMetres={42_195} freshness="extrapolated" />,
     );
     expect(screen.getByText(/4.6 km/)).toHaveTextContent("extrapolated");
-    expect(screen.getByText("landmark at 8 km")).toBeInTheDocument();
-    expect(screen.getByText("marathon 10%")).toBeInTheDocument();
+    expect(screen.getByText("3.4 km to today’s collective goal")).toBeInTheDocument();
+    expect(screen.getByText("10% of a marathon")).toBeInTheDocument();
     expect(container.querySelector(".goal-track span")).toHaveStyle({ width: "57.49999999999999%" });
   });
 
@@ -18,6 +18,6 @@ describe("GoalBar", () => {
       <GoalBar distanceMetres={42_195} landmarkMetres={8_000} marathonMetres={42_195} freshness="last confirmed" />,
     );
     expect(container.querySelector(".goal-bar")).toHaveAttribute("data-marathon", "true");
-    expect(screen.getByText("marathon 100%")).toBeInTheDocument();
+    expect(screen.getByText("100% of a marathon")).toBeInTheDocument();
   });
 });

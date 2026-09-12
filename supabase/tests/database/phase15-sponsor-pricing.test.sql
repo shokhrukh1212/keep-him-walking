@@ -56,7 +56,7 @@ select is((select relrowsecurity from pg_class where oid = 'public.sponsor_prici
 select is(public.sponsor_price_cents(0, 4900, 1, 299900), 4900, 'no audience still prices at the floor');
 select is(public.sponsor_price_cents(12000, 4900, 1, 299900), 12000, 'twelve thousand watchers price the day at $120');
 select is(public.sponsor_price_cents(500000, 4900, 1, 299900), 299900, 'a viral day is capped at $2,999');
-select is(public.sponsor_tier_price_cents(4900, 'premium', 1.5), 7400, 'premium rounds to a whole dollar');
+select is(public.sponsor_tier_price_cents(4900, 'premium', 1.5), 7350, 'premium preserves the exact cent result');
 select is(public.sponsor_tier_price_cents(4900, 'standard', 1.5), 4900, 'standard is unmultiplied');
 
 select is(public.journey_slot_date('00000000-0000-4000-8000-000000000150', '2033-03-02T20:00:00Z'), '2033-03-02'::date, 'today follows the rollover clock, not the calendar');
@@ -98,7 +98,7 @@ select * from public.reserve_sponsor_slot_v2(
   'Acme', 'sponsor@example.com', 'premium', true, '2033-03-02T17:00:00Z', 30, 1.5, 7
 );
 select is((select tier from reserved), 'premium', 'the purchase records its tier');
-select is((select expected_price_cents from reserved), 4400, 'the premium snapshot is 1.5x the founding price, to the dollar');
+select is((select expected_price_cents from reserved), 4350, 'the premium snapshot is exactly 1.5x the founding price');
 
 select * from finish();
 rollback;

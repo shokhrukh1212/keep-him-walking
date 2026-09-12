@@ -2,12 +2,12 @@
 
 import { useMemo } from "react";
 import type { BootstrapSnapshot, HeartbeatResponse } from "@/lib/contracts";
-import { travelerMotionAt } from "@/lib/traveler/motion-clock";
+import { dailyActiveWalkingSecondsAt, travelerMotionAt } from "@/lib/traveler/motion-clock";
 import { mergeScheduledActions } from "@/lib/reactions/payload";
 import {
   extrapolatedRouteDistance,
   extrapolatedRouteSeconds,
-  routePositionAt,
+  scenePositionAt,
 } from "@/lib/world/route-clock";
 
 export function useRouteRuntime(
@@ -32,6 +32,7 @@ export function useRouteRuntime(
       heartbeat?.reactions?.scheduled,
     );
     const rawSeconds = extrapolatedRouteSeconds(runtime, serverNowMs);
+    const walkingSeconds = dailyActiveWalkingSecondsAt(snapshot.assets, rawSeconds, scheduledActions);
     const distanceMetres = extrapolatedRouteDistance(runtime, serverNowMs, scheduledActions);
     const motion = travelerMotionAt(
       snapshot.assets,
@@ -45,8 +46,8 @@ export function useRouteRuntime(
       distanceMetres,
       scheduledActions,
       motion,
-      seconds: rawSeconds,
-      position: routePositionAt(snapshot.assets, distanceMetres),
+      seconds: walkingSeconds,
+      position: scenePositionAt(snapshot.assets, walkingSeconds),
     };
   }, [heartbeat, serverNowMs, snapshot.assets, snapshot.reactions.scheduled, snapshot.route]);
 }

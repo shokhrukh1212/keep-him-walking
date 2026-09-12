@@ -4,10 +4,9 @@ import { useEffect, useRef, type RefObject } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import type { Texture as PixiTexture } from "pixi.js";
 import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
-import { METRES_PER_SECOND, travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { dailyActiveWalkingSecondsAt, travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import {
-  boundedPanoramaLayout,
   stageLayout,
   blendStageLayout,
   type StageFrame,
@@ -16,7 +15,7 @@ import {
 import { CHARACTER_HEIGHT_TARGETS } from "@/lib/world/stage-targets";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
-import { deterministicVariant, routePositionAt } from "@/lib/world/route-clock";
+import { deterministicVariant, scenePositionAt, SCENE_VISIT_SECONDS } from "@/lib/world/route-clock";
 import { segmentVariant } from "@/lib/world/segment-sequencer";
 import { composedSegmentSignature } from "@/lib/world/segment-sequencer";
 import type { QualityTier, RouteRuntime, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
@@ -355,6 +354,7 @@ export function PixiScene({
           pendingZoneIndex = zoneIndex;
           const generation = ++buildGeneration;
           const zone = pack.route.zones[zoneIndex];
+          const outgoingZone = activeZone;
           const [panoramaTexture, nightTexture] = await Promise.all([
             Assets.load<PixiTexture>(publicAssetUrl(zone.fallbackUrl)),
             zone.nightUrl
@@ -514,8 +514,12 @@ export function PixiScene({
           propRoot.alpha = zoneFade;
           groundDetailsRoot.alpha = zoneFade;
           zoneCallback.current(zone.id, zone.label);
-          const nextZone = pack.route.zones[(zoneIndex + 1) % pack.route.zones.length];
-          void Assets.backgroundLoad(zoneAssetUrls(nextZone)).catch(() => undefined);
+          if (outgoingZone && outgoingZone.id !== zone.id) {
+            const retained = new Set(zoneAssetUrls(zone));
+            for (const url of zoneAssetUrls(outgoingZone)) {
+              if (!retained.has(url)) void Assets.unload(url).catch(() => undefined);
+            }
+          }
           if (!ready) {
             ready = true;
             onReady();
@@ -542,6 +546,7 @@ export function PixiScene({
         };
 
         let displayedSeconds = runtime.current.routeSeconds;
+        let displayedWalkingSeconds = runtime.current.routeSeconds;
         let displayedDistance = runtime.current.routeRuntime.globalDistanceMetres;
         let elapsed = 0;
         let lastTickAt = performance.now();
@@ -586,12 +591,13 @@ export function PixiScene({
           clock.accept(state.routeRuntime, state.travelerCommand?.presenceTtlMs ?? 50_000, tickAt);
           const sample = clock.sample(tickAt, state.scheduledActions);
           const motion = travelerMotionAt(pack, sample.rawSeconds, sample.distanceMetres, state.scheduledActions);
-          if(tickAt-lastMotionAt>=100) {lastMotionAt=tickAt;motionCallback.current?.({assetVersion:pack.assetVersion,motion});}
+          if(tickAt-lastMotionAt>=250) {lastMotionAt=tickAt;motionCallback.current?.({assetVersion:pack.assetVersion,motion});}
           displayedSeconds = sample.rawSeconds;
+          displayedWalkingSeconds = dailyActiveWalkingSecondsAt(pack, sample.rawSeconds, state.scheduledActions);
           displayedDistance = sample.distanceMetres;
 
-          const position = routePositionAt(pack, displayedDistance);
-          const zoneDistance = position.metresIntoZone;
+          const position = scenePositionAt(pack, displayedWalkingSeconds);
+          const zoneDistance = position.visitProgress * (activeZone?.lengthMetres ?? 0);
           if (position.zoneIndex !== activeZoneIndex && position.zoneIndex !== pendingZoneIndex) {
             void buildZone(position.zoneIndex).catch((error: unknown) => {
               pendingZoneIndex = -1;
@@ -604,13 +610,13 @@ export function PixiScene({
           if (!activeZone) return;
 
           let transitionAlpha = 0;
-          if (coherentPanorama && position.phase === "route") {
-            if (position.zoneIndex === activeZoneIndex && activeZoneIndex < pack.route.zones.length - 1) {
-              const remaining = Math.max(0, activeZone.lengthMetres - position.metresIntoZone);
-              if (remaining <= 200) void prepareTransition(activeZoneIndex + 1).catch(() => undefined);
-              const transitionMetres = METRES_PER_SECOND * Math.max(1, state.routeRuntime.paceRate);
-              if (remaining <= transitionMetres && transition?.zoneIndex === activeZoneIndex + 1) {
-                transitionAlpha = 1 - remaining / transitionMetres;
+          if (coherentPanorama) {
+            const nextZoneIndex = (activeZoneIndex + 1) % pack.route.zones.length;
+            if (position.zoneIndex === activeZoneIndex) {
+              const remaining = Math.max(0, SCENE_VISIT_SECONDS - position.secondsIntoVisit);
+              if (remaining <= 15) void prepareTransition(nextZoneIndex).catch(() => undefined);
+              if (remaining <= 1 && transition?.zoneIndex === nextZoneIndex) {
+                transitionAlpha = 1 - remaining;
               }
             } else if (transition?.zoneIndex === position.zoneIndex) {
               // Keep the fully blended next painting visible while its ordinary
@@ -666,21 +672,14 @@ export function PixiScene({
             }
             if (pool.mode === "city" || pool.mode === "panorama") {
               const texture = pool.textures[0];
-              const span = Math.max(1, texture.width * layout.imageScale);
-              const panorama = boundedPanoramaLayout(
-                span,
-                width,
-                position.metresIntoZone / activeZone.lengthMetres,
-                state.reducedMotion,
-              );
-              activePaintingX = panorama.x;
-              element.dataset.panoramaOffset = String(panorama.offset);
-              element.dataset.panoramaSpan = String(span);
+              activePaintingX = layout.imageX;
+              element.dataset.panoramaOffset = "0";
+              element.dataset.panoramaSpan = String(Math.max(1, texture.width * layout.imageScale));
               for (let slot = 0; slot < pool.sprites.length; slot += 1) {
                 const sprite = pool.sprites[slot];
                 sprite.texture = texture;
                 sprite.scale.set(layout.imageScale);
-                sprite.x = panorama.x;
+                sprite.x = layout.imageX;
                 sprite.y = layout.imageY;
                 sprite.visible = slot === 0;
               }
@@ -745,12 +744,10 @@ export function PixiScene({
               transition.zone.stage,
               CHARACTER_HEIGHT_TARGETS,
             );
-            const span = Math.max(1, transition.texture.width * nextLayout.imageScale);
-            const nextX = span >= width ? 0 : (width - span) / 2;
             for (let slot = 0; slot < transition.sprites.length; slot += 1) {
               const sprite = transition.sprites[slot];
               sprite.scale.set(nextLayout.imageScale);
-              sprite.x = nextX;
+              sprite.x = nextLayout.imageX;
               sprite.y = nextLayout.imageY;
               sprite.visible = slot === 0 && transitionAlpha > 0;
             }
@@ -1099,9 +1096,7 @@ export function PixiScene({
           }
         });
 
-        const initialZoneIndex = routePositionAt(pack, displayedDistance).zoneIndex;
-        const initialNextZone = pack.route.zones[(initialZoneIndex + 1) % pack.route.zones.length];
-        void Assets.backgroundLoad(zoneAssetUrls(initialNextZone)).catch(() => undefined);
+        const initialZoneIndex = scenePositionAt(pack, displayedWalkingSeconds).zoneIndex;
         await buildZone(initialZoneIndex);
         if (disposed) return;
         resize();

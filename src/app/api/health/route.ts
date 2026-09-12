@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const supabase = getServerSupabase();
   let database: "ready" | "unconfigured" | "unavailable" = supabase ? "unavailable" : "unconfigured";
-  let scenePackId = "tashkent-v5";
+  let scenePackId = "paris-v1";
   let weather: unknown = null;
   let launchAt: string | null = null;
   if (supabase) {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
   }
   const packs = registeredCountryPacks();
-  const pack = getCountryPack(scenePackId) ?? getCountryPack("tashkent-v5");
+  const pack = getCountryPack(scenePackId) ?? getCountryPack("paris-v1");
   const representativePath = pack ? packPrewarmPaths(pack)[0] : null;
   let assetUrlValue: string | null = null;
   let assetBase: "ready" | "unavailable" = "unavailable";
@@ -73,8 +73,7 @@ export async function GET(request: NextRequest) {
   const ready = database === "ready"
     && contentReady
     && assetBase === "ready"
-    && (!weatherEnabled || (weatherStatus === "fresh" && providers.weather === "ready"))
-    && providers.payments === "ready";
+    && (!weatherEnabled || (weatherStatus === "fresh" && providers.weather === "ready"));
   const launchState = process.env.VERCEL_ENV === "production" && process.env.LAUNCH_ENABLED !== "true"
     ? "disabled"
     : launchAt && new Date(launchAt).getTime() > now.getTime() ? "armed" : "live";
@@ -85,6 +84,10 @@ export async function GET(request: NextRequest) {
       content: contentReady ? "ready" : "unavailable",
       registeredPacks: packs.length,
       providers,
+      launchModes: {
+        freeValidation: ready ? "ready" : "blocked",
+        paidBooking: serverRuntimeConfig().sponsorBookingEnabled ? "configured_unverified" : "disabled",
+      },
       weather: { status: weatherStatus, ageSeconds: weatherAgeSeconds },
       assetBase: {
         status: assetBase,

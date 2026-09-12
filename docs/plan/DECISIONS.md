@@ -10,7 +10,7 @@ These describe the intended product, not features already implemented.
 |---|---|---|
 | Journey promise | Season 1 lasts **30 days**. Visiting 195 countries remains the dream, not a promise of 195 consecutive days. | P9, P12, P16, P21 |
 | Collective pace | More watchers make him walk faster: one watcher = 1×, two = 2×, four = 3×, eight = 4×, sixteen or more = 5×. No watchers means no progress. | P4–P5 |
-| Daily stakes | Reach the landmark at **8,000 metres**; marathon stretch goal at **42,195 metres**. Completed days retain grey, colour, or gold outcomes. | P4, P13, P16 |
+| Daily stakes | Reach a **collective daily distance goal of 8,000 metres**; marathon stretch goal at **42,195 metres**. The 8 km number is a reward threshold, not an assertion that the painting depicts arrival there. Completed days retain grey, colour, or gold outcomes. | P4, P13, P16, P25 |
 | Destination vote | Prefer neighbouring ready countries. Explicit train/flight fallback is allowed; apply the Season-1 blocked-pair policy below. Day 1 uses sequential name and destination votes, with the bounded Dushanbe fallback below. | P9, P22 |
 | Watching countries | Show, rank, and thank the countries contributing watch time, using server-confirmed aggregates. | P7, P12–P14 |
 
@@ -40,15 +40,32 @@ The owner has selected these values. Domain ownership and service readiness stil
 | Q10 | ADMIN_ACCESS_SECRET (at least 48 characters) exchanged for a signed HttpOnly session with 12-hour expiry. Exchange limited to five attempts per hour per IP. Never log the secret. Unauthenticated admin routes return 404. | P13/P20: production admin auth is separate from preview auth. Apply rate limiting using a protected IP-derived key, without storing raw IPs. No auth implementation is implied by this decision. |
 | Q11 | Accept proposed sponsor pricing: founding 2,900 cents, floor 4,900 cents, one cent per unique watcher, premium multiplier 1.5, seven-day window, cap 299,900 cents. | P15: server pricing, locked purchase snapshot and rounding tests remain required. |
 | Q12 | Tickets are eligible only on unsold eligible days and include Standard sponsorship; payment plus creative approval is required to override a destination vote. | P22: rejected creative triggers a full refund and the day reverts to a normal destination vote. Define cutoff handling under the same locked schedule/inventory workflow. |
-| Q13 | Use R2; implement assetUrl and upload tooling now, with same-origin fallback. | Owner creates the bucket and supplies credentials privately before launch. Host activation and live upload verification remain pending. Other P18 work is still planned. |
+| Q13 | Use R2 if it is useful; retain the implemented same-origin fallback. | Superseded for the small free validation launch: a separate R2 bucket is optional while immutable assets work correctly on the same-origin CDN. |
 | Q14 | Store eligibility: not checked. Payout eligibility: not checked. Real $1 checkout/webhook/replay/refund: not performed. | Owner/provider launch gates remain open. Do not equate fixture success with real payment acceptance. |
 | Q15 | Actual launch date: **TODO until all gates pass**. Working target: **Wednesday 23 September 2026, 16:00 UTC**. | P21: target is not permission to bypass launch gates or set a live launch timestamp now. |
-| Q16 | Start in Tashkent. Day 2 follows Q4, with Dushanbe fallback. Include Kazakhstan, Georgia and Türkiye if the route allows. No country is globally banned. | P9: exclude unordered pairs AM–AZ, AM–TR, RS–XK and GR–TR from the same vote; exclude every pair involving IL or RU for Season 1. If candidates conflict, drop one and choose the nearest ready third country that also passes the pair filter. Apply the rule to the whole ballot, including Q4 and fallbacks. IL/RU are not a global content ban. |
+| Q16 | Historical seed: start in Tashkent. | **Superseded 12 September 2026 by the Paris Day-1 validation decision below.** The ballot safety policy remains available for later routes; Tashkent is not a current Day-1 seed. |
 
-## Post-P22 launch decisions — 11 September 2026
+## Current public-validation decisions — 12 September 2026
 
-These later owner decisions supersede Q4/Q16 only where the launch city, fallback and
-route order conflict. The safety rules and two-stage Day-1 vote remain in force.
+These are the controlling product decisions for the reviewable launch candidate.
+
+| Area | Approved decision | Implementation record |
+|---|---|---|
+| Launch city | **Paris is Day 1.** The loading snapshot, live seed defaults and health fallback all use `paris-v1`. | P23 |
+| Traveler | Keep the approved 2,598,064-byte model and 1,973,112-byte animation pack. The exact combined traveler transfer budget is 4,571,176 bytes. Preserve current Mixamo motion. | D1/D6, `src/lib/characters/manifest.ts` |
+| Scene clock | Five paintings repeat indefinitely, each after exactly 1,080 seconds of global active walking. Viewer count and pace do not select the painting. Stops pause the walking clock. | P25 |
+| Scene motion | Keep the city painting stationary and move only the road/ground-life layer. Center the traveler; move him left only while a desktop panel needs space. | P24/P26 |
+| Distance | Preserve collective pace, accumulated distance and 8 km/42.195 km rewards. Call 8 km the collective daily distance goal, not arrival at a depicted landmark. | P25 |
+| Interface | One compact location/rule/audience header, Wave/Water/Photo, lower-left activity, restrained progress, and Sponsor/Journey/contextual Vote. Passport lives in Journey; panels are URL-addressed and do not recreate the scene. | P24 |
+| Rollover | The logical boundary is exactly 16:00 UTC. An authenticated idempotent minute reconciler prewarms at 15:55–15:59 and catches up the most recent boundary; authoritative reads also reconcile. | P25; production still needs Vercel Pro cron and `CRON_SECRET` configuration. |
+| Sponsorship | Keep the seven-day inventory and existing records. Standard remains informational. Premium is unavailable unless its bottle and café placements are fulfilled. Paid booking defaults off pending a provider that accepts this advertising offer and merchant. | P26 |
+| Capacity | The current-code 1,000-viewer load test is **after launch**. Historical measurements are not a launch claim and there is no invented 500-viewer substitute gate. | D2 |
+| Optional art | Dusk window overlays are skipped for validation; Sofia is not the launch city. | D3/D4 |
+
+## Historical post-P22 launch decisions — 11 September 2026
+
+This table is preserved as history. Its London route/art assumptions were superseded by
+the 12 September Paris public-validation decisions above. The safety rules remain.
 
 | Area | Approved decision | Implementation record |
 |---|---|---|
@@ -62,9 +79,9 @@ route order conflict. The safety rules and two-stage Day-1 vote remain in force.
 
 ## Owner work still needed before launch
 
-- Create R2 bucket/public host, configure browser CORS and provide bucket-scoped credentials privately; see the [asset hosting runbook](../runbooks/asset-hosting.md). Do not paste secrets into the conversation or commit them.
-- Check payment store and payout eligibility, then complete the real checkout/webhook/replay/refund rehearsal when the integration is ready.
-- Document cultural-safety review for the actual launch packs. Visual review, real-phone performance and launch comprehension gates still need evidence.
+- For a free validation release, configure Vercel Pro's minute cron and `CRON_SECRET`, then deploy/review this candidate. R2 remains optional while same-origin immutable caching works.
+- For paid booking only, choose a provider that explicitly permits the advertising offer and this merchant, then complete real checkout/webhook/replay/refund verification. Do not enable the existing checkout meanwhile.
+- Document cultural-safety review for the actual public pack. Emulated viewports are recorded; physical-phone/browser review remains a stated gap.
 - Supply a Mixamo FBX only if a specific clip needs manual account work, and PNGs only if generation is unavailable. These are conditional requests, not current blockers.
 - Confirm the actual launch date after all gates pass. The final character name comes from the vote.
 

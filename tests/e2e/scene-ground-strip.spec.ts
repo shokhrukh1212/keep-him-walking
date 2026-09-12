@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { offlineBootstrapSnapshot } from "../../src/lib/bootstrap/offline";
 import { tbilisiCountryPackV1 } from "../../src/content/countries/tbilisi.v1";
 
-/** Regression guard for the retired generated ground strip plus P4's bounded wrap. */
+/** Regression guard for a stationary city painting and the retired generated strip. */
 const ZONE_ID = "rustaveli-arrival";
 const PANORAMA_ASSET = `/scenes/tbilisi/v1/zones/${ZONE_ID}/fallback.webp`;
 /** Zone 0 spans 1,200 m; 75 m is clear of the wave beat at 150 m. */
@@ -10,7 +10,7 @@ const WALKING_RAW_SECONDS = 60;
 
 test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 
-test("Tbilisi arrival draws one wrapping panorama with no ground strip over it", async ({ page }) => {
+test("Tbilisi arrival keeps one city painting stationary with no generated strip", async ({ page }) => {
   test.setTimeout(90_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -73,24 +73,20 @@ test("Tbilisi arrival draws one wrapping panorama with no ground strip over it",
   expect(panoramaTextures).toHaveLength(1);
   expect(new URL(panoramaTextures[0]!, page.url()).pathname).toBe(PANORAMA_ASSET);
   await expect(stage).toHaveAttribute("data-shadow-visible", "true");
-  await expect.poll(async () => Number(await stage.getAttribute("data-shadow-x"))).toBeCloseTo(1440 * 0.61, 0);
+  await expect.poll(async () => Number(await stage.getAttribute("data-shadow-x"))).toBeCloseTo(1440 * 0.5, 0);
   await expect.poll(async () => Number(await stage.getAttribute("data-shadow-y"))).toBeCloseTo(900 * 0.86, 0);
 
-  // The offset is modulo one texture span and advances continuously on the
-  // distance clock. This directly guards the wrap contract without relying on
-  // screenshot timing or fractional WebGL texture sampling.
+  // The city painting stays fixed while the independently rendered road-life
+  // track advances on the distance clock.
   const span = Number(await stage.getAttribute("data-panorama-span"));
   const offsetBefore = Number(await stage.getAttribute("data-panorama-offset"));
   const groundPixelsBefore = Number(await stage.getAttribute("data-ground-pixels"));
   expect(span).toBeGreaterThan(0);
-  expect(offsetBefore).toBeGreaterThanOrEqual(0);
-  expect(offsetBefore).toBeLessThan(span);
+  expect(offsetBefore).toBe(0);
   await expect.poll(async () => Number(await stage.getAttribute("data-ground-pixels")))
     .toBeGreaterThan(groundPixelsBefore + 30);
   const offsetAfter = Number(await stage.getAttribute("data-panorama-offset"));
-  expect(offsetAfter).not.toBe(offsetBefore);
-  expect(offsetAfter).toBeGreaterThanOrEqual(0);
-  expect(offsetAfter).toBeLessThan(span);
+  expect(offsetAfter).toBe(0);
 
   expect(errors).toEqual([]);
 });

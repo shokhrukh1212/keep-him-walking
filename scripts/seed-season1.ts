@@ -16,7 +16,7 @@ function argument(name: string): string | undefined {
 const rawLaunchAt = argument("--launch-at");
 if (!rawLaunchAt) throw new Error("Missing required argument: --launch-at <ISO timestamp>");
 const launchAt = parseSeason1LaunchAt(rawLaunchAt);
-const packId = argument("--pack") ?? "london-v1";
+const packId = argument("--pack") ?? "paris-v1";
 const pack = getCountryPack(packId);
 if (!pack || pack.schemaVersion !== 3) {
   throw new Error(`Launch pack ${packId} is not a registered, reviewed v3 pack`);

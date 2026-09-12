@@ -34,7 +34,13 @@ describe("stage layout", () => {
       const targetPx = h * (w <= 600 ? 0.28 : 0.30);
       expect(result.personHeightPx).toBe(targetPx);
       expect(result.requiredImageScale).toBeCloseTo(targetPx / (defaults.personHeightFrac * ih));
-      expect(result.imageScale).toBe(Math.min(1.6, result.requiredImageScale));
+      expect(result.imageScale).toBeCloseTo(Math.max(
+        w / iw,
+        h / ih,
+        Math.min(1.6, result.requiredImageScale),
+      ));
+      expect(iw * result.imageScale).toBeGreaterThanOrEqual(w);
+      expect(ih * result.imageScale).toBeGreaterThanOrEqual(h);
       expect(result.imageX).toBeCloseTo((w - iw * result.imageScale) / 2);
       expect(result.imageY + defaults.groundLineY * ih * result.imageScale).toBeCloseTo(result.groundY);
       expect(result.groundY).toBeCloseTo(h * (w <= 600 ? 0.8 : 0.86));

@@ -26,6 +26,12 @@ type Props = {
 };
 
 type CooldownMap = Partial<Record<ReactionKind, number>>;
+type Feedback = {
+  kind: ReactionKind;
+  phase: "sending" | "contributing" | "queued" | "executing" | "cooldown" | "failed";
+  count?: number;
+  threshold?: number;
+};
 
 export function ReactionButtons({
   counts,
@@ -38,7 +44,7 @@ export function ReactionButtons({
   const [cooldowns, setCooldowns] = useState<CooldownMap>({});
   const [now, setNow] = useState(() => Date.now());
   const [pending, setPending] = useState<ReactionKind | null>(null);
-  const [heard, setHeard] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const previousCrowdKind = useRef<CrowdActionKind | null>(null);
 
   // One shared ticker drives every countdown, so the buttons stay honest about
@@ -49,42 +55,63 @@ export function ReactionButtons({
     return () => window.clearInterval(timer);
   }, [cooldowns]);
 
-  // "He heard you" is a one-second pulse the moment a crowd action begins.
   useEffect(() => {
     const previous = previousCrowdKind.current;
     previousCrowdKind.current = activeCrowdKind;
-    if (activeCrowdKind === null || previous === activeCrowdKind) return;
-    setHeard(true);
-    const timer = window.setTimeout(() => setHeard(false), 1_000);
-    return () => window.clearTimeout(timer);
+    if (activeCrowdKind !== null && previous !== activeCrowdKind) {
+      const kind = activeCrowdKind === "drink" ? "water" : activeCrowdKind;
+      setFeedback({ kind, phase: "executing" });
+    } else if (activeCrowdKind === null && previous !== null) {
+      const kind = previous === "drink" ? "water" : previous;
+      setFeedback({ kind, phase: "cooldown" });
+    }
   }, [activeCrowdKind]);
 
   const send = useCallback(async (kind: ReactionKind) => {
     setPending(kind);
+    setFeedback({ kind, phase: "sending" });
     try {
       const response = await fetch("/api/reactions", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ kind }),
+        signal: AbortSignal.timeout(10_000),
       });
       const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (response.status === 429) {
+          const cooldownSeconds = Number(result?.cooldownSeconds ?? REACTION_COOLDOWN_SECONDS);
+          setCooldowns((current) => ({ ...current, [kind]: Date.now() + cooldownSeconds * 1_000 }));
+          setFeedback({ kind, phase: "cooldown" });
+          return;
+        }
+        throw new Error("Reaction failed");
+      }
       const cooldownSeconds = Number(result?.cooldownSeconds ?? REACTION_COOLDOWN_SECONDS);
       setCooldowns((current) => ({ ...current, [kind]: Date.now() + cooldownSeconds * 1_000 }));
       if (response.ok && typeof result?.scheduledAt === "number") {
         onScheduled?.(kind, result.scheduledAt);
+        setFeedback({ kind, phase: "queued" });
+      } else {
+        setFeedback({
+          kind,
+          phase: "contributing",
+          count: Number(result?.count ?? counts[kind]),
+          threshold: Number(result?.threshold ?? reactionThreshold(activeViewers ?? 0)),
+        });
       }
       if (response.ok) onConfirmed?.();
     } catch {
-      // A failed send simply leaves the button available again.
+      setFeedback({ kind, phase: "failed" });
     } finally {
       setPending(null);
     }
-  }, [onConfirmed, onScheduled]);
+  }, [activeViewers, counts, onConfirmed, onScheduled]);
 
   const threshold = reactionThreshold(activeViewers ?? 0);
 
   return (
-    <div className="reaction-buttons" data-hud-region="reactions" data-heard={heard} role="group" aria-label="Ask him to do something">
+    <div className="reaction-buttons" data-hud-region="reactions" role="group" aria-label="Ask him to do something">
       {REACTION_KINDS.map((kind) => {
         const until = cooldowns[kind] ?? 0;
         const remaining = Math.max(0, Math.ceil((until - now) / 1_000));
@@ -111,7 +138,22 @@ export function ReactionButtons({
           </button>
         );
       })}
-      {heard ? <span className="reaction-heard" role="status">he heard you</span> : null}
+      <span className="reaction-feedback" role="status">
+        {feedback ? feedbackText(feedback, cooldowns[feedback.kind] ?? 0, now) : ""}
+      </span>
     </div>
   );
+}
+
+function feedbackText(feedback: Feedback, cooldownUntil: number, now: number) {
+  const label = REACTION_LABELS[feedback.kind].label;
+  if (feedback.phase === "sending") return `Sending ${label.toLowerCase()}…`;
+  if (feedback.phase === "contributing") return `${label} added · ${feedback.count}/${feedback.threshold}`;
+  if (feedback.phase === "queued") return `${label} queued`;
+  if (feedback.phase === "executing") return feedback.kind === "water"
+    ? "He’s taking water"
+    : feedback.kind === "wave" ? "He’s waving" : "He’s taking a photo";
+  if (feedback.phase === "failed") return "Couldn’t send. Try again.";
+  const remaining = Math.max(0, Math.ceil((cooldownUntil - now) / 1_000));
+  return remaining > 0 ? `${label} again in ${remaining}s` : `${label} is ready again`;
 }

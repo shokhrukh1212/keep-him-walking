@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(39);
 
 insert into public.journeys (
   id, slug, title, starts_at, total_days, status,
@@ -142,6 +142,7 @@ select * from public.submit_reaction(
 
 select is((select out_threshold from solo_photo), 1, 'the solo room receives threshold one');
 select isnt((select out_scheduled_at from solo_photo), null, 'the solo reaction schedules its action');
+select is((select out_scheduled_at from solo_photo), 3, 'the action starts after the request-time projection, never in the client past');
 select is(
   (select end_active_second - at_active_second from public.scheduled_actions
     where country_day_id = '10000000-0000-4000-8000-000000000079'),
@@ -151,8 +152,8 @@ select is(
 select is(
   (select frozen_distance_metres from public.scheduled_actions
     where country_day_id = '10000000-0000-4000-8000-000000000079'),
-  2.5::double precision,
-  'the scheduled action stores its authoritative planted distance'
+  3.75::double precision,
+  'the scheduled action projects authority to request time before planting distance'
 );
 
 create temporary table solo_after_action as select * from public.record_presence_heartbeat_v12(

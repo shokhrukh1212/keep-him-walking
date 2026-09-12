@@ -1,12 +1,8 @@
-import Link from "next/link";
-import { CountryFlags } from "./CountryFlags";
 import { CountryLeaderboardSheet } from "./CountryLeaderboardSheet";
-import { LiveStatus } from "./LiveStatus";
 import type {
   ConnectionStatus,
   CountryDayView,
   CountryWatchView,
-  LiveCountryView,
 } from "@/lib/contracts";
 
 type Props = {
@@ -22,12 +18,12 @@ type Props = {
   waitingDuration?: string | null;
   /** Real weather for the city, or null when nothing is confirmed. */
   weatherLabel?: string | null;
-  liveCountries?: LiveCountryView[];
   todayTopCountries?: CountryWatchView[];
   launchCountdown?: string | null;
   audienceOpen: boolean;
   onAudienceOpen: () => void;
   onAudienceClose: () => void;
+  onJourneyOpen: () => void;
 };
 
 export function JourneyHud({
@@ -42,40 +38,45 @@ export function JourneyHud({
   waitingSinceLocalTime,
   waitingDuration,
   weatherLabel = null,
-  liveCountries = [],
   todayTopCountries = [],
   launchCountdown = null,
   audienceOpen,
   onAudienceOpen,
   onAudienceClose,
+  onJourneyOpen,
 }: Props) {
+  const audienceLabel = activeViewers === null
+    ? "Live count unavailable"
+    : `${activeViewers} ${activeViewers === 1 ? "person" : "people"} watching`;
   return (
     <header className="journey-hud" data-hud-region="header">
-      <Link className="day-mark" data-hud-region="where-when" href="/map" aria-label={`Open journey map from ${day.cityName}`}>
-        <span className="eyebrow">DAY {day.dayNumber} · SEASON 1</span>
-        <strong>{day.cityName}</strong>
+      <button className="day-mark" data-hud-region="where-when" type="button" onClick={onJourneyOpen} aria-label={`Open Journey from ${day.cityName}`}>
+        <span className="product-mark">KEEP HIM WALKING</span>
+        <strong>{day.cityName} · Day {day.dayNumber}</strong>
         <span>
           {day.countryName} · {localTime}
           {weatherLabel ? <> · <span className="hud-weather">{weatherLabel}</span></> : null}
         </span>
-      </Link>
+      </button>
+      <p className="journey-rule">He only walks while someone is watching.</p>
       <div className="journey-hud-audience" data-hud-region="who">
-        <CountryFlags live={liveCountries} onOpen={onAudienceOpen} />
-        <LiveStatus
-          activeViewers={activeViewers}
-          paceRate={paceRate}
-          walking={walking}
-          status={status}
-          onShare={onShare}
-          wakeCountdown={wakeCountdown}
-          waitingSinceLocalTime={waitingSinceLocalTime}
-          waitingDuration={waitingDuration}
-          launchCountdown={launchCountdown}
-        />
+        <button className="audience-control" type="button" onClick={onAudienceOpen} aria-expanded={audienceOpen}>
+          <span className={`live-dot ${status}`} aria-hidden="true" />
+          <strong>{launchCountdown ? `Starts ${launchCountdown}` : audienceLabel}</strong>
+        </button>
       </div>
       <CountryLeaderboardSheet
         open={audienceOpen}
         todayTop={todayTopCountries}
+        activeViewers={activeViewers}
+        paceRate={paceRate}
+        walking={walking}
+        status={status}
+        waitingSinceLocalTime={waitingSinceLocalTime}
+        waitingDuration={waitingDuration}
+        wakeCountdown={wakeCountdown}
+        launchCountdown={launchCountdown}
+        onShare={onShare}
         onClose={onAudienceClose}
       />
     </header>

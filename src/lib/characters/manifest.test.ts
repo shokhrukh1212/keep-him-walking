@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CHARACTER_MANIFEST, CLIP_SPECS, clipFallbackChain, normalizedClipName } from "./manifest";
 
@@ -21,5 +22,14 @@ describe("character clip manifest", () => {
       animationUrl: "/characters/v3/traveler-animations.glb",
       fallbackUrl: "/characters/v2/traveler.glb?rev=interactions-1",
     });
+    expect(CHARACTER_MANIFEST.travelerBudgetBytes).toEqual({
+      model: 2_598_064,
+      animations: 1_973_112,
+      total: 4_571_176,
+    });
+    expect(statSync("public/characters/v3/traveler.glb").size)
+      .toBe(CHARACTER_MANIFEST.travelerBudgetBytes.model);
+    expect(statSync("public/characters/v3/traveler-animations.glb").size)
+      .toBe(CHARACTER_MANIFEST.travelerBudgetBytes.animations);
   });
 });

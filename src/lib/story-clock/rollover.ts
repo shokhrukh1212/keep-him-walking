@@ -4,11 +4,15 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { storePendingRecaps, type PendingRecap } from "@/lib/recap/store";
 import { nextDayPackId, planNextDay, type VoteWinner } from "@/lib/story-clock/next-day";
 import { writeOperationalLog } from "@/lib/observability/logger";
+import { logicalDayBoundaryAtOrBefore } from "./boundary";
 
-export async function reconcilePhase2(now = new Date()) {
+export async function reconcilePhase2(
+  now = new Date(),
+  effectiveAt = logicalDayBoundaryAtOrBefore(now),
+) {
   const supabase = getServerSupabase();
   if (!supabase) throw new Error("SUPABASE_NOT_CONFIGURED");
-  const operationKey = `rollover:${now.toISOString().slice(0, 10)}`;
+  const operationKey = `rollover:${effectiveAt.toISOString()}`;
   const { data: claimed, error: claimError } = await supabase.rpc("claim_operation", {
     p_operation_key: operationKey, p_operation_type: "rollover", p_now: now.toISOString(),
   });
@@ -19,15 +23,15 @@ export async function reconcilePhase2(now = new Date()) {
     // Close today's ballot first: tomorrow's country is whatever it chose.
     const { data: winnerRow, error: winnerError } = await supabase.rpc(
       "close_and_pick_vote_winner",
-      { p_real_now: now.toISOString() },
+      { p_real_now: effectiveAt.toISOString() },
     );
     if (winnerError) throw winnerError;
     const winner = (winnerRow ?? { state: "no_closing_vote" }) as VoteWinner;
-    const nextDay = await createNextDay(supabase, winner, now);
+    const nextDay = await createNextDay(supabase, winner, effectiveAt);
 
     const [{ data: state, error: stateError }, { data: cleanup, error: cleanupError }] = await Promise.all([
       supabase.rpc("reconcile_phase2_state_v2", {
-        p_real_now: now.toISOString(),
+        p_real_now: effectiveAt.toISOString(),
         p_ttl_seconds: config.presenceTtlSeconds,
         p_steps_per_second: config.stepsPerActiveSecond,
         p_pace_cap: config.paceCap,
@@ -38,14 +42,14 @@ export async function reconcilePhase2(now = new Date()) {
     // Pricing runs after reconciliation, because reconciliation is what finalizes
     // yesterday's unique watchers, and after tomorrow's day exists, so the date it
     // was sold as can finally point at a real country-day.
-    const sponsorWindow = await openSponsorWindow(supabase, winner, nextDay, now);
+    const sponsorWindow = await openSponsorWindow(supabase, winner, nextDay, effectiveAt);
     const recapDays = Array.isArray(state?.recapDays) ? state.recapDays as PendingRecap[] : [];
     const recapImages = await storePendingRecaps(recapDays);
-    const yesterday = new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10);
+    const yesterday = new Date(effectiveAt.getTime() - 86_400_000).toISOString().slice(0, 10);
     const { error: metricsError } = await supabase.rpc("aggregate_sponsor_metrics", { p_metric_date: yesterday, p_now: now.toISOString() });
     if (metricsError) throw metricsError;
     await supabase.from("operation_ledger").update({ status: "completed", completed_at: now.toISOString(), payload_json: { state, cleanup, winner, nextDay, recapImages, sponsorWindow } }).eq("operation_key", operationKey);
-    return { duplicate: false, operationKey, state, cleanup, winner, nextDay, recapImages, sponsorWindow };
+    return { duplicate: false, operationKey, effectiveAt: effectiveAt.toISOString(), state, cleanup, winner, nextDay, recapImages, sponsorWindow };
   } catch (error) {
     await supabase.from("operation_ledger").update({ status: "failed", completed_at: now.toISOString(), error_code: "RECONCILIATION_FAILED" }).eq("operation_key", operationKey);
     throw error;

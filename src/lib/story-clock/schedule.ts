@@ -1,5 +1,6 @@
 export const DAY_MS = 24 * 60 * 60 * 1_000;
 
+/** Historical accelerated Phase 2 rehearsal fixture; launch seeding uses Paris via seed-plan. */
 export const PHASE2_ROUTE = [
   { dayNumber: 1, countryCode: "UZ", countryName: "Uzbekistan", cityName: "Tashkent", timeZone: "Asia/Tashkent", scenePackId: "tashkent-v5" },
   { dayNumber: 2, countryCode: "TJ", countryName: "Tajikistan", cityName: "Dushanbe", timeZone: "Asia/Dushanbe", scenePackId: "dushanbe-v1" },

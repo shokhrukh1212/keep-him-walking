@@ -320,8 +320,8 @@ export function ProductCharacterStage3D(props: Props) {
       resident?.setAppearance(state.grade.current);
       const vertical = CHARACTER_MANIFEST.traveler.heightMetres * height / frame.layout.personHeightPx;
       const horizontal = vertical * width / height;
-      const defaultAnchor = state.pack.schemaVersion === 3 ? state.pack.route.travelerViewportAnchor : 0.61;
       const mobile = width <= 600;
+      const defaultAnchor = state.command?.panelOpen && !mobile ? 0.36 : 0.5;
       const [left, right] = frame.stage.walkableX;
       const travelerAnchor = Math.min(right, Math.max(left,
         cue.conversation ? (mobile ? 0.34 : 0.43) : defaultAnchor,

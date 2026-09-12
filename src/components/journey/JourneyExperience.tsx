@@ -25,11 +25,9 @@ import { useJourneyPresence } from "@/hooks/useJourneyPresence";
 import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { useQualityTier } from "@/hooks/useQualityTier";
 import { useRouteRuntime } from "@/hooks/useRouteRuntime";
-import { useIntroHeadline } from "@/hooks/useIntroHeadline";
 import { confirmedWalkingLease, presenceReadIsCurrent, walkingLeaseIsActive } from "@/lib/presence/walking-lease";
 import { worldCommandForEncounter } from "@/lib/world/encounter-timeline";
 import { motionPhaseAt, motionSpeedForPhase } from "@/lib/world/motion-machine";
-import { routePositionAt } from "@/lib/world/route-clock";
 import type { MotionTransition } from "@/lib/world/motion-machine";
 import type { WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import { SceneStage } from "@/components/scene/SceneStage";
@@ -44,7 +42,6 @@ import { SoundMotionControls } from "@/components/hud/SoundMotionControls";
 import { DailyVote } from "@/components/vote/DailyVote";
 import { VoteChip } from "@/components/hud/VoteChip";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
-import { IntroHeadline } from "@/components/hud/IntroHeadline";
 import { WalkingRuleStatus } from "@/components/hud/WalkingRuleStatus";
 import { GoalBar } from "@/components/hud/GoalBar";
 import { JourneyMapEmbed } from "@/components/map/JourneyMapEmbed";
@@ -60,7 +57,6 @@ import {
   waitingBehaviorAt,
 } from "@/lib/presence/waiting";
 import { WakeCard } from "@/components/journey/WakeCard";
-import { FirstVisitOverlay } from "@/components/journey/FirstVisitOverlay";
 import { shareCard } from "@/lib/share/client";
 import { CorrectionForm } from "@/components/corrections/CorrectionForm";
 import { flagEmoji } from "@/lib/countries/flags";
@@ -82,6 +78,15 @@ type WakeMoment = {
   waitedSeconds: number;
   shareToken: string | null;
 };
+
+type PanelName = "audience" | "journey" | "passport" | "sponsor" | "vote";
+
+function panelFromLocation(): PanelName | null {
+  if (typeof window === "undefined") return null;
+  const value = new URLSearchParams(window.location.search).get("panel");
+  return value === "audience" || value === "journey" || value === "passport"
+    || value === "sponsor" || value === "vote" ? value : null;
+}
 
 function currentlyActiveEvent(
   snapshot: BootstrapSnapshot,
@@ -117,11 +122,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const [puppetReady, setPuppetReady] = useState(false);
   const [residentReady, setResidentReady] = useState(false);
   const [presentationFrame,setPresentationFrame]=useState<{assetVersion:string;motion:TravelerMotionSnapshot}|null>(null);
-  const [openPanel, setOpenPanel] = useState<"audience" | "journey" | "vote" | null>(null);
+  const [openPanel, setOpenPanel] = useState<PanelName | null>(null);
+  const panelTrigger = useRef<HTMLElement | null>(null);
   const [wakeBeat, setWakeBeat] = useState<WakeMoment | null>(null);
   const [wakeCard, setWakeCard] = useState<WakeMoment | null>(null);
-  const [onboardingVisible, setOnboardingVisible] = useState(false);
-  const onboardingSeen = useRef(false);
   const [actionReview,setActionReview]=useState<ActionReview>({action:"auto",startedAt:0});
   const [reviewNow,setReviewNow]=useState(0);
   useEffect(()=>{
@@ -133,7 +137,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const [visitorSteps,setVisitorSteps]=useState(0);
   const newestHeartbeat = useRef(-Infinity);
   const confirmedContribution = useRef({day:initialSnapshot.countryDay.id,raw:0,visitor:0,steps:0});
-  const [replayOpen, setReplayOpen] = useState(false);
   const [loadingLive, setLoadingLive] = useState(true);
   const [bootstrapIssue, setBootstrapIssue] = useState("The live journey is temporarily unavailable. Retrying…");
   const [renderedZone, setRenderedZone] = useState(() => ({
@@ -145,7 +148,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     changedAtMs: new Date(initialSnapshot.realServerNow ?? initialSnapshot.serverNow).getTime(),
   });
   const [worldDiagnostics, setWorldDiagnostics] = useState<WorldDiagnosticsSnapshot | null>(null);
-  const [welcomeOriginMs] = useState(() => new Date(initialSnapshot.serverNow).getTime());
   const [walkingLease, setWalkingLease] = useState(() => confirmedWalkingLease(
     (initialSnapshot.presence.activeViewers ?? 0) > 0,
     initialSnapshot.presence.ttlSeconds,
@@ -165,6 +167,72 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const loadStarted = useRef(0);
   const reducedMotion = useMotionPreference();
   const qualityTier = useQualityTier(reducedMotion);
+
+  const showPanel = useCallback((panel: PanelName) => {
+    if (!panelFromLocation()) {
+      panelTrigger.current = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set("panel", panel);
+    window.history.pushState({ ...window.history.state, khwPanel: true }, "", url);
+    setOpenPanel(panel);
+  }, []);
+  const closePanel = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("panel");
+    window.history.replaceState({ ...window.history.state, khwPanel: false }, "", url);
+    setOpenPanel(null);
+  }, []);
+
+  useEffect(() => {
+    const initial = window.setTimeout(() => setOpenPanel(panelFromLocation()), 0);
+    const onPopState = () => setOpenPanel(panelFromLocation());
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.clearTimeout(initial);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!openPanel) {
+      const trigger = panelTrigger.current;
+      panelTrigger.current = null;
+      window.requestAnimationFrame(() => trigger?.focus());
+      return;
+    }
+    const root = document.querySelector<HTMLElement>("[data-panel-root]:not([hidden])");
+    window.requestAnimationFrame(() => {
+      const close = root?.querySelector<HTMLElement>("[data-panel-close]");
+      if (close) close.focus();
+      else root?.focus();
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePanel();
+        return;
+      }
+      if (event.key !== "Tab" || !root) return;
+      const items = [...root.querySelectorAll<HTMLElement>(
+        "button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex='-1'])",
+      )].filter((item) => !item.hidden);
+      if (items.length === 0) return;
+      const first = items[0]!;
+      const last = items.at(-1)!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [closePanel, openPanel]);
 
   useEffect(() => {
     loadStarted.current = performance.now();
@@ -262,7 +330,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     const tick = window.setInterval(() => {
       setServerNowMs(estimatedServerNow(clock));
       setRealNowMs(estimatedServerNow(realClock));
-    }, 100);
+    }, 1_000);
     return () => window.clearInterval(tick);
   }, [clock, realClock]);
 
@@ -371,15 +439,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const waitingLocalTime = currentWaitingSince
     ? formatWaitingLocalTime(currentWaitingSince, snapshot.countryDay.timeZone)
     : null;
-  const initialRoutePosition = routePositionAt(
-    snapshot.assets,
-    heartbeat?.globalDistanceMetres ?? snapshot.route.globalDistanceMetres,
-  );
-  const zoneAudioId = snapshot.assets.route.zones[initialRoutePosition.zoneIndex]?.audioIds[0];
-  const ambientAudioUrl = snapshot.assets.audio.find((asset) => asset.id === zoneAudioId)?.url;
-  const { enabled: soundEnabled, available: soundAvailable, toggle: toggleSound } =
-    useJourneyAudio(walking, ambientAudioUrl);
-
   useEffect(() => {
     if (walking === motionTransition.desiredWalking) return;
     const update = window.setTimeout(() => {
@@ -423,13 +482,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     worldCapture.current = capture;
   }, []);
 
-  useEffect(() => {
-    if (!snapshot.firstVisit || onboardingSeen.current) return;
-    onboardingSeen.current = true;
-    setOnboardingVisible(true);
-    const timer = window.setTimeout(() => setOnboardingVisible(false), 4_000);
-    return () => window.clearTimeout(timer);
-  }, [snapshot.firstVisit]);
   const registerCharacterCapture = useCallback((capture: CanvasCapture | null) => {
     characterCapture.current = capture;
   }, []);
@@ -450,6 +502,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
       ),
     );
+  const zoneAudioId = snapshot.assets.route.zones[routePosition.zoneIndex]?.audioIds[0];
+  const ambientAudioUrl = snapshot.assets.audio.find((asset) => asset.id === zoneAudioId)?.url;
+  const { enabled: soundEnabled, available: soundAvailable, toggle: toggleSound } =
+    useJourneyAudio(walking, ambientAudioUrl);
   const motion=puppetReady && presentationFrame?.assetVersion===snapshot.assets.assetVersion ? presentationFrame.motion : estimatedMotion;
   const routeEncounter = snapshot.assets.schemaVersion === 3 && motion.action?.kind === "encounter"
     ? snapshot.assets.encounters[0]
@@ -472,7 +528,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
               : motion.action.encounterPhase === "resume_walk"
                 ? "restore"
                 : "dialogue";
-  const introHeadline = useIntroHeadline(walking, welcomeOriginMs, serverNowMs);
   const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
   const activeRouteZone = snapshot.assets.route.zones[routePosition.zoneIndex];
   const eventStage = activeRouteZone?.eventStage;
@@ -534,7 +589,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   useEffect(() => {
     if (snapshot.assets.schemaVersion !== 3) return;
     const isDeparture = routePosition.zoneIndex === snapshot.assets.route.zones.length - 1;
-    if (!isDeparture || routePosition.zoneProgress < 0.7) return;
+    if (!isDeparture || routePosition.visitProgress < 0.7) return;
     const next = snapshot.tomorrow ? getCountryPack(snapshot.tomorrow.scenePackId) : null;
     if (!next) return;
     for (const url of next.schemaVersion === 3
@@ -545,7 +600,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       image.decoding = "async";
       image.src = publicAssetUrl(url);
     }
-  }, [routePosition.zoneIndex, routePosition.zoneProgress, snapshot.assets, snapshot.tomorrow]);
+  }, [routePosition.zoneIndex, routePosition.visitProgress, snapshot.assets, snapshot.tomorrow]);
 
   useEffect(() => {
     if (qualityReported.current) return;
@@ -659,6 +714,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     sponsorPatchUrl: demoLogo ?? sponsor?.logo ?? undefined,
     sponsorBottleUrl: sponsor?.bottle ?? undefined,
     actionReview: previewDemoSponsor?actionReview:undefined,
+    panelOpen: openPanel !== null && openPanel !== "audience",
   };
 
   const sceneDidReady = useCallback((renderer: "pixi" | "static") => {
@@ -757,7 +813,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   };
 
   return (
-    <main className="journey-shell" data-motion={reducedMotion ? "reduced" : "full"}>
+    <main className="journey-shell" data-motion={reducedMotion ? "reduced" : "full"} data-panel={openPanel ?? ""}>
       <SceneStage
         scheduledActions={scheduledActions}
         weather={weather}
@@ -770,7 +826,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         onCharacterCaptureReady={registerCharacterCapture}
         pack={snapshot.assets}
         routeSeconds={routeSeconds}
-        routeDistanceMetres={distanceMetres}
         routeRuntime={routeRuntime}
         command={worldCommand}
         qualityTier={qualityTier}
@@ -787,17 +842,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         onWorldFailure={worldDidFail}
         onReady={sceneDidReady}
       />
-      <IntroHeadline
-        travelerName={snapshot.journey.travelerName}
-        prelaunch={snapshot.journeyState === "prelaunch"}
-        collapsed={waking ? false : introHeadline.collapsed}
-        firstArrival={waking && waitingLocalTime && wakeCountdown ? {
-          waitingLocalTime,
-          waitedDuration: formatWaitDuration(waitedSeconds),
-          countdown: wakeCountdown,
-        } : null}
-      />
-      <FirstVisitOverlay visible={onboardingVisible} onDismiss={() => setOnboardingVisible(false)} />
       <JourneyHud
         day={snapshot.countryDay}
         localTime={localTime}
@@ -812,12 +856,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         wakeCountdown={wakeCountdown}
         waitingSinceLocalTime={waitingLocalTime}
         waitingDuration={formatWaitDuration(waitedSeconds)}
-        liveCountries={snapshot.countries.live}
         todayTopCountries={snapshot.countries.todayTop}
         launchCountdown={startsIn}
         audienceOpen={openPanel === "audience"}
-        onAudienceOpen={() => setOpenPanel("audience")}
-        onAudienceClose={() => setOpenPanel(null)}
+        onAudienceOpen={() => showPanel("audience")}
+        onAudienceClose={closePanel}
+        onJourneyOpen={() => showPanel("journey")}
       />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
@@ -829,10 +873,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       {/* A single connected idle frame holds the traveler's place until the 3D
           model reports ready. The sprite and Rive renderers it used to sit in
           front of were retired in P18; nothing else remains of that path. */}
-      {!puppetReady ? <div className="traveler-wrap" role="img" aria-label={`Traveler is ${command.state.replaceAll("_", " ")}`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="traveler-safe-fallback" src={publicAssetUrl(snapshot.assets.traveler.fallbackSprites.idle ?? "")} alt="" onLoad={() => setTravelerReady(true)} onError={() => setTravelerReady(true)} />
-      </div> : null}
+      {!puppetReady ? <div className="traveler-loading" role="status">Loading the walk…</div> : null}
       <WalkingRuleStatus
         walking={review?review.moving:walking}
         label={review ? `Preview test · ${review.state.replaceAll("_"," ")}` : snapshot.journeyState === "prelaunch"
@@ -877,13 +918,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine}
         locationLabel={routeEncounter?.locationLabel}
         npcSrc={snapshot.assets.npcAssets[(review?review.state==="listen":activeLine?.speaker === "npc") ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral ?? ""}
-        replayAvailable={replayAvailable}
-        replayOpen={replayOpen}
         motionSeconds={motion.action?.elapsedSeconds}
         reducedMotion={reducedMotion}
-        showNpcImage={!residentReady || (!activeLine && replayOpen)}
-        onReplay={() => setReplayOpen(true)}
-        onCloseReplay={() => setReplayOpen(false)}
+        showNpcImage={!residentReady}
       />
 
       <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
@@ -892,9 +929,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             <img src={sponsor.logo} alt="" width={40} height={40} /> : null}
           <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
             {sponsor.href ? <a href={sponsor.href}>{sponsor.cta} ↗</a> : null}</div>
-        </aside> : <Link className="sponsor-invitation" data-hud-region="sponsor" title="Price rises with the audience" href="/sponsors">
+        </aside> : <button className="sponsor-invitation" data-hud-region="sponsor" type="button" onClick={() => showPanel("sponsor")}>
           {sponsorPriceCents === null ? "Sponsor a day" : `Sponsor a day · ${formatPriceUsd(sponsorPriceCents)}`}
-        </Link>}
+        </button>}
         {previewDemoSponsor ? <label className="action-review-select">Preview action
           <select aria-label="Preview action" value={actionReview.action} onChange={event=>{
             const now=performance.now();setReviewNow(now);
@@ -904,17 +941,21 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         <VoteChip
           vote={snapshot.vote}
           rolloverUtcHour={snapshot.journey.rolloverUtcHour}
-          onOpen={() => setOpenPanel("vote")}
+          onOpen={() => showPanel("vote")}
         />
-        <button type="button" aria-expanded={openPanel === "journey"} aria-controls="journey-details" onClick={()=>setOpenPanel(openPanel === "journey" ? null : "journey")}> {openPanel === "journey" ? "Close journey" : "Journey"}</button>
+        <button type="button" aria-expanded={openPanel === "journey" || openPanel === "passport"} aria-controls="journey-details" onClick={() => openPanel === "journey" || openPanel === "passport" ? closePanel() : showPanel("journey")}>Journey</button>
       </section>
-      <section id="journey-details" className="journey-details" hidden={openPanel !== "journey"} aria-label="Journey details">
+      <section id="journey-details" className="journey-details launch-panel" data-panel-root tabIndex={-1} hidden={openPanel !== "journey" && openPanel !== "passport"} role="dialog" aria-modal="true" aria-label="Journey details">
+        <div className="panel-heading launch-panel-heading">
+          <div><span className="eyebrow">KEEP HIM WALKING</span><h2>{openPanel === "passport" ? "Passport" : "Journey"}</h2></div>
+          <button type="button" data-panel-close onClick={closePanel} aria-label="Close Journey">×</button>
+        </div>
         <div className="journey-details-primary">
           <div className="route-status" aria-label={`Current route zone: ${displayedZoneLabel}`}>
             <span>Route {displayedZoneIndex + 1}/{snapshot.assets.route.zones.length}</span>
             <strong>{displayedZoneLabel}</strong>
           </div>
-          <JourneyMapEmbed />
+          {openPanel === "journey" || openPanel === "passport" ? <JourneyMapEmbed /> : null}
           {snapshot.ticket ? <p className="ticket-notice" data-testid="ticket-notice">
             Ticket: someone is sending him to {flagEmoji(snapshot.ticket.countryCode)} {snapshot.ticket.countryName} on Day {snapshot.ticket.dayNumber}
           </p> : null}
@@ -927,6 +968,13 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             />
           ) : null}
           <DayPhotoStrip photos={snapshot.dayPhotos} />
+          <section className="recent-encounters" aria-labelledby="recent-encounters-title">
+            <h3 id="recent-encounters-title">Recent encounters</h3>
+            <p><small>Scripted fictional residents inspired by the place.</small></p>
+            {snapshot.assets.encounters[0]?.lines.map((line, index) => (
+              <p key={`${line.speaker}-${index}`}><strong>{line.speaker === "npc" ? "Camille" : "Traveler"}:</strong> {line.text}</p>
+            ))}
+          </section>
         </div>
         <div className="journey-details-secondary">
           <ContributionMeter
@@ -969,7 +1017,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
               ? <span className="dock-streak-today"> · today collected</span>
               : <span className="dock-streak-today"> · {Math.max(0, Math.ceil(snapshot.passport.collectSeconds - visitorSeconds))}s to collect today</span>}
           </p> : null}
-          <nav aria-label="Journey links"><Link href="/map">Map</Link><Link href="/archive">Passport</Link><Link href="/sponsors">Sponsor a day</Link><Link href="/tickets">Buy a ticket</Link><Link href="/privacy">Privacy</Link></nav>
+          <nav aria-label="Journey sections"><button type="button" onClick={() => showPanel("passport")}>Passport</button><button type="button" onClick={() => showPanel("sponsor")}>Sponsor a day</button><Link href="/privacy">Privacy</Link></nav>
           <CorrectionForm
             packId={snapshot.assets.assetVersion}
             zones={snapshot.assets.route.zones.map((zone) => ({ id: zone.id, label: zone.label }))}
@@ -977,10 +1025,21 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         </div>
       </section>
 
+      <section className="sponsor-panel launch-panel" data-panel-root tabIndex={-1} hidden={openPanel !== "sponsor"} role="dialog" aria-modal="true" aria-label="Sponsor a day">
+        <div className="panel-heading launch-panel-heading">
+          <div><span className="eyebrow">SUPPORT THE JOURNEY</span><h2>Sponsor a day</h2></div>
+          <button type="button" data-panel-close onClick={closePanel} aria-label="Close Sponsor a day">×</button>
+        </div>
+        <p>One sponsor can be clearly disclosed on a day of the shared journey.</p>
+        <p>Standard includes the disclosed sponsor card and approved traveler patch. Premium is shown only when both the bottle label and café placement can be fulfilled.</p>
+        <p>Pricing is based on the previous day’s confirmed audience, within the published floor and cap. It can rise or fall.</p>
+        <p className="booking-off"><strong>Public validation:</strong> booking is not accepting payment yet while an eligible advertising payment provider is confirmed.</p>
+      </section>
+
       <DailyVote
         vote={snapshot.vote}
         open={openPanel === "vote"}
-        onClose={() => setOpenPanel(null)}
+        onClose={closePanel}
         onAccepted={acceptVote}
       />
       <WorldDiagnostics

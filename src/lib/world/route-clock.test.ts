@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { tashkentCountryPackV4 } from "@/content/countries/tashkent.v4";
 import {
+  activeWalkingSecondsAt,
   deterministicVariant,
   extrapolatedRouteDistance,
   extrapolatedRouteSeconds,
   routePositionAt,
+  scenePositionAt,
+  SCENE_VISIT_SECONDS,
 } from "./route-clock";
 
 describe("route clock", () => {
@@ -91,5 +94,30 @@ describe("route clock", () => {
     expect(deterministicVariant("zone:ground", 24, 2)).toBe(
       deterministicVariant("zone:ground", 24, 2),
     );
+  });
+
+  it("loops five paintings after 90 walking minutes without a landmark clamp", () => {
+    expect(scenePositionAt(tashkentCountryPackV4, 0)).toMatchObject({ zoneIndex: 0, visitIndex: 0, cycleIndex: 0 });
+    expect(scenePositionAt(tashkentCountryPackV4, SCENE_VISIT_SECONDS)).toMatchObject({ zoneIndex: 1, visitIndex: 1, cycleIndex: 0 });
+    expect(scenePositionAt(tashkentCountryPackV4, SCENE_VISIT_SECONDS * 5)).toMatchObject({ zoneIndex: 0, visitIndex: 5, cycleIndex: 1 });
+    expect(scenePositionAt(tashkentCountryPackV4, SCENE_VISIT_SECONDS * 8 + 540)).toMatchObject({
+      zoneIndex: 3,
+      visitIndex: 8,
+      cycleIndex: 1,
+      secondsIntoVisit: 540,
+      visitProgress: 0.5,
+    });
+  });
+
+  it("derives one global walking clock and unions stopping-action overlaps", () => {
+    const actions = [
+      { kind: "wave" as const, atActiveSecond: 10, endsAtActiveSecond: 12.5 },
+      { kind: "photo" as const, atActiveSecond: 12, endsAtActiveSecond: 16 },
+    ];
+    expect(activeWalkingSecondsAt(9, actions)).toBe(9);
+    expect(activeWalkingSecondsAt(14, actions)).toBe(10);
+    expect(activeWalkingSecondsAt(20, actions)).toBe(14);
+    // Viewer count and pace are deliberately not inputs to this function.
+    expect(scenePositionAt(tashkentCountryPackV4, activeWalkingSecondsAt(20, actions)).zoneIndex).toBe(0);
   });
 });

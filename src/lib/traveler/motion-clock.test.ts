@@ -4,7 +4,6 @@ import {
   ACTION_DURATIONS,
   METRES_PER_SECOND,
   METRES_PER_STEP,
-  STEP_DURATION_SECONDS,
   travelerMotionAt,
   systemActionAt,
   visibleStepsBetween,
@@ -21,11 +20,9 @@ describe("traveler motion clock", () => {
     expect(visibleStepsBetween(tashkentCountryPackV4, start, start + 12)).toBe(20);
   });
 
-  it("schedules route beats by metres on the planted-foot grid", () => {
-    const arrivalMetres = tashkentCountryPackV4.storyBeats
-      .find((beat) => beat.kind === "arrival")!.atMetres!;
-    const arrivalAt = Math.round(arrivalMetres / METRES_PER_STEP) * STEP_DURATION_SECONDS;
-    const before = travelerMotionAt(tashkentCountryPackV4, arrivalAt);
+  it("schedules the arrival story on its first matching scene visit", () => {
+    const arrivalAt = 15;
+    const before = travelerMotionAt(tashkentCountryPackV4, arrivalAt - 0.01);
     const during = travelerMotionAt(tashkentCountryPackV4, arrivalAt + ACTION_DURATIONS.wave - 0.01);
     expect(during.action?.kind).toBe("wave");
     expect(during.routeSeconds).toBeGreaterThan(before.routeSeconds);
@@ -34,16 +31,14 @@ describe("traveler motion clock", () => {
   });
 
   it("uses exact bounded action durations and resumes walking immediately", () => {
-    const landmarkMetres = tashkentCountryPackV4.storyBeats
-      .find((beat) => beat.kind === "landmark")!.atMetres!;
-    const raw = Math.round(landmarkMetres / METRES_PER_STEP) * STEP_DURATION_SECONDS;
-    const start = travelerMotionAt(tashkentCountryPackV4, raw, landmarkMetres);
+    let raw = 4 * 18 * 60;
+    while (travelerMotionAt(tashkentCountryPackV4, raw).action?.kind !== "photo") raw += 0.25;
+    const start = travelerMotionAt(tashkentCountryPackV4, raw);
     expect(start.action?.kind).toBe("photo");
     expect(start.action?.durationSeconds).toBe(ACTION_DURATIONS.photo);
     const resumed = travelerMotionAt(
       tashkentCountryPackV4,
       raw + ACTION_DURATIONS.photo + 0.05,
-      landmarkMetres + (ACTION_DURATIONS.photo + 0.05) * METRES_PER_SECOND,
     );
     expect(resumed.action).toBeNull();
     expect(resumed.locomotionSeconds).toBeGreaterThan(start.locomotionSeconds);
@@ -168,10 +163,9 @@ describe("crowd-scheduled actions", () => {
   });
 
   it("never interrupts an encounter and resumes once the goodbye ends", () => {
-    // The encounter beat sits at 1,900 m.
-    const encounterMetres = 1_900;
-    const insideDistance = encounterMetres + 5 * METRES_PER_SECOND;
-    const insideRaw = 2_000;
+    // The encounter starts shortly into the first lanes visit.
+    const insideRaw = 18 * 60 + 15 + ACTION_DURATIONS.wave + 1;
+    const insideDistance = insideRaw * METRES_PER_SECOND;
     const scheduled = [{ kind: "wave" as const, atActiveSecond: insideRaw }];
 
     const during = travelerMotionAt(pack, insideRaw + 1, insideDistance, scheduled);
@@ -181,24 +175,24 @@ describe("crowd-scheduled actions", () => {
     // Once distance carries him past the encounter, the deferred wave starts
     // from the beginning rather than being dropped.
     const encounterDuration = during.action!.durationSeconds;
-    const afterDistance = encounterMetres + (encounterDuration + 0.5) * METRES_PER_SECOND;
-    const after = travelerMotionAt(pack, insideRaw + 400, afterDistance, scheduled);
+    const afterRaw = insideRaw + encounterDuration + ACTION_DURATIONS.wave + 0.5;
+    const after = travelerMotionAt(pack, afterRaw, afterRaw * METRES_PER_SECOND, scheduled);
     expect(after.action?.kind).toBe("wave");
     expect(after.action?.source).toBe("crowd");
     // Measured from the end of the goodbye, not from the scheduled second 400 s
     // earlier — otherwise the wave would have been silently dropped.
     expect(after.action?.elapsedSeconds).toBeGreaterThanOrEqual(0);
-    expect(after.action?.elapsedSeconds).toBeLessThan(1);
+    expect(after.action?.elapsedSeconds).toBeLessThan(ACTION_DURATIONS.wave);
   });
 
-  it("leaves the locomotion clock and step counts untouched", () => {
+  it("pauses the walking clock and step count during a stopping action", () => {
     const at = Math.round(quietRaw);
     const withoutCrowd = travelerMotionAt(pack, at + 1, quietDistance + METRES_PER_SECOND);
     const withCrowd = travelerMotionAt(pack, at + 1, quietDistance + METRES_PER_SECOND, [
       { kind: "photo", atActiveSecond: at },
     ]);
-    expect(withCrowd.plantIndex).toBe(withoutCrowd.plantIndex);
-    expect(withCrowd.locomotionSeconds).toBe(withoutCrowd.locomotionSeconds);
+    expect(withCrowd.plantIndex).toBeLessThan(withoutCrowd.plantIndex);
+    expect(withCrowd.locomotionSeconds).toBeLessThan(withoutCrowd.locomotionSeconds);
     expect(withCrowd.action?.kind).toBe("photo");
     expect(withoutCrowd.action).toBeNull();
   });

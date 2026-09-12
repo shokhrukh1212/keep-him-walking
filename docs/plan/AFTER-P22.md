@@ -16,17 +16,21 @@ finish rather than what it got wrong.
 
 | # | Item | Blocks launch? | Whose call |
 |---|---|---|---|
-| D1 | His 3D model is bigger than the target | No | Owner (visual) |
+| D1 | His 3D model is bigger than the old target | **Resolved — 2.48 MiB accepted with separate exact budgets** | Owner decision (12 Sep 2026) |
 | D2 | The 1,000-viewer load test has not been run on current code | No — owner deferred it to after launch (11 Sep 2026) | Owner (needs a deployed Preview) |
-| D3 | Lit windows at dusk have no artwork | No | Owner (art) |
-| D4 | Sofia has one source painting instead of the six the pack builder needs | No | Owner (art) |
-| D5 | The production scheduler may run launch jobs late | **Yes** | Owner (hosting) |
-| D6 | Some of his new movements do not fit the moment they are used for | No | Owner (visual) |
-| D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Yes** — every watched day reaches it within 2 hours | Owner (product) |
+| D3 | Lit windows at dusk have no artwork | **Resolved — optional windows skipped** | Owner decision (12 Sep 2026) |
+| D4 | Sofia has one source painting instead of the six the pack builder needs | **Superseded — Paris is Day 1** | Owner decision (12 Sep 2026) |
+| D5 | The production scheduler may run launch jobs late | **Code resolved; external Vercel Pro configuration remains** | Owner (hosting) |
+| D6 | Some of his new movements do not fit the moment they are used for | **Resolved — current motion accepted** | Owner decision (12 Sep 2026) |
+| D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved — five 18-minute visits repeat indefinitely** | P25 (12 Sep 2026) |
 
 ---
 
 ## D1 — His 3D model is 2.48 MB, not the 1.8 MB target
+
+**Resolved 12 September 2026.** The owner accepts the current traveler. The manifest now
+records separate exact limits: model 2,598,064 bytes, animations 1,973,112 bytes, total
+4,571,176 bytes. The options below are preserved as the history of that choice.
 
 **What it is.** P18 made the traveler's 3D model 44% smaller — 4.43 MB down to 2.48 MB —
 without changing how he looks. The plan asked for 1.8 MB. Getting the last 0.7 MB means
@@ -97,6 +101,10 @@ This cannot be run from the development environment: it needs a real deployment,
 
 ## D3 — Lit windows at dusk have no artwork
 
+**Resolved 12 September 2026.** Optional window overlays are skipped for this launch.
+The renderer remains available for a later reviewed asset. The alternatives below are
+preserved as history.
+
 **What it is.** The code that makes city windows glow as the sun goes down is finished
 and working. No city has the painting it needs, so it never draws anything. See
 `TECHNICAL.md`, section "The living world (P17)", under "Honest gap".
@@ -122,6 +130,9 @@ fallback. This entry is only about the optional lit-window overlay.
 
 ## D4 — Sofia needs separate paintings before it can be the P19 example
 
+**Superseded 12 September 2026.** Paris is the validation launch city. Sofia remains
+ordinary later content and is not a launch dependency.
+
 **What it is.** The new pack builder needs five separate zone paintings plus a night
 version of the landmark. Sofia currently has one painting at
 `art/phase3/sofia/master.png`, cropped five ways by the older pipeline.
@@ -141,6 +152,12 @@ keeps the current `sofia-v1` available for rollback.
 
 ## D5 — The production scheduler must be minute-accurate
 
+**Implementation completed 12 September 2026; account action remains.** An authenticated
+idempotent reconciler now runs every minute, derives 15:55–15:59 prewarm and 16:00 UTC
+boundaries without using invocation time as the boundary, and is also called as catch-up
+from authoritative reads. Production must use Vercel Pro (or another verified
+minute-accurate host) and configure `CRON_SECRET`; no plan was purchased here.
+
 **What it is.** The launch needs one job at 15:55 UTC and rollover at exactly 16:00 UTC, while Vercel's free scheduler may start a daily job anywhere inside its scheduled hour.
 
 **What happens if nothing changes.** Prewarming or a daily border crossing can happen up to 59 minutes late, so the launch and every later day can show the wrong state.
@@ -150,6 +167,10 @@ keeps the current `sofia-v1` available for rollback.
 ---
 
 ## D6 — Some of his new movements do not fit the moment they are used for
+
+**Resolved 12 September 2026.** The owner accepts the present traveler, residents and
+Mixamo motion for validation. Premium remains unavailable unless its placements are
+actually fulfilled. The visual observations below remain as an honest historical record.
 
 **What it is.** On 10 September 2026 his movements were replaced with Mixamo motion the owner
 picked. The owner approved using every clip exactly as downloaded, so they all went in, and
@@ -194,6 +215,12 @@ replaces the old file there, then a re-run of the import (commands in
 ---
 
 ## D7 — After the landmark he stays there for the rest of the day
+
+**Resolved 12 September 2026.** Scene selection no longer clamps or follows distance.
+Five paintings repeat in fixed 1,080-second global active-walking visits; stop actions
+pause that clock, and viewer count/pace cannot shorten a visit. The city painting is
+stationary and only the road/ground-life layer moves. Distance and rewards still accrue
+separately. The original diagnosis below is preserved as history.
 
 **Found 11 September 2026** while testing Paris. Nothing has been changed yet.
 

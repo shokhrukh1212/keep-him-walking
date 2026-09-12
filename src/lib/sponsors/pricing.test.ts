@@ -34,9 +34,9 @@ describe("sponsor price formula", () => {
 });
 
 describe("tier pricing", () => {
-  it("rounds premium to a whole dollar", () => {
-    expect(tierPriceCents(4_900, "premium", 1.5)).toBe(7_400);
-    expect(tierPriceCents(2_900, "premium", 1.5)).toBe(4_400);
+  it("preserves the exact cent result", () => {
+    expect(tierPriceCents(4_900, "premium", 1.5)).toBe(7_350);
+    expect(tierPriceCents(2_900, "premium", 1.5)).toBe(4_350);
     expect(tierPriceCents(12_000, "premium", 1.5)).toBe(18_000);
   });
 
@@ -44,9 +44,9 @@ describe("tier pricing", () => {
     expect(tierPriceCents(4_900, "standard", 1.5)).toBe(4_900);
   });
 
-  it("matches the published Standard $49 / Premium $74 pair", () => {
+  it("matches the published Standard $49 / Premium $73.50 pair", () => {
     expect(formatPriceUsd(tierPriceCents(4_900, "standard", 1.5))).toBe("$49");
-    expect(formatPriceUsd(tierPriceCents(4_900, "premium", 1.5))).toBe("$74");
+    expect(formatPriceUsd(tierPriceCents(4_900, "premium", 1.5))).toBe("$73.50");
   });
 });
 

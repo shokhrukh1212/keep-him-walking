@@ -24,10 +24,10 @@ export function clampSponsorPrice(
   return Math.max(floorCents, Math.min(capCents, Math.round(basis * perUnique)));
 }
 
-/** Premium is a whole-dollar multiple so a published price never shows odd cents. */
+/** Premium preserves exact cents; for example $49 × 1.5 is $73.50. */
 export function tierPriceCents(priceCents: number, tier: SponsorTier, premiumMultiplier: number): number {
   if (tier !== "premium") return priceCents;
-  return Math.max(100, Math.round(priceCents * premiumMultiplier / 100) * 100);
+  return Math.max(100, Math.round(priceCents * premiumMultiplier));
 }
 
 export function formatPriceUsd(priceCents: number): string {

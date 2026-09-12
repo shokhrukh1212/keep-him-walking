@@ -50,7 +50,11 @@ export function stageLayout(
   }
   const personHeightPx = targetCharacterHeightPx(viewportW, viewportH, targets);
   const requiredImageScale = personHeightPx / (stage.personHeightFrac * imageH);
-  const imageScale = Math.min(requiredImageScale, MAX_STAGE_IMAGE_SCALE);
+  // The painting is stationary and must cover the measured stage. Character
+  // perspective still supplies the preferred scale, but can never expose a
+  // blue/transparent strip at a narrow or short aspect ratio.
+  const coverScale = Math.max(viewportW / imageW, viewportH / imageH);
+  const imageScale = Math.max(coverScale, Math.min(requiredImageScale, MAX_STAGE_IMAGE_SCALE));
   const widthFitScale = viewportW / imageW;
   const groundY = viewportH * (viewportW <= 600 ? 0.80 : 0.86);
   return {

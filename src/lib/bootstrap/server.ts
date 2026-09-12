@@ -147,20 +147,34 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
     }
   }
   const iso = effectiveNow.toISOString();
-  const { data, error } = await supabase
-    .from("country_days")
-    .select(
-      "id,journey_id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id,journeys!inner(total_days,status,rollover_utc_hour)",
-    )
-    .in("status", ["scheduled", "live"])
-    .in("journeys.status", config.phase2Enabled ? ["preview", "active"] : ["active"])
-    .match(journeyId ? { journey_id: journeyId } : {})
-    .lte("starts_at", iso)
-    .gt("ends_at", iso)
-    .order("starts_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
+  const readDay = async () => {
+    const { data, error } = await supabase
+      .from("country_days")
+      .select(
+        "id,journey_id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id,journeys!inner(total_days,status,rollover_utc_hour)",
+      )
+      .in("status", ["scheduled", "live"])
+      .in("journeys.status", config.phase2Enabled ? ["preview", "active"] : ["active"])
+      .match(journeyId ? { journey_id: journeyId } : {})
+      .lte("starts_at", iso)
+      .gt("ends_at", iso)
+      .order("starts_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  };
+  let data = await readDay();
+  if (!data && config.phase2Enabled) {
+    // Authoritative reads are the catch-up path when cron was late or absent.
+    // The ledger and row locks make concurrent requests converge on one day.
+    const [{ reconcilePhase2 }, { logicalDayBoundaryAtOrBefore }] = await Promise.all([
+      import("@/lib/story-clock/rollover"),
+      import("@/lib/story-clock/boundary"),
+    ]);
+    await reconcilePhase2(now, logicalDayBoundaryAtOrBefore(now));
+    data = await readDay();
+  }
   return data ? { ...(data as CountryDayRow), story_now: iso, story_scale: storyScale } : null;
 }
 

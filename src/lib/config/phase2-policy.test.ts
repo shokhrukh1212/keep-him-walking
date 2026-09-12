@@ -15,7 +15,8 @@ describe("Phase 2 deployment policy", () => {
     expect(phase2DeploymentAllowed(preview)).toBe(true);
     expect(phase2DeploymentAllowed({ ...preview, VERCEL_GIT_COMMIT_REF: "phase-3-launch-hardening" })).toBe(true);
     expect(phase2DeploymentAllowed({ ...preview, VERCEL_GIT_COMMIT_REF: "traveler-finalization-v2" })).toBe(true);
-    expect(phase2DeploymentAllowed({ ...preview, VERCEL_GIT_COMMIT_REF: "main" })).toBe(false);
+    expect(phase2DeploymentAllowed({ ...preview, VERCEL_GIT_COMMIT_REF: "main" })).toBe(true);
+    expect(phase2DeploymentAllowed({ ...preview, VERCEL_GIT_COMMIT_REF: "unreviewed-branch" })).toBe(false);
   });
 
   it("requires the independent launch switch in Production", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildSevenDaySchedule, DAY_MS, resolveJourneyMoment, scaledStoryNow } from "./schedule";
 
-describe("Phase 2 seven-day story schedule", () => {
+describe("historical Phase 2 seven-day rehearsal schedule", () => {
   const start = new Date("2026-09-10T00:00:00.000Z");
 
   it("builds seven contiguous immutable UTC windows", () => {

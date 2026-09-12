@@ -1,0 +1,8 @@
+{
+  "sampleCount": 6,
+  "p95FrameDeltaMs": 2233.199999999997,
+  "maxFrameDeltaMs": 2233.199999999997,
+  "framesOver50Ms": 5,
+  "panelsPreservedCanvasCount": 2,
+  "transition": "paris-arrival -> paris-lanes"
+}

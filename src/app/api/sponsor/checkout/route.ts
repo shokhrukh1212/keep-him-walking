@@ -11,6 +11,10 @@ import { hasTrustedOrigin } from "@/lib/validation/origin";
 
 export async function POST(request: NextRequest) {
   if (!hasTrustedOrigin(request)) return apiError(403, "FORBIDDEN", "Untrusted request origin.");
+  const config = serverRuntimeConfig();
+  if (!config.sponsorBookingEnabled) {
+    return apiError(503, "UNAVAILABLE", "Paid sponsor booking is not available during public validation.");
+  }
   let body: unknown;
   try { body = await readLimitedJson(request); } catch { return apiError(400, "BAD_REQUEST", "Invalid checkout request."); }
   const parsed = sponsorCheckoutBodySchema.safeParse(body);
@@ -23,8 +27,10 @@ export async function POST(request: NextRequest) {
     p_key_hash: visitorHash, p_action: "sponsor_checkout", p_limit: 5, p_window_seconds: 900, p_now: new Date().toISOString(),
   });
   if (!allowed) return apiError(429, "RATE_LIMITED", "Please wait before starting another checkout.");
-  const config = serverRuntimeConfig();
   if (!config.phase2Enabled) return apiError(503, "UNAVAILABLE", "Phase 2 preview is disabled.");
+  if (parsed.data.tier === "premium" && !config.sponsorPremiumFulfilled) {
+    return apiError(409, "CONFLICT", "Premium placement is not available yet.");
+  }
   const now = new Date();
   const testMode = config.sponsorPaymentProvider === "fixture" || process.env.LEMON_SQUEEZY_TEST_MODE !== "false";
   // The server prices the slot from its own stored inventory. A client never

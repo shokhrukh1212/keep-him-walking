@@ -3,10 +3,9 @@ import {
   PHASE1_COUNTRY_DAY_ID,
   PHASE1_ENCOUNTER_ID,
 } from "../src/content/countries/tashkent.v1";
-// Every Season 1 feature — the panorama, the metre-driven route, the bundle
-// bootstrap — requires a schemaVersion 3 pack, and tashkent-v4 is the one that
-// ships. The schemaVersion 2 rollback packs were retired in P18.
-import { tashkentCountryPackV4 } from "../src/content/countries/tashkent.v4";
+// Preview identity follows the launch candidate unless an explicit reviewed
+// pack is supplied. Historical UUIDs remain only to preserve existing data.
+import { parisCountryPackV1 } from "../src/content/countries/paris.v1";
 import { getCountryPack } from "../src/content/countries/registry";
 
 const JOURNEY_ID = "00000000-0000-4000-8000-000000000001";
@@ -25,9 +24,9 @@ const requestedPackId = argument("--pack");
 if (requestedPackId && !preview) {
   throw new Error("--pack is available only with --preview; use seed:season1 for launch data");
 }
-const pack = requestedPackId ? getCountryPack(requestedPackId) : tashkentCountryPackV4;
+const pack = requestedPackId ? getCountryPack(requestedPackId) : parisCountryPackV1;
 if (!pack || pack.schemaVersion !== 3) {
-  throw new Error(`Preview pack ${requestedPackId ?? tashkentCountryPackV4.assetVersion} is not a registered v3 pack`);
+  throw new Error(`Preview pack ${requestedPackId ?? parisCountryPackV1.assetVersion} is not a registered v3 pack`);
 }
 const rawStart = argument("--starts-at") ?? (preview ? process.env.PHASE15_PREVIEW_START_AT : undefined);
 if (!rawStart) {
@@ -172,5 +171,5 @@ const { error: runtimeError } = await supabase.from("journey_runtime").upsert(
 if (runtimeError) throw runtimeError;
 
 process.stdout.write(
-  `Seeded ${preview ? `reversible ${pack.cityName} preview` : "Tashkent"} from ${startsAt.toISOString()} to ${endsAt.toISOString()}\n`,
+  `Seeded ${preview ? "reversible preview" : "journey"} for ${pack.cityName} from ${startsAt.toISOString()} to ${endsAt.toISOString()}\n`,
 );

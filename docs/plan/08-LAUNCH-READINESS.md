@@ -9,7 +9,27 @@ focus: the scene does not yet feel like one continuous illustrated street, the t
 does not dominate the frame, the interface competes with him, and the seeded route is
 not the route the owner wants to launch.
 
-## Decisions locked on 11 September 2026
+## Current small public-validation gate — 12 September 2026
+
+This section supersedes the London/24-painting and paid-provider launch assumptions
+below while preserving them as history.
+
+| Gate | Current state |
+|---|---|
+| Paris Day 1, coherent startup identity | Implemented and production-build browser checked |
+| Minimal responsive shell and internal panels | Implemented; emulated 320/390/430/768/1440 checks recorded |
+| Stationary painting, centered traveler, 18-minute repeating scenes | Implemented and clock/transition tested |
+| Wave request → shared state → rendered clip | Implemented; unit, browser and remote pgTAP verified |
+| 16:00 UTC reconciliation | Implemented and remote database verified; production Vercel Pro cron plus `CRON_SECRET` remain external |
+| Free validation | Code candidate ready for owner review/deployment; no deployment or launch date is claimed |
+| Paid booking | **Off** pending an eligible advertising provider/merchant review and real payment rehearsal |
+| Physical devices | Not available in this environment; emulation is evidence, not physical-device acceptance |
+| Current-code 1,000-viewer load test | Deliberately after launch (D2); no 500-viewer substitute gate |
+
+## Historical decisions locked on 11 September 2026
+
+The London route and 24-painting buffer in this historical section are superseded by
+the current Paris validation gate above.
 
 | Area | Launch decision |
 |---|---|
@@ -166,7 +186,8 @@ Every package has two independent completion marks:
 - Paris pilot progress (11 September 2026): five distinct day masters and one
   composition-matched landmark night master are generated, built as `paris-v1`, and
   available in the guarded local preview. This does not close the item: owner visual
-  acceptance and cultural review are still required, and London remains the launch pilot.
+  acceptance and cultural review were still required under this historical plan; the
+  later Paris validation decision supersedes its London-pilot sentence.
 - [ ] Run pack scaffold/build/validate/scale-audit, cultural review and visual review for
   each immutable version. Each pack needs real notebook lines and reviewed citations.
 - [ ] Preload today plus tomorrow only. Keep later days on the asset origin.
@@ -194,7 +215,7 @@ Every package has two independent completion marks:
 - [x] Keep the existing provider/cache/rendering code so a later reviewed commercial
   provider or agreement can re-enable it with one flag.
 
-## Launch gate
+## Historical launch gate (superseded for the small free validation)
 
 Launch is allowed only when every **Verified** item that affects the London/Paris path
 is complete, R1/R3/R7 are owner-accepted, the payment and scheduler gates are resolved,

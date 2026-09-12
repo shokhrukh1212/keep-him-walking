@@ -1,8 +1,70 @@
 import type { CountryPack } from "@/lib/content/schema";
 import type { ScheduledActionView } from "@/lib/contracts";
-import type { RoutePosition, RouteRuntime } from "./types";
+import type { RoutePosition, RouteRuntime, ScenePosition } from "./types";
 
 const CROWD_ACTION_DURATION_SECONDS = { wave: 2.5, drink: 5.5, photo: 4 } as const;
+export const SCENE_VISIT_SECONDS = 18 * 60;
+
+/**
+ * Derives the shared walking clock from server-owned watched time and action
+ * windows. Overlapping windows are unioned so corrupt/legacy rows cannot pause
+ * the clock twice. This clock is global: viewer count and pace never enter it.
+ */
+export function activeWalkingSecondsAt(
+  globalActiveSeconds: number,
+  scheduledActions: readonly ScheduledActionView[] = [],
+): number {
+  const end = Math.max(0, Number.isFinite(globalActiveSeconds) ? globalActiveSeconds : 0);
+  const windows = scheduledActions.flatMap((action) => {
+    const start = Math.max(0, Number.isFinite(action.atActiveSecond) ? action.atActiveSecond : 0);
+    const rawEnd = action.endsAtActiveSecond
+      ?? start + CROWD_ACTION_DURATION_SECONDS[action.kind];
+    const stop = Math.max(start, Number.isFinite(rawEnd) ? rawEnd : start);
+    if (start >= end || stop <= 0 || stop <= start) return [];
+    return [[Math.max(0, start), Math.min(end, stop)] as const];
+  }).sort((left, right) => left[0] - right[0]);
+
+  let held = 0;
+  let mergedStart = -1;
+  let mergedEnd = -1;
+  for (const [start, stop] of windows) {
+    if (mergedStart < 0) {
+      mergedStart = start;
+      mergedEnd = stop;
+    } else if (start <= mergedEnd) {
+      mergedEnd = Math.max(mergedEnd, stop);
+    } else {
+      held += mergedEnd - mergedStart;
+      mergedStart = start;
+      mergedEnd = stop;
+    }
+  }
+  if (mergedStart >= 0) held += mergedEnd - mergedStart;
+  return Math.max(0, end - held);
+}
+
+/** Five authored paintings repeat indefinitely, one per 18 walking minutes. */
+export function scenePositionAt(
+  pack: CountryPack,
+  dailyActiveWalkingSeconds: number,
+): ScenePosition {
+  if (pack.route.zones.length !== 5) {
+    throw new RangeError(`pack ${pack.assetVersion} must declare exactly five launch scenes`);
+  }
+  const seconds = Math.max(
+    0,
+    Number.isFinite(dailyActiveWalkingSeconds) ? dailyActiveWalkingSeconds : 0,
+  );
+  const visitIndex = Math.floor(seconds / SCENE_VISIT_SECONDS);
+  const secondsIntoVisit = seconds - visitIndex * SCENE_VISIT_SECONDS;
+  return {
+    zoneIndex: visitIndex % pack.route.zones.length,
+    visitIndex,
+    cycleIndex: Math.floor(visitIndex / pack.route.zones.length),
+    secondsIntoVisit,
+    visitProgress: secondsIntoVisit / SCENE_VISIT_SECONDS,
+  };
+}
 
 export function routePositionAt(
   pack: CountryPack,

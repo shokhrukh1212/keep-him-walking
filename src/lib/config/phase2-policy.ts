@@ -10,6 +10,7 @@ export function phase2DeploymentAllowed(environment: DeploymentEnvironment = pro
       "phase-2-seven-day-mvp",
       "phase-3-launch-hardening",
       "traveler-finalization-v2",
+      "main",
     ].includes(environment.VERCEL_GIT_COMMIT_REF ?? "");
   }
   return environment.PHASE2_REHEARSAL_MODE === "true";
