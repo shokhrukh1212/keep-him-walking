@@ -27,9 +27,11 @@ test("an approved Ticket replaces the vote, announces the destination, and draws
   await page.route("**/api/map", (route) => route.fulfill({ json: map }));
   await page.route("**/api/observability/vitals", (route) => route.fulfill({ status: 204 }));
   await page.goto("/");
-  await expect(page.getByTestId("ticket-notice")).toHaveText("Ticket: someone is sending him to 🇵🇹 Portugal on Day 14");
   await expect(page.getByRole("button", { name: "Daily vote" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Journey details" }).click();
+  await page.getByRole("button", { name: "Journey", exact: true }).click({ force: true });
+  await expect(page.getByTestId("ticket-notice")).toHaveText("Ticket: someone is sending him to 🇵🇹 Portugal on Day 14");
+  // The route map loads only when its section is opened.
+  await page.getByText("Route map", { exact: true }).click();
   await expect(page.getByTestId("ticket-flight")).toHaveAttribute("data-transfer", "flight");
   await expect(page.getByTestId("ticket-flight").locator("line")).toHaveClass(/flight/);
 });

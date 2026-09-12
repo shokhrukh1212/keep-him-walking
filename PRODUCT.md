@@ -78,21 +78,21 @@ number the server has not confirmed. When something is unknown, the interface sa
   display, content pack, sponsor slot, daily vote and postcard. Days cannot overlap —
   the database physically forbids it.
 
-- Each country-day contains **five route zones**, walked in order and then looped. The
-  shape is the same everywhere, so the day reads as a journey rather than a slideshow:
+- Each country-day walks an ordered list of **places** from its city's pinned
+  manifest, in order and then looped. The target is ten distinct places per city;
+  Paris has five real paintings today — the station, the canal, a market street, a
+  Left Bank café and the Seine with the tower — and more are coming. A day never
+  repeats a painting to pretend it has more.
 
-  1. **Arrival** — a boulevard or square, first steps.
-  2. **Neighbourhood lanes** — quieter residential character.
-  3. **Market** — the busiest, most textured stretch.
-  4. **Café / food** — a pause for the local ritual (plov, tea, banitsa, simit…).
-  5. **Evening landmark** — the defining view, warmer light, the day closing.
+  Each place lasts **seven minutes of active walking**. That clock runs only while he
+  walks, so it pauses while he stops or waits, and more viewers never shorten a visit.
+  The painting stays where it is; only the pavement moves under his feet. Day and night
+  are the same place in different light.
 
-  A zone advances only on watched time — 150 active seconds each in the current packs —
-  so an unwatched day genuinely does not progress.
-
-- Each country-day also carries **five story beats** pinned to fractions of the day, so
-  the same narrative rhythm lands for everyone: arrival (2 %), a local encounter (23 %),
-  food (48 %), landmark (72 %), departure (94 %).
+- Places carry **tags** (station, canal, market, café, landmark…), and the story uses
+  them: he arrives at the first place, meets a resident by the canal, pauses for food
+  at the café and takes in the landmark view, each on his first visit there. The
+  departure still happens at the day's end.
 
 ---
 
@@ -108,14 +108,20 @@ without needing hundreds of unique animations:
 | Cadence | What happens |
 |---|---|
 | Continuous | Walking, with proper start / slow / stop / resume transitions rather than snapping between poses. |
-| Every few minutes | A short ambient action from the day's pack — waves to a passerby, saves a photo, checks the route on his phone, takes a tea break. Each has an entry, a hold, and a recovery back into the walk. |
-| Once per country-day, at a fixed beat | A real conversation with a local resident. |
+| Every 2–3 walking minutes | A passer-by walks along his pavement, in at one edge and out at the other. They never stop him. |
+| About every 5 walking minutes | A short conversation with a local resident, or a wordless hello. Exchanges rotate and never repeat back to back. |
+| Every 4–6 walking minutes, between conversations | Something of his own: a drink, a photo, a look at his phone, a look around, an arm stretch, tying a shoe, a yawn, leaning for a breather, laughing to himself. All nine come round before any repeats. |
+| Whenever viewers react | Wave, Water or Photo. Viewers go first: a planned stop that has not begun gives way. |
+
+Every clip plays at its natural speed, and only one thing happens at a time.
 
 Two design rules matter here:
 
-- **Actions consume watched time but not distance.** When he stops to drink, the clock
-  keeps running for the world, but his locomotion is held at a planted-foot boundary and
-  resumes from exactly there. This is why a reload mid-action does not teleport him.
+- **Every stop pauses the walk and the distance.** Each stop is a shared window the
+  server commits to in advance, so every viewer sees the same stop at the same moment
+  and a late arrival walks into the middle of it. While he stops, the road and the
+  collective distance stand still, then resume from exactly there. With nobody watching,
+  nothing is scheduled at all.
 - **He is never in an impossible pose.** The state a viewer sees is always the state the
   status line names.
 
@@ -141,6 +147,14 @@ amused or thoughtful. That means the same animation set carries every conversati
 every city, translations are a data change, and nothing culturally sensitive is ever
 improvised at runtime.
 
+Each city has a small **pool of exchanges**, each tied to the places where it makes sense
+and to a named resident. Paris has nine: the reviewed six-line welcome is split into
+three two-line exchanges, and six new short ones (by the market, the café, a footbridge,
+the book stalls and the tower lights) are marked **pending cultural review**. Every
+third slot is a wordless hello instead, so the rotation never runs out of words to
+repeat. The last few exchanges a visitor saw are listed in Journey, each collapsed until
+opened.
+
 Each city also carries a **local phrase** with its original script, transliteration,
 plain-English gloss and pronunciation — for example Tbilisi's
 *"კეთილი იყოს თქვენი მობრძანება" / "Ketili iqos tkveni mobrdzaneba" / "Welcome"*.
@@ -165,20 +179,37 @@ that is hashed before it ever reaches the database.
 - **Reactions** — Wave, Water and Photo sit at top centre. One confirmed watcher can
   trigger one; Realtime is only an update hint and every viewer then reads the action
   window from the server.
-- **Walking rule status** — a small pill reading "→ Walking · Rustaveli Avenue", or the
-  current action's label ("Taking a photograph", "Talking · A carved balcony"), or
-  "Waiting for the internet".
-- **Footer** — only Vote, Journey and the disclosed Sponsor/invitation remain visible.
-  Progress has its own unobstructed row immediately above it.
+- **Walking rule status** — a small pill reading "→ Walking · Canal Saint-Martin", or the
+  current stop's label ("Taking a photo", "Talking with Camille", "Tying a shoe"). It
+  names a place only once that place's painting is actually on screen. "Reconnecting…"
+  means this browser has lost touch with the server; "Waiting for the internet" appears
+  only when the server confirms nobody is watching.
+- **Progress row** — one dot per place with "Stop 2 of 5" and "Next ~4 walking min".
+  Tapping a dot describes that place without moving him there. Beside it,
+  "4.3 / 8 km together · 54%", labelled extrapolated, last confirmed or reconnecting,
+  with an ⓘ explaining that a 42.2 km marathon is the next goal after the 8 km day.
+- **Footer** — the disclosed Sponsor/invitation, a short Vote chip with its countdown,
+  and Journey. Sound is its own toggle in the bottom-right corner.
 
-**On demand**
+**On demand** — each opens as a modal over the scene. He keeps walking underneath,
+nothing behind it moves or reloads, and the close button, Escape or the browser's Back
+button close it.
 
 - **Daily vote** — one question per country-day, one ballot per visitor, enforced
   server-side. Changing your mind is refused rather than silently counted twice. Results
   publish after the vote closes and are meant to influence the next part of the story.
-- **Journey details panel** — your contribution meter (active seconds, your steps, the
-  global step total, flagged "last confirmed" when stale), share, postcard, sound
-  toggle, tomorrow's preview, and links to passport / sponsor / privacy.
+- **Journey** — grouped from "where is he" to "what's next":
+  - today's walk: the places, this stop and the next
+  - together: shared distance and the two goals
+  - your part: your contribution, streak, share and postcard
+  - recent encounters, collapsed
+  - the day's photographs
+  - a route map that loads when opened
+  - tomorrow
+  - Sponsor a day and Privacy
+
+  The Passport link and the locals corrections form are no longer in Journey. Old
+  Passport links open Journey at "Your part", and submitted corrections are kept.
 - **Postcard** — after **60 seconds** of contributed watching you can generate a
   postcard of the day: a rendered image with the day's art and safe copy, an Open Graph
   variant, and a permanent public link at `/p/<token>` so it can be shared with people
@@ -198,7 +229,8 @@ that is hashed before it ever reaches the database.
   the day.
 - **Tomorrow** — only a committed next `country_days` row may name the next city, start
   time and walk/train/flight transfer. Registry order is never presented as a result.
-- **Sound** — per-zone ambient street audio, off until you ask for it.
+- **Sound** — per-place ambient street audio from the bottom-right toggle. It always
+  starts muted; if you turned it on last time, it comes back on your first tap.
 
 Weather rendering and its cache remain implemented, but weather is disabled for launch
 by default. While disabled there is no provider request and no temperature, icon,

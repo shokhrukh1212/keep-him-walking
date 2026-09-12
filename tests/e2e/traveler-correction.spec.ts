@@ -2,7 +2,6 @@ import {test,expect} from "@playwright/test";
 import {offlineBootstrapSnapshot} from "../../src/lib/bootstrap/offline";
 import {bishkekCountryPackV1 as bishkekCountryPack} from "../../src/content/countries/bishkek.v1";
 import {DEMO_LOGO} from "../../src/lib/traveler/demo-sponsor";
-import {travelerMotionAt} from "../../src/lib/traveler/motion-clock";
 
 test("connected puppet advances, rests, resumes and keeps controls compact",async({page},testInfo)=>{
   let raw=30,walking=true;
@@ -30,25 +29,18 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
   expect(Number(await stage.getAttribute("data-character-texture-bytes"))).toBeLessThan(32*1024*1024);
   const start=Number(await stage.getAttribute("data-ground-pixels"));
   await expect.poll(async()=>Number(await stage.getAttribute("data-ground-pixels"))).toBeGreaterThan(start+20);
-  await expect(page.locator("#journey-details")).toBeHidden();
-  await page.getByRole("button",{name:"Journey details"}).click();
-  await expect(page.locator("#journey-details")).toBeVisible();
-  await page.getByRole("button",{name:"Close details"}).click();
+  await expect(page.getByRole("dialog",{name:"Journey"})).toHaveCount(0);
+  await page.getByRole("button",{name:"Journey",exact:true}).click({force:true});
+  await expect(page.getByRole("dialog",{name:"Journey"})).toBeVisible();
+  await page.getByRole("button",{name:"Close Journey"}).click();
   raw=35;walking=false;anchoredAt=Date.now();
   await page.evaluate(()=>window.dispatchEvent(new Event("online")));
   await expect(stage).toHaveAttribute("data-character-state","idle");
   walking=true;anchoredAt=Date.now();
   await page.evaluate(()=>window.dispatchEvent(new Event("online")));
   await expect(stage).toHaveAttribute("data-character-state","walk");
-  for(const kind of ["photo","drink","phone"]) {
-    let at=0;
-    while(at<6_500&&travelerMotionAt(bishkekCountryPack,at).action?.kind!==kind)at+=0.1;
-    expect(at).toBeLessThan(6_500);
-    raw=at+1.25;anchoredAt=Date.now();
-    await page.evaluate(()=>window.dispatchEvent(new Event("online")));
-    await expect(stage).toHaveAttribute("data-character-state",kind);
-    await expect(stage).toHaveAttribute("data-sponsor-attached","true");
-  }
+  // Stops are server rows now (see reactions-wave.spec.ts and the planner's unit
+  // tests); this spec keeps to walking, resting and the preview selector.
   await page.emulateMedia({reducedMotion:"reduce"});
   await expect(page.locator("main")).toHaveAttribute("data-motion","reduced");
   await expect(page.locator(".static-scene img")).toBeAttached();

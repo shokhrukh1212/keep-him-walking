@@ -62,6 +62,22 @@ These are the controlling product decisions for the reviewable launch candidate.
 | Capacity | The current-code 1,000-viewer load test is **after launch**. Historical measurements are not a launch claim and there is no invented 500-viewer substitute gate. | D2 |
 | Optional art | Dusk window overlays are skipped for validation; Sofia is not the launch city. | D3/D4 |
 
+## Refinement decisions — 12 September 2026 (P28)
+
+These supersede the scene clock, scene motion and interface rows above where they
+conflict. Everything else above still stands.
+
+| Area | Approved decision | Implementation record |
+|---|---|---|
+| Places | A variable-length ordered manifest per city, targeting ten distinct places, with stable ids and tags. Day and night are one place. Paris ships its five real paintings; no painting is duplicated to fake ten. | `pnpm scenes:build`, `paris-v2`, `TECHNICAL.md` §8.7, AFTER-P22 D9 |
+| Scene clock | Seven active-walking minutes per place, looping all day. Replaces five 18-minute visits. | `scenePositionAt`, `TECHNICAL.md` §3 |
+| Stops | Every stop is a shared server window and pauses distance and the road. | Migration 0036 |
+| Conversations | About every five walking minutes, with deterministic shared variation. The reviewed welcome is split into three exchanges, with wordless greetings and new short Paris exchanges (pending review). No dialogue repeats back to back. | `activity-plan.ts`, `art/paris/conversations.json`, D9 |
+| His own actions | Every four to six walking minutes, staggered between conversations, using all nine: drink, photo, phone, look around, arm stretch, tie shoe, yawn, lean, laugh. | `activity-plan.ts` |
+| Passers-by | Every two to three walking minutes. They never stop him. | `walkers.ts` |
+| Image delivery | Cloudflare R2 behind a custom domain, through the existing `ASSET_BASE_URL`. Content-hashed renditions are cached immutably. The manifest lives in versioned code, never image bytes in Postgres. Only the current and next place are loaded. | `TECHNICAL.md` §8.7/§11, AFTER-P22 D8 |
+| Interface | Sponsor, Journey, Vote and the audience list are overlay modals, with no side panels. The traveler no longer moves left for a panel. The locals form and Passport link leave Journey (stored data kept). Sound becomes a bottom-right toggle; progress shows place dots and "4.3 / 8 km together · 54%". | `JourneyExperience`, `OverlayModal`, `GoalBar` |
+
 ## Historical post-P22 launch decisions — 11 September 2026
 
 This table is preserved as history. Its London route/art assumptions were superseded by

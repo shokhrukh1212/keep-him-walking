@@ -236,7 +236,7 @@ test("two browsers share presence and preserve steps across reconnects", async (
   await first.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(first.getByText("1 person watching")).toBeVisible();
   await expect(first.getByText("The internet is keeping him moving")).toBeVisible();
-  await first.getByRole("button", { name: "Journey details" }).click();
+  await first.getByRole("button", { name: "Journey", exact: true }).click({ force: true });
   await expect(first.getByText(/global steps/)).toBeVisible();
 
   const stepsBefore = server.steps;

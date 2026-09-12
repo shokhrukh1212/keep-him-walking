@@ -121,7 +121,7 @@ test("an arrival after the last lease expires sees the first-watcher beat and wa
 
   await expect(pageB.getByRole("heading", { name: /He's been waiting since/ })).toBeVisible();
   await expect(pageB.getByText("You're the first person here.")).toBeVisible();
-  await pageB.getByRole("button", { name: "Journey details" }).click();
+  await pageB.getByRole("button", { name: "Journey", exact: true }).click({ force: true });
   await expect(pageB.getByRole("heading", { name: "You woke him up" })).toBeVisible();
   await expect(pageB.getByLabel("You woke him up")).toContainText("Tashkent");
   await expect(pageB.getByLabel("You woke him up").getByRole("button", { name: "Share" }))

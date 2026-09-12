@@ -120,39 +120,84 @@ RouteRuntime { globalActiveSeconds, globalDistanceMetres, paceRate, authoritativ
 PresentationClock        two monotonic client tracks, drift-corrected
       │
       ▼
-travelerMotionAt(pack, rawSeconds, distanceMetres) → TravelerMotionSnapshot
-      │
-      ├──► activeWalkingSecondsAt(actions)         subtract server-owned stop windows
-      ├──► dailyActiveWalkingSecondsAt(pack, ...)  subtract first-visit story stops
-      ├──► scenePositionAt(pack, walkingSeconds)   five repeating 1,080 s visits
-      ├──► routePositionAt(pack, distanceMetres)   reward/distance position only
-      ├──► PixiScene                  stationary painting, moving ground/road
+travelerMotionAt(pack, rawSeconds, distanceMetres, scheduledActions, walkingClock)
+      │                                          → TravelerMotionSnapshot
+      ├──► activeWalkingSecondsAt(raw, rows, clock)  server anchor, minus held stop windows
+      ├──► scenePositionAt(pack, walkingSeconds)     N places, one 420 s visit each, looping
+      ├──► routePositionAt(pack, distanceMetres)     reward/distance position only
+      ├──► PixiScene                  stationary painting, moving pavement
       ├──► productCharacterSceneAt()  which clip, at which second
-      └──► HUD                        status label, step counts
+      └──► HUD                        status label, place dots, distance line
 ```
 
-### P23–P27 scene and continuity contract (current)
+### P28 places, pacing and continuity contract (current, 12 September 2026)
+
+This supersedes the P23–P27 five-scene, 1,080-second contract.
 
 - The server's `global_active_seconds` is elapsed shared journey time, not summed
   visitor time and not distance divided by the current pace. No eligible viewer means
   it does not advance.
-- `activeWalkingSecondsAt` unions scheduled crowd-action stop windows so overlaps never
-  subtract twice. `dailyActiveWalkingSecondsAt` also holds during deterministic story
-  actions. Five scene visits repeat modulo five; every visit is exactly 1,080 active
-  walking seconds regardless of pace.
-- Story arrival/encounter/food/landmark actions occur on the first matching scene visit.
-  Distance continues to accumulate outside stop windows and still drives the 8 km daily
-  collective goal and 42.195 km marathon rewards.
-- The Paris painting never pans. Only an authored repeating ground layer, or bounded
-  ground-life details for a legacy pack, moves with distance. `stageLayout` uses cover
-  sizing, so neither desktop nor portrait viewports reveal a background strip.
-- `JourneyExperience` keeps the Pixi application, Three mixer and presence session
-  mounted while URL-addressed Journey/Passport/Sponsor/Vote panels open. Presentation
-  callbacks are held in refs; ordinary snapshot changes no longer recreate the realtime
-  presence channel. The root clock publishes React state once per second and the Pixi
-  motion sample at most four times per second instead of 10 times per second.
-- The first server-rendered snapshot, loading label and live seed all identify Paris and
-  the approved GLB. No Tashkent illustration is a current startup fallback.
+- **Every stop is a server window.** Crowd reactions, story beats, conversations,
+  greetings, his own actions, the stumble and the marathon cheer are all
+  `scheduled_actions` rows (migration 0036). Heartbeat v12, runtime v6 and bootstrap v14
+  hold distance inside them through `action_overlap_seconds`, so the road stands still
+  whenever he does.
+- **The walking clock has a server anchor.** `read_day_reactions` returns
+  `walkingClock {anchorActiveSeconds, heldActiveSeconds}`, the held total from the start
+  of the day. `activeWalkingSecondsAt(raw, rows, clock)` is `anchor − held + (raw −
+  anchor) − held windows between them`, with overlapping windows merged and cancelled
+  rows ignored. A long day of stops therefore never drifts as old rows leave the 16-row,
+  600-second payload. Without an anchor (rollback payloads, tests) the rows are the
+  whole history.
+- **Places.** `pack.route.zones` is an ordered manifest of 1–24 places pinned by the
+  day's `scene_pack_id`. Each visit lasts `route.sceneVisitSeconds` (default 420)
+  walking seconds, and the manifest loops. Viewer count and pace never select the
+  painting. `scenePositionAt` also returns `placeCount`, `nextZoneIndex` and
+  `secondsToNextVisit` for the progress row. §8.7 covers manifests and loading.
+- **The planner.** `src/lib/world/activity-plan.ts` is pure: pack, day id and walking
+  seconds in, occurrences out, with `deterministicVariant` supplying every "random"
+  choice.
+  - **Conversations:** about every 300 walking seconds (first at 150, ±30 s).
+  - **Own actions:** about every 300 s, offset between conversations (first at 300).
+    A shuffle bag uses all nine (drink, photo, phone, look around, arm stretch, tie shoe,
+    yawn, lean, laugh) before any repeats, and never the same one twice in a row.
+  - **Greetings:** every third conversation slot is a wordless greeting.
+  - **Scripts:** chosen by place tag, never the same script or shared words back to
+    back.
+  - **Story beats:** on the first visit to a place carrying the beat's `placeTag`, kept
+    90 s clear of other stops.
+- **Scheduling.**
+  - After heartbeat v12, the heartbeat route schedules only the next occurrence whose
+    start is 20–75 s ahead, through `schedule_journey_activity`.
+  - The server lead is at least 15 s and occurrence keys are unique. A missed
+    occurrence is dropped, not queued, and zero viewers schedule nothing.
+  - The page that scheduled a stop broadcasts the existing Realtime reaction hint, so
+    other viewers read it at once.
+  - A crowd reaction cancels a not-yet-started planned stop, or queues right after one
+    in progress.
+- **Clips play at natural speed.** Scheduled actions, conversations and crowd
+  reactions last `walk_stop` plus the take's real length (§6.3). One foreground action
+  runs at a time.
+- **Passers-by** are client-derived from walking seconds in 150-second blocks
+  (`WALKER_BLOCK_SECONDS`), at most two by tier plus one conversation partner. No pass
+  starts during a stop or within 12 s of one, and they never stop him.
+- Distance still drives the 8 km daily collective goal and the 42.195 km marathon.
+- **Stationary scenery.** The painting never pans. Only the seamless pavement tile and
+  ground life move with distance. `stageLayout` uses cover sizing in nominal painting
+  pixels, so no viewport reveals a background strip and no rendition moves anything.
+- **Overlay modals.** Journey, Sponsor, Vote and the audience list are `OverlayModal`s
+  portalled to `document.body`.
+  - The page behind is only `inert`: the Pixi application, the Three mixer, their
+    layout and the presence session never move, resize or remount.
+  - Modals are URL-addressed (`?panel=`); `openPanelStep` / `closePanelStep` push one
+    history entry and close with Back.
+  - The traveler's anchor no longer shifts for panels (`TravelerCommand.panelOpen` is
+    gone).
+- **One world build.** `useDeviceQuality` returns null until the tier is measured, and
+  `SceneStage` mounts the Pixi and Three canvases only then, so the world is built once
+  rather than at a guessed tier and again a frame later.
+- The first server-rendered snapshot, loading label and live seed all identify Paris
+  (`paris-v2`) and the approved GLB.
 
 ### The server side
 
@@ -690,12 +735,24 @@ localHour, raining, wakeElapsedSeconds)` returns
 
 - `clipForState` maps all semantic states onto manifest clip names. `CharacterActor`
   resolves absent names through the declared per-clip fallback chain.
-- `scaledCue` **retimes** a clip to fit an action's scheduled duration, so a 4.5 s
-  `phone` beat and a 4.0 s `phone` clip stay in step.
-- `oppositeCue` gives the resident the complementary role: traveler `talk` → resident
-  `listen`, and vice versa; `greet`/`goodbye` are mirrored; everything else is `idle`.
-- The encounter path walks the same fixed prologue and per-line segmentation as the
-  motion clock, so dialogue text and character pose are driven from one source.
+- **P28: clips play at natural speed.** A scheduled window is `walk_stop` (1.2 s) plus
+  the take's own length (wave 4.73 s, drink 8.87 s, photo 4.0 s, phone 23.57 s…), so
+  `actionCue` plays `walk_stop` and then the take unscaled, and the actor's 0.28 s
+  crossfade returns him to the walk. `naturalCue` / `loopedCue` replace the old
+  retiming `scaledCue`.
+  - **Own actions:** look around → `look_up`, stretch → `wait_stretch`,
+    yawn → `wait_yawn`, lean → `rest`, laugh → `react`.
+  - **Conversations:** `conversationCue` plays greet and goodbye naturally, with the
+    resident's greet 0.35 s after his and her goodbye 0.25 s after his. Talk and listen
+    loop at natural speed for each line's `durationMs`.
+  - **Greetings:** a greeting is a greet without lines.
+- `ProductCharacterScene.residentType` follows the active script, so Camille and Inès
+  appear as their own residents.
+- The resident takes the complementary role: traveler `talk` → resident `listen`, and
+  vice versa; `greet`/`goodbye` are mirrored; everything else is `idle`.
+- The conversation path walks the same `conversationSegments` (notice, stop, greet,
+  lines, goodbye) as the motion clock, so dialogue text and character pose are driven
+  from one source.
 - The ordinary walking path applies the 3× brisk threshold described in §3. Pace is an
   explicit argument; no runtime singleton or module state participates.
 - The non-traveling path accepts explicit waited seconds, deterministically selects the
@@ -1211,11 +1268,103 @@ The prop cutouts (1.36 MiB per city) are **not** deleted: see §6.5.
   MiB; largest decoded zone 24.5–25.7 MiB; low-tier renderer reports 15.8 MiB active
   textures against a 96 MiB cap.
 
+### 8.7 Place manifests, renditions and loading (P28, 12 September 2026)
+
+This supersedes the "whole zone, next-zone preload in the final 200 m" loading in §8.2
+for packs with `variants`. Older packs still load their single `fallbackUrl` or
+`continuousScene` files through the same cache.
+
+**Manifest.**
+- `route.zones` is the ordered, versioned place list pinned by the day's
+  `scene_pack_id`.
+- Each place has a stable `id`.
+- `tags` carry the semantics for stories, scripts and ambient life: steam at `cafe`,
+  the tram at `arrival`, bunting at `market`. They default to `[kind]`.
+- `description` is optional.
+- `variants` is optional: `{nominalWidth, nominalHeight, city[], sky[], ground[],
+  night[]}`, each entry `{url, width, height, bytes, crop}`.
+- Day and night are variants of one place, never two places.
+- New places always mean a new pack version, so an active day is never reordered.
+
+**Builder.** `pnpm scenes:build <city>` reads `art/<city>/places.json` and
+`art/<city>/conversations.json`. It lints the content and refuses two places made from
+the same painting (by source pixel hash). It writes content-hashed WebP renditions to
+`public/scenes/<city>/v<N>/places/<id>/<layer>-<crop>-<width>.<hash10>.webp`:
+- city at 1920/2560/3600 (full)
+- city at 800/1200 (centre crop)
+- sky at 800/1600
+- ground at 1800/3600, edge-blended
+- night, when supplied
+
+It also writes the postcard background, `art/<city>/scenes-v<N>.build.json`, the
+generated pack module and the registry entry. Below the ten-place target it warns.
+
+**Paris v2.** Five places from the five existing masters: none is duplicated to fake
+ten.
+- Desktop transfer per place is 642,354–1,101,186 bytes.
+- Mobile transfer per place is 185,432–307,022 bytes.
+- The largest current-plus-next window is 1,890,176 bytes on desktop and 554,288 bytes
+  on mobile.
+- `content:validate` checks the manifest byte counts against the files, refuses repeated
+  paintings, enforces the two-place desktop budget and reports "paris-v2: 5 of 10
+  target places".
+
+**Choosing a rendition.** `placeRenditions(zone, renditionRequestFor(zone, width,
+height, resolution))` picks:
+- **Painting:** the smallest one that covers everything the viewport can show (the
+  centre crop on a portrait screen) with at least 0.9× the drawn pixel density, capped at
+  4,096 px.
+- **Sky:** half its drawn resolution.
+- **Pavement:** 0.8× the pavement band.
+
+Layout always uses the nominal painting size, so a smaller or cropped rendition lands
+exactly where the full painting would. A resize only upgrades
+(`shouldReplaceRendition`). `StaticScene` asks for the same file as the world and stops
+following the route once the world is up.
+
+**Loading.**
+- `PixiScene` holds only the current place, plus the next place in the last 45 walking
+  seconds (`placeLoadPlan`).
+- The next place is uploaded with `renderer.prepare` before it is shown, then fades in
+  over the final walking second.
+- A place that arrives after its moment fades in over 400 ms instead.
+- `PlaceTextureCache` reference-counts URLs. A released texture is unloaded with
+  `Assets.unload`, at most one per frame.
+- Night art is fetched only once dusk begins.
+- Tomorrow's first place is fetched only in the last 20 minutes before
+  `countryDay.endsAt`, at today's rendition size.
+
+**Failure.**
+- A place that fails keeps the last good painting on screen
+  (`data-scene-asset-state="retrying"`). It retries at 2 s, 5 s, 15 s and then every 30 s,
+  without touching the traveler, distance or presence. The status line names the place
+  actually drawn.
+- Only when nothing has loaded yet does the world draw a neutral sky and pavement
+  (`fallback`). It still publishes the stage frame and reports ready, so he keeps
+  walking and heartbeats keep flowing.
+- `onFailure`, and with it the static poster, is reserved for WebGL start-up failure.
+
+**Diagnostics.** `.pixi-scene` exposes these attributes:
+- `data-mount-count`
+- `data-scene-places-loaded`
+- `data-scene-textures-held`
+- `data-scene-texture-bytes`
+- `data-scene-variant`
+- `data-scene-next-zone-id`
+- `data-scene-retry-attempts`
+- `data-scene-asset-state`
+
+**Delivery.** Hashed renditions are served with `Cache-Control: public,
+max-age=31536000, immutable`, both from the application (`next.config.ts` headers for
+`/scenes/:city/:version/places/*`) and by `pnpm assets:upload` (§11). With
+`ASSET_BASE_URL` set they come from the CDN. No image bytes or URLs are stored in
+Postgres: the manifest is versioned code.
+
 ---
 
 ## 9. Data model and API surface
 
-### Tables (34 forward migrations)
+### Tables (36 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1256,6 +1405,30 @@ heartbeat/runtime/bootstrap v12/v6/v14, and serializes overlapping reaction wind
 All four migrations were applied to development project `tkntxptfhmjnqaaveddx` on
 11 September 2026. The resulting 19 pgTAP suites passed all 380 assertions and the
 remote database lint result was `{"results":[]}`.
+
+**Migration 0036, journey activities (12 September 2026):**
+- **Table.** `scheduled_actions` accepts fourteen kinds: wave, drink, photo, phone,
+  look_around, stretch, tie_shoe, yawn, lean, laugh, stumble, cheer, conversation and
+  greeting. It gains `variant`, `occurrence_key` (unique per day while not cancelled) and
+  `cancelled_at`. Crowd rows keep their original shape.
+- **Durations.** Crowd durations are the natural clip lengths: wave 5.930 s, drink
+  10.070 s, photo 5.200 s.
+- **Holds.** `action_overlap_seconds` ignores cancelled rows.
+- **Reads.** `read_day_reactions` returns up to 16 rows over 600 s, with source,
+  variant, occurrence key, cancellation and the `walkingClock` anchor.
+- **Scheduling.** `schedule_journey_activity(...)` is new and granted to `service_role`
+  only. It locks `journey_runtime`, projects G through runtime v6, and inserts only when:
+  - the start is at least `ceil(G) + min_lead` ahead,
+  - the row overlaps no live row, and
+  - its occurrence key is new.
+
+  It answers `scheduled`, `exists`, `too_soon`, `overlap` or `no_runtime`.
+- **Reactions.** `submit_reaction` puts viewers first: a crowd reaction cancels a planned
+  stop that has not started, or queues right after one in progress (searching up to
+  G + 120 s). The same-kind guard applies to crowd rows only.
+- **Verification.** Applied to development project `tkntxptfhmjnqaaveddx` on
+  12 September 2026. All 20 pgTAP suites pass, including 28 new assertions in
+  `phase23-journey-activities.test.sql`, and remote lint is `{"results":[]}`.
 
 **Season 1 migration 0030, Tickets:** `tickets` links one future date, one Standard
 sponsorship and one curated versioned pack. `reserve_ticket` locks the date-keyed slot,
@@ -1341,7 +1514,8 @@ peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval a
 `normalize_country_code`, `read_country_day_watch`, `reaction_threshold`,
 `close_and_pick_vote_winner`, `create_next_country_day`, `read_traveler_name`,
 `write_journey_weather`, `read_journey_weather`,
-`submit_reaction`, `read_day_reactions`, `record_day_photo`,
+`submit_reaction`, `read_day_reactions`, `schedule_journey_activity`,
+`action_overlap_seconds`, `record_day_photo`,
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot` / `_v2`,
 `sponsor_price_cents`, `sponsor_tier_price_cents`, `journey_slot_date`,
 `open_sponsor_pricing_window`, `bind_sponsor_slot_day`,
@@ -2083,14 +2257,28 @@ credential-free dry run. Only `--upload` sends S3 Signature V4 PUTs using privat
 `ASSET_S3_SECRET_ACCESS_KEY` and optional `ASSET_S3_REGION` (default `auto`). These
 credentials are never included in Next configuration or browser code. The command
 preflights public runtime file types, rejects symlinks and files above 100 MiB,
-preserves relative object keys and credits, sets MIME types and a one-hour public
-cache TTL, rejects redirects and stops on errors without printing remote bodies or
-signed headers. Upload replaces matching remote keys and never deletes objects.
+preserves relative object keys and credits, sets MIME types, rejects redirects and stops
+on errors without printing remote bodies or signed headers. Upload replaces matching
+remote keys and never deletes objects.
+
+P28 additions:
+- **Cache headers.** A key with a content hash (`name.<10 hex>.ext`, as every place
+  rendition has) is uploaded with `Cache-Control: public, max-age=31536000, immutable`.
+  Every other key keeps the one-hour TTL (`cacheControlFor`).
+- **`--prefix scenes/paris/v2`** limits a run to one tree inside the public asset roots.
+- **`--skip-existing`** HEADs each key on `ASSET_BASE_URL` first and skips ones already
+  served, so a new pack version uploads only its own files.
+- **`pnpm assets:verify --pack paris-v2 --base <https origin> [--origin <app origin>]`**
+  needs no credentials. It sends a HEAD request with an `Origin` header for every rendition in
+  the pack's manifest, and checks status 200, MIME type, the immutable cache header,
+  `Access-Control-Allow-Origin` and the byte count against the local file. It exits
+  non-zero on any failure.
 
 Local assets remain checked in. Same-origin fallback means clearing the origin and
-rebuilding; no automatic CDN-failure retry is added. R2 provisioning is optional for
-the free validation while the same-origin CDN meets the immutable-cache requirement.
-See [asset hosting runbook](docs/runbooks/asset-hosting.md).
+rebuilding. In the browser a failed painting is retried and the last good one kept
+(§8.7), but there is no automatic switch back to the application origin. Until the
+owner's bucket exists, the application origin serves the same immutable renditions
+(AFTER-P22 D8). See [asset hosting runbook](docs/runbooks/asset-hosting.md).
 
 Hard rules stated in the repository and worth repeating: never use the analytics
 provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or

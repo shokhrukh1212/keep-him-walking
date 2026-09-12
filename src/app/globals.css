@@ -2648,13 +2648,6 @@ button:focus-visible,
 .vote-panel { z-index: 31; }
 .audience-share { min-height: 44px; }
 
-.journey-shell[data-panel]:not([data-panel=""]) .compact-dock,
-.journey-shell[data-panel]:not([data-panel=""]) > .reaction-buttons,
-.journey-shell[data-panel]:not([data-panel=""]) > .goal-bar,
-.journey-shell[data-panel]:not([data-panel=""]) > .traveler-state {
-  pointer-events: none;
-}
-
 @media (max-width: 760px) {
   .journey-hud {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -2696,28 +2689,9 @@ button:focus-visible,
   .dialogue-npc { top: auto; right: .7rem; bottom: calc(7.2rem + env(safe-area-inset-bottom)); left: .7rem; width: auto; max-height: 7.8rem; padding: .7rem .85rem; }
   .traveler-state { bottom: calc(7.15rem + env(safe-area-inset-bottom)); font-size: .62rem; }
   .goal-bar { bottom: calc(3.75rem + env(safe-area-inset-bottom)); font-size: .6rem; }
-  .goal-copy span:last-child { display: none; }
   .compact-dock { gap: .35rem; }
   .compact-dock .sponsor-invitation,
   .compact-dock button { flex: 1; min-width: 0; max-width: 11rem; padding: .5rem .55rem; font-size: .67rem; }
-
-  .launch-panel {
-    top: auto;
-    right: max(.35rem, env(safe-area-inset-right));
-    bottom: max(.35rem, env(safe-area-inset-bottom));
-    left: max(.35rem, env(safe-area-inset-left));
-    width: auto;
-    height: 44dvh;
-    min-height: 15rem;
-    border-radius: 1.1rem 1.1rem .8rem .8rem;
-  }
-  .journey-shell[data-panel="journey"] .scene-stage,
-  .journey-shell[data-panel="passport"] .scene-stage,
-  .journey-shell[data-panel="sponsor"] .scene-stage,
-  .journey-shell[data-panel="vote"] .scene-stage { height: 58dvh; }
-  .journey-shell[data-panel]:not([data-panel=""]) .compact-dock,
-  .journey-shell[data-panel]:not([data-panel=""]) > .goal-bar,
-  .journey-shell[data-panel]:not([data-panel=""]) > .traveler-state { visibility: hidden; }
 }
 
 @media (max-width: 350px), (max-height: 600px) {
@@ -2911,7 +2885,33 @@ button:focus-visible,
 }
 .journey-map-details > :not(summary) { margin: 0 0.9rem 0.9rem; }
 .overlay-modal .tomorrow-preview { position: static; display: grid; min-width: 0; text-align: left; backdrop-filter: none; }
-.overlay-modal .contribution-meter { padding-left: 0; }
+.overlay-modal .contribution-meter { gap: 0.3rem; padding-left: 0; }
+/* The section title already says "Your part". */
+.overlay-modal .contribution-meter .eyebrow { display: none; }
+.overlay-modal .contribution-meter strong { font-size: 1.45rem; }
+.overlay-modal .contribution-meter small { font-size: 0.76rem; }
+.journey-actions { align-items: flex-start; }
+.overlay-modal .postcard-control { display: grid; gap: 0.3rem; margin: 0; }
+.overlay-modal .postcard-control small { color: rgb(255 243 217 / 62%); font-size: 0.74rem; }
+.overlay-modal .postcard-control button,
+.overlay-modal .contribution-meter button {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 999px;
+  padding: 0.5rem 1.05rem;
+  background: rgb(255 255 255 / 7%);
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.overlay-modal .postcard-control button:disabled { cursor: default; opacity: 0.6; }
+.overlay-modal .postcard-control .control-icon { color: #e9c979; }
 .overlay-modal .dock-streak { margin: 0; color: rgb(255 243 217 / 78%); font-size: 0.82rem; }
 .overlay-modal .ticket-notice { max-width: none; }
 .overlay-modal .country-sheet {
@@ -2972,6 +2972,11 @@ button:focus-visible,
   .dock-label-short { display: inline; }
 }
 .traveler-state[data-tone="reconnecting"] span { color: #ffb38a; }
+/* Reactions sit at the top on narrow screens; an older bottom offset must not stretch them. */
+@media (max-width: 760px) { .reaction-buttons { bottom: auto; } }
+/* A landscape phone is shorter than the shell's old minimum. The page cannot scroll,
+   so anything below the fold (the dock, sound) would be unreachable. */
+@media (max-height: 480px) { .journey-shell { min-height: 0; } }
 
 /* Progress row: place dots on one side, shared distance on the other. */
 .goal-bar {
@@ -3068,6 +3073,9 @@ button:focus-visible,
   .goal-copy { justify-content: space-between; }
   .goal-copy-long { display: none; }
   .goal-copy-short { display: inline; }
-  .reaction-buttons { bottom: calc(118px + env(safe-area-inset-bottom)); }
-  .traveler-state { bottom: calc(166px + env(safe-area-inset-bottom)); }
+  /* The progress row takes two lines here; keep the status and speech above it. */
+  .traveler-state { bottom: calc(7.7rem + env(safe-area-inset-bottom)); }
+  .dialogue-bubble,
+  .dialogue-traveler,
+  .dialogue-npc { bottom: calc(9.4rem + env(safe-area-inset-bottom)); }
 }

@@ -22,7 +22,9 @@ finish rather than what it got wrong.
 | D4 | Sofia has one source painting instead of the six the pack builder needs | **Superseded — Paris is Day 1** | Owner decision (12 Sep 2026) |
 | D5 | The production scheduler may run launch jobs late | **Code resolved; external Vercel Pro configuration remains** | Owner (hosting) |
 | D6 | Some of his new movements do not fit the moment they are used for | **Resolved — current motion accepted** | Owner decision (12 Sep 2026) |
-| D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved — five 18-minute visits repeat indefinitely** | P25 (12 Sep 2026) |
+| D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved, then superseded — every place lasts 7 walking minutes and the list repeats** | P25, then P28 (12 Sep 2026) |
+| D8 | Paintings are served from the app itself, not from Cloudflare R2 | No — same-origin works; R2 is needed before real traffic | Owner (Cloudflare account) |
+| D9 | Paris has five places, not ten, and six new conversations await review | No — five real places loop honestly | Owner (art and cultural review) |
 
 ---
 
@@ -216,6 +218,10 @@ replaces the old file there, then a re-run of the import (commands in
 
 ## D7 — After the landmark he stays there for the rest of the day
 
+**Superseded later on 12 September 2026 (P28).** Places now come from a variable-length
+manifest, each visit lasts 420 active-walking seconds, and every stop is a server window
+that also pauses distance. See `TECHNICAL.md` §3 and §8.7.
+
 **Resolved 12 September 2026.** Scene selection no longer clamps or follows distance.
 Five paintings repeat in fixed 1,080-second global active-walking visits; stop actions
 pause that clock, and viewer count/pace cannot shorten a visit. The city painting is
@@ -322,3 +328,86 @@ Where it lives in the code:
 
 Whichever is chosen, update `PRODUCT.md` §3 afterwards so it describes what the code
 does.
+
+---
+
+## D8 — Paintings are served from the app itself, not from Cloudflare R2
+
+**Found 12 September 2026 (P28).** Everything on the code side is ready: sized paintings
+with permanent file names, year-long browser caching, an upload command and a check
+command. What is missing is the Cloudflare side, which needs the owner's account.
+
+**What it is.** The city paintings should come from a Cloudflare R2 bucket on your own
+web address, so they load fast everywhere and do not use the app's bandwidth. Until that
+bucket exists, the app sends the same files itself, with the same long caching.
+
+**What happens if nothing changes.** Everything works. Every painting download counts
+against the app host's bandwidth and comes from its servers instead of Cloudflare's
+network. That is fine for a small validation, but a busy day would cost more and load
+slower far from the app's region.
+
+**What to do.** In Cloudflare, once:
+
+1. Create an R2 bucket, for example `keep-him-walking-assets`.
+2. Create an R2 API token with **Object Read & Write** on that bucket only. Put these
+   four values in `.env.local` on the machine that uploads, never in chat or git:
+
+   ```dotenv
+   ASSET_S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+   ASSET_S3_BUCKET=keep-him-walking-assets
+   ASSET_S3_ACCESS_KEY_ID=<from the token>
+   ASSET_S3_SECRET_ACCESS_KEY=<from the token>
+   ```
+
+3. In the bucket's **Settings → Custom Domains**, connect a subdomain you own, for example
+   `assets.keephimwalking.lol`. Do not use the `r2.dev` address: it is rate-limited and
+   has no caching.
+4. In **Settings → CORS policy**, paste the read-only rule from
+   `docs/runbooks/asset-hosting.md`.
+5. Upload and check, from the repository:
+
+   ```sh
+   pnpm assets:upload --upload
+   ASSET_BASE_URL=https://assets.keephimwalking.lol pnpm assets:verify --pack paris-v2
+   ```
+
+6. When the check prints `"failed": 0`, set `ASSET_BASE_URL=https://assets.keephimwalking.lol`
+   in the Vercel project for Production and Preview, then redeploy. To undo it, clear
+   that variable and redeploy.
+
+This uses R2's free allowance for a small validation. Nothing is bought by the code.
+
+---
+
+## D9 — Paris has five places, not ten, and six new conversations await review
+
+**Found 12 September 2026 (P28).** The app now takes any number of places per city, up to
+24, aiming for ten. Paris has five real paintings, so it loops five.
+
+**What it is.** Two pieces of content only the owner can supply.
+
+- **Five more Paris places.** Each needs a new, genuinely different painting in the
+  same style as the existing five. Copies or crops of existing paintings are refused by
+  the build.
+- **Cultural review of new words.** Six new short exchanges were written for Paris:
+  peaches at the market, a minute at the café, the view from a footbridge, the book stalls
+  on the quay, and the tower lights. The reviewed welcome was also split into three
+  shorter exchanges. The new ones are in `art/paris/conversations.json`, marked
+  `"review": "pending"`.
+
+**What happens if nothing changes.** Viewers see the same five Paris places every 35
+walking minutes, and the pending exchanges are shown as they are.
+
+**What to do.**
+
+- **Paintings.** For each new place, save the day painting as
+  `art/paris/places/<place-id>/day.png`, and optionally a matching night painting as
+  `night.png`. Use the same 3:1 shape as the others (3600×1200 or larger). Add the place
+  to `art/paris/places.json` with its id, name, tags and a one-line description, then
+  raise `packVersion` to 3 so the day already running keeps its list. Run
+  `pnpm scenes:build paris`, then `pnpm content:validate`. Once D8 is done, run
+  `pnpm assets:upload --upload --prefix scenes/paris/v3`. A day switches to the new list
+  only with `pnpm launch:switch-pack --day-id <id> --from paris-v2 --to paris-v3`
+  (dry run first, then `--apply`).
+- **Conversations.** Read the six new exchanges and either approve them (change
+  `"pending"` to `"approved"`), rewrite them, or delete them. Then rebuild as above.

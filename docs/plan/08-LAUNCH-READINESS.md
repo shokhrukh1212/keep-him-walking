@@ -17,8 +17,11 @@ below while preserving them as history.
 | Gate | Current state |
 |---|---|
 | Paris Day 1, coherent startup identity | Implemented and production-build browser checked |
-| Minimal responsive shell and internal panels | Implemented; emulated 320/390/430/768/1440 checks recorded |
-| Stationary painting, centered traveler, 18-minute repeating scenes | Implemented and clock/transition tested |
+| Minimal responsive shell and overlay modals (P28) | Implemented; modal continuity checked in a production build at 320×568, 390×844, 667×375, 768×1024 and 1440×900 |
+| Stationary painting, centered traveler, 7-minute places from a manifest (P28) | Implemented; clock, planner, loading and recovery tested. Paris has 5 of 10 target places (D9) |
+| Every stop a server window, natural clip speed (P28) | Implemented; migration 0036 remote-verified on dev |
+| Image delivery | Hashed immutable renditions, current + next place only. Served same-origin until the owner's R2 bucket and domain exist (D8) |
+| "Waiting for the internet" while watching | Heartbeat chain fix and watchdog unit-tested; the status line now separates "Reconnecting…" from a confirmed empty audience |
 | Wave request → shared state → rendered clip | Implemented; unit, browser and remote pgTAP verified |
 | 16:00 UTC reconciliation | Implemented and remote database verified; production Vercel Pro cron plus `CRON_SECRET` remain external |
 | Free validation | Code candidate ready for owner review/deployment; no deployment or launch date is claimed |
