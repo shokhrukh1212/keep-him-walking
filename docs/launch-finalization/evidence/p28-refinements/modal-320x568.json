@@ -5,10 +5,10 @@
   },
   "deviceScaleFactor": 1.5,
   "openFrames": {
-    "samples": 16,
-    "p95Ms": 216.6,
-    "maxMs": 216.6,
-    "over50Ms": 16,
+    "samples": 13,
+    "p95Ms": 250,
+    "maxMs": 250,
+    "over50Ms": 13,
     "longAnimationFrames": 1
   },
   "worldMounts": "1",

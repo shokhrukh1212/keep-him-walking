@@ -1,5 +1,10 @@
 # Keep Him Walking — final launch decisions
 
+> Historical P27 brief. The owner's P28 variable-place, seven-walking-minute,
+> overlay-modal requirements supersede its five-place/18-minute/panel details.
+> Current behavior is specified in `PRODUCT.md`, `TECHNICAL.md` and
+> `docs/plan/DECISIONS.md`.
+
 Product: keephimwalking.lol. Status: researched implementation brief, not a certification of the running application.
 
 ## Recommendation

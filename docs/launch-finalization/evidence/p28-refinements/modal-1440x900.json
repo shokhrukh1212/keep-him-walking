@@ -6,10 +6,10 @@
   "deviceScaleFactor": 1.5,
   "openFrames": {
     "samples": 3,
-    "p95Ms": 966.7,
-    "maxMs": 966.7,
+    "p95Ms": 1233.2,
+    "maxMs": 1233.2,
     "over50Ms": 3,
-    "longAnimationFrames": 1
+    "longAnimationFrames": 0
   },
   "worldMounts": "1",
   "presenceSessions": 1

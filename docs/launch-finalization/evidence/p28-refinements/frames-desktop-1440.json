@@ -6,25 +6,25 @@
   "deviceScaleFactor": 1.5,
   "renderer": "headless Chromium (software GL); not a physical device",
   "modalOpenClose": {
-    "samples": 12,
-    "p95Ms": 616.7,
-    "maxMs": 616.7,
-    "over50Ms": 12,
+    "samples": 7,
+    "p95Ms": 1083.4,
+    "maxMs": 1083.4,
+    "over50Ms": 7,
     "longAnimationFrames": 1
   },
   "placeChange": {
-    "samples": 6,
-    "p95Ms": 866.6,
-    "maxMs": 866.6,
-    "over50Ms": 6,
-    "longAnimationFrames": 0
+    "samples": 3,
+    "p95Ms": 2849.8,
+    "maxMs": 2849.8,
+    "over50Ms": 3,
+    "longAnimationFrames": 2
   },
   "steadyWalk": {
-    "samples": 12,
-    "p95Ms": 799.9,
-    "maxMs": 799.9,
-    "over50Ms": 12,
-    "longAnimationFrames": 3
+    "samples": 9,
+    "p95Ms": 1049.9,
+    "maxMs": 1049.9,
+    "over50Ms": 9,
+    "longAnimationFrames": 1
   },
   "worldMountCount": "1",
   "presenceSessions": 1

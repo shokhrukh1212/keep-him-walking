@@ -110,7 +110,7 @@ without needing hundreds of unique animations:
 | Continuous | Walking, with proper start / slow / stop / resume transitions rather than snapping between poses. |
 | Every 2–3 walking minutes | A passer-by walks along his pavement, in at one edge and out at the other. They never stop him. |
 | About every 5 walking minutes | A short conversation with a local resident, or a wordless hello. Exchanges rotate and never repeat back to back. |
-| Every 4–6 walking minutes, between conversations | Something of his own: a drink, a photo, a look at his phone, a look around, an arm stretch, tying a shoe, a yawn, leaning for a breather, laughing to himself. All nine come round before any repeats. |
+| Every 4–6 walking minutes, between conversations | An eligible existing photo or drink action, alternating without an immediate repeat. |
 | Whenever viewers react | Wave, Water or Photo. Viewers go first: a planned stop that has not begun gives way. |
 
 Every clip plays at its natural speed, and only one thing happens at a time.
@@ -148,12 +148,11 @@ every city, translations are a data change, and nothing culturally sensitive is 
 improvised at runtime.
 
 Each city has a small **pool of exchanges**, each tied to the places where it makes sense
-and to a named resident. Paris has nine: the reviewed six-line welcome is split into
-three two-line exchanges, and six new short ones (by the market, the café, a footbridge,
-the book stalls and the tower lights) are marked **pending cultural review**. Every
-third slot is a wordless hello instead, so the rotation never runs out of words to
-repeat. The last few exchanges a visitor saw are listed in Journey, each collapsed until
-opened.
+and to a named resident. Paris currently has nine authored records: one six-line story,
+three shorter splits and five new exchanges (market, café, footbridge, book stalls and
+tower lights). All nine are marked **pending cultural review**, so none is shown; the
+five-minute cadence uses wordless greetings until reviewed words are available. The last
+few reviewed exchanges a visitor saw are listed in Journey, each collapsed until opened.
 
 Each city also carries a **local phrase** with its original script, transliteration,
 plain-English gloss and pronunciation — for example Tbilisi's
@@ -292,7 +291,7 @@ approved.
 ## 8. Content and cultural integrity
 
 Each country-day is powered by a versioned, immutable **country pack** containing its
-five zones, artwork, ambience, NPC variant, encounter script, local phrase, story beats,
+ordered place manifest, artwork, ambience, NPC variant, encounter script, local phrase, story beats,
 postcard copy, preload groups and asset budget.
 
 Two deliberate constraints:

@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-09-12T18:55:13Z",
+  "projectRef": "tkntxptfhmjnqaaveddx",
+  "journey": "keep-him-walking-phase15-preview",
+  "preservedEndedDays": [1],
+  "createdDay": {
+    "dayNumber": 2,
+    "city": "Paris",
+    "scenePackId": "paris-v2",
+    "endsAt": "2026-09-13T16:00:00Z"
+  },
+  "bootstrap": {
+    "httpStatus": 200,
+    "mode": "live",
+    "dayNumber": 2,
+    "scenePackId": "paris-v2"
+  },
+  "diagnosis": [
+    "The seeded development day had expired.",
+    "PHASE2_ENABLED and PHASE2_REHEARSAL_MODE were absent from the local environment."
+  ],
+  "databaseRowsDeleted": 0,
+  "focusedBrowserChecks": {
+    "realLiveDayAndDay1Recap": "passed",
+    "server503UsesUnavailableCopyWithoutInventedCounts": "passed"
+  }
+}

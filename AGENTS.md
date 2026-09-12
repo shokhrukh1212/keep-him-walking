@@ -67,5 +67,12 @@ HOUSE RULES for this repository (Keep Him Walking):
   current code (the one that matters), **D3** dusk window lights have no artwork.
   Evidence for each lives in `TECHNICAL.md` and `docs/phase-3-results.md`; do not
   re-litigate a `D<n>` entry inside an unrelated prompt.
+- Keep reviews and final handoffs practical and concise. Report exactly four things:
+  **Done**, **Wrong**, **Missing**, and **Owner-only actions**. Once the owner approves a
+  fix scope, implement every safe in-scope fix, update tests and documentation, run the
+  required verification, and deliver the completed batch without waiting for repeated
+  prompts. Ask again only when an irreversible choice, credential, payment, artwork
+  acceptance, or other genuinely owner-only dependency blocks progress. Do not stop at
+  a plan when implementation has been approved.
 - Small commits with clear messages. At the end, print: files changed, how to test
   manually, and anything you could not finish.

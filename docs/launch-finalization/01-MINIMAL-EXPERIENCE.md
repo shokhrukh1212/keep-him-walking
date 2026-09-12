@@ -1,5 +1,10 @@
 # Keep Him Walking — minimal experience specification
 
+> Historical P27 brief. The owner's P28 variable-place, seven-walking-minute,
+> overlay-modal requirements supersede any conflicting schedule or panel detail.
+> Current behavior is specified in `PRODUCT.md`, `TECHNICAL.md` and
+> `docs/plan/DECISIONS.md`.
+
 Companion to `00-DECISIONS-AND-LAUNCH.md`. Design specification for the existing product; preserve approved art and motion.
 
 ## The first impression

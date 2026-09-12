@@ -1,5 +1,10 @@
 # Keep Him Walking — runtime, timing and performance
 
+> Historical P27 brief. The owner's P28 variable-place, seven-walking-minute,
+> overlay-modal requirements supersede its five-place/18-minute assumptions.
+> Current behavior is specified in `PRODUCT.md`, `TECHNICAL.md` and
+> `docs/plan/DECISIONS.md`.
+
 All implementation details below are proposed requirements pending inspection of the current repository. The supplied files establish intended architecture, not measured production performance.
 
 ## What can and cannot be concluded

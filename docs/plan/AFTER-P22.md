@@ -24,7 +24,7 @@ finish rather than what it got wrong.
 | D6 | Some of his new movements do not fit the moment they are used for | **Resolved — current motion accepted** | Owner decision (12 Sep 2026) |
 | D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved, then superseded — every place lasts 7 walking minutes and the list repeats** | P25, then P28 (12 Sep 2026) |
 | D8 | Paintings are served from the app itself, not from Cloudflare R2 | No — same-origin works; R2 is needed before real traffic | Owner (Cloudflare account) |
-| D9 | Paris has five places, not ten, and six new conversations await review | No — five real places loop honestly | Owner (art and cultural review) |
+| D9 | Paris has five places, not ten, and nine authored conversation records await review | No — five real places loop honestly; pending words stay hidden | Owner (art and cultural review) |
 
 ---
 
@@ -379,7 +379,7 @@ This uses R2's free allowance for a small validation. Nothing is bought by the c
 
 ---
 
-## D9 — Paris has five places, not ten, and six new conversations await review
+## D9 — Paris has five places, not ten, and nine authored conversation records await review
 
 **Found 12 September 2026 (P28).** The app now takes any number of places per city, up to
 24, aiming for ten. Paris has five real paintings, so it loops five.
@@ -389,14 +389,14 @@ This uses R2's free allowance for a small validation. Nothing is bought by the c
 - **Five more Paris places.** Each needs a new, genuinely different painting in the
   same style as the existing five. Copies or crops of existing paintings are refused by
   the build.
-- **Cultural review of new words.** Six new short exchanges were written for Paris:
-  peaches at the market, a minute at the café, the view from a footbridge, the book stalls
-  on the quay, and the tower lights. The reviewed welcome was also split into three
-  shorter exchanges. The new ones are in `art/paris/conversations.json`, marked
-  `"review": "pending"`.
+- **Cultural review of words.** Paris has one six-line story, three shorter splits and
+  five new exchanges: peaches at the market, a minute at the café, the footbridge view,
+  the book stalls and the tower lights. All nine records in
+  `art/paris/conversations.json` are marked `"review": "pending"`.
 
 **What happens if nothing changes.** Viewers see the same five Paris places every 35
-walking minutes, and the pending exchanges are shown as they are.
+walking minutes. The five-minute conversation cadence continues with wordless greetings;
+pending dialogue is not shown or added to Journey transcripts.
 
 **What to do.**
 
@@ -409,5 +409,5 @@ walking minutes, and the pending exchanges are shown as they are.
   `pnpm assets:upload --upload --prefix scenes/paris/v3`. A day switches to the new list
   only with `pnpm launch:switch-pack --day-id <id> --from paris-v2 --to paris-v3`
   (dry run first, then `--apply`).
-- **Conversations.** Read the six new exchanges and either approve them (change
+- **Conversations.** Read the nine authored records and either approve them (change
   `"pending"` to `"approved"`), rewrite them, or delete them. Then rebuild as above.

@@ -158,12 +158,12 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
   seconds in, occurrences out, with `deterministicVariant` supplying every "random"
   choice.
   - **Conversations:** about every 300 walking seconds (first at 150, ±30 s).
-  - **Own actions:** about every 300 s, offset between conversations (first at 300).
-    A shuffle bag uses all nine (drink, photo, phone, look around, arm stretch, tie shoe,
-    yawn, lean, laugh) before any repeats, and never the same one twice in a row.
+  - **Own actions:** an eligible drink or photo about every 300 s, offset between
+    conversations (first at 300), alternating without an immediate repeat.
   - **Greetings:** every third conversation slot is a wordless greeting.
-  - **Scripts:** chosen by place tag, never the same script or shared words back to
-    back.
+  - **Scripts:** only `approved` or `creator_reviewed` records are eligible, chosen by
+    place tag, never the same script or shared words back to back. If no reviewed script
+    is eligible, the slot becomes a wordless greeting.
   - **Story beats:** on the first visit to a place carrying the beat's `placeTag`, kept
     90 s clear of other stops.
 - **Scheduling.**
@@ -193,6 +193,9 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
     history entry and close with Back.
   - The traveler's anchor no longer shifts for panels (`TravelerCommand.panelOpen` is
     gone).
+- **Unavailable preview data.** A `NO_ACTIVE_DAY` fallback can show the bundled neutral
+  review scene and place sequence, but it hides reaction counts and renders distance as
+  `unavailable`; zero is never presented as a server-confirmed live value.
 - **One world build.** `useDeviceQuality` returns null until the tier is measured, and
   `SceneStage` mounts the Pixi and Three canvases only then, so the world is built once
   rather than at a guessed tier and again a frame later.
@@ -1329,7 +1332,9 @@ following the route once the world is up.
   over the final walking second.
 - A place that arrives after its moment fades in over 400 ms instead.
 - `PlaceTextureCache` reference-counts URLs. A released texture is unloaded with
-  `Assets.unload`, at most one per frame.
+  `Assets.unload`, at most one per frame. Optional window-light and sponsor-sign textures
+  use the same cache, are released when replaced, and the whole cache is disposed on a
+  real scene unmount.
 - Night art is fetched only once dusk begins.
 - Tomorrow's first place is fetched only in the last 20 minutes before
   `countryDay.endsAt`, at today's rendition size.
@@ -1914,42 +1919,30 @@ served from the origin.
 this commit, the harness now models reactions and the `/api/me` call, and only the dry
 run was executed here.
 
-### Pack authoring pipeline (P19)
+### Pack authoring pipeline (P19, superseded by the P28 manifest builder)
 
-`pnpm pack:new <slug>` scaffolds an immutable v1 module in
-`src/content/countries/` and an `art/<slug>/` authoring directory. It accepts an
-interactive questionnaire or `--from <json>`; JSON is deliberate because no YAML
-dependency is installed or approved. The strict authoring schema admits only the
-country, geography, five zone descriptions, landmark, phrase, resident, six dialogue
-lines, eight notebook lines, vote blurb and postcard copy. `pnpm pack:lint <slug>`
-checks those fields against the owner-editable
-`docs/plan/content-banned-words.txt`. A keyword match is a review stop, not proof that
-an unflagged pack is culturally safe.
+`pnpm pack:new <slug>` scaffolds `art/<slug>/pack.json`, `places.json`,
+`conversations.json` and an owner README. Its interactive questionnaire accepts 1–24
+ordered places (target ten), each with a stable id, semantic tags, description, required
+day source and optional night source. `--from <json>` accepts the same three authoring
+objects. It does not manufacture a fixed route or generated module before artwork exists.
 
-`pnpm pack:build <slug>` requires five distinct `master.png` files and the landmark's
-`night.png`. Sharp normalizes each source to a bounded 3600×1200 city WebP, derives a
-soft 1600×900 sky plate, and extracts the lower 18% into a 3600×216 pavement texture
-whose outer eight percent is blended for the seam audit. The factory emits these as a
-`continuousScene`: the city never wraps and only the pavement moves as a tile. The
-builder also writes day/night/lights assets, derives the postcard, samples three palette
-colours and writes `art/<slug>/build.json` with exact transfer bytes against the existing
-5.5 MiB pack ceiling. It then regenerates the module and adds it to the small authored
-registry. Generated packs start with `culturalReview.status = pending`: they work in the
-private pack preview but `isVoteReadyPack` keeps them out of ballots until the owner
-records review evidence. Missing NPC fallback art and ambient audio degrade to the 3D
-resident and silence rather than borrowing another culture's assets.
+`pnpm pack:build <slug>` and `pnpm scenes:build <slug>` now call the same variable-length
+builder described in §8.7. Every declared place requires its own distinct painting; the
+builder derives immutable renditions, a postcard, byte report and generated pack module.
+`pnpm pack:lint <slug>` still checks the owner-editable authored fields against
+`docs/plan/content-banned-words.txt`; this keyword check never replaces cultural review.
 
-Paris `v1` is the first pack produced by this layered authoring path. Its five day
-masters and matching landmark night master live under `art/paris/`; its derived runtime
-transfer is 4,220,300 bytes. It is registered for private preview with cultural review
-still pending. The reversible development seed accepts `--preview --pack <registered-v3-pack>`;
-for example, `pnpm seed:phase1 --preview --pack paris-v1 --starts-at <ISO timestamp>`.
+Paris `v1` is retained as a rollback artifact from the old five-position builder. Paris
+`v2` is the first variable manifest and honestly contains the five supplied paintings.
+The reversible development seed accepts `--preview --pack <registered-v3-pack>`.
 
 The v3 schema now rejects unknown top-level, dialogue, phrase, story-beat, review,
 postcard, resident, NPC-system and editorial fields. `resident` and `notebookLines` have
-defaults, so the existing fourteen packs retain their parsed shape. Sofia remains on its
-existing one-master pack until the owner supplies the six separate paintings; the exact
-handoff is D4 in `docs/plan/AFTER-P22.md`.
+defaults, so older packs retain their parsed shape. Positional kind defaults remain only
+for backward compatibility; places after the legacy sequence default to `lanes`, while
+new manifests carry explicit tags. A manifest that declares renditions for one place must
+declare them for every place. Sofia's old artwork decision remains documented in D4.
 
 ### Private corrections loop (P20)
 
@@ -2113,7 +2106,9 @@ using the next rollover after invocation would otherwise leave a 24-hour schedul
 For local manual review, `pnpm dev:prepare` is a dry run over the single reversible seed
 in dev project `tkntxptfhmjnqaaveddx`. `--apply` enables its Season 1 path, finalizes
 ended rows through the locked RPC, and extends the fixed private itinerary only until a
-current day exists. It preserves existing days and contributions. Passing `--base-url`
+current day exists. An authored review pack outside that old itinerary repeats for the
+next dev day, allowing an expired preview to recover without a destructive reseed. It
+preserves existing days and contributions. Passing `--base-url`
 also renders and stores any missing immutable recap cards through the running app.
 
 ---
@@ -2128,13 +2123,13 @@ pnpm verify:phase2       + isolated-project preflight, phase-2 pgTAP, full e2e
 pnpm verify:phase3       the current full gate
 ```
 
-Current P28 evidence (12 September 2026), in
+Current P28 evidence (12–13 September 2026), in
 `docs/launch-finalization/evidence/p28-refinements/`:
 
 - **Database.** Migration 0036 is applied to dev `tkntxptfhmjnqaaveddx`. All 20 pgTAP
   suites pass, including 28 new activity assertions, and remote lint is
   `{"results":[]}`.
-- **Unit tests, lint, typecheck.** Unit tests cover the clock, planner, motion,
+- **Unit tests, lint, typecheck.** All 538 unit tests pass. They cover the clock, planner, motion,
   timeline, walkers, scene assets, texture cache, scene build, progress copy, panel
   history, heartbeat recovery, the status line, the encounter log, upload and verify
   parsing, and the modal, sound, goal and vote components. Two heartbeat-chain
@@ -2142,22 +2137,21 @@ Current P28 evidence (12 September 2026), in
   `pnpm typecheck` are clean.
 - **Content.** `content:validate` reports 17 packs, 346 uniquely owned scene assets, and
   "paris-v2: 5 of 10 target places".
-- **Browser.** Production-build specs are `modal-continuity`, `scene-loading` and
-  `launch-candidate`, run in headless Chromium at device scale 1.5. Results and
-  measurements are in `measurements.json`.
-- **Live development probe.** The dev day was switched to `paris-v2` with the guarded
-  RPC. As one real watcher over nine minutes:
-  - Every heartbeat returned 200.
-  - The server scheduled a greeting, a lean, the café conversation and a shoe-tie, and
-    each played with its label.
-  - One world mount; at most two places and six textures held; no page errors.
-  - It found the two startup flaws fixed in `a6752fe`.
-
-  The probe advanced the shared development journey while it ran.
-- **Frames are not a performance claim.** Software GL makes rAF intervals range from
-  67 ms (320 px canvas) to about 1 s (1440 px at scale 1.5). The P27 baseline in the
-  same environment was 2,233 ms p95. No freeze is claimed fixed or present, and no
-  physical device was available.
+- **Browser.** The 19 current core cases in `modal-continuity`, `scene-loading` and
+  `launch-candidate` pass against a production build in headless Chromium at device
+  scale 1.5. Two focused `review-repairs` cases also prove the current live day and
+  honest 503 presentation. Results and measurements are in `measurements.json`.
+- **Live development recovery.** The screenshot's unavailable state had two causes:
+  Day 1 had expired and local Phase 2 rehearsal flags were absent. `dev:prepare --apply`
+  preserved Day 1 and contributions, created Paris Day 2 through the locked RPC, and a
+  local production bootstrap then returned 200/live. The earlier nine-minute probe is
+  retained only as diagnosis: it exposed pending dialogue and unintended solo-action
+  scheduling, both now blocked by reviewed-script filtering and the photo/drink plan.
+- **Frames are not a performance claim.** Software GL produced modal p95 intervals of
+  250–1,233 ms and a 2,850 ms desktop place-change interval in this run. The P27
+  baseline in the same environment was 2,233 ms p95, but these samples are not a
+  controlled physical-device comparison. No freeze is claimed solved, and no physical
+  device was available.
 
 The current-code 1,000-viewer run remains deliberately after launch (D2), and nothing
 below is a capacity claim.

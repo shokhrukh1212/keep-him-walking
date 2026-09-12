@@ -1,5 +1,9 @@
 # Keep Him Walking — Codex execution handoff
 
+> Historical P27 prompt. Do not execute it: the owner's P28 refinement prompt
+> supersedes its five-place/18-minute/panel requirements. Current behavior is
+> specified in `PRODUCT.md`, `TECHNICAL.md` and `docs/plan/DECISIONS.md`.
+
 Put all four files in the project, preferably `docs/launch-finalization/`. Paste the master prompt below into Codex in the real repository. The phases are execution checkpoints within the same task, not requests to produce another planning document. If the session is interrupted, use the continuation prompts afterward.
 
 ## Master prompt
