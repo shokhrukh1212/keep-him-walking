@@ -1,4 +1,5 @@
 import { getCountryPack } from "../../src/content/countries/registry";
+import { firstPlaceWithTag } from "../../src/lib/content/places";
 import { scheduleStoryBeats } from "../../src/lib/story-clock/cadence";
 import { buildSevenDaySchedule } from "../../src/lib/story-clock/schedule";
 import { adminClient, requireApply } from "./lib";
@@ -86,8 +87,8 @@ for (const [index, scheduled] of schedule.entries()) {
   }).select("id").single();
   if (voteError) throw voteError;
   const { error: optionsError } = await supabase.from("vote_options").insert([
-    { vote_id: vote.id, label: pack.route.zones[2]?.label ?? "Market", display_order: 0 },
-    { vote_id: vote.id, label: pack.route.zones[4]?.label ?? "Landmark", display_order: 1 },
+    { vote_id: vote.id, label: firstPlaceWithTag(pack, "market")?.label ?? "Market", display_order: 0 },
+    { vote_id: vote.id, label: firstPlaceWithTag(pack, "landmark")?.label ?? "Landmark", display_order: 1 },
   ]);
   if (optionsError) throw optionsError;
   const { error: slotError } = await supabase.from("sponsor_slots").insert({

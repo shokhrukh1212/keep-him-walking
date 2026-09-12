@@ -61,7 +61,11 @@ while (new Date(last.ends_at) <= now) {
     : { data: null, error: null };
   if (choiceError) throw choiceError;
   // Honor a real destination result; legacy/name-only days use the private itinerary.
-  const pack = choice?.pack_id ? getCountryPack(choice.pack_id) : getNextCountryPack(last.scene_pack_id);
+  // An authored pack outside that old itinerary repeats only in this disposable
+  // review journey, so an expired local preview can recover without reseeding.
+  const pack = choice?.pack_id
+    ? getCountryPack(choice.pack_id)
+    : getNextCountryPack(last.scene_pack_id) ?? getCountryPack(last.scene_pack_id);
   if (!pack) throw new Error("The prepared private itinerary has ended; provide the next reviewed pack.");
   const startsAt = new Date(last.ends_at), endsAt = new Date(startsAt.getTime() + 86_400_000);
   const { candidates: options } = buildDestinationCandidates({

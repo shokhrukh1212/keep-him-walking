@@ -39,10 +39,8 @@ describe("activity catalogue", () => {
     }
   });
 
-  it("rotates all nine actions the owner chose", () => {
-    expect([...OWN_ACTION_KINDS].sort()).toEqual([
-      "drink", "laugh", "lean", "look_around", "phone", "photo", "stretch", "tie_shoe", "yawn",
-    ]);
+  it("keeps the autonomous cadence to the requested drink and photo actions", () => {
+    expect([...OWN_ACTION_KINDS].sort()).toEqual(["drink", "photo"]);
   });
 
   it("builds natural-length conversation choreography", () => {
@@ -74,11 +72,16 @@ describe("activity catalogue", () => {
         lines: [{ speaker: "npc", text: "The tea is fresh.", mood: "neutral" }],
       }],
     });
-    const [script] = conversationScripts(withRotation);
-    expect(script).toMatchObject({ id: "tea-house", role: "ambient", review: "pending" });
-    expect(conversationResident(withRotation, script!)).toBe("resident-a");
-    expect(conversationSpeakerName(withRotation, script!)).toBe("Dilnoza");
-    expect(conversationResident(withRotation, null)).toBe(withRotation.npcSystem.baseType);
+    expect(conversationScripts(withRotation)).toEqual([]);
+    const approvedRotation = countryPackV3Schema.parse({
+      ...withRotation,
+      conversations: withRotation.conversations.map((script) => ({ ...script, review: "creator_reviewed" })),
+    });
+    const [script] = conversationScripts(approvedRotation);
+    expect(script).toMatchObject({ id: "tea-house", role: "ambient", review: "creator_reviewed" });
+    expect(conversationResident(approvedRotation, script!)).toBe("resident-a");
+    expect(conversationSpeakerName(approvedRotation, script!)).toBe("Dilnoza");
+    expect(conversationResident(approvedRotation, null)).toBe(approvedRotation.npcSystem.baseType);
   });
 
   it("names every state the status line can show", () => {

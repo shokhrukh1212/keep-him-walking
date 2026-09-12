@@ -86,6 +86,9 @@ for (const candidate of packs) {
   if (pack.schemaVersion === 3) {
     const manifestZones = pack.route.zones.filter((zone) => zone.variants);
     if (manifestZones.length > 0) {
+      if (manifestZones.length !== pack.route.zones.length) {
+        throw new Error(`${pack.assetVersion}: every place in a versioned manifest must declare renditions`);
+      }
       if (pack.route.zones.length < TARGET_PLACE_COUNT) {
         process.stdout.write(`${pack.assetVersion}: ${pack.route.zones.length} of ${TARGET_PLACE_COUNT} target places.\n`);
       }

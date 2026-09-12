@@ -118,15 +118,17 @@ function actionForRow(
   };
   if (row.kind === "conversation" || row.kind === "greeting") {
     const script = row.kind === "conversation" ? conversationScript(pack, row.variant) : null;
+    const kind = script ? "conversation" : "greeting";
     const lines = script?.lines ?? [];
     const speakerName = conversationSpeakerName(pack, script);
     const segments = conversationSegments(lines);
     const segment = [...segments].reverse().find((candidate) => elapsedSeconds >= candidate.start) ?? segments[0]!;
     return {
       ...base,
+      kind,
       state: CONVERSATION_STATES[segment.phase],
       // A script the pinned pack no longer carries plays as the wordless greeting it can honour.
-      label: activityLabel(script ? "conversation" : "greeting", source, speakerName),
+      label: activityLabel(kind, source, speakerName),
       conversation: {
         scriptId: script?.id ?? null,
         speakerName,

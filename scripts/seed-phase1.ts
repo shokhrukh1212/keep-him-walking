@@ -7,6 +7,7 @@ import {
 // pack is supplied. Historical UUIDs remain only to preserve existing data.
 import { parisCountryPackV1 } from "../src/content/countries/paris.v1";
 import { getCountryPack } from "../src/content/countries/registry";
+import { firstPlaceWithTag } from "../src/lib/content/places";
 
 const JOURNEY_ID = "00000000-0000-4000-8000-000000000001";
 const VOTE_ID = "30000000-0000-4000-8000-000000000001";
@@ -146,13 +147,13 @@ const { error: optionsError } = await supabase.from("vote_options").upsert([
   {
     id: OPTION_PLOV_ID,
     vote_id: VOTE_ID,
-    label: pack.route.zones[2]?.label ?? "Explore the market",
+    label: firstPlaceWithTag(pack, "market")?.label ?? "Explore the market",
     display_order: 0,
   },
   {
     id: OPTION_CHORSU_ID,
     vote_id: VOTE_ID,
-    label: pack.route.zones[4]?.label ?? "Reach the landmark",
+    label: firstPlaceWithTag(pack, "landmark")?.label ?? "Reach the landmark",
     display_order: 1,
   },
 ]);

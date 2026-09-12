@@ -282,7 +282,7 @@ function routeSchemaWithDistanceDefaults() {
         const value = zone as Record<string, unknown>;
         const kind = value.kind
           ?? DEFAULT_ZONE_KINDS[index]
-          ?? DEFAULT_ZONE_KINDS[DEFAULT_ZONE_KINDS.length - 1];
+          ?? "lanes";
         return {
           ...value,
           lengthMetres: value.lengthMetres
@@ -489,6 +489,14 @@ export const countryPackV3Schema = baseCountryPackSchema
         code: "custom",
         path: ["route", "zones"],
         message: "Place ids must be unique within a manifest",
+      });
+    }
+    const placesWithRenditions = pack.route.zones.filter((zone) => zone.variants).length;
+    if (placesWithRenditions > 0 && placesWithRenditions !== pack.route.zones.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["route", "zones"],
+        message: "A versioned place manifest must provide renditions for every place",
       });
     }
     for (const group of pack.preloadGroups) {

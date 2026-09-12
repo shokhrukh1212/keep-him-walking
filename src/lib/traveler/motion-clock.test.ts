@@ -136,6 +136,7 @@ describe("conversations", () => {
     expect(greeting.label).toBe("Saying hello");
     expect(greeting.conversation?.lines).toEqual([]);
     const missing = travelerMotionAt(pack, 500.5, 9_000, [stop("conversation", 500, { variant: "retired-script" })]).action!;
+    expect(missing.kind).toBe("greeting");
     expect(missing.label).toBe("Saying hello");
     expect(missing.conversation?.lines).toEqual([]);
   });

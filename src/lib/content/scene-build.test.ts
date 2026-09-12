@@ -20,13 +20,8 @@ const SMALL: SceneBuildOptions = {
 };
 
 const pack = {
-  version: 1, country: "Portugal", city: "Lisbon", iso2: "PT", lat: 38.7223, lon: -9.1393,
+  country: "Portugal", city: "Lisbon", iso2: "PT", lat: 38.7223, lon: -9.1393,
   timezone: "Europe/Lisbon", neighbours: [],
-  zones: {
-    arrival: "a broad riverside square", lanes: "steep residential lanes", market: "a produce market",
-    cafe: "a small pastry cafe", landmark: "a viewpoint over the river",
-  },
-  landmark: "Miradouro at dusk",
   localPhrase: { original: "Bem-vindo", transliteration: "Bem-vindo", gloss: "Welcome", pronunciation: "beng VEEN-doo" },
   resident: { name: "Ines", role: "tram conductor", variantId: "lisbon-resident-a" },
   dialogue: [

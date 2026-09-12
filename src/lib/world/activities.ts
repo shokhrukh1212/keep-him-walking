@@ -11,10 +11,8 @@ import type { ConversationScript, CountryPack, DialogueLine, TravelerState } fro
 export const CROWD_ACTIVITY_KINDS = ["wave", "drink", "photo"] as const;
 export type CrowdActivityKind = (typeof CROWD_ACTIVITY_KINDS)[number];
 
-/** His own occasional actions, played as a shuffle bag: all nine before any repeats. */
-export const OWN_ACTION_KINDS = [
-  "drink", "photo", "phone", "look_around", "stretch", "tie_shoe", "yawn", "lean", "laugh",
-] as const;
+/** The two autonomous actions requested for the 4–6 minute cadence. */
+export const OWN_ACTION_KINDS = ["drink", "photo"] as const;
 export type OwnActionKind = (typeof OWN_ACTION_KINDS)[number];
 
 export const ACTIVITY_KINDS = [
@@ -122,16 +120,25 @@ export function conversationDurationSeconds(lines: readonly DialogueLine[]): num
   return round3(conversationSegments(lines).reduce((total, segment) => total + segment.duration, 0));
 }
 
-/** The pack's reviewed scripts. A pack without a rotation offers its single encounter as the story. */
+export function conversationReviewIsUsable(review: ConversationScript["review"]): boolean {
+  return review === "approved" || review === "creator_reviewed";
+}
+
+/** Only reviewed scripts. Pending words must never reach a live schedule or transcript. */
 export function conversationScripts(pack: CountryPack): ConversationScript[] {
-  if (pack.schemaVersion === 3 && pack.conversations.length > 0) return pack.conversations;
+  if (pack.schemaVersion === 3 && pack.conversations.length > 0) {
+    return pack.conversations.filter((script) => conversationReviewIsUsable(script.review));
+  }
   const encounter = pack.encounters[0];
   if (!encounter) return [];
+  const reviewed = pack.schemaVersion === 3
+    && (pack.culturalReview.status === "approved" || pack.culturalReview.status === "creator_reviewed");
+  if (!reviewed) return [];
   return [{
     id: encounter.id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "story",
     placeTags: [],
     role: "story",
-    review: pack.schemaVersion === 3 && pack.culturalReview.status === "approved" ? "approved" : "pending",
+    review: pack.culturalReview.status === "approved" ? "approved" : "creator_reviewed",
     lines: encounter.lines.slice(0, 8),
   }];
 }

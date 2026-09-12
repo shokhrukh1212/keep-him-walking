@@ -24,13 +24,13 @@ const line = (speaker: "npc" | "traveler", text: string) => ({ speaker, text, mo
 const pack: CountryPackV3 = countryPackV3Schema.parse({
   ...parisCountryPackV1,
   conversations: [
-    { id: "story-welcome", role: "story", lines: parisCountryPackV1.encounters[0]!.lines },
-    { id: "station-hello", placeTags: ["arrival"], lines: [line("npc", parisCountryPackV1.encounters[0]!.lines[0]!.text), line("traveler", "Yes.")] },
-    { id: "canal-advice", placeTags: ["lanes", "arrival"], lines: [line("npc", "Follow the canal."), line("traveler", "I will.")] },
-    { id: "market-peaches", placeTags: ["market"], lines: [line("npc", "Try the peaches."), line("traveler", "Merci!")] },
-    { id: "cafe-slow", placeTags: ["cafe"], lines: [line("npc", "Nobody rushes here."), line("traveler", "Good.")] },
-    { id: "river-books", placeTags: ["landmark"], lines: [line("npc", "The bookstalls open soon."), line("traveler", "Then I'll look.")] },
-    { id: "anywhere-hello", lines: [line("npc", "Lovely afternoon."), line("traveler", "It really is.")] },
+    { id: "story-welcome", role: "story", review: "approved", lines: parisCountryPackV1.encounters[0]!.lines },
+    { id: "station-hello", review: "approved", placeTags: ["arrival"], lines: [line("npc", parisCountryPackV1.encounters[0]!.lines[0]!.text), line("traveler", "Yes.")] },
+    { id: "canal-advice", review: "approved", placeTags: ["lanes", "arrival"], lines: [line("npc", "Follow the canal."), line("traveler", "I will.")] },
+    { id: "market-peaches", review: "approved", placeTags: ["market"], lines: [line("npc", "Try the peaches."), line("traveler", "Merci!")] },
+    { id: "cafe-slow", review: "approved", placeTags: ["cafe"], lines: [line("npc", "Nobody rushes here."), line("traveler", "Good.")] },
+    { id: "river-books", review: "approved", placeTags: ["landmark"], lines: [line("npc", "The bookstalls open soon."), line("traveler", "Then I'll look.")] },
+    { id: "anywhere-hello", review: "approved", lines: [line("npc", "Lovely afternoon."), line("traveler", "It really is.")] },
   ],
 });
 
@@ -56,10 +56,11 @@ describe("activity slots", () => {
     }
   });
 
-  it("uses all nine actions before any repeats and never the same one twice in a row", () => {
-    const kinds = Array.from({ length: 9 * 12 }, (_, index) => ownActionKind(SEED, index));
+  it("alternates drink and photo without an immediate repeat", () => {
+    const kinds = Array.from({ length: OWN_ACTION_KINDS.length * 12 }, (_, index) => ownActionKind(SEED, index));
     for (let round = 0; round < 12; round += 1) {
-      expect(new Set(kinds.slice(round * 9, round * 9 + 9)).size).toBe(OWN_ACTION_KINDS.length);
+      const start = round * OWN_ACTION_KINDS.length;
+      expect(new Set(kinds.slice(start, start + OWN_ACTION_KINDS.length)).size).toBe(OWN_ACTION_KINDS.length);
     }
     for (let index = 1; index < kinds.length; index += 1) expect(kinds[index]).not.toBe(kinds[index - 1]);
   });

@@ -1,5 +1,6 @@
 import { storyBeatPlaceTag, type ConversationScript, type CountryPack, type RouteZone } from "@/lib/content/schema";
 import type { ScheduledActionView } from "@/lib/contracts";
+import { placeTagsOf } from "@/lib/content/places";
 import {
   OWN_ACTION_KINDS,
   actionDurationSeconds,
@@ -60,9 +61,7 @@ function jitter(seed: string, stream: string, index: number): number {
   return deterministicVariant(`${seed}:${stream}`, index, SLOT_JITTER_SECONDS * 2 + 1) - SLOT_JITTER_SECONDS;
 }
 
-export function placeTagsOf(zone: RouteZone): string[] {
-  return zone.tags && zone.tags.length > 0 ? zone.tags : [zone.kind];
-}
+export { placeTagsOf } from "@/lib/content/places";
 
 function placeAt(pack: CountryPack, walkingSecond: number): RouteZone {
   return pack.route.zones[scenePositionAt(pack, walkingSecond).zoneIndex]!;
@@ -89,17 +88,12 @@ function shuffled<T>(items: readonly T[], seed: string): T[] {
   return result;
 }
 
-/** A shuffle bag: all nine actions before any repeats, and never the same one twice in a row. */
+/** Alternate the eligible drink/photo actions without an immediate repeat. */
 export function ownActionKind(seed: string, index: number): OwnActionKind {
   const size = OWN_ACTION_KINDS.length;
   const safeIndex = Math.max(0, Math.floor(index));
-  const round = Math.floor(safeIndex / size);
-  const bag = shuffled(OWN_ACTION_KINDS, `${seed}:actions:${round}`);
-  if (round > 0) {
-    const previous = shuffled(OWN_ACTION_KINDS, `${seed}:actions:${round - 1}`);
-    if (bag[0] === previous[size - 1]) [bag[0], bag[1]] = [bag[1]!, bag[0]!];
-  }
-  return bag[safeIndex % size]!;
+  const offset = deterministicVariant(`${seed}:actions`, 0, size);
+  return OWN_ACTION_KINDS[(offset + safeIndex) % size]!;
 }
 
 /** The once-a-day stories, each on the first visit to the first place carrying its tag. */

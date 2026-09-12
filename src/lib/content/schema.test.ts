@@ -6,7 +6,6 @@ import {
   DEFAULT_DAY_ROUTE_METRES,
   DEFAULT_MARATHON_METRES,
   DEFAULT_ZONE_LENGTH_METRES,
-  DEFAULT_ZONE_KINDS,
 } from "./schema";
 import type { CountryPackV3 } from "./schema";
 
@@ -96,11 +95,10 @@ describe("Phase 3 editorial buffer", () => {
   });
 });
 
-describe("zone kind", () => {
-  it("names each zone by position so consumers stop matching city-specific ids", () => {
+describe("zone semantics", () => {
+  it("keeps a semantic tag on every current place without constraining manifest length", () => {
     for (const pack of registeredCountryPacks()) {
-      expect(pack.route.zones.map((zone) => zone.kind))
-        .toEqual(DEFAULT_ZONE_KINDS.slice(0, pack.route.zones.length));
+      expect(pack.route.zones.every((zone) => zone.tags.length > 0)).toBe(true);
     }
   });
 
@@ -165,24 +163,37 @@ describe("variable place manifests", () => {
     const parsed = countryPackV3Schema.parse(withPlaces(10));
     expect(parsed.route.sceneVisitSeconds).toBe(420);
     expect(parsed.route.zones[3]!.tags).toEqual(["cafe"]);
-    expect(parsed.route.zones[7]!.tags).toEqual(["landmark"]);
+    expect(parsed.route.zones[7]!.tags).toEqual(["lanes"]);
   });
 
   it("keeps explicit tags, a description and content-addressed renditions", () => {
     const source = withPlaces(2);
-    Object.assign((source.route as { zones: Record<string, unknown>[] }).zones[1]!, {
-      tags: ["canal", "lanes"],
-      description: "A quiet canal with an iron footbridge.",
-      variants: {
+    const zones = (source.route as { zones: Record<string, unknown>[] }).zones;
+    const variants = {
         nominalWidth: 3_600,
         nominalHeight: 1_200,
         city: [{ url: "/scenes/paris/v2/places/p/city-full-1920.0123456789.webp", width: 1_920, height: 640, bytes: 190_000 }],
-      },
+    };
+    Object.assign(zones[0]!, { variants });
+    Object.assign(zones[1]!, {
+      tags: ["canal", "lanes"],
+      description: "A quiet canal with an iron footbridge.",
+      variants,
     });
     const zone = countryPackV3Schema.parse(source).route.zones[1]!;
     expect(zone.tags).toEqual(["canal", "lanes"]);
     expect(zone.description).toBe("A quiet canal with an iron footbridge.");
     expect(zone.variants).toMatchObject({ city: [{ crop: "full" }], sky: [], ground: [], night: [] });
+  });
+
+  it("rejects a partly migrated rendition manifest", () => {
+    const source = withPlaces(3);
+    (source.route as { zones: Record<string, unknown>[] }).zones[0]!.variants = {
+      nominalWidth: 3_600,
+      nominalHeight: 1_200,
+      city: [{ url: "/scenes/test/v2/places/one/city-full-1920.0123456789.webp", width: 1_920, height: 640, bytes: 190_000 }],
+    };
+    expect(() => countryPackV3Schema.parse(source)).toThrow(/renditions for every place/);
   });
 
   it("rejects duplicate conversation scripts", () => {

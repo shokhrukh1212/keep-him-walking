@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "country": "France",
   "city": "Paris",
   "iso2": "FR",
@@ -7,14 +6,6 @@
   "lon": 2.3522,
   "timezone": "Europe/Paris",
   "neighbours": [],
-  "zones": {
-    "arrival": "The first steps outside Gare du Nord, with the station held once in the middle distance.",
-    "lanes": "A quiet Canal Saint-Martin promenade with plane trees and an iron footbridge.",
-    "market": "An intimate Marais market street inspired by the covered passages around Marché des Enfants Rouges.",
-    "cafe": "A calm Left Bank corner café with an open side street and empty tables behind the walking line.",
-    "landmark": "A broad Seine promenade opening onto a single Eiffel Tower view at golden hour."
-  },
-  "landmark": "The Seine and Eiffel Tower",
   "localPhrase": {
     "original": "Bonjour, je découvre Paris à pied.",
     "transliteration": "Bon-zhoor, zhuh day-koovr Pa-ree ah pyay.",
