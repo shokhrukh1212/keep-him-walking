@@ -1,44 +1,44 @@
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { expect, test, type BrowserContext } from "@playwright/test";
-import { parisCountryPackV2 } from "../../src/content/countries/paris.v2";
-import { conversationDurationSeconds, conversationScript } from "../../src/lib/world/activities";
+import { conversationDurationSeconds } from "../../src/lib/world/activities";
 import { evidenceRoot, installJourneyApi, sampleFrames, setRawSeconds, settled, type JourneyState } from "./helpers/journey-api";
 
 test.use({ deviceScaleFactor: 1.5 });
 
-test("captures cold and settled launch layouts at the target widths", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium", "Each viewport is set explicitly");
-  test.setTimeout(180_000);
-  await mkdir(evidenceRoot, { recursive: true });
-  const state: JourneyState = { rawSeconds: 90 };
-  await installJourneyApi(page, state);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.screenshot({ path: `${evidenceRoot}/desktop-1440-cold.png` });
-  await settled(page);
-
-  for (const viewport of [
-    { width: 1440, height: 900 },
-    { width: 768, height: 1024 },
-    { width: 667, height: 375 },
-    { width: 390, height: 844 },
-    { width: 320, height: 568 },
-  ]) {
+for (const viewport of [
+  { width: 1440, height: 900 },
+  { width: 768, height: 1024 },
+  { width: 667, height: 375 },
+  { width: 390, height: 844 },
+  { width: 320, height: 568 },
+]) {
+  test(`captures the launch layout at ${viewport.width}×${viewport.height}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "Each viewport is set explicitly");
+    test.setTimeout(180_000);
+    await mkdir(evidenceRoot, { recursive: true });
+    const state: JourneyState = { rawSeconds: 90 };
+    await installJourneyApi(page, state);
     await page.setViewportSize(viewport);
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    if (viewport.width === 1440) {
+      await page.screenshot({ path: `${evidenceRoot}/desktop-1440-cold.png` });
+    }
+    await settled(page);
     await page.waitForTimeout(800);
-    const dimensions = await page.evaluate(() => ({
+    const measurements = await page.evaluate(() => ({
       innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
+      controlHeights: [...document.querySelectorAll<HTMLElement>(".reaction-button, .sound-toggle, .compact-dock button")]
+        .filter((control) => control.getClientRects().length > 0)
+        .map((control) => control.getBoundingClientRect().height),
     }));
-    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.innerWidth);
-    for (const control of await page.locator(".reaction-button, .sound-toggle, .compact-dock button").all()) {
-      const box = await control.boundingBox();
-      if (box) expect(box.height).toBeGreaterThanOrEqual(44);
-    }
+    expect(measurements.scrollWidth).toBeLessThanOrEqual(measurements.innerWidth);
+    expect(measurements.controlHeights.length).toBeGreaterThan(0);
+    expect(Math.min(...measurements.controlHeights)).toBeGreaterThanOrEqual(44);
     await expect(page.getByRole("button", { name: /^Sound off/ })).toBeInViewport();
     await page.screenshot({ path: `${evidenceRoot}/settled-${viewport.width}x${viewport.height}.png` });
-  }
-});
+  });
+}
 
 test("keeps one world through modals and a seven-minute place change", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "The desktop measurement runs once");
@@ -95,11 +95,10 @@ test("keeps one world through modals and a seven-minute place change", async ({ 
   }, null, 2)}\n`);
 });
 
-test("records a short motion review: a modal, a place change and a conversation", async ({ browser }, testInfo) => {
+test("records a short motion review: a modal, a place change and a wordless greeting", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "The recording runs once");
   test.setTimeout(180_000);
   await mkdir(evidenceRoot, { recursive: true });
-  const script = conversationScript(parisCountryPackV2, "paris-canal-advice")!;
   const context: BrowserContext = await browser.newContext({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 1.5,
@@ -119,17 +118,16 @@ test("records a short motion review: a modal, a place change and a conversation"
   await expect(world).toHaveAttribute("data-zone-id", "paris-lanes", { timeout: 30_000 });
   const at = 432;
   state.scheduled = [{
-    kind: "conversation",
+    kind: "greeting",
     atActiveSecond: at,
-    endsAtActiveSecond: at + conversationDurationSeconds(script.lines),
-    variant: script.id,
-    occurrenceKey: "conversation:e2e-review",
+    endsAtActiveSecond: at + conversationDurationSeconds([]),
+    occurrenceKey: "greeting:e2e-review",
     source: "system",
   }];
   const status = page.getByRole("status", { name: /Walking rule/ });
-  await expect(status).toContainText("Talking with Camille", { timeout: 30_000 });
-  await expect(page.locator(".dialogue-bubble")).toBeVisible({ timeout: 20_000 });
-  await page.screenshot({ path: `${evidenceRoot}/conversation-390.png` });
+  await expect(status).toContainText("Saying hello", { timeout: 30_000 });
+  await expect(page.locator(".dialogue-bubble")).toHaveCount(0);
+  await page.screenshot({ path: `${evidenceRoot}/greeting-390.png` });
   await page.waitForTimeout(4_000);
   await context.close();
   if (video) await copyFile(await video.path(), `${evidenceRoot}/mobile-motion-review.webm`);

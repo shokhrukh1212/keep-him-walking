@@ -814,11 +814,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         sleeping: waitingBehavior.phase === "sleep",
         joining: snapshot.mode === "live" && heartbeat === null,
       });
-  const distanceFreshness = snapshot.mode === "live" && connectionStatus !== "live"
-    ? "reconnecting" as const
-    : distanceMetres > routeRuntime.globalDistanceMetres + 0.001
-      ? "extrapolated" as const
-      : "last confirmed" as const;
+  const confirmedDistance = snapshot.mode === "live" ? distanceMetres : null;
+  const distanceFreshness = snapshot.mode !== "live"
+    ? "unavailable" as const
+    : connectionStatus !== "live"
+      ? "reconnecting" as const
+      : distanceMetres > routeRuntime.globalDistanceMetres + 0.001
+        ? "extrapolated" as const
+        : "last confirmed" as const;
   const sponsorLabel = sponsorPriceCents === null ? "Sponsor a day" : `Sponsor a day · ${formatPriceUsd(sponsorPriceCents)}`;
 
   const acceptVote = (optionId: string, totalBallots: number) => {
@@ -894,7 +897,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         label={walkingStatus.text}
         tone={walkingStatus.tone}
       />
-      {snapshot.journeyState !== "prelaunch" ? <ReactionButtons
+      {snapshot.journeyState !== "prelaunch" && snapshot.mode === "live" ? <ReactionButtons
         counts={heartbeat?.reactions.counts ?? snapshot.reactions.counts}
         activeViewers={activeViewers}
         enabled={snapshot.mode === "live" && connectionStatus === "live"}
@@ -908,7 +911,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         }}
       /> : null}
       {snapshot.journeyState !== "prelaunch" ? <GoalBar
-        distanceMetres={distanceMetres}
+        distanceMetres={confirmedDistance}
         dailyGoalMetres={snapshot.assets.dayRouteMetres}
         marathonMetres={snapshot.assets.marathonMetres}
         freshness={distanceFreshness}
@@ -973,7 +976,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           currentPlaceIndex={routePosition.zoneIndex}
           secondsToNextVisit={routePosition.secondsToNextVisit}
           visitSeconds={routePosition.visitSeconds}
-          distanceMetres={distanceMetres}
+          distanceMetres={confirmedDistance}
           dailyGoalMetres={snapshot.assets.dayRouteMetres}
           marathonMetres={snapshot.assets.marathonMetres}
           freshness={distanceFreshness}

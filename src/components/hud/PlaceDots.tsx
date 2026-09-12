@@ -25,6 +25,7 @@ export function PlaceDots({ places, currentIndex, secondsToNextVisit, visitSecon
   const [openId, setOpenId] = useState<string | null>(null);
   const popoverId = useId();
   const root = useRef<HTMLDivElement>(null);
+  const currentDot = useRef<HTMLButtonElement>(null);
   const count = places.length;
   const stop = stopLabel(currentIndex, count);
   const eta = nextPlaceEta(secondsToNextVisit);
@@ -42,6 +43,12 @@ export function PlaceDots({ places, currentIndex, secondsToNextVisit, visitSecon
       document.removeEventListener("pointerdown", onPointerDown);
     };
   }, [openId]);
+
+  useEffect(() => {
+    if (typeof currentDot.current?.scrollIntoView === "function") {
+      currentDot.current.scrollIntoView({ block: "nearest", inline: "center" });
+    }
+  }, [currentIndex]);
 
   if (count === 0) return null;
   const openIndex = places.findIndex((place) => place.id === openId);
@@ -63,6 +70,7 @@ export function PlaceDots({ places, currentIndex, secondsToNextVisit, visitSecon
               <button
                 type="button"
                 className="place-dot"
+                ref={current ? currentDot : undefined}
                 data-current={current}
                 aria-current={current ? "step" : undefined}
                 aria-expanded={openId === place.id}

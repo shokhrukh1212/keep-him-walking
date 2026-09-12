@@ -5,10 +5,11 @@ import { distanceProgress, formatGoalKm } from "@/lib/world/progress-copy";
 import { PlaceDots, type PlaceDot } from "./PlaceDots";
 
 type Props = {
-  distanceMetres: number;
+  /** Null while the server has not confirmed a live distance. */
+  distanceMetres: number | null;
   dailyGoalMetres: number;
   marathonMetres: number;
-  freshness: "extrapolated" | "last confirmed" | "reconnecting";
+  freshness: "extrapolated" | "last confirmed" | "reconnecting" | "unavailable";
   places: readonly PlaceDot[];
   currentPlaceIndex: number;
   secondsToNextVisit: number;
@@ -26,9 +27,9 @@ export function GoalBar({
 }: Props) {
   const [infoOpen, setInfoOpen] = useState(false);
   const infoId = useId();
-  const progress = distanceProgress(distanceMetres, dailyGoalMetres, marathonMetres);
+  const progress = distanceMetres === null ? null : distanceProgress(distanceMetres, dailyGoalMetres, marathonMetres);
   return (
-    <section className="goal-bar" data-hud-region="goal" data-goal={progress.goal} data-marathon={progress.goal !== "daily"}>
+    <section className="goal-bar" data-hud-region="goal" data-goal={progress?.goal ?? "unavailable"} data-marathon={Boolean(progress && progress.goal !== "daily")}>
       <PlaceDots
         places={places}
         currentIndex={currentPlaceIndex}
@@ -37,12 +38,12 @@ export function GoalBar({
       />
       <div className="goal-distance">
         <div className="goal-track" aria-hidden="true">
-          <span style={{ width: `${progress.fill * 100}%` }} />
+          {progress ? <span style={{ width: `${progress.fill * 100}%` }} /> : null}
         </div>
         <p className="goal-copy">
-          <strong aria-label={progress.text}>
-            <span className="goal-copy-long" aria-hidden="true">{progress.text}</span>
-            <span className="goal-copy-short" aria-hidden="true">{progress.shortText}</span>
+          <strong aria-label={progress?.text ?? "Daily distance unavailable"}>
+            <span className="goal-copy-long" aria-hidden="true">{progress?.text ?? "Daily distance unavailable"}</span>
+            <span className="goal-copy-short" aria-hidden="true">{progress?.shortText ?? "Distance unavailable"}</span>
           </strong>
           <small className="goal-freshness" data-freshness={freshness}>{freshness}</small>
           <button

@@ -16,6 +16,7 @@ export type JourneyState = {
   vote?: VoteView | null;
   sessions?: Set<string>;
   heartbeats?: number;
+  assets?: BootstrapSnapshot["assets"];
 };
 
 export function setRawSeconds(state: JourneyState, seconds: number) {
@@ -47,9 +48,15 @@ export function journeySnapshot(state: JourneyState): BootstrapSnapshot {
   const seconds = currentSeconds(state);
   return {
     ...base,
+    assets: state.assets ?? base.assets,
     mode: "live",
     firstVisit: false,
-    countryDay: { ...base.countryDay, id: dayId, cityName: state.cityName ?? base.countryDay.cityName },
+    countryDay: {
+      ...base.countryDay,
+      id: dayId,
+      cityName: state.cityName ?? base.countryDay.cityName,
+      scenePackId: state.assets?.assetVersion ?? base.countryDay.scenePackId,
+    },
     refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
     presence: { activeViewers: 1, status: "live", ttlSeconds: 50, waitingSince: null },
     reactions: reactions(state),

@@ -34,6 +34,15 @@ describe("GoalBar", () => {
     expect(container.querySelector(".goal-track span")).toHaveStyle({ width: "50%" });
   });
 
+  it("does not invent a distance before the live server confirms one", () => {
+    const { container } = renderBar({ distanceMetres: null, freshness: "unavailable" });
+    expect(screen.getByLabelText("Daily distance unavailable")).toBeInTheDocument();
+    expect(screen.getByText("unavailable")).toBeInTheDocument();
+    expect(container.querySelector(".goal-track span")).not.toBeInTheDocument();
+    expect(container.querySelector(".goal-bar")).toHaveAttribute("data-marathon", "false");
+    expect(screen.queryByText(/0\.0 \/ 8 km/)).not.toBeInTheDocument();
+  });
+
   it("generates one dot per place and marks the current stop", () => {
     renderBar();
     expect(screen.getByRole("list")).toHaveAccessibleName("Stop 2 of 3. Next place in about 5 minutes of walking.");

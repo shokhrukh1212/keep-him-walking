@@ -14,10 +14,12 @@ type Entry<T> = { refs: number; promise: Promise<T> };
 export class PlaceTextureCache<T> {
   private readonly entries = new Map<string, Entry<T>>();
   private releasing: string[] = [];
+  private disposed = false;
 
   constructor(private readonly source: TextureSource<T>) {}
 
   acquire(url: string): Promise<T> {
+    if (this.disposed) return Promise.reject(new Error("Texture cache is disposed"));
     let entry = this.entries.get(url);
     if (!entry) {
       const created: Entry<T> = {
@@ -61,6 +63,19 @@ export class PlaceTextureCache<T> {
 
   pendingReleases(): number {
     return this.releasing.length;
+  }
+
+  /** The scene is gone, so every texture can be unloaded as soon as its load settles. */
+  dispose(): string[] {
+    if (this.disposed) return [];
+    this.disposed = true;
+    const entries = [...this.entries];
+    this.entries.clear();
+    this.releasing = [];
+    for (const [url, entry] of entries) {
+      void entry.promise.then(() => this.source.unload(url), () => undefined);
+    }
+    return entries.map(([url]) => url).sort();
   }
 }
 

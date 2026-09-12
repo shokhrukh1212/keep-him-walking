@@ -78,6 +78,9 @@ test("a server 503 is identified as unavailable service, not lost internet", asy
   await page.goto("/");
   await expect(page.locator(".connection-banner")).toContainText("No journey day is active");
   await expect(page.locator(".traveler-state")).toContainText("Preview only · waiting for the live journey");
+  await expect(page.locator(".reaction-buttons")).toHaveCount(0);
+  await expect(page.getByLabel("Daily distance unavailable")).toBeAttached();
+  await expect(page.locator(".goal-freshness")).toHaveText("unavailable");
 });
 
 test.describe("private sign-in", () => {

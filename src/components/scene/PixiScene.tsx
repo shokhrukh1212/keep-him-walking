@@ -563,6 +563,7 @@ export function PixiScene({
         observer.observe(element);
         cleanup = () => {
           observer.disconnect();
+          cache.dispose();
           app.destroy(true, { children: true });
           shadowTexture.destroy(true);
           worldGrade.destroy();
@@ -744,8 +745,13 @@ export function PixiScene({
 
           // Premium cafe sign. It hangs on the near plane and scrolls with the
           // pavement, so it reads as part of the street rather than an overlay.
-          const signUrl = current && zoneHasTag(current.zone, "cafe") ? state.sponsorSignUrl : null;
+          const rawSignUrl = current && zoneHasTag(current.zone, "cafe") ? state.sponsorSignUrl : null;
+          const signUrl = rawSignUrl ? publicAssetUrl(rawSignUrl) : null;
           if (signUrl !== sign.url) {
+            if (sign.url) {
+              sign.sprite.texture = Texture.EMPTY;
+              cache.release(sign.url);
+            }
             sign.url = signUrl;
             sign.sprite.visible = false;
             // Drop the old texture's readiness immediately, or a sponsor change
@@ -753,7 +759,7 @@ export function PixiScene({
             sign.ready = false;
             const generation = ++sign.generation;
             if (signUrl) {
-              void Assets.load(signUrl).then((texture: PixiTexture) => {
+              void cache.acquire(signUrl).then((texture: PixiTexture) => {
                 if (disposed || generation !== sign.generation) return;
                 sign.sprite.texture = texture;
                 sign.ready = true;
@@ -862,12 +868,16 @@ export function PixiScene({
           // ramp as the night grade. Absent art simply means no lights.
           const lightsUrl = current?.zone.lightsUrl ? publicAssetUrl(current.zone.lightsUrl) : null;
           if (lightsUrl !== lights.url) {
+            if (lights.url) {
+              windowLights.texture = Texture.EMPTY;
+              cache.release(lights.url);
+            }
             lights.url = lightsUrl;
             lights.ready = false;
             windowLights.visible = false;
             const generation = ++lights.generation;
             if (lightsUrl) {
-              void Assets.load(lightsUrl).then((texture: PixiTexture) => {
+              void cache.acquire(lightsUrl).then((texture: PixiTexture) => {
                 if (disposed || generation !== lights.generation) return;
                 windowLights.texture = texture;
                 lights.ready = true;
@@ -995,7 +1005,9 @@ export function PixiScene({
             const visibleObjects = placeSprites.filter((sprite) => sprite.visible && sprite.parent?.visible !== false).length
               + groundLife.filter((item) => item.visible).length
               + motes.length + [...Object.values(shadows), ...walkerShadows].filter((shadow) => shadow.visible).length;
-            const textureBytes = views.reduce((total, view) => total + view.bytes, 0);
+            const overlayTextureBytes = (sign.ready ? sign.sprite.texture.width * sign.sprite.texture.height * 4 : 0)
+              + (lights.ready ? windowLights.texture.width * windowLights.texture.height * 4 : 0);
+            const textureBytes = views.reduce((total, view) => total + view.bytes, overlayTextureBytes);
             // Test-observable inventory of every texture the world holds on the
             // stage. Assets.load stamps the resolved URL onto the texture label;
             // textures built in the browser (a canvas, a render target) have no

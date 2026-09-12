@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { parisCountryPackV2 } from "../../src/content/countries/paris.v2";
 import type { VoteView } from "../../src/lib/contracts";
 import { evidenceRoot, installJourneyApi, sampleFrames, settled, type JourneyState } from "./helpers/journey-api";
 
@@ -145,39 +146,49 @@ for (const viewport of viewports) {
   });
 }
 
-for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
   test(`place dots come from the manifest and never move him at ${viewport.width}px`, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "Each viewport is set explicitly");
     test.setTimeout(150_000);
     await mkdir(evidenceRoot, { recursive: true });
     // 500 walking seconds: the second place, with 340 s to the next one.
-    const state: JourneyState = { rawSeconds: 500 };
+    // A UI-only ten-place fixture proves the target layout without adding fake
+    // places or duplicated paintings to a published content pack.
+    const assets = structuredClone(parisCountryPackV2);
+    assets.assetVersion = "paris-v2-ten-place-test";
+    assets.route.zones = Array.from({ length: 10 }, (_, index) => ({
+      ...structuredClone(parisCountryPackV2.route.zones[index % parisCountryPackV2.route.zones.length]!),
+      id: `test-place-${index + 1}`,
+      label: `Review place ${index + 1}`,
+    }));
+    const state: JourneyState = { rawSeconds: 500, assets };
     await installJourneyApi(page, state);
     await page.setViewportSize(viewport);
     await page.goto("/");
     await settled(page);
     const world = page.locator(".pixi-scene");
-    await expect(world).toHaveAttribute("data-zone-id", "paris-lanes");
+    await expect(world).toHaveAttribute("data-zone-id", "test-place-2");
 
-    await expect(page.locator(".place-dot")).toHaveCount(5);
-    await expect(page.getByRole("button", { name: "Stop 2 of 5, Canal Saint-Martin, you are here" }))
+    await expect(page.locator(".place-dot")).toHaveCount(10);
+    await expect(page.getByRole("button", { name: "Stop 2 of 10, Review place 2, you are here" }))
       .toHaveAttribute("aria-current", "step");
-    await expect(page.getByRole("list", { name: /^Stop 2 of 5\. Next place in about 6 minutes of walking\.$/ })).toBeAttached();
+    await expect(page.getByRole("list", { name: /^Stop 2 of 10\. Next place in about 6 minutes of walking\.$/ })).toBeAttached();
     await expect(page.locator(".goal-copy strong")).toHaveAttribute("aria-label", /^0\.6 \/ 8 km together · 7%$/);
     await expect(page.locator(".goal-freshness")).toHaveText(/extrapolated|last confirmed/);
     for (const dot of await page.locator(".place-dot").all()) {
       const box = await dot.boundingBox();
-      expect(box!.width).toBeGreaterThanOrEqual(viewport.width <= 600 ? 28 : 44);
-      expect(box!.height).toBeGreaterThanOrEqual(viewport.width <= 600 ? 28 : 44);
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
     }
 
-    const cafe = page.getByRole("button", { name: "Stop 4 of 5, Left Bank café" });
-    await cafe.focus();
+    const ninth = page.getByRole("button", { name: "Stop 9 of 10, Review place 9" });
+    await ninth.scrollIntoViewIfNeeded();
+    await ninth.focus();
     await page.keyboard.press("Enter");
-    await expect(page.locator(".place-popover")).toContainText("Left Bank café");
-    await expect(page.locator(".place-popover")).toContainText("In ~13 walking min");
+    await expect(page.locator(".place-popover")).toContainText("Review place 9");
+    await expect(page.locator(".place-popover")).toContainText("In ~48 walking min");
     await page.waitForTimeout(1_200);
-    await expect(world).toHaveAttribute("data-zone-id", "paris-lanes");
+    await expect(world).toHaveAttribute("data-zone-id", "test-place-2");
     await page.screenshot({ path: `${evidenceRoot}/place-dot-popover-${viewport.width}.png` });
     await page.keyboard.press("Escape");
     await expect(page.locator(".place-popover")).toHaveCount(0);

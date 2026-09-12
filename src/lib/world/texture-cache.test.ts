@@ -62,4 +62,16 @@ describe("place texture cache", () => {
   it("backs off quickly, then gently", () => {
     expect([0, 1, 2, 3, 9].map(textureRetryDelayMs)).toEqual([2_000, 5_000, 15_000, 30_000, 30_000]);
   });
+
+  it("unloads every settled or in-flight texture when the scene is disposed", async () => {
+    const { source, loaded } = fakeSource();
+    const cache = new PlaceTextureCache(source);
+    const loading = Promise.all([cache.acquire("/place.webp"), cache.acquire("/lights.webp")]);
+    expect(cache.dispose()).toEqual(["/lights.webp", "/place.webp"]);
+    await loading;
+    await Promise.resolve();
+    expect(loaded).toEqual(new Set());
+    expect(cache.held()).toEqual([]);
+    await expect(cache.acquire("/late.webp")).rejects.toThrow("disposed");
+  });
 });

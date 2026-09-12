@@ -20,10 +20,10 @@ type Props = {
   currentPlaceIndex: number;
   secondsToNextVisit: number;
   visitSeconds: number;
-  distanceMetres: number;
+  distanceMetres: number | null;
   dailyGoalMetres: number;
   marathonMetres: number;
-  freshness: "extrapolated" | "last confirmed" | "reconnecting";
+  freshness: "extrapolated" | "last confirmed" | "reconnecting" | "unavailable";
   activeViewers: number | null;
   paceRate: number;
   prelaunch: boolean;
@@ -64,7 +64,7 @@ export function JourneyPanel({
   const here = places[currentPlaceIndex] ?? null;
   const stop = stopLabel(currentPlaceIndex, count);
   const eta = nextPlaceEta(secondsToNextVisit);
-  const progress = distanceProgress(distanceMetres, dailyGoalMetres, marathonMetres);
+  const progress = distanceMetres === null ? null : distanceProgress(distanceMetres, dailyGoalMetres, marathonMetres);
   const visitMinutes = Math.max(1, Math.round(visitSeconds / 60));
 
   return (
@@ -103,11 +103,11 @@ export function JourneyPanel({
       <section className="journey-section" aria-labelledby={`${ids}-together`}>
         <h3 className="journey-section-title" id={`${ids}-together`}>Together</h3>
         <p className="journey-distance">
-          <strong>{progress.text}</strong>{" "}
+          <strong>{progress?.text ?? "Daily distance unavailable"}</strong>{" "}
           <small className="goal-freshness" data-freshness={freshness}>{freshness}</small>
         </p>
         <div className="goal-track" aria-hidden="true">
-          <span style={{ width: `${progress.fill * 100}%` }} />
+          {progress ? <span style={{ width: `${progress.fill * 100}%` }} /> : null}
         </div>
         <p className="journey-muted">
           {formatGoalKm(dailyGoalMetres)} km is today&apos;s shared goal, and a {formatGoalKm(marathonMetres)} km marathon

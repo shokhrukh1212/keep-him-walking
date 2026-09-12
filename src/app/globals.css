@@ -3037,7 +3037,8 @@ button:focus-visible,
 .place-popover strong { font-family: Georgia, "Times New Roman", serif; font-size: 1rem; font-weight: 500; }
 .place-popover p { color: rgb(255 243 217 / 72%); }
 .place-dots { position: relative; display: flex; flex: 0 1 auto; align-items: center; gap: 0.5rem; min-width: 0; }
-.place-dots-list { display: flex; align-items: center; margin: 0; padding: 0; list-style: none; }
+.place-dots-list { display: flex; align-items: center; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.place-dots-list li { flex: 0 0 auto; }
 .place-dot {
   display: grid;
   place-items: center;
@@ -3067,8 +3068,15 @@ button:focus-visible,
 .place-dots-eta { color: rgb(255 247 229 / 76%); font-size: 0.64rem; font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) {
   .goal-bar { gap: 0 0.5rem; }
-  .place-dot { width: 1.75rem; height: 1.75rem; }
-  .place-dots { gap: 0.3rem; }
+  .place-dots { display: grid; grid-template-columns: minmax(0, 1fr) auto; flex: 1 1 100%; gap: 0.3rem; width: 100%; }
+  .place-dots-list {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .place-dots-list::-webkit-scrollbar { display: none; }
+  .place-dots-list li { scroll-snap-align: center; }
   .goal-distance { flex-basis: 100%; }
   .goal-copy { justify-content: space-between; }
   .goal-copy-long { display: none; }
