@@ -6,7 +6,8 @@ import type { DialogueLine } from "@/lib/content/schema";
 
 type Props = {
   line: DialogueLine | null;
-  locationLabel?: string;
+  /** Who is speaking, by name: the fictional resident or the traveler. */
+  speakerLabel?: string;
   npcSrc: string;
   motionSeconds?: number;
   reducedMotion?: boolean;
@@ -15,7 +16,7 @@ type Props = {
 
 export function EncounterDialogue({
   line,
-  locationLabel,
+  speakerLabel,
   npcSrc,
   motionSeconds = 0,
   reducedMotion = false,
@@ -38,9 +39,8 @@ export function EncounterDialogue({
       ) : null}
       {line ? (
         <section className={`dialogue-bubble dialogue-${line.speaker}`} aria-live="polite">
-          <span className="eyebrow">{line.speaker === "npc" ? "LOCAL RESIDENT" : "TRAVELER"}</span>
+          <span className="eyebrow">{speakerLabel ?? (line.speaker === "npc" ? "Local resident" : "Traveler")}</span>
           <p>{line.text}</p>
-          {locationLabel ? <small>{locationLabel}</small> : null}
         </section>
       ) : null}
     </>

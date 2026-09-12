@@ -38,6 +38,23 @@ function snapshot(countryDayId: string): BootstrapSnapshot {
   } as unknown as BootstrapSnapshot;
 }
 
+function mockVisibility() {
+  let value: DocumentVisibilityState = "visible";
+  const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, "visibilityState");
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => value });
+  return {
+    set(next: DocumentVisibilityState) { value = next; },
+    restore() {
+      delete (document as unknown as Record<string, unknown>).visibilityState;
+      if (descriptor) Object.defineProperty(Document.prototype, "visibilityState", descriptor);
+    },
+  };
+}
+
+function bodyState(fetchMock: ReturnType<typeof vi.fn>, call: number): string {
+  return JSON.parse(String(fetchMock.mock.calls[call]?.[1]?.body)).state;
+}
+
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -123,6 +140,68 @@ describe("useJourneyPresence country rollover", () => {
     act(() => window.dispatchEvent(new Event("pagehide")));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body)).state).toBe("inactive");
+    unmount();
+  });
+
+  it("sends an active heartbeat as soon as the tab returns during a goodbye", async () => {
+    vi.useFakeTimers();
+    const visibility = mockVisibility();
+    const pending: Array<(value: unknown) => void> = [];
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...heartbeatResponse, nextHeartbeatInMs: 20_000 }) })
+      .mockImplementationOnce(() => new Promise((resolve) => pending.push(resolve)))
+      .mockResolvedValue({ ok: true, json: async () => ({ ...heartbeatResponse, nextHeartbeatInMs: 20_000 }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const { unmount } = renderHook(() => useJourneyPresence({ snapshot: snapshot("day-1"), sceneReady: true, onHeartbeat: vi.fn() }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A quick switch away and back while the goodbye is still on the wire.
+    visibility.set("hidden");
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(bodyState(fetchMock, 1)).toBe("inactive");
+    visibility.set("visible");
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    await act(async () => { pending[0]!({ ok: true, json: async () => ({ ...heartbeatResponse, walking: false, activeViewers: 0 }) }); await vi.advanceTimersByTimeAsync(1_000); });
+
+    // The server just heard "inactive"; a visible viewer must correct that at once,
+    // not after the old 20 s interval.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(bodyState(fetchMock, 2)).toBe("active");
+    visibility.restore();
+    unmount();
+  });
+
+  it("restarts a heartbeat chain lost when a goodbye aborted the beat in flight", async () => {
+    vi.useFakeTimers();
+    const visibility = mockVisibility();
+    const pending: Array<(value: unknown) => void> = [];
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...heartbeatResponse, nextHeartbeatInMs: 20_000 }) })
+      // The regular beat is slow and gets aborted by the goodbye.
+      .mockImplementationOnce((_url, options) => new Promise((_resolve, reject) => options.signal.addEventListener("abort", () => reject(new Error("aborted")))))
+      // The goodbye itself is slow.
+      .mockImplementationOnce(() => new Promise((resolve) => pending.push(resolve)))
+      .mockResolvedValue({ ok: true, json: async () => ({ ...heartbeatResponse, nextHeartbeatInMs: 20_000 }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const { result, unmount } = renderHook(() => useJourneyPresence({ snapshot: snapshot("day-1"), sceneReady: true, onHeartbeat: vi.fn() }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20_000); });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    visibility.set("hidden");
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    visibility.set("visible");
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    await act(async () => { pending[0]!({ ok: true, json: async () => heartbeatResponse }); await vi.advanceTimersByTimeAsync(0); });
+
+    // Nothing else will ever call heartbeat() here: no Realtime channel, no network event.
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    const states = fetchMock.mock.calls.slice(3).map((_, index) => bodyState(fetchMock, index + 3));
+    expect(states.length).toBeGreaterThanOrEqual(2);
+    expect(states.every((state) => state === "active")).toBe(true);
+    expect(result.current.status).toBe("live");
+    visibility.restore();
     unmount();
   });
 

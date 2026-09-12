@@ -69,6 +69,13 @@ export type WorldCommand = {
 
 export type QualityTier = "low" | "medium" | "high";
 
+/**
+ * Whether the world is showing a real painting. `retrying` keeps the last good
+ * painting on screen; `fallback` is the neutral street drawn only when no painting
+ * has loaded yet. Neither ever claims to depict the current place.
+ */
+export type SceneAssetState = "loading" | "ready" | "retrying" | "fallback";
+
 export type WorldDiagnosticsSnapshot = {
   routeSeconds: number;
   distance: number;

@@ -3,8 +3,16 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CountryPack } from "@/lib/content/schema";
+import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import { scenePositionAt } from "@/lib/world/route-clock";
-import type { QualityTier, RouteRuntime, WalkingClock, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
+import type {
+  QualityTier,
+  RouteRuntime,
+  SceneAssetState,
+  WalkingClock,
+  WorldCommand,
+  WorldDiagnosticsSnapshot,
+} from "@/lib/world/types";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import type { TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { StaticScene } from "./StaticScene";
@@ -15,11 +23,11 @@ import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3
 import type { JourneyWeather } from "@/lib/weather/open-meteo";
 
 const PixiScene = dynamic(
-  () => import("./PixiScene").then((module) => module.PixiScene),
+  () => import("./PixiScene").then((generated) => generated.PixiScene),
   { ssr: false },
 );
 const ProductCharacterStage3D = dynamic(
-  () => import("@/components/traveler/ProductCharacterStage3D").then((module) => module.ProductCharacterStage3D),
+  () => import("@/components/traveler/ProductCharacterStage3D").then((generated) => generated.ProductCharacterStage3D),
   { ssr: false },
 );
 
@@ -35,13 +43,15 @@ type Props = {
   onWorldCaptureReady?: (capture: CanvasCapture | null) => void;
   onCharacterCaptureReady?: (capture: CanvasCapture | null) => void;
   command: WorldCommand;
-  qualityTier: QualityTier;
+  /** Null until the device has been measured; the canvases wait so they mount once. */
+  qualityTier: QualityTier | null;
   reducedMotion: boolean;
   travelerCommand?: TravelerCommand;
   onTravelerReady?: (ready: boolean) => void;
   onResidentReady?: (ready: boolean) => void;
   onMotionSample?: (frame: {assetVersion:string;motion:TravelerMotionSnapshot}) => void;
   onZoneChange: (zoneId: string, zoneLabel: string) => void;
+  onAssetState?: (state: SceneAssetState) => void;
   onDiagnostics: (snapshot: WorldDiagnosticsSnapshot) => void;
   onWorldFailure: () => void;
   onReady: (renderer: "pixi" | "static") => void;
@@ -66,6 +76,7 @@ export function SceneStage({
   onResidentReady,
   onMotionSample,
   onZoneChange,
+  onAssetState,
   onDiagnostics,
   onWorldFailure,
   onReady,
@@ -118,13 +129,18 @@ export function SceneStage({
     return () => window.clearTimeout(update);
   }, [onReady, pixiFailed]);
   const route = scenePositionAt(pack, routeSeconds);
-  const fallbackUrl = pack.route.zones[route.zoneIndex]?.fallbackUrl ?? pack.scene.fallbackUrl;
+  const zone = pack.route.zones[route.zoneIndex] ?? pack.route.zones[0]!;
+  // The same resolution the live world renders at, so the poster and the world
+  // choose the same rendition.
+  const resolution = qualityTier
+    ? Math.min(window.devicePixelRatio || 1, QUALITY_LIMITS[qualityTier].resolution)
+    : null;
 
   return (
     <div ref={container} className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"}>
-      <StaticScene src={fallbackUrl} zone={pack.route.zones[route.zoneIndex]} assetVersion={pack.assetVersion}
+      <StaticScene zone={zone} assetVersion={pack.assetVersion} resolution={resolution}
         active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
-      {!pixiFailed ? (
+      {qualityTier && !pixiFailed ? (
         <PixiScene
           contacts={contacts}
           grade={grade}
@@ -144,25 +160,28 @@ export function SceneStage({
           travelerCommand={travelerCommand}
           onMotionSample={onMotionSample}
           onZoneChange={onZoneChange}
+          onAssetState={onAssetState}
           onDiagnostics={onDiagnostics}
           onReady={liveReady}
           onFailure={liveFailed}
         />
       ) : null}
-      <ProductCharacterStage3D
-        contacts={contacts}
-        grade={grade}
-        pack={pack}
-        stageFrame={stageFrame}
-        routeRuntime={routeRuntime}
-        scheduledActions={scheduledActions}
-        walkingClock={walkingClock}
-        onCaptureReady={onCharacterCaptureReady}
-        command={travelerCommand}
-        qualityTier={qualityTier}
-        onTravelerAvailability={onTravelerReady}
-        onResidentAvailability={onResidentReady}
-      />
+      {qualityTier ? (
+        <ProductCharacterStage3D
+          contacts={contacts}
+          grade={grade}
+          pack={pack}
+          stageFrame={stageFrame}
+          routeRuntime={routeRuntime}
+          scheduledActions={scheduledActions}
+          walkingClock={walkingClock}
+          onCaptureReady={onCharacterCaptureReady}
+          command={travelerCommand}
+          qualityTier={qualityTier}
+          onTravelerAvailability={onTravelerReady}
+          onResidentAvailability={onResidentReady}
+        />
+      ) : null}
       <div className="scene-grade" aria-hidden="true" />
       <div className="scene-vignette" aria-hidden="true" />
     </div>

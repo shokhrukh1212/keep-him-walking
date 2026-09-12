@@ -63,7 +63,7 @@ export function CharacterReview() {
     playing:!window.matchMedia("(prefers-reduced-motion: reduce)").matches}));
   return <main className={styles.review}>
     {reviewPack&&<div className={styles.world} data-renderer={pixiReady?"pixi":"static"}>
-      <StaticScene src={reviewPack.route.zones[0].fallbackUrl} zone={reviewPack.route.zones[0]}
+      <StaticScene resolution={1} zone={reviewPack.route.zones[0]}
         assetVersion={reviewPack.assetVersion} active={!pixiReady} onStageFrame={publishStage} onReady={noOp} />
       {!pixiFailed&&<PixiScene key={background} pack={reviewPack} contacts={contacts} grade={grade}
         onStageFrame={publishStage} routeSeconds={0} routeRuntime={reviewRuntime} command={reviewCommand}

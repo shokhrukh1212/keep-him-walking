@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
-import type { Texture as PixiTexture } from "pixi.js";
-import type { CountryPack, RouteProp, RouteZone } from "@/lib/content/schema";
+import type { Container as PixiContainer, Graphics as PixiGraphics, Sprite as PixiSprite, Texture as PixiTexture } from "pixi.js";
+import type { CountryPack, RouteZone } from "@/lib/content/schema";
 import { travelerMotionAt, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import {
@@ -16,18 +16,41 @@ import { CHARACTER_HEIGHT_TARGETS } from "@/lib/world/stage-targets";
 import type { TravelerCommand } from "@/lib/traveler/types";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import { activeWalkingSecondsAt, deterministicVariant, scenePositionAt } from "@/lib/world/route-clock";
-import { segmentVariant } from "@/lib/world/segment-sequencer";
-import { composedSegmentSignature } from "@/lib/world/segment-sequencer";
-import type { QualityTier, RouteRuntime, WalkingClock, WorldCommand, WorldDiagnosticsSnapshot } from "@/lib/world/types";
+import { composedSegmentSignature, segmentVariant } from "@/lib/world/segment-sequencer";
+import type {
+  QualityTier,
+  RouteRuntime,
+  SceneAssetState,
+  WalkingClock,
+  WorldCommand,
+  WorldDiagnosticsSnapshot,
+} from "@/lib/world/types";
 import { contactShadowLayout, gradeMatrix, type CharacterContacts, type VisualGrade } from "@/lib/world/visual-grade";
 import type { ScheduledActionView } from "@/lib/contracts";
 import type { JourneyWeather } from "@/lib/weather/open-meteo";
 import { weatherEffect } from "@/lib/weather/effects";
 import { combineGrade, gradeForHour, localHourFraction, nightMix } from "@/lib/world/time-grade";
 import { birdFlights, buntingVisible, steamPuffs, tramPass } from "@/lib/world/ambient";
+import {
+  placeLoadPlan,
+  placeRenditions,
+  renditionRequestFor,
+  shouldReplaceRendition,
+  type PlaceRenditions,
+  type RenditionChoice,
+} from "@/lib/world/scene-assets";
+import { PlaceTextureCache, textureRetryDelayMs } from "@/lib/world/texture-cache";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 
 const EMPTY_SCHEDULED_ACTIONS: readonly ScheduledActionView[] = [];
+/** The next place fades in over the last walking second before the shared clock reaches it. */
+const CROSSFADE_SECONDS = 1;
+/** A painting that arrives after its moment fades in over the one it replaces. */
+const LATE_FADE_MS = 400;
+/** Waits for a resize to settle before asking for a sharper rendition. */
+const UPGRADE_SETTLE_MS = 500;
+/** Every Pixi application this page has created; a remount shows up as a jump. */
+let worldMounts = 0;
 
 type Props = {
   pack: CountryPack;
@@ -49,15 +72,46 @@ type Props = {
   qualityTier: QualityTier;
   travelerCommand?: TravelerCommand;
   onMotionSample?: (frame: {assetVersion:string;motion:TravelerMotionSnapshot}) => void;
+  /** A painting of this place is now on screen. */
   onZoneChange: (zoneId: string, zoneLabel: string) => void;
+  onAssetState?: (state: SceneAssetState) => void;
   onDiagnostics: (snapshot: WorldDiagnosticsSnapshot) => void;
   onReady: () => void;
+  /** WebGL could not start. A painting that fails to load is retried instead. */
   onFailure: () => void;
 };
 
 type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">
   & { scheduledActions: readonly ScheduledActionView[]; walkingClock: WalkingClock | null; weather: JourneyWeather | null;
       sponsorSignUrl: string | null; hundredWatchersAt: string | null };
+
+/** One place's drawable layers. Sprites belong to the view; textures belong to the cache. */
+type PlaceView = {
+  zoneIndex: number;
+  zone: RouteZone;
+  renditions: PlaceRenditions;
+  urls: string[];
+  nominalWidth: number;
+  nominalHeight: number;
+  root: PixiContainer;
+  sky: PixiSprite | null;
+  city: PixiSprite;
+  ground: PixiSprite[];
+  foreground: PixiSprite | null;
+  night: { sprite: PixiSprite; url: string | null; state: "idle" | "loading" | "ready" | "failed" };
+  bytes: number;
+  released: boolean;
+};
+
+function zoneHasTag(zone: RouteZone, tag: string): boolean {
+  return zone.tags.includes(tag) || zone.kind === tag;
+}
+
+function sameRenditions(left: PlaceRenditions, right: PlaceRenditions): boolean {
+  return left.city.url === right.city.url
+    && left.sky?.url === right.sky?.url
+    && left.ground?.url === right.ground?.url;
+}
 
 export function PixiScene({
   pack,
@@ -78,6 +132,7 @@ export function PixiScene({
   travelerCommand,
   onMotionSample,
   onZoneChange,
+  onAssetState,
   onDiagnostics,
   onReady,
   onFailure,
@@ -86,6 +141,7 @@ export function PixiScene({
   const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt });
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
+  const assetStateCallback = useRef(onAssetState);
   const diagnosticsCallback = useRef(onDiagnostics);
   const captureCallback = useRef(onCaptureReady);
 
@@ -93,9 +149,10 @@ export function PixiScene({
     runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
+    assetStateCallback.current = onAssetState;
     diagnosticsCallback.current = onDiagnostics;
     captureCallback.current = onCaptureReady;
-  }, [command, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, walkingClock, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, onMotionSample]);
+  }, [command, onAssetState, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, walkingClock, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -105,7 +162,11 @@ export function PixiScene({
       const element = host.current;
       if (!element) return;
       try {
-        const { Application, Assets, Container, Graphics, Sprite, Texture, ColorMatrixFilter } = await import("pixi.js");
+        const pixi = await import("pixi.js");
+        // Registers renderer.prepare, which uploads the next painting to the GPU
+        // well before it is shown. It must be registered before the renderer exists.
+        await import("pixi.js/prepare").catch(() => undefined);
+        const { Application, Assets, Container, Graphics, Sprite, Texture, ColorMatrixFilter } = pixi;
         if (disposed) return;
         const limits = QUALITY_LIMITS[qualityTier];
         const app = new Application();
@@ -122,6 +183,8 @@ export function PixiScene({
           app.destroy(true);
           return;
         }
+        worldMounts += 1;
+        element.dataset.mountCount = String(worldMounts);
         cleanup = () => { app.destroy(true, { children: true }); return undefined; };
         app.ticker.maxFPS = limits.targetFps;
         app.canvas.setAttribute("aria-hidden", "true");
@@ -129,32 +192,24 @@ export function PixiScene({
 
         const camera = new Container();
         const sky = new Graphics();
-        const layerRoot = new Container();
-        const nightRoot = new Container();
+        // The current place, with a late-arriving replacement fading in on top of it.
+        const placeRoot = new Container();
+        // The next place, shown only during its crossfade.
         const transitionRoot = new Container();
-        const propRoot = new Container();
         const signRoot = new Container();
-        // lifeRoot is a sibling of weatherStaticRoot, never a child of weatherRoot:
-        // weatherRoot is emptied and destroyed on every zone rebuild, which would
-        // take the birds and other ambient life with it.
         const lifeRoot = new Container();
         const lightsRoot = new Container();
         const groundLifeRoot = new Container();
         const groundDetailsRoot = new Container();
         const weatherRoot = new Container();
-        // weatherRoot is emptied and destroyed on every zone rebuild, so the
-        // long-lived fog band needs a container of its own.
         const weatherStaticRoot = new Container();
         const fogBand = new Graphics();
         const stormFlash = new Graphics();
-        let precipitation: InstanceType<typeof Graphics>[] = [];
-        let precipitationKind: "none" | "rain" | "snow" = "none";
         // The local hour and the weather move on the scale of minutes. Deriving
         // them every frame cost an Intl lookup and five DOM attribute writes per
         // frame for values that had not changed.
         let effect = weatherEffect(0, 0);
         let lastSkySampleAt = Number.NEGATIVE_INFINITY;
-        // Pixi owns the grade; P10 will animate this same object in the world loop.
         gradeRef.current = { exposure: 1, tint: { r: 1, g: 1, b: 1 } };
         const worldGrade = new ColorMatrixFilter();
         camera.filters = [worldGrade];
@@ -175,46 +230,15 @@ export function PixiScene({
         const walkerShadows = Array.from({ length: QUALITY_LIMITS.high.walkers }, () => new Sprite(shadowTexture));
         for (const shadow of [...Object.values(shadows), ...walkerShadows]) { shadow.anchor.set(0.5); shadow.visible = false; }
         groundLifeRoot.addChild(groundDetailsRoot, ...walkerShadows, shadows.traveler, shadows.resident);
-        // Draw order, back to front: sky, the panorama (or the legacy parallax
-        // layers), props, ground life, weather. Nothing composites over the
-        // painting itself.
-        camera.addChild(sky, layerRoot, nightRoot, lightsRoot, transitionRoot, propRoot, signRoot, lifeRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
-        // Lit windows add light to the painting rather than covering it.
+        // Draw order, back to front: the neutral street, the place (sky, painting,
+        // pavement, night), window light, the incoming place, then life and weather.
+        camera.addChild(sky, placeRoot, lightsRoot, transitionRoot, signRoot, lifeRoot, groundLifeRoot, weatherRoot, weatherStaticRoot);
         lightsRoot.blendMode = "add";
         weatherStaticRoot.addChild(fogBand);
         app.stage.addChild(stormFlash);
         app.stage.addChild(camera);
         const clock = new PresentationClock();
 
-        // V3 country packs include a complete editorial fallback for every
-        // zone. Use that coherent painting as the panorama instead of stacking
-        // opaque horizontal crops, which exposed hard seams as their parallax
-        // offsets diverged. Motion remains explicit through panorama travel,
-        // the independently moving ground-life track and weather.
-        const coherentPanorama = pack.schemaVersion === 3;
-
-        type LayerPool = {
-          parallaxScale: number;
-          y: number;
-          height: number;
-          layerIndex: number;
-          sequenceLayerIndex: number;
-          textures: PixiTexture[];
-          sprites: InstanceType<typeof Sprite>[];
-          mode: "panorama" | "sky" | "city" | "ground" | "foreground" | "legacy";
-        };
-        type LoadedLayer = {
-          layer: { id: string; speed: number; y: number; height: number };
-          textures: PixiTexture[];
-          mode: LayerPool["mode"];
-        };
-        type PropPool = {
-          definition: RouteProp;
-          display: InstanceType<typeof Graphics> | InstanceType<typeof Sprite>;
-          illustrated: boolean;
-          nativeHeight: number;
-          slot: number;
-        };
         const sign = {
           sprite: new Sprite(),
           url: null as string | null,
@@ -251,280 +275,282 @@ export function PixiScene({
         windowLights.visible = false;
         lightsRoot.addChild(windowLights);
         const lights = { url: null as string | null, ready: false, generation: 0 };
-        const night = { sprite: new Sprite(), ready: false };
-        night.sprite.visible = false;
-        nightRoot.addChild(night.sprite);
-        let pools: LayerPool[] = [];
-        let props: PropPool[] = [];
-        let groundLife: InstanceType<typeof Graphics>[] = [];
-        let motes: InstanceType<typeof Graphics>[] = [];
-        let activeZone: RouteZone | null = null;
-        let activeZoneIndex = -1;
-        let pendingZoneIndex = -1;
-        let buildGeneration = 0;
-        let transitionGeneration = 0;
-        let transitionPendingIndex = -1;
-        let transition: {
-          zoneIndex: number;
-          zone: RouteZone;
-          texture: PixiTexture;
-          sprites: InstanceType<typeof Sprite>[];
-        } | null = null;
-        let ready = false;
-        let estimatedTextureBytes = 0;
-        let zoneFade = 1;
-        let imageW = 1600, imageH = 900;
-        let displayedLayout: StageLayout | null = null;
-        let previousLayout: StageLayout | null = null;
-        let layoutChangedAt = 0;
-        let lastWidth = 0, lastHeight = 0;
 
-        const zoneAssetUrls = (zone: RouteZone) => [
-          ...(zone.continuousScene
-            ? [
-                zone.fallbackUrl,
-                zone.continuousScene.skyUrl,
-                zone.continuousScene.cityUrl,
-                zone.continuousScene.groundUrl,
-                ...(zone.continuousScene.foregroundUrl ? [zone.continuousScene.foregroundUrl] : []),
-              ]
-            : coherentPanorama
-            ? [zone.fallbackUrl]
-            : zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url))),
-          ...(zone.nightUrl ? [zone.nightUrl] : []),
-          ...(!coherentPanorama
-            ? zone.props.flatMap((prop) => prop.assetUrl ? [prop.assetUrl] : [])
-            : []),
-        ].map(publicAssetUrl);
-
-        const drawProp = (graphic: InstanceType<typeof Graphics>, definition: RouteProp) => {
-          const [primary = "#315d4d", secondary = "#d9a75a"] = definition.colors;
-          graphic.clear();
-          if (definition.kind === "tree") {
-            graphic.rect(-7, -72, 14, 72).fill(primary);
-            graphic.circle(0, -96, 40).fill(secondary);
-            graphic.circle(-24, -80, 26).fill(secondary);
-            graphic.circle(25, -78, 29).fill(secondary);
-          } else if (definition.kind === "lamp" || definition.kind === "signpost") {
-            graphic.rect(-4, -92, 8, 92).fill(primary);
-            graphic.roundRect(-17, -111, 34, 25, 8).fill(secondary);
-          } else if (definition.kind === "bench") {
-            graphic.roundRect(-42, -34, 84, 14, 5).fill(primary);
-            graphic.rect(-34, -20, 7, 20).fill(secondary);
-            graphic.rect(27, -20, 7, 20).fill(secondary);
-          } else if (definition.kind === "awning") {
-            graphic.poly([-50, -62, 50, -62, 38, -36, -38, -36]).fill(primary);
-            graphic.rect(-40, -36, 5, 36).fill(secondary);
-            graphic.rect(35, -36, 5, 36).fill(secondary);
-          } else if (definition.kind === "stall") {
-            graphic.rect(-48, -52, 96, 52).fill(primary);
-            graphic.poly([-56, -54, 56, -54, 42, -80, -42, -80]).fill(secondary);
-          } else {
-            graphic.roundRect(-34, -27, 68, 27, 8).fill(primary);
-            graphic.circle(-17, -35, 17).fill(secondary);
-            graphic.circle(15, -38, 20).fill(secondary);
-          }
-          graphic.alpha = 0.84;
-        };
-
-        const prepareTransition = async (zoneIndex: number) => {
-          if (!coherentPanorama || transition?.zoneIndex === zoneIndex
-            || transitionPendingIndex === zoneIndex) return;
-          transitionPendingIndex = zoneIndex;
-          const generation = ++transitionGeneration;
-          const zone = pack.route.zones[zoneIndex];
-          let texture: PixiTexture;
-          try {
-            texture = await Assets.load<PixiTexture>(publicAssetUrl(zone.fallbackUrl));
-          } catch (error) {
-            if (generation === transitionGeneration) transitionPendingIndex = -1;
-            throw error;
-          }
-          if (disposed || generation !== transitionGeneration) return;
-          transitionRoot.removeChildren().forEach((child) => child.destroy());
-          const sprites = Array.from({ length: 1 }, () => {
-            const sprite = new Sprite(texture);
-            transitionRoot.addChild(sprite);
-            return sprite;
-          });
-          transition = { zoneIndex, zone, texture, sprites };
-          transitionPendingIndex = -1;
-          transitionRoot.alpha = 0;
-        };
-
-        const buildZone = async (zoneIndex: number) => {
-          pendingZoneIndex = zoneIndex;
-          const generation = ++buildGeneration;
-          const zone = pack.route.zones[zoneIndex];
-          const outgoingZone = activeZone;
-          const [panoramaTexture, nightTexture] = await Promise.all([
-            Assets.load<PixiTexture>(publicAssetUrl(zone.fallbackUrl)),
-            zone.nightUrl
-              ? Assets.load<PixiTexture>(publicAssetUrl(zone.nightUrl))
-              : Promise.resolve(null),
-          ]);
-          const continuous = zone.continuousScene;
-          const loaded: LoadedLayer[] = continuous
-            ? await (async () => {
-                const [skyTexture, cityTexture, groundTexture, foregroundTexture] = await Promise.all([
-                  Assets.load<PixiTexture>(publicAssetUrl(continuous.skyUrl)),
-                  Assets.load<PixiTexture>(publicAssetUrl(continuous.cityUrl)),
-                  Assets.load<PixiTexture>(publicAssetUrl(continuous.groundUrl)),
-                  continuous.foregroundUrl
-                    ? Assets.load<PixiTexture>(publicAssetUrl(continuous.foregroundUrl))
-                    : Promise.resolve(null),
-                ]);
-                return [
-                  { layer: { id: "sky", speed: 0.01, y: 0, height: 1 }, textures: [skyTexture], mode: "sky" as const },
-                  { layer: { id: "city", speed: 0.08, y: 0, height: 1 }, textures: [cityTexture], mode: "city" as const },
-                  { layer: { id: "ground", speed: 1, y: zone.stage.groundLineY, height: continuous.groundHeightFrac }, textures: [groundTexture], mode: "ground" as const },
-                  ...(foregroundTexture
-                    ? [{ layer: { id: "foreground", speed: 0.14, y: 0, height: 1 }, textures: [foregroundTexture], mode: "foreground" as const }]
-                    : []),
-                ];
-              })()
-            : coherentPanorama
-            ? [{
-                layer: { id: "coherent-panorama", speed: 0.055, y: 0, height: 1 },
-                textures: [panoramaTexture],
-                mode: "panorama",
-              }]
-            : await Promise.all(
-              zone.layers.map(async (layer) => ({
-                layer,
-                textures: await Promise.all(
-                  layer.segments.map((segment) => Assets.load<PixiTexture>(publicAssetUrl(segment.url))),
-                ),
-                mode: "legacy" as const,
-              })),
-            );
-          const propTextures = await Promise.all(
-            coherentPanorama
-              ? []
-              : zone.props.map((prop) => prop.assetUrl
-                ? Assets.load<PixiTexture>(publicAssetUrl(prop.assetUrl))
-                : Promise.resolve(null)),
-          );
-          if (disposed || generation !== buildGeneration) return;
-
-          imageW = panoramaTexture.width;
-          imageH = panoramaTexture.height;
-          night.ready = Boolean(nightTexture);
-          night.sprite.visible = false;
-          if (nightTexture) night.sprite.texture = nightTexture;
-          previousLayout = displayedLayout;
-          layoutChangedAt = performance.now();
-
-          layerRoot.removeChildren().forEach((child) => child.destroy());
-          transitionGeneration += 1;
-          transitionPendingIndex = -1;
-          transition = null;
-          transitionRoot.removeChildren().forEach((child) => child.destroy());
-          propRoot.removeChildren().forEach((child) => child.destroy());
-          groundDetailsRoot.removeChildren().forEach((child) => child.destroy());
-          weatherRoot.removeChildren().forEach((child) => child.destroy());
-          // The drops were just destroyed; the tick must not touch them again
-          // until the rebuild below replaces them.
-          precipitation = [];
-          precipitationKind = "none";
-          let sequenceLayerIndex = 0;
-          pools = loaded.map(({ layer, textures, mode }, layerIndex) => {
-            const container = new Container();
-            layerRoot.addChild(container);
-            const sprites = Array.from({ length: mode === "legacy" || mode === "ground" ? 6 : 1 }, () => {
-              const sprite = new Sprite(textures[0]);
-              container.addChild(sprite);
-              return sprite;
-            });
-            const pool = {
-              parallaxScale: coherentPanorama
-                ? 0.7
-                : layer.id === "distant"
-                  ? 0.35
-                  : layer.id === "architecture"
-                    ? 0.7
-                    : 1,
-              y: layer.y,
-              height: layer.height,
-              layerIndex,
-              sequenceLayerIndex,
-              textures,
-              sprites,
-              mode,
-            };
-            if (textures.length > 1) sequenceLayerIndex += 1;
-            return pool;
-          });
-          estimatedTextureBytes = loaded.reduce(
-            (total, item) => total + item.textures.reduce(
-              (layerTotal, texture) => layerTotal + texture.width * texture.height * 4,
-              0,
-            ),
-            0,
-          ) + propTextures.reduce(
-            (total, texture) => total + (texture ? texture.width * texture.height * 4 : 0),
-            0,
-          );
-
-          props = coherentPanorama ? [] : Array.from({ length: limits.maxProps }, (_, slot) => {
-            const definition = zone.props[slot % zone.props.length];
-            const texture = propTextures[slot % zone.props.length];
-            if (texture) {
-              const sprite = new Sprite(texture);
-              sprite.anchor.set(0.5, 1);
-              propRoot.addChild(sprite);
-              return { definition, display: sprite, illustrated: true, nativeHeight: texture.height, slot };
-            }
-            const graphic = new Graphics();
-            drawProp(graphic, definition);
-            propRoot.addChild(graphic);
-            return { definition, display: graphic, illustrated: false, nativeHeight: 1, slot };
-          });
-          groundLife = Array.from({ length: qualityTier === "low" ? 7 : 12 }, (_, index) => {
-            const detail = new Graphics();
+        // Street life, motes and weather belong to the world, not to a place, so a
+        // place change never rebuilds them.
+        const groundLife: PixiGraphics[] = Array.from({ length: qualityTier === "low" ? 7 : 12 }, () => {
+          const detail = new Graphics();
+          groundDetailsRoot.addChild(detail);
+          return detail;
+        });
+        let groundLifeZoneId: string | null = null;
+        const recolorGroundLife = (zone: RouteZone) => {
+          groundLife.forEach((detail, index) => {
             const color = index % 3 === 0 ? zone.lighting.skyBottom : zone.lighting.grade;
+            detail.clear();
             if (index % 2 === 0) {
               detail.ellipse(0, 0, 18 + (index % 4) * 6, 3 + (index % 3)).fill({ color, alpha: 0.13 });
             } else {
               detail.roundRect(-12, -2, 24 + (index % 5) * 5, 4, 2).fill({ color, alpha: 0.12 });
             }
-            groundDetailsRoot.addChild(detail);
-            return detail;
           });
-          motes = Array.from({ length: limits.motes }, (_, index) => {
-            const mote = new Graphics();
-            mote.circle(0, 0, 1 + (index % 3) * 0.7).fill({ color: 0xffe4a1, alpha: 0.3 });
-            weatherRoot.addChild(mote);
-            return mote;
+        };
+        const motes = Array.from({ length: limits.motes }, (_, index) => {
+          const mote = new Graphics();
+          mote.circle(0, 0, 1 + (index % 3) * 0.7).fill({ color: 0xffe4a1, alpha: 0.3 });
+          weatherRoot.addChild(mote);
+          return mote;
+        });
+        // Rain and snow are a real signal, not decoration, so even the low
+        // tier gets enough particles to read as weather.
+        const precipitationCount = qualityTier === "high" ? 42 : qualityTier === "medium" ? 28 : 14;
+        const precipitation = Array.from({ length: precipitationCount }, () => {
+          const drop = new Graphics();
+          drop.visible = false;
+          weatherRoot.addChild(drop);
+          return drop;
+        });
+        let precipitationKind: "none" | "rain" | "snow" = "none";
+
+        // ---- Places. Only the current place and, in its last moments, the next
+        // one are ever held; a released texture is unloaded one per frame.
+        const cache = new PlaceTextureCache<PixiTexture>({
+          load: (url) => Assets.load<PixiTexture>(url),
+          unload: (url) => Assets.unload(url),
+        });
+        let current: PlaceView | null = null;
+        let incoming: PlaceView | null = null;
+        let fading: { view: PlaceView; startedAt: number; startAlpha: number } | null = null;
+        const pendingZones = new Set<number>();
+        const retries = new Map<number, { attempt: number; notBefore: number }>();
+        let plan: { current: number; next: number | null } = { current: -1, next: null };
+        let assetState: SceneAssetState = "loading";
+        let upgradeCheckAt = 0;
+        let ready = false;
+        let displayedLayout: StageLayout | null = null;
+        let previousLayout: StageLayout | null = null;
+        let layoutChangedAt = 0;
+        let lastWidth = 0, lastHeight = 0;
+
+        const setAssetState = (next: SceneAssetState) => {
+          if (next === assetState) return;
+          assetState = next;
+          element.dataset.sceneAssetState = next;
+          assetStateCallback.current?.(next);
+        };
+        element.dataset.sceneAssetState = assetState;
+        const markReady = () => {
+          if (ready) return;
+          ready = true;
+          onReady();
+        };
+
+        const renditionsFor = (zone: RouteZone) => placeRenditions(
+          zone,
+          renditionRequestFor(zone, app.screen.width, app.screen.height, app.renderer.resolution),
+        );
+
+        const loadPlace = async (zoneIndex: number, renditions: PlaceRenditions): Promise<PlaceView> => {
+          const zone = pack.route.zones[zoneIndex]!;
+          const foregroundUrl = zone.variants ? null : zone.continuousScene?.foregroundUrl ?? null;
+          const urls = [...new Set(
+            [renditions.city.url, renditions.sky?.url, renditions.ground?.url, foregroundUrl]
+              .filter((url): url is string => Boolean(url))
+              .map(publicAssetUrl),
+          )];
+          const settled = await Promise.allSettled(urls.map((url) => cache.acquire(url)));
+          const failure = settled.find((result) => result.status === "rejected");
+          if (failure || disposed) {
+            settled.forEach((result, index) => { if (result.status === "fulfilled") cache.release(urls[index]!); });
+            throw failure?.status === "rejected" ? failure.reason : new Error("World disposed");
+          }
+          const texture = (url: string | null | undefined): PixiTexture | null => {
+            if (!url) return null;
+            const result = settled[urls.indexOf(publicAssetUrl(url))];
+            return result?.status === "fulfilled" ? result.value : null;
+          };
+          const cityTexture = texture(renditions.city.url)!;
+          const root = new Container();
+          root.label = `place:${zone.id}`;
+          const skyTexture = texture(renditions.sky?.url);
+          const skySprite = skyTexture ? new Sprite(skyTexture) : null;
+          const city = new Sprite(cityTexture);
+          const groundTexture = texture(renditions.ground?.url);
+          const groundContainer = new Container();
+          const ground = groundTexture
+            ? Array.from({ length: 6 }, () => {
+                const tile = new Sprite(groundTexture);
+                groundContainer.addChild(tile);
+                return tile;
+              })
+            : [];
+          const foregroundTexture = texture(foregroundUrl);
+          const foreground = foregroundTexture ? new Sprite(foregroundTexture) : null;
+          const nightSprite = new Sprite(Texture.EMPTY);
+          nightSprite.visible = false;
+          for (const child of [skySprite, city, groundContainer, foreground, nightSprite]) {
+            if (child) root.addChild(child);
+          }
+          return {
+            zoneIndex,
+            zone,
+            renditions,
+            urls,
+            nominalWidth: renditions.nominal?.width ?? cityTexture.width,
+            nominalHeight: renditions.nominal?.height ?? cityTexture.height,
+            root,
+            sky: skySprite,
+            city,
+            ground,
+            foreground,
+            night: { sprite: nightSprite, url: null, state: "idle" },
+            bytes: settled.reduce((total, result) => total
+              + (result.status === "fulfilled" ? result.value.width * result.value.height * 4 : 0), 0),
+            released: false,
+          };
+        };
+
+        const releaseView = (view: PlaceView) => {
+          if (view.released) return;
+          view.released = true;
+          view.root.parent?.removeChild(view.root);
+          view.root.destroy({ children: true });
+          for (const url of view.urls) cache.release(url);
+          if (view.night.url) cache.release(view.night.url);
+        };
+
+        // Night art is fetched only once dusk begins, never with the day painting.
+        const ensureNight = (view: PlaceView) => {
+          if (!view.renditions.night || view.night.state !== "idle") return;
+          const url = publicAssetUrl(view.renditions.night.url);
+          view.night.state = "loading";
+          cache.acquire(url).then((texture) => {
+            if (disposed || view.released) {
+              cache.release(url);
+              return;
+            }
+            view.night.url = url;
+            view.night.sprite.texture = texture;
+            view.night.state = "ready";
+            view.bytes += texture.width * texture.height * 4;
+          }, () => {
+            if (!view.released) view.night.state = "failed";
           });
-          // Rain and snow are a real signal, not decoration, so even the low
-          // tier gets enough particles to read as weather.
-          const precipitationCount = qualityTier === "high" ? 42 : qualityTier === "medium" ? 28 : 14;
-          precipitation = Array.from({ length: precipitationCount }, () => {
-            const drop = new Graphics();
-            drop.visible = false;
-            weatherRoot.addChild(drop);
-            return drop;
+        };
+
+        const promote = (view: PlaceView, tickAt: number, shownAlpha: number) => {
+          const outgoing = current;
+          current = view;
+          if (incoming === view) incoming = null;
+          placeRoot.addChild(view.root);
+          view.root.visible = true;
+          if (outgoing && outgoing !== view) {
+            if (shownAlpha >= 0.98 || outgoing.zone.id === view.zone.id) {
+              releaseView(outgoing);
+              view.root.alpha = 1;
+            } else {
+              if (fading) releaseView(fading.view);
+              fading = { view: outgoing, startedAt: tickAt, startAlpha: shownAlpha };
+              view.root.alpha = shownAlpha;
+            }
+          } else {
+            view.root.alpha = 1;
+          }
+          if (!outgoing || outgoing.zone.id !== view.zone.id) {
+            previousLayout = displayedLayout;
+            layoutChangedAt = tickAt;
+            zoneCallback.current(view.zone.id, view.zone.label);
+          }
+          retries.delete(view.zoneIndex);
+          upgradeCheckAt = tickAt + UPGRADE_SETTLE_MS;
+          setAssetState("ready");
+          markReady();
+        };
+
+        const requestPlace = (zoneIndex: number) => {
+          const zone = pack.route.zones[zoneIndex];
+          if (!zone || pendingZones.has(zoneIndex)) return;
+          const renditions = renditionsFor(zone);
+          pendingZones.add(zoneIndex);
+          void loadPlace(zoneIndex, renditions).then((view) => {
+            pendingZones.delete(zoneIndex);
+            if (disposed) return;
+            if (zoneIndex === plan.current) {
+              if (current?.zoneIndex === zoneIndex && sameRenditions(current.renditions, view.renditions)) {
+                releaseView(view);
+                return;
+              }
+              promote(view, performance.now(), 0);
+            } else if (zoneIndex === plan.next && !incoming) {
+              incoming = view;
+              view.root.visible = false;
+              transitionRoot.addChild(view.root);
+              retries.delete(zoneIndex);
+              if (nightMix(Number(element.dataset.localHour ?? "12")) > 0.01) ensureNight(view);
+              const prepare = (app.renderer as unknown as { prepare?: { upload(item: unknown): Promise<void> } }).prepare;
+              void prepare?.upload(view.root).catch(() => undefined);
+            } else {
+              releaseView(view);
+            }
+          }, (error: unknown) => {
+            pendingZones.delete(zoneIndex);
+            if (disposed) return;
+            const attempt = retries.get(zoneIndex)?.attempt ?? 0;
+            retries.set(zoneIndex, { attempt: attempt + 1, notBefore: performance.now() + textureRetryDelayMs(attempt) });
+            if (process.env.NODE_ENV !== "production") {
+              console.warn(`World place ${zone.id} did not load; keeping the last painting and retrying`, error);
+            }
           });
-          precipitationKind = "none";
-          activeZone = zone;
-          activeZoneIndex = zoneIndex;
-          pendingZoneIndex = -1;
-          zoneFade = 1;
-          sky.clear().rect(0, 0, app.screen.width, app.screen.height).fill(zone.lighting.skyTop);
-          layerRoot.alpha = zoneFade;
-          propRoot.alpha = zoneFade;
-          groundDetailsRoot.alpha = zoneFade;
-          zoneCallback.current(zone.id, zone.label);
-          if (outgoingZone && outgoingZone.id !== zone.id) {
-            const retained = new Set(zoneAssetUrls(zone));
-            for (const url of zoneAssetUrls(outgoingZone)) {
-              if (!retained.has(url)) void Assets.unload(url).catch(() => undefined);
+        };
+
+        const placePainting = (sprite: PixiSprite, choice: RenditionChoice, view: PlaceView, layout: StageLayout) => {
+          // Layout is in nominal painting pixels, so a smaller or cropped rendition
+          // lands exactly where the full painting would.
+          const coverWidth = choice.nominalWidth || view.nominalWidth;
+          sprite.position.set(layout.imageX + choice.nominalLeft * layout.imageScale, layout.imageY);
+          sprite.width = coverWidth * layout.imageScale;
+          sprite.height = view.nominalHeight * layout.imageScale;
+        };
+
+        const layoutFor = (view: PlaceView, width: number, height: number) => stageLayout(
+          width, height, view.nominalWidth, view.nominalHeight, view.zone.stage, CHARACTER_HEIGHT_TARGETS,
+        );
+
+        const drawView = (
+          view: PlaceView, layout: StageLayout, width: number, height: number,
+          groundPixels: number, still: boolean, nightAlpha: number,
+        ) => {
+          if (view.sky) {
+            const texture = view.sky.texture;
+            const scale = Math.max(width / Math.max(1, texture.width), height / Math.max(1, texture.height));
+            view.sky.scale.set(scale);
+            view.sky.position.set((width - texture.width * scale) / 2, (height - texture.height * scale) / 2);
+          }
+          placePainting(view.city, view.renditions.city, view, layout);
+          const firstTile = view.ground[0];
+          if (firstTile) {
+            const texture = firstTile.texture;
+            const targetHeight = Math.max(height - layout.groundY, height * (view.zone.continuousScene?.groundHeightFrac ?? 0.22));
+            const scale = targetHeight / Math.max(1, texture.height);
+            const segmentWidth = Math.max(1, texture.width * scale);
+            // Only the pavement moves: it is the one layer tied to distance.
+            const offset = still ? 0 : ((groundPixels % segmentWidth) + segmentWidth) % segmentWidth;
+            const first = -offset - segmentWidth;
+            for (let slot = 0; slot < view.ground.length; slot += 1) {
+              const tile = view.ground[slot]!;
+              tile.scale.set(scale);
+              tile.position.set(first + slot * segmentWidth, layout.groundY);
+              tile.visible = tile.x + segmentWidth > -4 && tile.x < width + 4;
             }
           }
-          if (!ready) {
-            ready = true;
-            onReady();
+          if (view.foreground) {
+            view.foreground.scale.set(layout.imageScale);
+            view.foreground.position.set(layout.imageX, layout.imageY);
+          }
+          view.night.sprite.visible = view.night.state === "ready" && nightAlpha > 0.01;
+          if (view.night.sprite.visible && view.renditions.night) {
+            placePainting(view.night.sprite, view.renditions.night, view, layout);
+            view.night.sprite.alpha = nightAlpha;
           }
         };
 
@@ -532,10 +558,6 @@ export function PixiScene({
           // resizeTo only listens for window resizes. The host can change size without one,
           // and until the world redraws at that size the characters wait for its frame.
           app.resize();
-          sky.clear();
-          if (activeZone) {
-            sky.rect(0, 0, app.screen.width, app.screen.height).fill(activeZone.lighting.skyTop);
-          }
         };
         const observer = new ResizeObserver(resize);
         observer.observe(element);
@@ -546,6 +568,7 @@ export function PixiScene({
           worldGrade.destroy();
           return undefined;
         };
+        resize();
 
         let displayedSeconds = runtime.current.routeSeconds;
         let displayedWalkingSeconds = runtime.current.routeSeconds;
@@ -590,6 +613,8 @@ export function PixiScene({
           elapsed += wallDeltaMs;
           frameSamples.push(wallDeltaMs);
           if (frameSamples.length > 180) frameSamples.shift();
+          // Freeing a released texture costs a little; never more than one per frame.
+          cache.drainOne();
           clock.accept(state.routeRuntime, state.travelerCommand?.presenceTtlMs ?? 50_000, tickAt);
           const sample = clock.sample(tickAt, state.scheduledActions);
           const motion = travelerMotionAt(pack, sample.rawSeconds, sample.distanceMetres, state.scheduledActions, state.walkingClock);
@@ -599,55 +624,82 @@ export function PixiScene({
           displayedDistance = sample.distanceMetres;
 
           const position = scenePositionAt(pack, displayedWalkingSeconds);
-          const zoneDistance = position.visitProgress * (activeZone?.lengthMetres ?? 0);
-          if (position.zoneIndex !== activeZoneIndex && position.zoneIndex !== pendingZoneIndex) {
-            void buildZone(position.zoneIndex).catch((error: unknown) => {
-              pendingZoneIndex = -1;
-              if (process.env.NODE_ENV !== "production") {
-                console.error("World zone load failed", error);
-              }
-              onFailure();
-            });
+          plan = placeLoadPlan(position);
+          const retryDue = (zoneIndex: number) => (retries.get(zoneIndex)?.notBefore ?? 0) <= tickAt;
+          let incomingAlpha = 0;
+          if (incoming && current && incoming.zoneIndex === plan.next) {
+            const remaining = Math.max(0, position.secondsToNextVisit);
+            incomingAlpha = remaining <= CROSSFADE_SECONDS ? 1 - remaining / CROSSFADE_SECONDS : 0;
           }
-          if (!activeZone) return;
-
-          let transitionAlpha = 0;
-          if (coherentPanorama) {
-            const nextZoneIndex = (activeZoneIndex + 1) % pack.route.zones.length;
-            if (position.zoneIndex === activeZoneIndex) {
-              const remaining = Math.max(0, position.secondsToNextVisit);
-              if (remaining <= 15) void prepareTransition(nextZoneIndex).catch(() => undefined);
-              if (remaining <= 1 && transition?.zoneIndex === nextZoneIndex) {
-                transitionAlpha = 1 - remaining;
-              }
-            } else if (transition?.zoneIndex === position.zoneIndex) {
-              // Keep the fully blended next painting visible while its ordinary
-              // zone build completes at the exact metre boundary.
-              transitionAlpha = 1;
-            }
+          if (current?.zoneIndex !== plan.current && incoming?.zoneIndex === plan.current) {
+            // The shared clock reached the prepared place: it was fading in already.
+            const shown = incoming.root.visible ? incoming.root.alpha : 0;
+            promote(incoming, tickAt, shown);
           }
+          if (current?.zoneIndex !== plan.current && retryDue(plan.current)) requestPlace(plan.current);
+          if (plan.next !== null && incoming?.zoneIndex !== plan.next && current?.zoneIndex !== plan.next && retryDue(plan.next)) {
+            requestPlace(plan.next);
+          }
+          if (incoming && incoming.zoneIndex !== plan.next && incoming.zoneIndex !== plan.current) {
+            releaseView(incoming);
+            incoming = null;
+          }
+          if (current?.zoneIndex === plan.current) {
+            setAssetState("ready");
+          } else if (retries.has(plan.current)) {
+            // Keep whatever painting is up; a neutral street only when there is none.
+            setAssetState(current ? "retrying" : "fallback");
+            if (!current) markReady();
+          } else if (!current) {
+            setAssetState("loading");
+          }
+          // Until the first painting or the fallback, the static poster owns the frame.
+          if (!current && assetState !== "fallback") return;
 
+          const drawnZone = current?.zone ?? pack.route.zones[plan.current]!;
+          if (groundLifeZoneId !== drawnZone.id) {
+            groundLifeZoneId = drawnZone.id;
+            recolorGroundLife(drawnZone);
+          }
+          const nominalWidth = current?.nominalWidth ?? drawnZone.variants?.nominalWidth ?? 1_600;
+          const nominalHeight = current?.nominalHeight ?? drawnZone.variants?.nominalHeight ?? 900;
           const width = app.screen.width;
           const height = app.screen.height;
           const targetLayout = stageLayout(
-            width, height, imageW, imageH, activeZone.stage, CHARACTER_HEIGHT_TARGETS,
+            width, height, nominalWidth, nominalHeight, drawnZone.stage, CHARACTER_HEIGHT_TARGETS,
           );
-          // Resizing immediately reanchors both canvases; zone switches ease for 400 ms.
-          if (width !== lastWidth || height !== lastHeight) previousLayout = null;
+          // Resizing immediately reanchors both canvases; place switches ease for 400 ms.
+          if (width !== lastWidth || height !== lastHeight) {
+            previousLayout = null;
+            if (current) upgradeCheckAt = tickAt + UPGRADE_SETTLE_MS;
+          }
           lastWidth = width; lastHeight = height;
           const layout = previousLayout
             ? blendStageLayout(previousLayout, targetLayout, tickAt - layoutChangedAt) : targetLayout;
           displayedLayout = layout;
-          onStageFrame({ assetVersion: pack.assetVersion, zoneId: activeZone.id,
-            viewportW: width, viewportH: height, imageW, imageH, stage: activeZone.stage, layout }, "pixi");
+          onStageFrame({ assetVersion: pack.assetVersion, zoneId: drawnZone.id,
+            viewportW: width, viewportH: height, imageW: nominalWidth, imageH: nominalHeight, stage: drawnZone.stage, layout }, "pixi");
+
+          // A viewport that grew needs a sharper or uncropped rendition; the layout
+          // is nominal, so the swap moves nothing.
+          if (current && upgradeCheckAt > 0 && tickAt >= upgradeCheckAt && !pendingZones.has(current.zoneIndex)) {
+            upgradeCheckAt = 0;
+            const wanted = renditionsFor(current.zone);
+            if (shouldReplaceRendition(current.renditions.city, wanted.city)
+              || shouldReplaceRendition(current.renditions.ground, wanted.ground)) {
+              requestPlace(current.zoneIndex);
+            }
+          }
+
           const groundPixels=displayedDistance*layout.pxPerMetre;
           element.dataset.groundY = String(layout.groundY);
           element.dataset.personHeight = String(layout.personHeightPx);
           element.dataset.characterImageScale = String(layout.characterImageScale);
-          element.dataset.zoneId = activeZone.id;
-          sky.clear().rect(0, 0, width, height).fill(activeZone.lighting.skyTop);
+          if (current) element.dataset.zoneId = current.zone.id;
+          else delete element.dataset.zoneId;
+          sky.clear().rect(0, 0, width, height).fill(drawnZone.lighting.skyTop);
           // Width-fit can leave space below the image too: extend only the pavement colour.
-          sky.rect(0, layout.groundY, width, height - layout.groundY).fill(activeZone.stage.palette[0]);
+          sky.rect(0, layout.groundY, width, height - layout.groundY).fill(drawnZone.stage.palette[0]);
           element.dataset.gaitPhase=String(motion.cyclePhase);
           element.dataset.characterState=sample.traveling ? motion.action?.state ?? "walk" : "idle";
           element.dataset.actionReview=String(Boolean(state.travelerCommand?.actionReview&&state.travelerCommand.actionReview.action!=="auto"));
@@ -655,123 +707,44 @@ export function PixiScene({
           camera.pivot.set(width / 2, height / 2);
           camera.position.set(width / 2, height / 2);
           camera.scale.set(1);
-          layerRoot.alpha = zoneFade * (1 - transitionAlpha);
-          transitionRoot.alpha = transitionAlpha;
-          propRoot.alpha = zoneFade * (1 - transitionAlpha) * (0.72 + state.command.backgroundLife * 0.28);
-          groundDetailsRoot.alpha = zoneFade * (1 - transitionAlpha) * (0.75 + state.command.backgroundLife * 0.25);
+          groundDetailsRoot.alpha = 0.75 + state.command.backgroundLife * 0.25;
           weatherRoot.alpha = 0.5 + state.command.backgroundLife * 0.5;
-          element.dataset.zoneTransition = String(transitionAlpha);
-          let activePaintingX = layout.imageX;
-          for (const pool of pools) {
-            if (pool.mode === "sky") {
-              const texture = pool.textures[0];
-              const scale = Math.max(width / texture.width, height / texture.height);
-              const sprite = pool.sprites[0];
-              sprite.scale.set(scale);
-              sprite.position.set((width - texture.width * scale) / 2, (height - texture.height * scale) / 2);
-              sprite.visible = true;
-              continue;
-            }
-            if (pool.mode === "city" || pool.mode === "panorama") {
-              const texture = pool.textures[0];
-              activePaintingX = layout.imageX;
-              element.dataset.panoramaOffset = "0";
-              element.dataset.panoramaSpan = String(Math.max(1, texture.width * layout.imageScale));
-              for (let slot = 0; slot < pool.sprites.length; slot += 1) {
-                const sprite = pool.sprites[slot];
-                sprite.texture = texture;
-                sprite.scale.set(layout.imageScale);
-                sprite.x = layout.imageX;
-                sprite.y = layout.imageY;
-                sprite.visible = slot === 0;
-              }
-              continue;
-            }
-            if (pool.mode === "ground") {
-              const texture = pool.textures[0];
-              const targetHeight = Math.max(height - layout.groundY, height * pool.height);
-              const scale = targetHeight / Math.max(1, texture.height);
-              const segmentWidth = Math.max(1, texture.width * scale);
-              const offset = state.reducedMotion
-                ? 0
-                : ((groundPixels % segmentWidth) + segmentWidth) % segmentWidth;
-              const first = -offset - segmentWidth;
-              for (let slot = 0; slot < pool.sprites.length; slot += 1) {
-                const sprite = pool.sprites[slot];
-                sprite.texture = texture;
-                sprite.scale.set(scale);
-                sprite.position.set(first + slot * segmentWidth, layout.groundY);
-                sprite.visible = sprite.x + segmentWidth > -4 && sprite.x < width + 4;
-              }
-              continue;
-            }
-            if (pool.mode === "foreground") {
-              const sprite = pool.sprites[0];
-              sprite.scale.set(layout.imageScale);
-              sprite.position.set(activePaintingX, layout.imageY);
-              sprite.visible = true;
-              continue;
-            }
-            const targetHeight = height * pool.height;
-            const sampleTexture = pool.textures[0];
-            const scale = targetHeight / Math.max(1, sampleTexture.height);
-            const segmentWidth = Math.max(180, sampleTexture.width * scale);
-            const cameraPixels = state.reducedMotion
-              ? 0
-              : zoneDistance * layout.pxPerMetre * pool.parallaxScale;
-            const firstIndex = Math.floor(cameraPixels / segmentWidth) - 1;
-            for (let slot = 0; slot < pool.sprites.length; slot += 1) {
-              const segmentIndex = firstIndex + slot;
-              const sprite = pool.sprites[slot];
-              const variant = segmentVariant(
-                activeZone.id,
-                segmentIndex,
-                pool.sequenceLayerIndex,
-                pool.textures.length,
-              );
-              sprite.texture = pool.textures[variant];
-              sprite.scale.set(scale);
-              sprite.x = segmentIndex * segmentWidth - cameraPixels;
-              sprite.y = height * pool.y;
-              sprite.visible = sprite.x + segmentWidth > -4 && sprite.x < width + 4;
-            }
-          }
+          element.dataset.zoneTransition = String(incomingAlpha);
+          element.dataset.panoramaOffset = "0";
+          element.dataset.panoramaSpan = String(Math.max(1, nominalWidth * layout.imageScale));
 
-          if (transition) {
-            const nextLayout = stageLayout(
-              width,
-              height,
-              transition.texture.width,
-              transition.texture.height,
-              transition.zone.stage,
-              CHARACTER_HEIGHT_TARGETS,
-            );
-            for (let slot = 0; slot < transition.sprites.length; slot += 1) {
-              const sprite = transition.sprites[slot];
-              sprite.scale.set(nextLayout.imageScale);
-              sprite.x = nextLayout.imageX;
-              sprite.y = nextLayout.imageY;
-              sprite.visible = slot === 0 && transitionAlpha > 0;
+          const localHourNow = Number(element.dataset.localHour ?? "12");
+          const nightAmount = nightMix(localHourNow);
+          if (current) {
+            if (nightAmount > 0.01) ensureNight(current);
+            drawView(current, layout, width, height, groundPixels, state.reducedMotion, nightAmount);
+          }
+          if (fading) {
+            const progress = Math.min(1, (tickAt - fading.startedAt) / LATE_FADE_MS);
+            if (current) current.root.alpha = Math.max(fading.startAlpha, progress);
+            drawView(fading.view, layoutFor(fading.view, width, height), width, height, groundPixels, state.reducedMotion, nightAmount);
+            if (progress >= 1) {
+              releaseView(fading.view);
+              fading = null;
+              if (current) current.root.alpha = 1;
             }
           }
-
-          const nightAlpha = night.ready
-            ? nightMix(Number(element.dataset.localHour ?? "12")) * (1 - transitionAlpha)
-            : 0;
-          night.sprite.visible = nightAlpha > 0.01;
-          if (night.sprite.visible) {
-            night.sprite.position.set(activePaintingX, layout.imageY);
-            night.sprite.scale.set(layout.imageScale);
-            night.sprite.alpha = nightAlpha;
+          if (incoming) {
+            incoming.root.visible = incomingAlpha > 0;
+            if (incoming.root.visible) {
+              if (nightAmount > 0.01) ensureNight(incoming);
+              incoming.root.alpha = incomingAlpha;
+              drawView(incoming, layoutFor(incoming, width, height), width, height, groundPixels, state.reducedMotion, nightAmount);
+            }
           }
-          element.dataset.nightTextureAlpha = nightAlpha.toFixed(3);
+          element.dataset.nightTextureAlpha = (current?.night.sprite.visible ? nightAmount * (1 - incomingAlpha) : 0).toFixed(3);
 
           const groundCamera = state.reducedMotion ? 0 : groundPixels;
           groundLifeRoot.x = -groundCamera;
 
           // Premium cafe sign. It hangs on the near plane and scrolls with the
           // pavement, so it reads as part of the street rather than an overlay.
-          const signUrl = activeZone.kind === "cafe" ? state.sponsorSignUrl : null;
+          const signUrl = current && zoneHasTag(current.zone, "cafe") ? state.sponsorSignUrl : null;
           if (signUrl !== sign.url) {
             sign.url = signUrl;
             sign.sprite.visible = false;
@@ -805,7 +778,6 @@ export function PixiScene({
           // the authoritative second, so two viewers see the same bird and tram
           // at the same moment. Decorative animals require reviewed artwork.
           const life = state.reducedMotion ? 0 : 1;
-          const localHourNow = Number(element.dataset.localHour ?? "12");
 
           for (let index = 0; index < birds.length; index += 1) birds[index]!.visible = false;
           const flock = life ? birdFlights(displayedSeconds, pack.assetVersion, limits.birds, effect.windScale) : [];
@@ -825,7 +797,7 @@ export function PixiScene({
           }
 
           // Steam from the cafe, rising and thinning as it goes.
-          const steaming = life && activeZone.kind === "cafe";
+          const steaming = life && current && zoneHasTag(current.zone, "cafe");
           const puffs = steaming ? steamPuffs(displayedSeconds, steam.length) : [];
           for (let index = 0; index < steam.length; index += 1) {
             const puff = steam[index]!;
@@ -843,7 +815,7 @@ export function PixiScene({
           }
 
           // A tram silhouette crosses the arrival zone, for cities that run one.
-          const tramNow = life && ambient?.tram && activeZone.kind === "arrival"
+          const tramNow = life && ambient?.tram && zoneHasTag(drawnZone, "arrival")
             ? tramPass(displayedSeconds, pack.assetVersion)
             : { active: false, progress: 0, direction: 1 as const };
           tram.visible = tramNow.active;
@@ -864,7 +836,7 @@ export function PixiScene({
           }
 
           // Bunting, only once the server has confirmed a hundred watchers at once.
-          const buntingUp = activeZone.kind === "market"
+          const buntingUp = zoneHasTag(drawnZone, "market")
             && buntingVisible(state.hundredWatchersAt, new Date());
           bunting.visible = buntingUp;
           if (buntingUp) {
@@ -888,7 +860,7 @@ export function PixiScene({
 
           // Lit windows: the zone's own night overlay, faded in on the same dusk
           // ramp as the night grade. Absent art simply means no lights.
-          const lightsUrl = activeZone.lightsUrl ? publicAssetUrl(activeZone.lightsUrl) : null;
+          const lightsUrl = current?.zone.lightsUrl ? publicAssetUrl(current.zone.lightsUrl) : null;
           if (lightsUrl !== lights.url) {
             lights.url = lightsUrl;
             lights.ready = false;
@@ -902,7 +874,7 @@ export function PixiScene({
               }).catch(() => { lights.ready = false; });
             }
           }
-          const lightAlpha = lights.ready ? nightMix(localHourNow) : 0;
+          const lightAlpha = lights.ready ? nightMix(localHourNow) * (1 - incomingAlpha) : 0;
           windowLights.visible = lightAlpha > 0.01;
           if (windowLights.visible) {
             windowLights.position.set(layout.imageX, layout.imageY);
@@ -917,7 +889,7 @@ export function PixiScene({
           element.dataset.buntingVisible = String(bunting.visible);
 
           const placeShadow = (
-            shadow: InstanceType<typeof Sprite>, contact: CharacterContacts["traveler"] | undefined,
+            shadow: PixiSprite, contact: CharacterContacts["traveler"] | undefined,
           ) => {
             shadow.visible = Boolean(contact);
             if (!contact) return null;
@@ -941,48 +913,17 @@ export function PixiScene({
           const groundSpacing = width < 500 ? 170 : 240;
           const firstGround = Math.floor(groundCamera / groundSpacing) - 2;
           for (let index = 0; index < groundLife.length; index += 1) {
-            const detail = groundLife[index];
+            const detail = groundLife[index]!;
             const streamIndex = firstGround + index;
-            const jitter = deterministicVariant(`${activeZone.id}:ground-life`, streamIndex, 95);
+            const jitter = deterministicVariant(`${drawnZone.id}:ground-life`, streamIndex, 95);
             detail.x = streamIndex * groundSpacing + jitter;
             detail.y = layout.groundY + layout.personHeightPx * (0.03 + (index % 3) * 0.06);
             detail.scale.set((0.75 + (index % 4) * 0.12) * height / 900);
             detail.visible = detail.x - groundCamera > -100 && detail.x - groundCamera < width + 100;
           }
 
-          const propSpacing = width < 500 ? 390 : 470;
-          for (const item of props) {
-            const depthSpeed = 0.42 + Math.min(1.2, item.definition.depth) * 0.48;
-              const propCamera = state.reducedMotion ? 0 : zoneDistance * depthSpeed * (width / 1_600);
-            const firstProp = Math.floor(propCamera / propSpacing) - 2;
-            const index = firstProp + item.slot;
-            const jitter = deterministicVariant(
-              `${activeZone.id}:${item.definition.id}`,
-              index,
-              180,
-            );
-            item.display.x = index * propSpacing + jitter - propCamera;
-            item.display.y = height * (0.79 + (item.definition.depth - 0.65) * 0.12);
-            if (item.illustrated) {
-              const targetRatio = item.definition.kind === "tree"
-                ? 0.34
-                : item.definition.kind === "lamp"
-                  ? 0.27
-                  : item.definition.kind === "awning" || item.definition.kind === "stall"
-                    ? 0.24
-                    : 0.16;
-              const scale = height * targetRatio * item.definition.depth / Math.max(1, item.nativeHeight);
-              item.display.scale.set(scale);
-            } else {
-              item.display.scale.set(
-                Math.max(0.68, Math.min(1.25, item.definition.depth)) * height / 850,
-              );
-            }
-            item.display.visible = item.display.x > -180 && item.display.x < width + 180;
-          }
-
           for (let index = 0; index < motes.length; index += 1) {
-            const mote = motes[index];
+            const mote = motes[index]!;
             // Wind carries the drifting motes faster, as it does the leaves.
             mote.x = ((index * 173 + elapsed * (0.006 + (index % 4) * 0.002) * effect.windScale)
               % (width + 80)) - 40;
@@ -1019,11 +960,10 @@ export function PixiScene({
             }
           }
 
-
           // A fog band sits on the horizon line the zone declares.
           fogBand.clear();
           if (effect.fog) {
-            const horizon = height * (activeZone?.stage.horizonY ?? 0.55);
+            const horizon = height * drawnZone.stage.horizonY;
             fogBand
               .rect(0, horizon - height * 0.06, width, height * 0.18)
               .fill({ color: 0xdfe7ea, alpha: 0.34 });
@@ -1043,65 +983,63 @@ export function PixiScene({
             const sorted = [...frameSamples].sort((a, b) => a - b);
             const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] ?? 0;
             const average = frameSamples.reduce((sum, value) => sum + value, 0) / frameSamples.length;
-            const groundPool = coherentPanorama ? undefined : pools[pools.length - 1];
-            const groundHeight = groundPool ? height * groundPool.height : height * 0.24;
-            const groundTexture = groundPool?.textures[0];
+            const views = [current, incoming, fading?.view].filter((view): view is PlaceView => Boolean(view));
+            const groundTexture = current?.ground[0]?.texture;
+            const groundHeight = height * (current?.zone.continuousScene?.groundHeightFrac ?? 0.24);
             const groundWidth = groundTexture
               ? groundTexture.width * (groundHeight / Math.max(1, groundTexture.height))
               : width;
             const segmentIndex = Math.floor((displayedDistance * (width / 1_600)) / Math.max(1, groundWidth));
-            const visibleObjects = pools.flatMap((pool) => pool.sprites).filter((sprite) => sprite.visible).length
-              + props.filter((item) => item.display.visible).length
+            const placeSprites = views.flatMap((view) => [view.sky, view.city, ...view.ground, view.foreground, view.night.sprite]
+              .filter((sprite): sprite is PixiSprite => Boolean(sprite)));
+            const visibleObjects = placeSprites.filter((sprite) => sprite.visible && sprite.parent?.visible !== false).length
               + groundLife.filter((item) => item.visible).length
               + motes.length + [...Object.values(shadows), ...walkerShadows].filter((shadow) => shadow.visible).length;
+            const textureBytes = views.reduce((total, view) => total + view.bytes, 0);
             // Test-observable inventory of every texture the world holds on the
             // stage. Assets.load stamps the resolved URL onto the texture label;
             // textures built in the browser (a canvas, a render target) have no
-            // URL, so they are recorded by size instead. A regression that
-            // reintroduces a retired layer then fails in Playwright rather than
-            // only in visual review.
+            // URL, so they are recorded by size instead.
             const drawnTextures = new Set<string>();
-            const collectTextures = (node: InstanceType<typeof Container>) => {
+            const collectTextures = (node: PixiContainer) => {
               // Only what is actually on screen. A hidden sprite that is waiting
-              // for its texture — the cafe sign before a premium sponsor, the
-              // window lights before dusk — is not something the world is drawing,
-              // and counting it would report a texture nobody can see.
+              // for its texture is not something the world is drawing.
               if (!node.visible) return;
               if (node instanceof Sprite) {
                 const texture = node.texture;
-                drawnTextures.add(
-                  texture.label || texture.source.label || `generated:${texture.width}x${texture.height}`,
-                );
+                if (texture !== Texture.EMPTY) {
+                  drawnTextures.add(
+                    texture.label || texture.source.label || `generated:${texture.width}x${texture.height}`,
+                  );
+                }
               }
-              for (const child of node.children) collectTextures(child as InstanceType<typeof Container>);
+              for (const child of node.children) collectTextures(child as PixiContainer);
             };
             collectTextures(app.stage);
             element.dataset.sceneTextures = [...drawnTextures].sort().join(" ");
+            element.dataset.scenePlacesLoaded = String(views.length);
+            element.dataset.sceneTexturesHeld = String(cache.held().length);
+            element.dataset.sceneTextureBytes = String(textureBytes);
+            element.dataset.sceneVariant = current
+              ? `${current.renditions.city.crop}-${current.renditions.city.width || current.city.texture.width}`
+              : "none";
+            element.dataset.sceneNextZoneId = incoming?.zone.id ?? "";
+            element.dataset.sceneRetryAttempts = String(retries.get(plan.current)?.attempt ?? 0);
+            const signatureZone = drawnZone.id;
             diagnosticsCallback.current({
               routeSeconds: displayedSeconds,
               distance: displayedDistance,
-              zoneId: activeZone.id,
+              zoneId: signatureZone,
               segmentIndex,
-              segmentSignature: `${composedSegmentSignature(
-                activeZone.id,
-                segmentIndex,
-                pools.map((pool) => pool.textures.length),
-              )}:p${segmentVariant(activeZone.id, segmentIndex, 0, 12)}`,
+              segmentSignature: `${composedSegmentSignature(signatureZone, segmentIndex, [1])}:p${segmentVariant(signatureZone, segmentIndex, 0, 12)}`,
               fps: Math.round(1_000 / Math.max(1, average)),
               p95FrameMs: Math.round(p95 * 10) / 10,
               liveObjects: visibleObjects,
-              pooledObjects: pools.reduce((total, pool) => total + pool.sprites.length, 0) + props.length + groundLife.length + motes.length + 2,
-              estimatedTextureBytes: estimatedTextureBytes
-                + (transition ? transition.texture.width * transition.texture.height * 4 : 0)
-                + 128 * 128 * 4,
+              pooledObjects: placeSprites.length + groundLife.length + motes.length + 2,
+              estimatedTextureBytes: textureBytes + 128 * 128 * 4,
             });
           }
         });
-
-        const initialZoneIndex = scenePositionAt(pack, displayedWalkingSeconds).zoneIndex;
-        await buildZone(initialZoneIndex);
-        if (disposed) return;
-        resize();
       } catch {
         if (!disposed) { cleanup(); cleanup = () => undefined; onFailure(); }
       }

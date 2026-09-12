@@ -7,15 +7,13 @@ import type { VoteView } from "@/lib/contracts";
 
 type Props = {
   vote: VoteView | null;
-  open: boolean;
-  onClose: () => void;
   onAccepted: (optionId: string, totalBallots: number) => void;
 };
 
-export function DailyVote({ vote, open, onClose, onAccepted }: Props) {
+/** The ballot's contents. The surrounding modal owns its title, close button and focus. */
+export function DailyVote({ vote, onAccepted }: Props) {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  if (!open) return null;
   const percentages = vote ? ballotPercentages(vote) : new Map<string, number>();
   // Named only once the ballot has closed; before that nothing is decided.
   const winner = vote && vote.status === "closed" && vote.resultOptionId
@@ -42,50 +40,43 @@ export function DailyVote({ vote, open, onClose, onAccepted }: Props) {
     }
   };
 
+  if (!vote) {
+    return <p className="vote-empty">The live server is not connected, so no vote or result is being invented.</p>;
+  }
   return (
-    <section className="vote-panel" data-panel-root tabIndex={-1} role="dialog" aria-modal="true" aria-label="Daily vote">
-      <div className="panel-heading">
-        <div>
-          <span className="eyebrow">TODAY’S CHOICE</span>
-          <h2>{vote?.question ?? "Voting is unavailable while offline"}</h2>
-        </div>
-        <button type="button" data-panel-close onClick={onClose} aria-label="Close vote">×</button>
+    <div className="vote-ballot">
+      <p className="vote-question">{vote.question}</p>
+      <div className="vote-options">
+        {vote.options.map((option) => (
+          <button
+            type="button"
+            key={option.id}
+            disabled={vote.status !== "open" || Boolean(submitting) || Boolean(vote.selectedOptionId)}
+            aria-pressed={vote.selectedOptionId === option.id}
+            onClick={() => void submit(option.id)}
+          >
+            <span className="vote-option-label">
+              {option.countryCode ? (
+                <span aria-hidden="true">{flagEmoji(option.countryCode)} </span>
+              ) : null}
+              {option.label}
+            </span>
+            {option.blurb ? <small className="vote-blurb">{option.blurb}</small> : null}
+            {option.votes === undefined ? null : (
+              <small className="vote-tally">{option.votes} votes · {percentages.get(option.id) ?? 0}%</small>
+            )}
+          </button>
+        ))}
       </div>
-      {vote ? (
-        <div className="vote-options">
-          {vote.options.map((option) => (
-            <button
-              type="button"
-              key={option.id}
-              disabled={vote.status !== "open" || Boolean(submitting) || Boolean(vote.selectedOptionId)}
-              aria-pressed={vote.selectedOptionId === option.id}
-              onClick={() => void submit(option.id)}
-            >
-              <span>
-                {option.countryCode ? (
-                  <span aria-hidden="true">{flagEmoji(option.countryCode)} </span>
-                ) : null}
-                {option.label}
-              </span>
-              {option.blurb ? <small className="vote-blurb">{option.blurb}</small> : null}
-              {option.votes === undefined ? null : (
-                <small>{option.votes} votes · {percentages.get(option.id) ?? 0}%</small>
-              )}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <p>The live server is not connected, so no vote or result is being invented.</p>
-      )}
       {winner ? (
         <p className="vote-result">
-          {vote?.kind === "name" ? "His name: " : "Tomorrow: "}
+          {vote.kind === "name" ? "His name: " : "Tomorrow: "}
           {winner.countryCode ? <span aria-hidden="true">{flagEmoji(winner.countryCode)} </span> : null}
           <strong>{winner.label}</strong> ({percentages.get(winner.id) ?? 0}%)
         </p>
       ) : null}
-      {vote ? <small>{vote.totalBallots} people have voted</small> : null}
+      <small className="vote-total">{vote.totalBallots} people have voted</small>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
-    </section>
+    </div>
   );
 }

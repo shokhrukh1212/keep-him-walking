@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { flagEmoji } from "@/lib/countries/flags";
 import { millisecondsUntilRollover } from "@/lib/story-clock/rollover-hour";
 import type { VoteView } from "@/lib/contracts";
 
@@ -19,7 +18,7 @@ function formatCountdown(milliseconds: number): string {
   return `${seconds}s`;
 }
 
-/** Whole percentages that still sum to 100, so the chip never shows 99 %. */
+/** Whole percentages that still sum to 100, so the ballot never shows 99 %. */
 export function ballotPercentages(vote: VoteView): Map<string, number> {
   const counts = vote.options.map((option) => Math.max(0, option.votes ?? 0));
   const total = counts.reduce((sum, count) => sum + count, 0);
@@ -45,8 +44,8 @@ export function ballotPercentages(vote: VoteView): Map<string, number> {
 }
 
 /**
- * The compact ballot in the dock: the candidate flags, the live split and how
- * long is left. Every number is a server-confirmed ballot count.
+ * One short ballot chip: what it is and how long is left. The choices and their
+ * server-confirmed tallies live in the vote modal, never crammed into the dock.
  */
 export function VoteChip({ vote, rolloverUtcHour, onOpen }: Props) {
   const [remainingMs, setRemainingMs] = useState(
@@ -61,7 +60,6 @@ export function VoteChip({ vote, rolloverUtcHour, onOpen }: Props) {
   }, [rolloverUtcHour]);
 
   if (!vote || vote.status !== "open") return null;
-  const percentages = ballotPercentages(vote);
   const isNameVote = vote.kind === "name";
 
   return (
@@ -72,17 +70,7 @@ export function VoteChip({ vote, rolloverUtcHour, onOpen }: Props) {
       onClick={onOpen}
       aria-label={`${isNameVote ? "Name vote" : "Destination vote"}. Closes in ${formatCountdown(remainingMs)}.`}
     >
-      <span className="vote-chip-options">
-        {vote.options.map((option) => (
-          <span key={option.id} className="vote-chip-option">
-            {option.countryCode ? (
-              <span aria-hidden="true">{flagEmoji(option.countryCode)}</span>
-            ) : null}
-            <span className="vote-chip-label">{option.label}</span>
-            <span className="vote-chip-percent">{percentages.get(option.id) ?? 0}%</span>
-          </span>
-        ))}
-      </span>
+      <span className="vote-chip-label">{isNameVote ? "Name him" : "Vote"}</span>
       <time className="vote-chip-countdown" dateTime={`PT${Math.floor(remainingMs / 1_000)}S`}>
         {formatCountdown(remainingMs)}
       </time>

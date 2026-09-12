@@ -5,7 +5,7 @@ import type { MotionPhase, QualityTier, WorldDiagnosticsSnapshot } from "@/lib/w
 type Props = {
   snapshot: WorldDiagnosticsSnapshot | null;
   locomotionPhase: MotionPhase;
-  qualityTier: QualityTier;
+  qualityTier: QualityTier | null;
   renderer: "pixi" | "static" | null;
   authoritativeRouteSeconds: number;
 };
@@ -40,7 +40,7 @@ export function WorldDiagnostics({
       data-route-seconds={snapshot?.routeSeconds ?? 0}
       data-authoritative-route-seconds={authoritativeRouteSeconds}
     >
-      <strong>WORLD / {renderer ?? "loading"} / {qualityTier}</strong>
+      <strong>WORLD / {renderer ?? "loading"} / {qualityTier ?? "measuring"}</strong>
       <span>authoritative {authoritativeRouteSeconds.toFixed(2)}s</span>
       <span>presented {(snapshot?.routeSeconds ?? 0).toFixed(2)}s · {(snapshot?.distance ?? 0).toFixed(0)}u</span>
       <span>{snapshot?.zoneId ?? "loading"} · segment {snapshot?.segmentIndex ?? 0}</span>

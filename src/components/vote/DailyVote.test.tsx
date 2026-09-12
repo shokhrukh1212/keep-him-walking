@@ -40,13 +40,13 @@ describe("DailyVote", () => {
         }),
       }),
     );
-    render(<DailyVote vote={vote} open onClose={() => undefined} onAccepted={accepted} />);
+    render(<DailyVote vote={vote} onAccepted={accepted} />);
     await userEvent.click(screen.getByRole("button", { name: "Find the best plov" }));
     await waitFor(() => expect(accepted).toHaveBeenCalledWith(vote.options[0]?.id, 5));
   });
 
   it("states why no vote appears offline", () => {
-    render(<DailyVote vote={null} open onClose={() => undefined} onAccepted={() => undefined} />);
+    render(<DailyVote vote={null} onAccepted={() => undefined} />);
     expect(screen.getByText(/no vote or result is being invented/i)).toBeInTheDocument();
   });
 });

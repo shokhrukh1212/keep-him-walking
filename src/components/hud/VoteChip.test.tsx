@@ -51,16 +51,16 @@ describe("ballotPercentages", () => {
 });
 
 describe("VoteChip", () => {
-  it("shows the candidate flags, the live split and a countdown", () => {
+  it("shows one short label and the time left, never the whole ballot", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-25T12:00:00Z"));
     render(<VoteChip vote={vote()} rolloverUtcHour={16} onOpen={vi.fn()} />);
-    const chip = screen.getByRole("button");
-    expect(chip).toHaveTextContent("🇬🇪");
-    expect(chip).toHaveTextContent("🇹🇷");
-    expect(chip).toHaveTextContent("52%");
     // Four hours to the 16:00 UTC rollover.
+    const chip = screen.getByRole("button", { name: "Destination vote. Closes in 4h 0m." });
+    expect(chip).toHaveTextContent("Vote");
     expect(chip).toHaveTextContent("4h 0m");
+    expect(chip).not.toHaveTextContent("🇬🇪");
+    expect(chip).not.toHaveTextContent("%");
     vi.useRealTimers();
   });
 

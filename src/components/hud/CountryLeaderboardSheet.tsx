@@ -4,9 +4,7 @@ import type { ConnectionStatus, CountryWatchView } from "@/lib/contracts";
 import { formatPaceRate } from "@/lib/presence";
 
 type Props = {
-  open: boolean;
   todayTop: CountryWatchView[];
-  onClose: () => void;
   activeViewers: number | null;
   paceRate: number;
   walking: boolean;
@@ -18,18 +16,13 @@ type Props = {
   onShare: () => void;
 };
 
-/** The day's leaderboard: rank, flag, name, carried time. All server-confirmed. */
+/** The day's audience: who is carrying him and from where. Every number is server-confirmed. */
 export function CountryLeaderboardSheet({
-  open, todayTop, onClose, activeViewers, paceRate, walking, status,
+  todayTop, activeViewers, paceRate, walking, status,
   waitingSinceLocalTime, waitingDuration, wakeCountdown, launchCountdown, onShare,
 }: Props) {
-  if (!open) return null;
   return (
-    <aside className="country-sheet" data-panel-root tabIndex={-1} role="dialog" aria-modal="true" aria-label="Audience details">
-      <div className="country-sheet-head">
-        <span className="eyebrow">TODAY · CARRIED TIME</span>
-        <button type="button" data-panel-close onClick={onClose} aria-label="Close audience details">Close</button>
-      </div>
+    <div className="country-sheet">
       <p className="audience-summary">
         {launchCountdown
           ? `The journey starts ${launchCountdown}.`
@@ -60,6 +53,6 @@ export function CountryLeaderboardSheet({
           ))}
         </ol>
       )}
-    </aside>
+    </div>
   );
 }
