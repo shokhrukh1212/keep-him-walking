@@ -334,7 +334,11 @@ second term is derived from distance, so it needs no history and stays pure, and
 wave scheduled mid-encounter starts cleanly the moment the goodbye ends. Crowd actions
 feed both renderers and the bounded browser distance projection as explicit inputs.
 Realtime broadcast is only an invalidation hint: a client always follows it with
-`GET /api/reactions`, which projects the authoritative rows server-side.
+`GET /api/reactions`, which projects the authoritative rows server-side. Since
+migration 0038 a page broadcasts only when its own request booked an action, and a
+viewer answers any number of hints with at most one read a second, after a random wait
+of up to 400 ms (`createHintRefresher`), so a flood of hints cannot multiply database
+reads.
 
 **One divergence worth knowing:** the database's `global_steps` uses the configurable
 `STEPS_PER_ACTIVE_SECOND` (default **1.8**/s), while every displayed step count uses
@@ -1467,6 +1471,35 @@ deployments and older wrappers keep working, but it no longer affects progress. 
 applied to development project `tkntxptfhmjnqaaveddx`; all 20 remote pgTAP suites pass
 and remote lint reports `{"results":[]}`.
 
+**Migration 0038, reactions count watchers (14 September 2026):** owner-approved fixes
+after a review of what hundreds of simultaneous clicks do.
+- **Who counts.** `reaction_requests` holds one row per visitor per reaction per day with
+  that visitor's latest request. `reaction_request_core` refuses a visitor without a live,
+  visible, scene-ready lease (`not_watching`), allows one request per kind per rolling
+  minute (`cooldown`, with the seconds left), and counts the distinct watchers who asked
+  in the last 30 seconds. A cookieless script is no longer a crowd.
+- **Rest.** For 120 watched seconds after a crowd action of that kind starts, nothing
+  counts and the answer is `resting` with the second the rest ends. `read_day_reactions`
+  returns zero for a resting reaction plus `rest`, so a button can never sit at "400/300".
+- **Lock.** Counting takes no lock. Only the request that completes the crowd waits for
+  the `journey_runtime` row lock, re-projects under it, re-checks the rest, then runs the
+  0036 slot search. Heartbeats no longer queue behind every click.
+- **One call.** `submit_reaction_v2` applies a per-network limit (60 a minute, keyed by an
+  HMAC of the edge-reported address, never the address) and the visitor limit (12 a
+  minute) before counting, and returns the fresh board. `read_reactions_now` projects the
+  watched second and reads the board in one call. With a five-second per-instance cache of
+  the current day (`currentCountryDayForReactions`), each reaction route is one round trip.
+- **Pruning.** Each counted request deletes up to 64 requests older than ten minutes,
+  skipping rows another request is already pruning.
+- **Compatibility.** `submit_reaction` keeps its signature for rollback and counts the
+  same way; `reaction_windows` stays for history and is no longer read or written.
+  `walking_metres_per_second()` holds the pace a crowd booking plants distance at.
+- **Load test.** The D2 harness sends every reaction from one machine, so one network key:
+  its documented 5% of 1,000 viewers a minute (50) stays under the 60 limit.
+- **Verification.** Applied to development project `tkntxptfhmjnqaaveddx`. All 21 pgTAP
+  suites pass (436 assertions), including 27 new ones in
+  `phase24-reaction-watchers.test.sql`, and remote lint is `{"results":[]}`.
+
 **Season 1 migration 0030, Tickets:** `tickets` links one future date, one Standard
 sponsorship and one curated versioned pack. `reserve_ticket` locks the date-keyed slot,
 requires journey Day 8+, enforces D+3 through the configured horizon, and snapshots
@@ -1499,7 +1532,7 @@ visible delta to its own country row, and bootstrap v6 carries the live/leaderbo
 projection. **No IP is read, stored or logged anywhere on this path** — the two-letter
 edge header is the whole of the location signal.
 
-**Season 1 migration 0015, reactions:** the `reaction_kind` enum plus
+**Season 1 migration 0015, reactions (counting superseded by 0038):** the `reaction_kind` enum plus
 `reaction_windows` (30-second buckets), `scheduled_actions` (unique per active second
 per day) and `day_photos` (unique per active second). `submit_reaction` rate-limits one
 reaction per kind per visitor per minute through `consume_mutation_rate_limit`,
@@ -1551,8 +1584,8 @@ peak) → `_v9` (the hundred-watcher moment) → `_v10` (the adaptive interval a
 `normalize_country_code`, `read_country_day_watch`, `reaction_threshold`,
 `close_and_pick_vote_winner`, `create_next_country_day`, `read_traveler_name`,
 `write_journey_weather`, `read_journey_weather`,
-`submit_reaction`, `read_day_reactions`, `schedule_journey_activity`,
-`action_overlap_seconds`, `record_day_photo`,
+`submit_reaction` / `_v2`, `read_day_reactions`, `read_reactions_now`, `schedule_journey_activity`,
+`action_overlap_seconds`, `walking_metres_per_second`, `record_day_photo`,
 `submit_phase1_ballot`, `consume_mutation_rate_limit`, `reserve_sponsor_slot` / `_v2`,
 `sponsor_price_cents`, `sponsor_tier_price_cents`, `journey_slot_date`,
 `open_sponsor_pricing_window`, `bind_sponsor_slot_day`,
@@ -1596,8 +1629,8 @@ POST /api/notifications/country     revocable, provider-gated opt-in
 GET  /api/cron/prewarm              15:55 asset, OG and weather warm-up (authorized)
 GET  /api/cron/rollover             16:00 daily reconciliation (authorized)
 GET  /api/health                    DB/content/provider/weather/asset/launch readiness
-POST /api/reactions                 enum reaction, per-kind cooldown, crowd threshold
-GET  /api/reactions                 authoritative counts/action projection after a Realtime hint
+POST /api/reactions                 enum reaction from a live watcher; limits, count and booking in one call
+GET  /api/reactions                 authoritative counts/action projection after a Realtime hint, one call
 POST /api/day-photos                the crowd's photograph for a scheduled moment
 POST /api/corrections               private correction, three per visitor per hour
 POST /api/observability/vitals
@@ -1667,10 +1700,16 @@ not over the live painting. While `LAUNCH_ENABLED` is not exactly `true`, the le
 `/api/og/day` route serves that same static card without opening a database connection;
 after launch its verified day card retains the explicit 60-second shared-cache policy.
 
-`POST /api/reactions` returns the end of its authoritative 30-second request bucket.
-`ReactionButtons` uses it only for feedback: if a below-threshold request reaches that
-boundary without a scheduled action, the live status says it expired and invites the
-visitor to ask again. It does not schedule or extend an action in the browser.
+`POST /api/reactions` answers with the outcome (`counted` or `scheduled` as 200,
+`cooldown` or `rate_limited` as 429, `resting` or `not_watching` as 409), the fresh
+reaction board, and the moment the request stops counting, 30 seconds after it arrived.
+`ReactionButtons` uses these only for feedback: an expired below-threshold request
+invites the visitor to ask again, a repeat says how long to wait, and a request during
+the rest says when he can do it again. Every viewer's buttons derive the rest from the
+crowd rows and the bounded watched-second clock and show `~Ns`. A request that times out
+or gets a 5xx is not called a failure until a read of the board shows no new booking of
+that kind; if one appeared it is shown as queued and the page broadcasts the hint. None of
+this schedules or extends an action in the browser.
 
 `src/lib/share/token.ts` signs compact, purpose-bound HMAC claims. Personal cards contain
 only a day number, expiry, and confirmed numbers: steps cards are issued after reading
@@ -2117,7 +2156,9 @@ is only "draw an image on the patch" - it stores nothing and reads nothing.
 - Every mutating route checks a trusted `Origin`.
 - Distributed rate limits with correct `Retry-After`: bootstrap 90/min, presence 45/min,
   vote 10/min, postcard 4/5 min, sponsor metric 60/5 min, sponsor click 20/5 min,
-  notification 8/5 min.
+  notification 8/5 min, reactions 12/min per visitor and 60/min per network. The network
+  key is an HMAC of the edge-reported address, as for admin sign-in; the address itself is
+  never stored.
 - Correlation IDs and redaction in structured logs; missing vendor credentials are an
   intentional no-op rather than a crash.
 - The pack-preview route hard-denies Production regardless of any other flag.

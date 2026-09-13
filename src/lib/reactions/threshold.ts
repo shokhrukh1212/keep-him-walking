@@ -5,13 +5,16 @@ export const REACTION_KINDS = ["wave", "water", "photo"] as const;
 
 export type ReactionKind = (typeof REACTION_KINDS)[number];
 
-/** One reaction per kind per visitor per minute. Mirrors the RPC's rate limit. */
+/** One reaction per kind per watcher per rolling minute. Mirrors reaction_request_core. */
 export const REACTION_COOLDOWN_SECONDS = 60;
 
-/** Reactions are counted in 30-second buckets. Mirrors reaction_windows. */
-export const REACTION_BUCKET_SECONDS = 30;
+/** A request counts for this long: the tally is distinct watchers who asked within it. */
+export const REACTION_WINDOW_SECONDS = 30;
 
-/** He will not repeat a kind inside this many active seconds. Mirrors the RPC. */
+/**
+ * After a crowd action he rests that reaction for this many watched seconds; nothing
+ * counts meanwhile. Mirrors the RPC.
+ */
 export const REACTION_DEDUPE_ACTIVE_SECONDS = 120;
 
 /** What each reaction asks him to do. 'water' is a drink. */

@@ -182,10 +182,14 @@ system sans-serif. There is no glass blur, glow or decorative gradient in the ch
   local time.
 - **Audience control** — one top-right control combines the country summary, confirmed
   watcher count and honest movement status.
-- **Reactions** — Wave, Water and Photo sit at top centre. One confirmed watcher can
-  trigger one; Realtime is only an update hint and every viewer then reads the action
-  window from the server. Sending, queued, active, cooldown, failure and expired-request
-  feedback are visibly distinct.
+- **Reactions** — Wave, Water and Photo sit at top centre. They count people, not
+  clicks: only a page that is watching can ask, once a minute for each kind, and he acts
+  when enough different watchers ask within 30 seconds — one in a room of one, two in a
+  small room, 30% of a big one. Afterwards that reaction rests for two watched minutes,
+  and every button shows about how long. Realtime is only an update hint and every viewer
+  then reads the action window from the server. If a request's answer is lost, the page
+  checks whether he is about to act before saying it failed. Sending, checking, queued,
+  active, waiting, resting, failure and expired-request feedback are visibly distinct.
 - **Walking rule status** — a small pill reading "→ Walking · Canal Saint-Martin", or the
   current stop's label ("Taking a photo", "Talking with Camille", "Tying a shoe"). It
   names a place only once that place's painting is actually on screen. "Reconnecting…"

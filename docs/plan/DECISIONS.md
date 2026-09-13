@@ -78,6 +78,14 @@ conflict. Everything else above still stands.
 | Image delivery | Cloudflare R2 behind a custom domain, through the existing `ASSET_BASE_URL`. Content-hashed renditions are cached immutably. The manifest lives in versioned code, never image bytes in Postgres. Only the current and next place are loaded. | `TECHNICAL.md` §8.7/§11, AFTER-P22 D8 |
 | Interface | Sponsor, Journey, Vote and the audience list are overlay modals, with no side panels. The traveler no longer moves left for a panel. The locals form and Passport link leave Journey (stored data kept). Sound becomes a bottom-right toggle; progress shows place dots and "4.3 / 8 km together · 54%". | `JourneyExperience`, `OverlayModal`, `GoalBar` |
 
+## Refinement decisions — 13 September 2026
+
+These supersede the rows above where they conflict.
+
+| Area | Approved decision | Implementation record |
+|---|---|---|
+| Reactions | Count distinct live watchers, not clicks, over a rolling 30 seconds. Nothing counts while he rests for two watched minutes after a crowd action. Only the request that completes a crowd takes the authority lock. Each visitor and each network has a per-minute limit. A lost answer is checked against the server before the page says it failed. | Migration 0038, `ReactionButtons`, `TECHNICAL.md` §9 |
+
 ## Historical post-P22 launch decisions — 11 September 2026
 
 This table is preserved as history. Its London route/art assumptions were superseded by

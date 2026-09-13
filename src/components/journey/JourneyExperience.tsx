@@ -6,8 +6,15 @@ import { trackVisitorEvent } from "@/lib/analytics/client";
 import type {
   BootstrapSnapshot,
   HeartbeatResponse,
+  ReactionsView,
   ScheduledEventView,
 } from "@/lib/contracts";
+import { withReactionBoard } from "@/lib/reactions/payload";
+import {
+  REACTION_HINT_JITTER_MS,
+  REACTION_HINT_SPACING_MS,
+  createHintRefresher,
+} from "@/lib/reactions/hint-refresh";
 import type { TravelerState } from "@/lib/content/schema";
 import {
   estimatedServerNow,
@@ -350,28 +357,44 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   // a painting renderer is ready, a slow or unavailable 3D traveler must not be
   // misreported as an offline viewer or keep the shared walk paused.
   const experienceReady = sceneRenderer !== null;
-  const refreshReactions = useCallback(async () => {
+  // A newer read of the reaction board replaces the bootstrap's and is laid over the
+  // latest heartbeat's, whose counts the buttons would otherwise keep showing.
+  const applyReactions = useCallback((reactions: ReactionsView) => {
+    const dayId = snapshot.countryDay.id;
+    setSnapshot((current) => current.countryDay.id === dayId ? { ...current, reactions } : current);
+    setHeartbeat((current) => current?.countryDayId === dayId
+      ? { ...current, response: { ...current.response, reactions: withReactionBoard(current.response.reactions, reactions) } }
+      : current);
+  }, [snapshot.countryDay.id]);
+  const refreshReactions = useCallback(async (): Promise<ReactionsView | null> => {
     try {
       const response = await fetch("/api/reactions", { cache: "no-store" });
-      if (!response.ok) return;
+      if (!response.ok) return null;
       const result = await response.json() as {
         countryDayId?: string;
         reactions?: BootstrapSnapshot["reactions"];
       };
-      if (result.countryDayId !== snapshot.countryDay.id || !result.reactions) return;
-      setSnapshot((current) => current.countryDay.id === result.countryDayId
-        ? { ...current, reactions: result.reactions! }
-        : current);
+      if (result.countryDayId !== snapshot.countryDay.id || !result.reactions) return null;
+      applyReactions(result.reactions);
+      return result.reactions;
     } catch {
       // A later heartbeat remains the authoritative fallback.
+      return null;
     }
-  }, [snapshot.countryDay.id]);
+  }, [applyReactions, snapshot.countryDay.id]);
+  // A Realtime hint only says "something changed". However many arrive, this viewer
+  // answers with at most one read a second, after a short random wait.
+  const hintRefresh = useMemo(() => createHintRefresher(refreshReactions, {
+    minSpacingMs: REACTION_HINT_SPACING_MS,
+    jitterMs: REACTION_HINT_JITTER_MS,
+  }), [refreshReactions]);
+  useEffect(() => () => hintRefresh.cancel(), [hintRefresh]);
 
   const { status: connectionStatus, broadcastReactionHint } = useJourneyPresence({
     snapshot,
     sceneReady: experienceReady,
     onHeartbeat: handleHeartbeat,
-    onReactionHint: refreshReactions,
+    onReactionHint: hintRefresh.request,
   });
   useEffect(() => { broadcastHint.current = broadcastReactionHint; }, [broadcastReactionHint]);
   const activeViewers = heartbeat?.activeViewers ?? snapshot.presence.activeViewers;
@@ -890,13 +913,17 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         activeViewers={activeViewers}
         enabled={snapshot.mode === "live" && connectionStatus === "live"}
         activeCrowdKind={crowdKind}
+        scheduled={scheduledActions}
+        activeSeconds={routeRawSeconds}
         onScheduled={(kind, atActiveSecond) => {
           if (kind === "photo") ownedPhotoSecond.current = atActiveSecond;
         }}
-        onConfirmed={() => {
-          void refreshReactions();
-          broadcastReactionHint();
+        onReactions={applyReactions}
+        onConfirmed={(booked) => {
+          // Only a booking changes what everyone should see; a +1 waits for the next beat.
+          if (booked) broadcastReactionHint();
         }}
+        reconcile={refreshReactions}
       /> : null}
       <EncounterDialogue
         line={review ? ["talk","listen","greet","goodbye"].includes(review.state)

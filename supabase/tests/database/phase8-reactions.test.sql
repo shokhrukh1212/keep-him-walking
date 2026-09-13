@@ -193,7 +193,7 @@ select is((select out_count from first_wave), 1, 'the first wave is counted');
 select is((select out_threshold from first_wave), 2, 'the threshold follows the live crowd');
 select is((select out_scheduled_at from first_wave), null, 'one person is not a crowd');
 
--- A different visitor in the same 30-second bucket reaches the threshold.
+-- A different watcher asking within thirty seconds reaches the threshold.
 create temporary table second_wave as
 select * from public.submit_reaction(
   '10000000-0000-4000-8000-000000000077', repeat('b', 64), 'wave',
@@ -218,8 +218,8 @@ select * from public.submit_reaction(
 
 select is((select out_rate_limited from repeat_wave), true, 'one wave per visitor per minute');
 
--- Two more visitors wave inside the 120 active-second dedupe window. The bucket
--- still counts them, but he does not wave twice in the same two minutes.
+-- Two more visitors wave inside the 120 active seconds he rests after a wave.
+-- Nothing counts while he rests, so he does not wave twice in the same two minutes.
 do $$ begin
   perform * from public.submit_reaction(
     '10000000-0000-4000-8000-000000000077', repeat('c', 64), 'wave',

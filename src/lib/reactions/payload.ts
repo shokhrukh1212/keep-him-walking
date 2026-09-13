@@ -113,6 +113,21 @@ export function mergeScheduledActions(
   );
 }
 
+/**
+ * A newer read of the reaction board laid over a payload that already carried one.
+ * Counts come from the newer read; stops are unioned, because either read may hold a
+ * stop the other has not seen yet.
+ */
+export function withReactionBoard(current: ReactionsView, next: ReactionsView): ReactionsView {
+  const walkingClock = newestWalkingClock(current.walkingClock, next.walkingClock);
+  return {
+    counts: next.counts,
+    scheduled: mergeScheduledActions(current.scheduled, next.scheduled),
+    nextScheduledAction: next.nextScheduledAction,
+    ...(walkingClock ? { walkingClock } : {}),
+  };
+}
+
 /** The anchor read at the newest watched second wins. */
 export function newestWalkingClock(
   ...clocks: ReadonlyArray<WalkingClock | null | undefined>

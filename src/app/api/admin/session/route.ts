@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ADMIN_SESSION_COOKIE, issueAdminSession, validateAdminCredential } from "@/lib/admin/admin-auth";
 import { hashOpaqueValue } from "@/lib/identity/server";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
+import { clientAddress } from "@/lib/security/client-address";
 import { readLimitedJson } from "@/lib/validation/http";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
 
@@ -13,9 +14,7 @@ export function GET(request: NextRequest) {
 }
 
 function protectedClientKey(request: NextRequest) {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const address = forwarded || request.headers.get("x-real-ip")?.trim() || "unknown";
-  return hashOpaqueValue(`admin-access:${address}`);
+  return hashOpaqueValue(`admin-access:${clientAddress(request.headers)}`);
 }
 
 export async function POST(request: NextRequest) {
