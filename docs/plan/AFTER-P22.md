@@ -20,10 +20,10 @@ finish rather than what it got wrong.
 | D2 | The 1,000-viewer load test has not been run on current code | No — owner deferred it to after launch (11 Sep 2026) | Owner (needs a deployed Preview) |
 | D3 | Lit windows at dusk have no artwork | **Resolved — optional windows skipped** | Owner decision (12 Sep 2026) |
 | D4 | Sofia has one source painting instead of the six the pack builder needs | **Superseded — Paris is Day 1** | Owner decision (12 Sep 2026) |
-| D5 | Minute-accurate scheduling on the free Vercel plan | **Chosen 13 Sep — external minute job (cron-job.org) plus a daily Vercel backup; owner creates the job and `CRON_SECRET`** | Owner (cron-job.org account, Vercel setting) |
+| D5 | Minute-accurate scheduling on the free Vercel plan | **Chosen 13 Sep — external minute job (cron-job.org) plus a daily Vercel backup. Deployed; `CRON_SECRET` verified; owner confirms the cron-job.org history shows 200** | Owner (cron-job.org account) |
 | D6 | Some of his new movements do not fit the moment they are used for | **Resolved — current motion accepted** | Owner decision (12 Sep 2026) |
 | D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved, then superseded — every place lasts 7 walking minutes and the list repeats** | P25, then P28 (12 Sep 2026) |
-| D8 | R2 is verified and the Vercel setting is on, but the live site is still the old build; Preview addresses are refused by the CDN | No — the live site keeps serving its own copies until the next production build (blocked by D5) | Owner (Cloudflare CORS rule; deployment via D5) |
+| D8 | R2 is live on `keephimwalking.com`; Preview addresses are refused by the CDN, and desktop needs a real-browser check | No — production build `82e517a` uses the CDN (13 Sep). Preview needs the CORS choice | Owner (Cloudflare CORS rule, desktop check) |
 | D9 | Paris v3 paintings and Day 1 conversations | **Resolved — owner approved and development Day 2 switched to v3** | Owner decision (13 Sep 2026) |
 
 ---
@@ -184,8 +184,8 @@ The minute-accurate runs come from an external scheduler the owner controls.
   the daily backup, up to an hour late, or the next visitor's page load, which runs the
   same catch-up.
 - **What to do.**
-  1. Add `CRON_SECRET` to Vercel Production, a long random value that never goes in chat
-     or git. Then redeploy so the running build can read it.
+  1. **Done 13 September.** `CRON_SECRET` is in Vercel Production. The deployment of
+     `82e517a` reads it: `/api/cron/reconcile` answers 403 without it and 200 with it.
   2. On cron-job.org, create a job with:
      - URL `https://keephimwalking.com/api/cron/reconcile`
      - schedule every minute, method GET
@@ -374,8 +374,12 @@ domain/deployment work.
 - **CDN rechecked from `https://keephimwalking.com`.** Paris v3 passed 95/95 checks. The
   traveler model, its animations and both residents are byte-identical to the local files
   and carry the right CORS header.
-- **Not yet live.** The setting only takes effect in a new build, and Vercel refused that
-  build on the free plan (D5). The live site therefore still serves its own copies.
+- **Live.** The production deployment of `82e517a` (13 September) serves
+  `keephimwalking.com` with the CDN origin built into its client bundle.
+- **Desktop risk.** In this repository's software-rendered Chromium, a 1440×900 page
+  crashed within 12 s of loading a 3600 px painting from the CDN, in all three runs. The
+  same build loading its own copies did not crash. Phone size passed every check. See
+  `docs/launch-finalization/evidence/p28-refinements/README.md`.
 - **Preview addresses refused.** The R2 CORS rule allows only
   `https://keephimwalking.com`. `https://www.keephimwalking.com`, every `*.vercel.app`
   Preview address and `http://localhost:3100` get HTTP 403.
@@ -389,8 +393,10 @@ people, be refused, and show a neutral street with no traveler model.
 
 **What to do.**
 
-1. **Unblock deployment (D5).** Once that is decided, redeploy Production. No other
-   setting is needed.
+1. **Check a real desktop.** Open `https://keephimwalking.com` in desktop Chrome and leave
+   it for five minutes. If the tab shows "Aw, Snap" or goes blank, clear
+   `ASSET_BASE_URL` in Vercel Production and redeploy. The site then serves its own
+   copies again.
 2. **Preview addresses.** In Cloudflare → R2 → `keephimwalking-assets` → Settings →
    CORS policy, choose one:
    - **Allow any address.** Change `AllowedOrigins` to `["*"]`. The files are public

@@ -2345,10 +2345,8 @@ rebuilding. In the browser a failed painting is retried and the last good one ke
 State on 13 September 2026:
 - **Vercel setting.** `ASSET_BASE_URL=https://assets.keephimwalking.com` is set for Vercel
   Production and Preview.
-- **Not yet in a deployed build.** The production deployment is still the 12 September
-  build, because Vercel's free plan rejects the every-minute cron in `vercel.json`
-  (AFTER-P22 D5). Until a new build, the application origin serves the same immutable
-  renditions.
+- **Deployed.** The production deployment of `82e517a` (13 September) has the CDN origin
+  built into its client bundle. Its `vercel.json` runs the cron daily; see AFTER-P22 D5.
 - **CORS.** The R2 rule allows `https://keephimwalking.com` only; Preview origins get 403
   (AFTER-P22 D8).
 
