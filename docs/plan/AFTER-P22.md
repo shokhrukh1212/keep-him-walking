@@ -20,7 +20,7 @@ finish rather than what it got wrong.
 | D2 | The 1,000-viewer load test has not been run on current code | No — owner deferred it to after launch (11 Sep 2026) | Owner (needs a deployed Preview) |
 | D3 | Lit windows at dusk have no artwork | **Resolved — optional windows skipped** | Owner decision (12 Sep 2026) |
 | D4 | Sofia has one source painting instead of the six the pack builder needs | **Superseded — Paris is Day 1** | Owner decision (12 Sep 2026) |
-| D5 | Minute-accurate scheduling on the free Vercel plan | **Chosen 13 Sep — external minute job (cron-job.org) plus a daily Vercel backup. Deployed; `CRON_SECRET` verified; owner confirms the cron-job.org history shows 200** | Owner (cron-job.org account) |
+| D5 | Minute-accurate scheduling on the free Vercel plan | **Resolved 13 Sep — cron-job.org calls the reconciler every minute and gets HTTP 200; Vercel keeps a daily backup** | Owner decision (13 Sep 2026) |
 | D6 | Some of his new movements do not fit the moment they are used for | **Resolved — current motion accepted** | Owner decision (12 Sep 2026) |
 | D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved, then superseded — every place lasts 7 walking minutes and the list repeats** | P25, then P28 (12 Sep 2026) |
 | D8 | R2 is live on `keephimwalking.com`; Preview addresses are refused by the CDN, and desktop needs a real-browser check | No — production build `82e517a` uses the CDN (13 Sep). Preview needs the CORS choice | Owner (Cloudflare CORS rule, desktop check) |
@@ -190,8 +190,10 @@ The minute-accurate runs come from an external scheduler the owner controls.
      - URL `https://keephimwalking.com/api/cron/reconcile`
      - schedule every minute, method GET
      - header `Authorization: Bearer <CRON_SECRET>`
-  3. After a few minutes, confirm its history shows HTTP 200. A 403 means the header
-     and the Vercel value differ.
+  3. **Verified 13 September.** Vercel's request logs show one 403, at 09:21 +05, from
+     before the header was saved. Every later completed run returned HTTP 200, including
+     on the GitHub-built deployment of `38b7e2e`. A future 403 means the header and the
+     Vercel value differ.
 
 ---
 
