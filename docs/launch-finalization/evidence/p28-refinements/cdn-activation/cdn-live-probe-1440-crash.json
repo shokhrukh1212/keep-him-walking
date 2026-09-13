@@ -1,0 +1,273 @@
+{
+  "name": "desktop-1440-dsf1",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "checks": [
+    {
+      "label": "renderer process stayed alive",
+      "ok": false,
+      "detail": "crashed at 11293 ms"
+    },
+    {
+      "label": "run completed",
+      "ok": false,
+      "detail": "Error: page.waitForTimeout: Page crashed"
+    },
+    {
+      "label": "scene requests only current or next place",
+      "ok": false,
+      "detail": {
+        "requestedPlaces": [
+          "paris-market"
+        ],
+        "seenZones": [],
+        "offPlan": [
+          {
+            "t": 10011,
+            "path": "/scenes/paris/v3/places/paris-market/city-full-3600.8909e99a60.webp",
+            "status": 200,
+            "type": "image",
+            "contentType": "image/webp",
+            "acao": "https://keephimwalking.com",
+            "place": "paris-market",
+            "zoneAtRequest": null,
+            "nextAtRequest": null
+          },
+          {
+            "t": 10135,
+            "path": "/scenes/paris/v3/places/paris-market/ground-full-3600.f83820bd71.webp",
+            "status": 200,
+            "type": "fetch",
+            "contentType": "image/webp",
+            "acao": "https://keephimwalking.com",
+            "place": "paris-market",
+            "zoneAtRequest": null,
+            "nextAtRequest": null
+          },
+          {
+            "t": 10173,
+            "path": "/scenes/paris/v3/places/paris-market/city-full-3600.8909e99a60.webp",
+            "status": 200,
+            "type": "fetch",
+            "contentType": "image/webp",
+            "acao": "https://keephimwalking.com",
+            "place": "paris-market",
+            "zoneAtRequest": null,
+            "nextAtRequest": null
+          },
+          {
+            "t": 10197,
+            "path": "/scenes/paris/v3/places/paris-market/sky-full-800.8eef0ba4d1.webp",
+            "status": 200,
+            "type": "fetch",
+            "contentType": "image/webp",
+            "acao": "https://keephimwalking.com",
+            "place": "paris-market",
+            "zoneAtRequest": null,
+            "nextAtRequest": null
+          }
+        ]
+      }
+    },
+    {
+      "label": "max places loaded <= 2",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "label": "every CDN response 2xx/3xx with ACAO for the app origin",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no same-origin asset requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no failed requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no CORS / CSP console errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "traveler model + animations loaded from CDN",
+      "ok": true,
+      "detail": [
+        "/characters/v3/traveler.glb 200",
+        "/characters/v3/traveler-animations.glb 200"
+      ]
+    }
+  ],
+  "cdn": [
+    {
+      "t": 1731,
+      "path": "/characters/v3/traveler.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 1795,
+      "path": "/characters/v3/resident-b.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 3227,
+      "path": "/characters/v3/traveler-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 3655,
+      "path": "/characters/v3/resident-b-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 5883,
+      "path": "/characters/v3/resident-a.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 8535,
+      "path": "/characters/v3/resident-a-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 10011,
+      "path": "/scenes/paris/v3/places/paris-market/city-full-3600.8909e99a60.webp",
+      "status": 200,
+      "type": "image",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-market",
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 10135,
+      "path": "/scenes/paris/v3/places/paris-market/ground-full-3600.f83820bd71.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-market",
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 10173,
+      "path": "/scenes/paris/v3/places/paris-market/city-full-3600.8909e99a60.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-market",
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 10197,
+      "path": "/scenes/paris/v3/places/paris-market/sky-full-800.8eef0ba4d1.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-market",
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    }
+  ],
+  "sameOriginAssetRequests": [],
+  "failed": [],
+  "console": [
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x203400145400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x203400145400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x203400145400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x203400145400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    }
+  ],
+  "forwardErrors": [],
+  "bootstrap": {
+    "status": 200,
+    "mode": "live",
+    "journeyState": "live",
+    "day": 2,
+    "city": "Paris",
+    "pack": "paris-v3",
+    "conversations": 14
+  },
+  "heartbeats": [
+    {
+      "t": 8297,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 2
+    }
+  ],
+  "samples": [],
+  "dialogue": [],
+  "screenshots": [],
+  "summary": {
+    "cdnRequests": 10,
+    "requestedPlaces": [
+      "paris-market"
+    ],
+    "heartbeats": 1,
+    "heartbeatStatuses": [
+      200
+    ],
+    "dialogueLines": 0,
+    "zonesVisited": []
+  }
+}

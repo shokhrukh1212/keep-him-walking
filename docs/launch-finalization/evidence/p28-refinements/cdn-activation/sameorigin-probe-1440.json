@@ -1,0 +1,185 @@
+{
+  "name": "desktop-1440-dsf1",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "checks": [
+    {
+      "label": "settled (pixi renderer, traveler ready, no connection banner)",
+      "ok": true
+    },
+    {
+      "label": "scene painting ready from CDN",
+      "ok": true,
+      "detail": {
+        "zone": "paris-market",
+        "next": "",
+        "status": "→\nWalking · Marais market street"
+      }
+    },
+    {
+      "label": "status line names the drawn place",
+      "ok": true,
+      "detail": "→\nWalking · Marais market street"
+    },
+    {
+      "label": "ten place dots",
+      "ok": true
+    },
+    {
+      "label": "run completed",
+      "ok": false,
+      "detail": "TimeoutError: locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.utility-controls button')\u001b[22m\n"
+    },
+    {
+      "label": "scene requests only current or next place",
+      "ok": true,
+      "detail": {
+        "requestedPlaces": [],
+        "seenZones": [
+          "paris-market"
+        ],
+        "offPlan": []
+      }
+    },
+    {
+      "label": "max places loaded <= 2",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "label": "every CDN response 2xx/3xx with ACAO for the app origin",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no same-origin asset requests",
+      "ok": false,
+      "detail": [
+        "https://keephimwalking.com/characters/v3/traveler.glb",
+        "https://keephimwalking.com/characters/v3/resident-b.glb",
+        "https://keephimwalking.com/characters/v3/resident-b-animations.glb",
+        "https://keephimwalking.com/characters/v3/traveler-animations.glb",
+        "https://keephimwalking.com/scenes/paris/v3/places/paris-market/city-full-3600.8909e99a60.webp"
+      ]
+    },
+    {
+      "label": "no failed requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no CORS / CSP console errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "traveler model + animations loaded from CDN",
+      "ok": false,
+      "detail": []
+    }
+  ],
+  "cdn": [],
+  "sameOriginAssetRequests": [
+    "https://keephimwalking.com/characters/v3/traveler.glb",
+    "https://keephimwalking.com/characters/v3/resident-b.glb",
+    "https://keephimwalking.com/characters/v3/resident-b-animations.glb",
+    "https://keephimwalking.com/characters/v3/traveler-animations.glb",
+    "https://keephimwalking.com/scenes/paris/v3/places/paris-market/city-full-3600.8909e99a60.webp",
+    "https://keephimwalking.com/scenes/paris/v3/places/paris-market/ground-full-3600.f83820bd71.webp",
+    "https://keephimwalking.com/scenes/paris/v3/places/paris-market/sky-full-800.8eef0ba4d1.webp",
+    "https://keephimwalking.com/scenes/paris/v3/places/paris-market/city-full-3600.8909e99a60.webp"
+  ],
+  "failed": [],
+  "console": [
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x33c00146000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x33c00146000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x33c00146000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x33c00146000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    },
+    {
+      "type": "warning",
+      "text": "WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost"
+    },
+    {
+      "type": "error",
+      "text": ""
+    },
+    {
+      "type": "warning",
+      "text": "0: #define SHADER_NAME color-matrix-filter-vertex\n1: \n2: \n3:         #ifdef GL_ES // This checks if it is WebGL1\n4:         #define in attribute\n5:         #define out varying\n6:         #endif\n7:         precision highp float;\n8: in vec2 aPosition;\n9: out vec2 vTextureCoord;\n10: \n11: uniform vec4 u"
+    },
+    {
+      "type": "error",
+      "text": ""
+    },
+    {
+      "type": "warning",
+      "text": "0: #define SHADER_NAME color-matrix-filter-fragment\n1: \n2: \n3:         #ifdef GL_ES // This checks if it is WebGL1\n4:         #define in varying\n5:         #define finalColor gl_FragColor\n6:         #define texture texture2D\n7:         #endif\n8:         precision mediump float;\n9: \n10: in vec2 vText"
+    },
+    {
+      "type": "error",
+      "text": "PixiJS Error: Could not initialize shader."
+    },
+    {
+      "type": "warning",
+      "text": "WebGL: INVALID_OPERATION: useProgram: program not valid"
+    },
+    {
+      "type": "warning",
+      "text": "WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost"
+    }
+  ],
+  "forwardErrors": [],
+  "bootstrap": {
+    "status": 200,
+    "mode": "live",
+    "journeyState": "live",
+    "day": 2,
+    "city": "Paris",
+    "pack": "paris-v3",
+    "conversations": 14
+  },
+  "heartbeats": [
+    {
+      "t": 8986,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 31382,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    }
+  ],
+  "samples": [],
+  "dialogue": [],
+  "screenshots": [
+    "desktop-1440-dsf1-settled.png"
+  ],
+  "summary": {
+    "cdnRequests": 0,
+    "requestedPlaces": [],
+    "heartbeats": 2,
+    "heartbeatStatuses": [
+      200
+    ],
+    "dialogueLines": 0,
+    "zonesVisited": []
+  },
+  "note": "Same commit rebuilt with ASSET_BASE_URL empty (same-origin), 1440x900 at scale 1, to test whether the CDN runs crash is tied to cross-origin loading. Same-origin asset and CDN checks fail by design here."
+}

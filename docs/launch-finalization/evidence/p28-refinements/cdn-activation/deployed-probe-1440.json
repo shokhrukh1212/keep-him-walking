@@ -1,0 +1,352 @@
+{
+  "name": "desktop-1440-dsf1",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "checks": [
+    {
+      "label": "settled (pixi renderer, traveler ready)",
+      "ok": true
+    },
+    {
+      "label": "no connection banner",
+      "ok": false,
+      "detail": "No journey day is active right now. Retrying… Preview only · live counts, steps and voting are unavailable."
+    },
+    {
+      "label": "scene painting ready from CDN",
+      "ok": true,
+      "detail": {
+        "zone": "paris-arrival",
+        "next": "",
+        "status": "•\nPreview only · waiting for the live journey"
+      }
+    },
+    {
+      "label": "status line names the drawn place",
+      "ok": true,
+      "detail": "•\nPreview only · waiting for the live journey"
+    },
+    {
+      "label": "ten place dots",
+      "ok": false
+    },
+    {
+      "label": "sound turns on",
+      "ok": true,
+      "detail": "Sound on"
+    },
+    {
+      "label": "Journey modal opens and closes",
+      "ok": true
+    },
+    {
+      "label": "Sponsor modal opens and closes",
+      "ok": true
+    },
+    {
+      "label": "Vote chip present",
+      "ok": false,
+      "detail": "no .vote-chip rendered (no open ballot on this day)"
+    },
+    {
+      "label": "modals did not remount the world",
+      "ok": true,
+      "detail": {
+        "before": "1",
+        "after": "1"
+      }
+    },
+    {
+      "label": "scene requests only current or next place",
+      "ok": true,
+      "detail": {
+        "requestedPlaces": [],
+        "seenZones": [
+          "paris-arrival"
+        ],
+        "offPlan": []
+      }
+    },
+    {
+      "label": "max places loaded <= 2",
+      "ok": true,
+      "detail": 1
+    },
+    {
+      "label": "every CDN response 2xx/3xx with ACAO for the app origin",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no same-origin asset requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no failed requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no CORS / CSP console errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "traveler model + animations loaded from CDN",
+      "ok": true,
+      "detail": [
+        "/characters/v3/traveler.glb 200",
+        "/characters/v3/traveler-animations.glb 200"
+      ]
+    }
+  ],
+  "cdn": [
+    {
+      "t": 2643,
+      "path": "/characters/v3/traveler.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 2675,
+      "path": "/characters/v3/resident-b.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 4634,
+      "path": "/characters/v3/traveler-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 4934,
+      "path": "/scenes/paris/v2/places/paris-arrival/ground-full-3600.c17dc5c232.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 4937,
+      "path": "/scenes/paris/v2/places/paris-arrival/sky-full-800.6ac25de359.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 4951,
+      "path": "/scenes/paris/v2/places/paris-arrival/city-full-3600.609a458a53.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 6834,
+      "path": "/characters/v3/resident-b-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 9257,
+      "path": "/scenes/paris/v2/places/paris-arrival/city-full-3600.609a458a53.webp",
+      "status": 200,
+      "type": "image",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    }
+  ],
+  "sameOriginAssetRequests": [],
+  "failed": [],
+  "console": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x14940014b400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x14940014b400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x14940014b400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x14940014b400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    }
+  ],
+  "forwardErrors": [],
+  "bootstrap": {
+    "status": 503,
+    "conversations": null
+  },
+  "heartbeats": [],
+  "samples": [
+    {
+      "t": 122565,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 127950,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 133356,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 139162,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    }
+  ],
+  "dialogue": [],
+  "screenshots": [
+    "deployed-settled-1440.png",
+    "deployed-journey-modal-1440.png"
+  ],
+  "summary": {
+    "cdnRequests": 8,
+    "requestedPlaces": [],
+    "heartbeats": 0,
+    "heartbeatStatuses": [],
+    "dialogueLines": 0,
+    "zonesVisited": [
+      "paris-arrival"
+    ]
+  },
+  "note": "Deployed production site https://keephimwalking.com (commit 82e517a), opened directly with no routing. No country day is active in Production, so the page is the Preview-only fallback (Paris v2 arrival)."
+}

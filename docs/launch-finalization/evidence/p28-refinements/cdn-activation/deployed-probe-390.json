@@ -1,0 +1,551 @@
+{
+  "name": "mobile-390",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "checks": [
+    {
+      "label": "settled (pixi renderer, traveler ready)",
+      "ok": true
+    },
+    {
+      "label": "no connection banner",
+      "ok": false,
+      "detail": "No journey day is active right now. Retrying… Preview only · live counts, steps and voting are unavailable."
+    },
+    {
+      "label": "scene painting ready from CDN",
+      "ok": true,
+      "detail": {
+        "zone": "paris-arrival",
+        "next": "",
+        "status": "•\nPreview only · waiting for the live journey"
+      }
+    },
+    {
+      "label": "status line names the drawn place",
+      "ok": true,
+      "detail": "•\nPreview only · waiting for the live journey"
+    },
+    {
+      "label": "ten place dots",
+      "ok": false
+    },
+    {
+      "label": "Journey modal opens and closes",
+      "ok": true
+    },
+    {
+      "label": "Sponsor modal opens and closes",
+      "ok": true
+    },
+    {
+      "label": "Vote chip present",
+      "ok": false,
+      "detail": "no .vote-chip rendered (no open ballot on this day)"
+    },
+    {
+      "label": "modals did not remount the world",
+      "ok": true,
+      "detail": {
+        "before": "1",
+        "after": "1"
+      }
+    },
+    {
+      "label": "scene requests only current or next place",
+      "ok": true,
+      "detail": {
+        "requestedPlaces": [],
+        "seenZones": [
+          "paris-arrival"
+        ],
+        "offPlan": []
+      }
+    },
+    {
+      "label": "max places loaded <= 2",
+      "ok": true,
+      "detail": 1
+    },
+    {
+      "label": "every CDN response 2xx/3xx with ACAO for the app origin",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no same-origin asset requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no failed requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no CORS / CSP console errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "traveler model + animations loaded from CDN",
+      "ok": true,
+      "detail": [
+        "/characters/v3/traveler.glb 200",
+        "/characters/v3/traveler-animations.glb 200"
+      ]
+    }
+  ],
+  "cdn": [
+    {
+      "t": 4278,
+      "path": "/characters/v3/resident-b.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 4316,
+      "path": "/characters/v3/traveler.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 6264,
+      "path": "/scenes/paris/v2/places/paris-arrival/city-center-800.1b08210e6b.webp",
+      "status": 200,
+      "type": "image",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 6624,
+      "path": "/characters/v3/resident-b-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 7031,
+      "path": "/scenes/paris/v2/places/paris-arrival/city-center-800.1b08210e6b.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 7141,
+      "path": "/scenes/paris/v2/places/paris-arrival/sky-full-800.6ac25de359.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 7142,
+      "path": "/scenes/paris/v2/places/paris-arrival/ground-full-3600.c17dc5c232.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 7175,
+      "path": "/characters/v3/traveler-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    }
+  ],
+  "sameOriginAssetRequests": [],
+  "failed": [],
+  "console": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x34fc00bade00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x34fc00bade00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x34fc00bade00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x34fc00bade00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 503 ()"
+    }
+  ],
+  "forwardErrors": [],
+  "bootstrap": {
+    "status": 503,
+    "conversations": null
+  },
+  "heartbeats": [],
+  "samples": [
+    {
+      "t": 86176,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 89928,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 92847,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 95486,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 98033,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 100798,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 103446,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 105858,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 108303,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 110914,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 113447,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 115947,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 118715,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 121270,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 124216,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 127819,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 130629,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 133168,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 135720,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 138272,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 140924,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    },
+    {
+      "t": 143628,
+      "zone": "paris-arrival",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "wait_pockets",
+      "resident": "idle"
+    }
+  ],
+  "dialogue": [],
+  "screenshots": [
+    "deployed-settled-390.png",
+    "deployed-journey-modal-390.png"
+  ],
+  "summary": {
+    "cdnRequests": 8,
+    "requestedPlaces": [],
+    "heartbeats": 0,
+    "heartbeatStatuses": [],
+    "dialogueLines": 0,
+    "zonesVisited": [
+      "paris-arrival"
+    ]
+  },
+  "note": "Deployed production site https://keephimwalking.com (commit 82e517a), opened directly with no routing. No country day is active in Production, so the page is the Preview-only fallback (Paris v2 arrival)."
+}

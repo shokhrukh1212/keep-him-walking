@@ -393,10 +393,12 @@ people, be refused, and show a neutral street with no traveler model.
 
 **What to do.**
 
-1. **Check a real desktop.** Open `https://keephimwalking.com` in desktop Chrome and leave
-   it for five minutes. If the tab shows "Aw, Snap" or goes blank, clear
-   `ASSET_BASE_URL` in Vercel Production and redeploy. The site then serves its own
-   copies again.
+1. **Check a real desktop once Paris v3 is live.** Today's Preview-only page uses the
+   Paris v2 painting, and it already passed at 1440 px. The risk is Paris v3's 3600 px
+   paintings, so the check means something only after the launch switch shows a live
+   Paris v3 day. Open `https://keephimwalking.com` in desktop Chrome and leave it for five
+   minutes. If the tab shows "Aw, Snap" or goes blank, clear `ASSET_BASE_URL` in Vercel
+   Production and redeploy. The site then serves its own copies again.
 2. **Preview addresses.** In Cloudflare → R2 → `keephimwalking-assets` → Settings →
    CORS policy, choose one:
    - **Allow any address.** Change `AllowedOrigins` to `["*"]`. The files are public

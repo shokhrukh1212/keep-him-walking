@@ -1,0 +1,1923 @@
+{
+  "name": "mobile-390",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "checks": [
+    {
+      "label": "settled (pixi renderer, traveler ready, no connection banner)",
+      "ok": true
+    },
+    {
+      "label": "scene painting ready from CDN",
+      "ok": true,
+      "detail": {
+        "zone": "paris-lanes",
+        "next": "",
+        "status": "→\nWalking · Canal Saint-Martin"
+      }
+    },
+    {
+      "label": "status line names the drawn place",
+      "ok": true,
+      "detail": "→\nWalking · Canal Saint-Martin"
+    },
+    {
+      "label": "ten place dots",
+      "ok": true
+    },
+    {
+      "label": "Journey modal opens and closes",
+      "ok": true
+    },
+    {
+      "label": "Sponsor modal opens and closes",
+      "ok": true
+    },
+    {
+      "label": "Vote modal opens and closes",
+      "ok": true
+    },
+    {
+      "label": "Watchers modal opens and closes",
+      "ok": true,
+      "detail": "2 people watching"
+    },
+    {
+      "label": "modals did not remount the world",
+      "ok": true,
+      "detail": {
+        "before": "1",
+        "after": "1"
+      }
+    },
+    {
+      "label": "scene requests only current or next place",
+      "ok": true,
+      "detail": {
+        "requestedPlaces": [
+          "paris-lanes",
+          "paris-market"
+        ],
+        "seenZones": [
+          "paris-lanes",
+          "paris-market"
+        ],
+        "offPlan": []
+      }
+    },
+    {
+      "label": "max places loaded <= 2",
+      "ok": true,
+      "detail": 2
+    },
+    {
+      "label": "every CDN response 2xx/3xx with ACAO for the app origin",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no same-origin asset requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no failed requests",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "no CORS / CSP console errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "traveler model + animations loaded from CDN",
+      "ok": true,
+      "detail": [
+        "/characters/v3/traveler.glb 200",
+        "/characters/v3/traveler-animations.glb 200"
+      ]
+    }
+  ],
+  "cdn": [
+    {
+      "t": 1407,
+      "path": "/characters/v3/traveler.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 1431,
+      "path": "/characters/v3/resident-b.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 2594,
+      "path": "/characters/v3/resident-b-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 2962,
+      "path": "/characters/v3/traveler-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 4673,
+      "path": "/scenes/paris/v3/places/paris-lanes/sky-full-800.29c28f1089.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-lanes",
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 4689,
+      "path": "/scenes/paris/v3/places/paris-lanes/city-center-800.9429832f5e.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-lanes",
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 4709,
+      "path": "/scenes/paris/v3/places/paris-lanes/ground-full-3600.b27c1833f4.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-lanes",
+      "zoneAtRequest": null,
+      "nextAtRequest": null
+    },
+    {
+      "t": 129302,
+      "path": "/characters/v3/resident-a.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": "paris-lanes",
+      "nextAtRequest": ""
+    },
+    {
+      "t": 131794,
+      "path": "/characters/v3/resident-a-animations.glb",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "model/gltf-binary",
+      "acao": "https://keephimwalking.com",
+      "place": null,
+      "zoneAtRequest": "paris-lanes",
+      "nextAtRequest": ""
+    },
+    {
+      "t": 244314,
+      "path": "/scenes/paris/v3/places/paris-market/city-center-800.b98dede687.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-market",
+      "zoneAtRequest": "paris-lanes",
+      "nextAtRequest": ""
+    },
+    {
+      "t": 244400,
+      "path": "/scenes/paris/v3/places/paris-market/sky-full-800.8eef0ba4d1.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-market",
+      "zoneAtRequest": "paris-lanes",
+      "nextAtRequest": ""
+    },
+    {
+      "t": 244415,
+      "path": "/scenes/paris/v3/places/paris-market/ground-full-3600.f83820bd71.webp",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "image/webp",
+      "acao": "https://keephimwalking.com",
+      "place": "paris-market",
+      "zoneAtRequest": "paris-lanes",
+      "nextAtRequest": ""
+    }
+  ],
+  "sameOriginAssetRequests": [],
+  "failed": [],
+  "console": [
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x204400145400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x204400145400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x204400145400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x204400145400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    }
+  ],
+  "forwardErrors": [],
+  "bootstrap": {
+    "status": 200,
+    "mode": "live",
+    "journeyState": "live",
+    "day": 2,
+    "city": "Paris",
+    "pack": "paris-v3",
+    "conversations": 14
+  },
+  "heartbeats": [
+    {
+      "t": 5128,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 2
+    },
+    {
+      "t": 7193,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 2
+    },
+    {
+      "t": 29384,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 2
+    },
+    {
+      "t": 54993,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 78288,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 101270,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 127896,
+      "status": 200,
+      "activityScheduled": true,
+      "viewers": 1
+    },
+    {
+      "t": 149732,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 172334,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 193670,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 217445,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 243547,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 264816,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 292139,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 317999,
+      "status": 200,
+      "activityScheduled": true,
+      "viewers": 1
+    },
+    {
+      "t": 340414,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 365970,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 390253,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 411309,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    },
+    {
+      "t": 436722,
+      "status": 200,
+      "activityScheduled": true,
+      "viewers": 1
+    },
+    {
+      "t": 460044,
+      "status": 200,
+      "activityScheduled": false,
+      "viewers": 1
+    }
+  ],
+  "samples": [
+    {
+      "t": 12071,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 13723,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 15341,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 16922,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 18578,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "stop",
+      "resident": "idle"
+    },
+    {
+      "t": 20235,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "drink",
+      "resident": "idle"
+    },
+    {
+      "t": 22519,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "drink",
+      "resident": "idle"
+    },
+    {
+      "t": 25494,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "drink",
+      "resident": "idle"
+    },
+    {
+      "t": 27292,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "drink",
+      "resident": "idle"
+    },
+    {
+      "t": 29073,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 30865,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 32604,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 34423,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 36350,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 38266,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 40460,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 42373,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 44480,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 46502,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 48420,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 50385,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 52441,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 54458,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 56434,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 58408,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 60398,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 62542,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 64540,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 66633,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 68703,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 70960,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 72999,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 75069,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 77204,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 79358,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 81526,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 83736,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 86084,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 88330,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 91088,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 94406,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 98275,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 101545,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 104942,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 107641,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 110227,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 112756,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 115293,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 117862,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 121603,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 125141,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 128110,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 131608,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 134140,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 136763,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 139541,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 142678,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 145768,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 149192,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 153677,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 157571,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 161042,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 163592,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 166328,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 169704,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 173304,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 176693,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 180264,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "notice",
+      "resident": "walk"
+    },
+    {
+      "t": 183235,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "listen",
+      "resident": "greet"
+    },
+    {
+      "t": 191793,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "greet",
+      "resident": "listen"
+    },
+    {
+      "t": 197444,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "listen",
+      "resident": "talk"
+    },
+    {
+      "t": 202849,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "talk",
+      "resident": "listen"
+    },
+    {
+      "t": 206859,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "listen",
+      "resident": "greet"
+    },
+    {
+      "t": 210790,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "goodbye",
+      "resident": "listen"
+    },
+    {
+      "t": 215561,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 220240,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 223476,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 227760,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 230684,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 234456,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 238169,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 242891,
+      "zone": "paris-lanes",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 247537,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 253123,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 258183,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 262367,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 268565,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 271661,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 274364,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 276993,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 279678,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 282576,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 287791,
+      "zone": "paris-lanes",
+      "next": "paris-market",
+      "assetState": "ready",
+      "placesLoaded": 2,
+      "texturesHeld": 6,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 292945,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 299062,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 305428,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 311137,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 315033,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 319978,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 324517,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 327810,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 330949,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 333893,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 336777,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 340121,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 343225,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 345988,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 348645,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 351584,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 354476,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 357175,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 359733,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 362568,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 365972,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 368864,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 372270,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 375264,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "stop",
+      "resident": "idle"
+    },
+    {
+      "t": 377933,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "photo",
+      "resident": "idle"
+    },
+    {
+      "t": 380519,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 383267,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 385963,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 388605,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 391286,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 393996,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 397002,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 399938,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 403173,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 405936,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 408576,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 411309,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 414136,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 416764,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 419534,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 422190,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 424675,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 427189,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 429618,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 432142,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 434794,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 437482,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 440149,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 443058,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 445533,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 448146,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 450599,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 453375,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 456004,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 458479,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    },
+    {
+      "t": 461072,
+      "zone": "paris-market",
+      "next": "",
+      "assetState": "ready",
+      "placesLoaded": 1,
+      "texturesHeld": 3,
+      "character": "walk",
+      "resident": "idle"
+    }
+  ],
+  "dialogue": [
+    {
+      "t": 183235,
+      "speaker": "INÈS",
+      "text": "INÈS Bonjour! The canal suits your walking pace today.",
+      "resident": "greet"
+    },
+    {
+      "t": 191793,
+      "speaker": "INÈS",
+      "text": "INÈS Pause halfway across the footbridge. The view opens from the middle.",
+      "resident": "listen"
+    }
+  ],
+  "screenshots": [
+    "cdn-live-settled-390.png",
+    "cdn-live-journey-modal-390.png",
+    "cdn-live-conversation-390.png"
+  ],
+  "summary": {
+    "cdnRequests": 12,
+    "requestedPlaces": [
+      "paris-lanes",
+      "paris-market"
+    ],
+    "heartbeats": 21,
+    "heartbeatStatuses": [
+      200
+    ],
+    "dialogueLines": 2,
+    "zonesVisited": [
+      "paris-lanes",
+      "paris-market"
+    ]
+  }
+}
