@@ -30,7 +30,7 @@
     },
     {
       "speaker": "npc",
-      "text": "Follow the canal for a quieter start; the city changes pace beside the water.",
+      "text": "Follow the canal for a quieter start. The city changes pace beside the water.",
       "mood": "thoughtful"
     },
     {
@@ -62,6 +62,6 @@
   "voteBlurb": "Station boulevards, canal paths, market passages and the Seine, ending beneath the evening lights.",
   "postcard": {
     "title": "Evening beside the Seine",
-    "copy": "Five Paris streets later, the river opened and the tower caught the last light."
+    "copy": "Ten Paris places later, the river opened and the tower caught the last light."
   }
 }

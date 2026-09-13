@@ -1,5 +1,5 @@
 {
-  "packVersion": 2,
+  "packVersion": 3,
   "sceneVisitSeconds": 420,
   "targetPlaceCount": 10,
   "places": [
@@ -38,11 +38,51 @@
     {
       "id": "paris-landmark",
       "label": "The Seine and the Eiffel Tower",
-      "tags": ["landmark", "river"],
+      "tags": ["landmark", "river", "eiffel-view"],
       "description": "The river widens and the tower comes into view as the light softens.",
       "day": "zones/paris-landmark/master.png",
       "night": "zones/paris-landmark/night.png",
       "weather": "evening"
+    },
+    {
+      "id": "paris-montmartre",
+      "label": "Montmartre and Sacré-Cœur",
+      "tags": ["montmartre", "landmark", "steps"],
+      "description": "Broad Montmartre steps rise toward Sacré-Cœur above warm stone terraces.",
+      "day": "zones/paris-montmartre/master.png",
+      "weather": "clear"
+    },
+    {
+      "id": "paris-vosges",
+      "label": "Place des Vosges",
+      "tags": ["square", "arcades", "marais", "vosges"],
+      "description": "Brick arcades and clipped trees frame the quiet paths of Place des Vosges.",
+      "day": "zones/paris-vosges/master.png",
+      "weather": "golden"
+    },
+    {
+      "id": "paris-luxembourg",
+      "label": "Luxembourg Garden",
+      "tags": ["garden", "landmark"],
+      "description": "The Luxembourg Garden opens behind its railings, with pale paths and green chairs.",
+      "day": "zones/paris-luxembourg/master.png",
+      "weather": "breeze"
+    },
+    {
+      "id": "paris-alexandre",
+      "label": "Pont Alexandre III",
+      "tags": ["bridge", "river", "landmark"],
+      "description": "Pont Alexandre III crosses the Seine beneath gilded lamps and a wide Paris sky.",
+      "day": "zones/paris-alexandre/master.png",
+      "weather": "golden"
+    },
+    {
+      "id": "paris-saint-germain",
+      "label": "Saint-Germain bookshop street",
+      "tags": ["bookshop", "saint-germain", "lanes"],
+      "description": "A narrow Saint-Germain street passes old bookshop windows and shaded café fronts.",
+      "day": "zones/paris-saint-germain/master.png",
+      "weather": "haze"
     }
   ]
 }

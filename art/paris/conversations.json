@@ -1,52 +1,45 @@
 {
   "conversations": [
     {
-      "id": "paris-welcome",
+      "id": "paris-canal-welcome",
       "role": "story",
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["lanes"],
       "review": "pending",
       "lines": [
-        { "speaker": "npc", "text": "Bonjour! Are you finding your way from the station?", "mood": "curious" },
-        { "speaker": "traveler", "text": "Bonjour. Yes, I am discovering Paris on foot.", "mood": "amused" },
-        { "speaker": "npc", "text": "Follow the canal for a quieter start; the city changes pace beside the water.", "mood": "thoughtful" },
-        { "speaker": "traveler", "text": "That sounds better than rushing straight to the famous view.", "mood": "thoughtful" },
-        { "speaker": "npc", "text": "There is time for the market, a café, and the river before evening.", "mood": "neutral" },
-        { "speaker": "traveler", "text": "Merci, Camille. I will let the streets lead me there.", "mood": "amused" }
+        { "speaker": "npc", "text": "Bonjour! Are you finding your way from the station?", "mood": "curious", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. Yes, I am discovering Paris on foot.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Follow the canal for a quieter start. The city changes pace beside the water.", "mood": "thoughtful", "durationMs": 5400 },
+        { "speaker": "traveler", "text": "That sounds better than rushing straight to the famous view.", "mood": "thoughtful", "durationMs": 4300 },
+        { "speaker": "npc", "text": "There is time for the market, a café, and the river before evening.", "mood": "neutral", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Merci, Camille. I will let the streets lead me there.", "mood": "amused", "durationMs": 4300 }
       ]
     },
     {
-      "id": "paris-station-hello",
+      "id": "paris-station-directions",
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["arrival", "station"],
       "review": "pending",
       "lines": [
-        { "speaker": "npc", "text": "Bonjour! Are you finding your way from the station?", "mood": "curious" },
-        { "speaker": "traveler", "text": "Bonjour. Yes, I am discovering Paris on foot.", "mood": "amused" }
+        { "speaker": "npc", "text": "Bonjour! You look ready for a long walk.", "mood": "curious", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. I am, once I choose the right street.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Start toward the canal. The pavements become calmer after the station streets.", "mood": "thoughtful", "durationMs": 5200 },
+        { "speaker": "traveler", "text": "Perfect. A calm beginning will help me find my rhythm.", "mood": "amused", "durationMs": 4400 }
       ]
     },
     {
-      "id": "paris-canal-advice",
-      "residentType": "resident-b",
-      "speakerName": "Camille",
-      "placeTags": ["arrival", "lanes", "canal"],
+      "id": "paris-canal-footbridge",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["canal"],
       "review": "pending",
       "lines": [
-        { "speaker": "npc", "text": "Follow the canal for a quieter start; the city changes pace beside the water.", "mood": "thoughtful" },
-        { "speaker": "traveler", "text": "That sounds better than rushing straight to the famous view.", "mood": "thoughtful" }
-      ]
-    },
-    {
-      "id": "paris-before-evening",
-      "residentType": "resident-b",
-      "speakerName": "Camille",
-      "placeTags": ["lanes", "market", "cafe"],
-      "review": "pending",
-      "lines": [
-        { "speaker": "npc", "text": "There is time for the market, a café, and the river before evening.", "mood": "neutral" },
-        { "speaker": "traveler", "text": "Merci, Camille. I will let the streets lead me there.", "mood": "amused" }
+        { "speaker": "npc", "text": "Bonjour! The canal suits your walking pace today.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. It is difficult to hurry beside this water.", "mood": "thoughtful", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Pause halfway across the footbridge. The view opens from the middle.", "mood": "curious", "durationMs": 5000 },
+        { "speaker": "traveler", "text": "I will. A short pause still counts as exploring.", "mood": "amused", "durationMs": 4200 }
       ]
     },
     {
@@ -56,52 +49,140 @@
       "placeTags": ["market"],
       "review": "pending",
       "lines": [
-        { "speaker": "npc", "text": "Take a look at the peaches before they sell out.", "mood": "curious" },
-        { "speaker": "traveler", "text": "They smell like the end of summer. Merci!", "mood": "amused" }
+        { "speaker": "npc", "text": "Bonjour! Have you seen the fruit stall around the corner?", "mood": "curious", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. Not yet, but I can smell something sweet.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "npc", "text": "The peaches are good today. Look before the afternoon crowd arrives.", "mood": "neutral", "durationMs": 5000 },
+        { "speaker": "traveler", "text": "Then my timing is lucky. Merci for the tip.", "mood": "amused", "durationMs": 4000 }
       ]
     },
     {
-      "id": "paris-cafe-minute",
+      "id": "paris-cafe-counter",
       "residentType": "resident-a",
       "speakerName": "Inès",
       "placeTags": ["cafe"],
       "review": "pending",
       "lines": [
-        { "speaker": "npc", "text": "Nobody rushes a coffee here. Sit for a minute if you can.", "mood": "neutral" },
-        { "speaker": "traveler", "text": "A minute is exactly what my feet wanted.", "mood": "amused" }
+        { "speaker": "npc", "text": "Bonjour! Are you stopping for coffee or only passing through?", "mood": "curious", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. Coffee, if I can enjoy it without rushing.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Stand at the counter for a quick cup, or take a table when you want a longer pause.", "mood": "neutral", "durationMs": 5900 },
+        { "speaker": "traveler", "text": "A quick cup today. The street is asking me to keep walking.", "mood": "thoughtful", "durationMs": 4800 }
       ]
     },
     {
-      "id": "paris-footbridge-view",
-      "residentType": "resident-a",
-      "speakerName": "Inès",
-      "placeTags": ["lanes", "canal"],
-      "review": "pending",
-      "lines": [
-        { "speaker": "npc", "text": "Stop halfway across the footbridge. The water looks best from the middle.", "mood": "thoughtful" },
-        { "speaker": "traveler", "text": "Then I will stop halfway. Thank you.", "mood": "neutral" }
-      ]
-    },
-    {
-      "id": "paris-quay-bookstalls",
+      "id": "paris-cafe-to-river",
       "residentType": "resident-b",
       "speakerName": "Camille",
-      "placeTags": ["river", "landmark"],
+      "placeTags": ["cafe", "eiffel-view"],
       "review": "pending",
       "lines": [
-        { "speaker": "npc", "text": "The green bookstalls along the quay are worth a slow look.", "mood": "curious" },
-        { "speaker": "traveler", "text": "Then I will walk slowly and look twice.", "mood": "thoughtful" }
+        { "speaker": "npc", "text": "Bonjour! Did the café persuade you to stay?", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. Nearly, but I still want to reach the river.", "mood": "thoughtful", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Keep walking toward the brighter sky between the buildings. The river will appear soon.", "mood": "neutral", "durationMs": 5600 },
+        { "speaker": "traveler", "text": "That is a direction I can remember. Merci.", "mood": "amused", "durationMs": 3900 }
       ]
     },
     {
-      "id": "paris-tower-lights",
-      "residentType": "resident-a",
-      "speakerName": "Inès",
-      "placeTags": ["landmark"],
+      "id": "paris-seine-bookstalls",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["eiffel-view"],
       "review": "pending",
       "lines": [
-        { "speaker": "npc", "text": "After dark the tower sparkles for a few minutes every hour.", "mood": "surprised" },
-        { "speaker": "traveler", "text": "Then I have a good reason to come back tonight.", "mood": "amused" }
+        { "speaker": "npc", "text": "Bonjour! The river has given you a little more sky.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. I noticed that before I noticed the tower.", "mood": "thoughtful", "durationMs": 4800 },
+        { "speaker": "npc", "text": "The green bookstalls along the quay reward a slow look as well.", "mood": "curious", "durationMs": 4900 },
+        { "speaker": "traveler", "text": "Then I will divide my attention between books and the view.", "mood": "amused", "durationMs": 4500 }
+      ]
+    },
+    {
+      "id": "paris-montmartre-steps",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["montmartre", "steps"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! Those steps are easier if you do not race them.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. I was hoping they would reward patience.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Turn around once you are higher. Paris keeps widening behind you.", "mood": "thoughtful", "durationMs": 4900 },
+        { "speaker": "traveler", "text": "Good advice. The climb should include the view it creates.", "mood": "thoughtful", "durationMs": 4400 }
+      ]
+    },
+    {
+      "id": "paris-vosges-arcades",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["vosges"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! You found one of the calmest corners of the square.", "mood": "neutral", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. The arcades make the whole place feel sheltered.", "mood": "thoughtful", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Walk beneath them, then come back through the garden. The two routes feel completely different.", "mood": "curious", "durationMs": 5900 },
+        { "speaker": "traveler", "text": "I like a square that offers a second version of itself.", "mood": "amused", "durationMs": 4300 }
+      ]
+    },
+    {
+      "id": "paris-vosges-garden",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["vosges"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! Have you tried the path beneath the trees?", "mood": "curious", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. Not yet; I was following the red-brick arcade.", "mood": "neutral", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Cross the garden on your next turn. The centre feels quieter than the street outside.", "mood": "thoughtful", "durationMs": 5500 },
+        { "speaker": "traveler", "text": "I will take the quieter route before moving on.", "mood": "thoughtful", "durationMs": 4100 }
+      ]
+    },
+    {
+      "id": "paris-luxembourg-chairs",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["garden"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! The green chairs are an invitation, you know.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. My feet understood the invitation immediately.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Choose one facing the path. Resting here is also a way of watching Paris pass.", "mood": "thoughtful", "durationMs": 5500 },
+        { "speaker": "traveler", "text": "One quiet minute, then I will join the path again.", "mood": "neutral", "durationMs": 4300 }
+      ]
+    },
+    {
+      "id": "paris-alexandre-details",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["bridge"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! The bridge is making you look in every direction.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. There is too much detail for one glance.", "mood": "surprised", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Look up at the lamps, then down the river. The grand view is built from small things.", "mood": "thoughtful", "durationMs": 5600 },
+        { "speaker": "traveler", "text": "Then I will give the bridge the time it is asking for.", "mood": "thoughtful", "durationMs": 4400 }
+      ]
+    },
+    {
+      "id": "paris-river-to-books",
+      "residentType": "resident-a",
+      "speakerName": "Inès",
+      "placeTags": ["bridge", "bookshop"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! Are you following the river or looking for the bookshops?", "mood": "curious", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. I was following the river, but books could change the route.", "mood": "amused", "durationMs": 5000 },
+        { "speaker": "npc", "text": "Turn into Saint-Germain when the streets narrow. The shop windows will slow you down.", "mood": "neutral", "durationMs": 5500 },
+        { "speaker": "traveler", "text": "That sounds like a worthwhile delay. Merci.", "mood": "amused", "durationMs": 3900 }
+      ]
+    },
+    {
+      "id": "paris-saint-germain-books",
+      "residentType": "resident-b",
+      "speakerName": "Camille",
+      "placeTags": ["bookshop"],
+      "review": "pending",
+      "lines": [
+        { "speaker": "npc", "text": "Bonjour! Did a bookshop window finally stop you?", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "traveler", "text": "Bonjour. Only for a moment, but it was a convincing window.", "mood": "amused", "durationMs": 4800 },
+        { "speaker": "npc", "text": "Browse without a plan. The smallest shelves often hold the best surprise.", "mood": "curious", "durationMs": 5000 },
+        { "speaker": "traveler", "text": "I can make room for one surprise before the route begins again.", "mood": "thoughtful", "durationMs": 4600 }
       ]
     }
   ]

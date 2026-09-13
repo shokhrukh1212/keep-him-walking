@@ -116,6 +116,12 @@ export const PACK_GEOGRAPHY: Record<string, PackGeography> = {
     neighbours: [],
     voteBlurb: "Station boulevards, canal paths, market passages and the Seine, ending beneath the evening lights.",
   },
+  "paris-v3": {
+    lat: 48.8566,
+    lon: 2.3522,
+    neighbours: [],
+    voteBlurb: "Station boulevards, canal paths, gardens, bookshops and bridges across ten Paris places.",
+  },
 };
 
 const EMPTY_GEOGRAPHY: PackGeography = { lat: 0, lon: 0, neighbours: [], voteBlurb: "" };

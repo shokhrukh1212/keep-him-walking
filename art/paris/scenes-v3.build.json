@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "packId": "paris-v3",
+  "builtAt": "2026-09-13T02:13:03.784Z",
+  "placeCount": 10,
+  "targetPlaceCount": 10,
+  "warnings": [],
+  "assetBudgetBytes": 5767168,
+  "largestTwoPlaceDesktopBytes": 1904580,
+  "largestTwoPlaceMobileBytes": 603580,
+  "places": {
+    "paris-arrival": {
+      "sourceHash": "040b3be878fb1eac",
+      "palette": [
+        "#aaccee",
+        "#aa9988",
+        "#777777"
+      ],
+      "night": false,
+      "desktopBytes": 642354,
+      "mobileBytes": 185432,
+      "storedBytes": 1491138
+    },
+    "paris-lanes": {
+      "sourceHash": "5d572c313941e9a0",
+      "palette": [
+        "#888888",
+        "#ccaa99",
+        "#aaccee"
+      ],
+      "night": false,
+      "desktopBytes": 745490,
+      "mobileBytes": 249418,
+      "storedBytes": 1793250
+    },
+    "paris-market": {
+      "sourceHash": "cb17874544bf2919",
+      "palette": [
+        "#888888",
+        "#eeccaa",
+        "#ccaa99"
+      ],
+      "night": false,
+      "desktopBytes": 777152,
+      "mobileBytes": 281620,
+      "storedBytes": 1893930
+    },
+    "paris-cafe": {
+      "sourceHash": "9d4b188be6811536",
+      "palette": [
+        "#888888",
+        "#eeccaa",
+        "#663333"
+      ],
+      "night": false,
+      "desktopBytes": 788990,
+      "mobileBytes": 247266,
+      "storedBytes": 1848578
+    },
+    "paris-landmark": {
+      "sourceHash": "c5848028a5788dfc",
+      "palette": [
+        "#776666",
+        "#8899cc",
+        "#ffbb77"
+      ],
+      "night": true,
+      "desktopBytes": 1101186,
+      "mobileBytes": 307022,
+      "storedBytes": 2657620
+    },
+    "paris-montmartre": {
+      "sourceHash": "1c9226a1d1d7c523",
+      "palette": [
+        "#aaccff",
+        "#bbaa99",
+        "#998888"
+      ],
+      "night": false,
+      "desktopBytes": 803394,
+      "mobileBytes": 296558,
+      "storedBytes": 1944582
+    },
+    "paris-vosges": {
+      "sourceHash": "c8acbc1fcff69622",
+      "palette": [
+        "#99ccee",
+        "#bbaa99",
+        "#ffddbb"
+      ],
+      "night": false,
+      "desktopBytes": 856232,
+      "mobileBytes": 266900,
+      "storedBytes": 1985856
+    },
+    "paris-luxembourg": {
+      "sourceHash": "705109174f43fdf0",
+      "palette": [
+        "#eeccaa",
+        "#99ccff",
+        "#998888"
+      ],
+      "night": false,
+      "desktopBytes": 697834,
+      "mobileBytes": 235654,
+      "storedBytes": 1632136
+    },
+    "paris-alexandre": {
+      "sourceHash": "e5d372d34aaf9978",
+      "palette": [
+        "#ddbb99",
+        "#887777",
+        "#88bbee"
+      ],
+      "night": false,
+      "desktopBytes": 654412,
+      "mobileBytes": 232964,
+      "storedBytes": 1564916
+    },
+    "paris-saint-germain": {
+      "sourceHash": "b86be69376321797",
+      "palette": [
+        "#aa9988",
+        "#eeccaa",
+        "#887777"
+      ],
+      "night": false,
+      "desktopBytes": 788374,
+      "mobileBytes": 301638,
+      "storedBytes": 1920456
+    }
+  }
+}
