@@ -23,7 +23,7 @@ it("rejects a mismatched database identity", () => {
   )).toThrow(/different projects/);
 });
 
-it.each(["tkntxptfhmjnqaaveddx", "pqtfhkiftiubwuwxnuzd"])(
+it.each(["tkntxptfhmjnqaaveddx"])(
   "rejects known rehearsal project %s",
   (projectRef) => expect(() => productionEnvironmentIdentity({
     ...production,

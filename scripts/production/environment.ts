@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
 
-const NON_PRODUCTION_REFS = new Set([
-  "tkntxptfhmjnqaaveddx",
-  "pqtfhkiftiubwuwxnuzd",
-]);
+// The owner uses two projects: tknt… for local/rehearsal work and pqtf… for
+// keephimwalking.com. Never let a production command target the development project.
+const NON_PRODUCTION_REFS = new Set(["tkntxptfhmjnqaaveddx"]);
 
 export function supabaseProjectRef(publicUrl: string, databaseUrl: string): string {
   const publicRef = new URL(publicUrl).hostname.match(/^([a-z0-9]+)\.supabase\.co$/)?.[1];

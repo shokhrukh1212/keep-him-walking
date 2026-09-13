@@ -2021,6 +2021,12 @@ remote database lint returned `{"results":[]}`.
 
 ### Production launch configuration (P21)
 
+The owner-approved two-project mapping is `tkntxptfhmjnqaaveddx` for Development/local
+rehearsals and `pqtfhkiftiubwuwxnuzd` for `keephimwalking.com` Production. Guarded
+Production commands require the latter through `.env.production.local` and refuse the
+Development reference. Production can contain an expired test journey while launch flags
+remain disabled; that does not activate the public season.
+
 Production enters the Season 1 path only when both `PHASE2_ENABLED=true` and
 `LAUNCH_ENABLED=true`. With the switch armed but before the journey's stored
 `launch_at`, `/api/bootstrap` returns the real Day 1 pack in `prelaunch` mode: the scene

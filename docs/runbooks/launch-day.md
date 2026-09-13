@@ -68,16 +68,18 @@ redeploy the last known-good commit. Do not delete or reseed the database.
 
 ## Owner-only prerequisites
 
-### Separate Production database
+### Production database mapping
 
-**WHAT:** Production needs its own Supabase project; the current Vercel variables are
-scoped to Production and Preview together, so separation is not proven.
+**WHAT:** `tkntxptfhmjnqaaveddx` is Development/local rehearsal and
+`pqtfhkiftiubwuwxnuzd` is Production for `keephimwalking.com`.
 
-**WHAT HAPPENS:** If nothing changes, a launch could expose or advance rehearsal data.
+**WHAT HAPPENS:** If Vercel Production points to `tknt…`, the public site can expose or
+advance local rehearsal data; if local tools point to `pqtf…`, local testing can mutate
+Production.
 
-**WHAT TO DO:** Create the Production project, create `.env.production.local` with the five
-variables above, run the guarded commands, then replace the four Supabase variables in
-Vercel Production only and redeploy. Keep Preview on its existing project.
+**WHAT TO DO:** Keep `.env.local` on `tknt…` and `.env.production.local` on `pqtf…`.
+Scope the four Supabase variables in Vercel Production to `pqtf…`; use `tknt…` for local
+rehearsal. Never copy a completed rehearsal journey into Production.
 
 ### Monitored contact route
 
