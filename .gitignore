@@ -3,6 +3,7 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
+*:Zone.Identifier
 artifacts/**/.last-run.json
 .env
 .env.local

@@ -2384,6 +2384,18 @@ State on 13 September 2026:
 - **CORS.** The R2 rule allows `https://keephimwalking.com` only; Preview origins get 403
   (AFTER-P22 D8).
 
+Prompt 1 cleanup keeps the 88,848,842-byte R2 mirror checked in for deterministic content
+validation but excludes it from Vercel's runtime source upload through `.vercelignore`.
+The exception is the 282,944-byte Tashkent scene poster. `StaticScene` retries that
+same-origin poster once after a CDN or decode failure, then retains its CSS sky/ground;
+the separate traveler loading/error frame under `/traveler/` is not excluded. Source art,
+Blender files and cited historical evidence also remain in Git but are excluded from the
+runtime upload. A credential-free all-pack run checked 235 painting URLs across all 18
+registered packs from the Production Origin with zero status, MIME, size, cache or CORS
+failures. `assets:report:phase2` now enforces the schema's actual largest-two-neighbouring-
+places transfer window rather than incorrectly comparing an entire ten-stop source pack
+to that runtime budget.
+
 See [asset hosting runbook](docs/runbooks/asset-hosting.md).
 
 Hard rules stated in the repository and worth repeating: never use the analytics

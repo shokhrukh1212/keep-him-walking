@@ -1,0 +1,19 @@
+# Source art and historical review evidence remain in Git, never in the runtime upload.
+art/
+artifacts/
+docs/launch-finalization/evidence/
+playwright-report/
+test-results/
+
+# These runtime mirrors are served by the configured R2 origin in Production.
+public/characters/
+public/audio/
+public/npcs/
+public/scenes/*
+!public/scenes/tashkent/
+public/scenes/tashkent/*
+!public/scenes/tashkent/v1/
+public/scenes/tashkent/v1/*
+
+# One compact same-origin painting remains for a failed CDN/decoder path.
+!public/scenes/tashkent/v1/scene-fallback.webp

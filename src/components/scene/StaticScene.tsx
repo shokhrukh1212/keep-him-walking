@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
+import { localSceneFallbackAfter } from "@/lib/assets/fallback";
 import type { RouteZone } from "@/lib/content/schema";
 import {
   placeRenditions,
@@ -149,7 +150,11 @@ export function StaticScene({ zone, assetVersion, active, resolution, defer = fa
           crossOrigin="anonymous"
           alt=""
           onLoad={report}
-          onError={report}
+          onError={(event) => {
+            const fallback = localSceneFallbackAfter(event.currentTarget.src);
+            if (fallback) event.currentTarget.src = fallback;
+            else report();
+          }}
           draggable={false}
         />
       ) : null}
