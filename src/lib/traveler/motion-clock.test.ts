@@ -122,13 +122,13 @@ describe("conversations", () => {
     const at = (seconds: number) => travelerMotionAt(pack, 300 + seconds, 9_000, rows).action!;
     expect(at(0.5)).toMatchObject({ kind: "conversation", conversationPhase: "notice", state: "notice" });
     expect(at(1.5).conversationPhase).toBe("stop");
-    expect(at(3.2)).toMatchObject({ conversationPhase: "greet", state: "greet" });
-    const firstLine = at(2.2 + 4.73 + 0.1);
+    expect(at(3.2)).toMatchObject({ conversationPhase: "approach", state: "idle" });
+    const firstLine = at(5.1);
     expect(firstLine.dialogueLineIndex).toBe(0);
-    expect(firstLine.conversationPhase).toBe(script.lines[0]!.speaker === "traveler" ? "talk" : "listen");
+    expect(firstLine.conversationPhase).toBe(script.lines[0]!.speaker === "traveler" ? "greet_traveler" : "greet_resident");
     expect(firstLine.conversation?.lines).toEqual(script.lines);
     expect(firstLine.label).toBe(`Talking with ${conversationSpeakerName(pack, script)}`);
-    expect(at(duration - 0.5).conversationPhase).toBe("goodbye");
+    expect(at(duration - 0.5).conversationPhase).toBe("depart");
   });
 
   it("labels a wordless greeting honestly and plays a missing script as one", () => {

@@ -23,6 +23,12 @@ describe("asset upload", () => {
   it("requires private credentials only for real uploads", () => {
     expect(() => uploadConfig({})).toThrow("Upload requires");
     expect(uploadConfig(env)).toMatchObject({ region: "auto", bucket: "walking-assets" });
+    expect(uploadConfig({
+      R2_ENDPOINT: env.ASSET_S3_ENDPOINT,
+      R2_BUCKET: env.ASSET_S3_BUCKET,
+      R2_ACCESS_KEY_ID: env.ASSET_S3_ACCESS_KEY_ID,
+      R2_SECRET_ACCESS_KEY: env.ASSET_S3_SECRET_ACCESS_KEY,
+    })).toMatchObject({ region: "auto", bucket: "walking-assets" });
     expect(() => uploadConfig({ ...env, ASSET_S3_BUCKET: "../private" })).toThrow("bucket name");
     expect(() => uploadConfig({ ...env, ASSET_S3_ENDPOINT: "http://insecure.example.com" })).toThrow("HTTPS");
   });

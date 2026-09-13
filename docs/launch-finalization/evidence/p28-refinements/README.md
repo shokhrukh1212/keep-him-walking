@@ -15,7 +15,8 @@ All browser specs except the live probe mock the authority endpoints (`tests/e2e
 | `painting-neutral-fallback-390.png` | No painting has ever loaded: neutral street, traveler still walking | `scene-loading.spec.ts` |
 | `settled-<w>x<h>.png`, `desktop-1440-cold.png` | Cold and settled layouts at the target sizes | `launch-candidate.spec.ts` |
 | `desktop-place-change.png`, `frames-desktop-1440.json` | A 7-minute place change, plus frame intervals for modal open/close, the place change and steady walking | `launch-candidate.spec.ts` |
-| `greeting-390.png`, `mobile-motion-review.webm` | Current short motion review: a modal, a place change and a wordless greeting; no pending dialogue is shown | `launch-candidate.spec.ts` |
+| `conversation-resident-speaks-390.png`, `conversation-traveler-speaks-390.png`, `mobile-motion-review.webm` | Current reciprocal dialogue: the resident approaches from the right, each person waves/speaks alone, the other listens, the named bubble remains at left and the traveler stays centred | `launch-candidate.spec.ts` |
+| `greeting-390.png` | Historical wordless-greeting capture from before the reciprocal choreography | Earlier `launch-candidate.spec.ts` run |
 | `conversation-390.png` | Historical rejected capture from before pending dialogue was filtered; retained only to show the bug that was removed | Earlier `launch-candidate.spec.ts` run |
 | `live-dev-probe*.json`, `.png` | Historical pre-repair probe retained as diagnosis: it exposed startup heartbeat flaws and that pending dialogue plus unintended solo actions could be scheduled. It is not current acceptance evidence | `live-probe.mjs` |
 | `live-recovery.json` | Current dev recovery: expired Day 1 preserved, Day 2 created through the locked RPC, local rehearsal enabled, bootstrap 200/live and focused live/503 checks passing | `dev:prepare`, local production bootstrap and `review-repairs.spec.ts` |
@@ -25,6 +26,12 @@ The current core browser candidate is 19 passing cases across `launch-candidate`
 `modal-continuity` and `scene-loading`, plus two focused live/unavailable-state checks.
 They were run in focused invocations because software rendering makes the two
 three-loop cases take several minutes each.
+
+The 13 September Paris v3 update reran the 15 `launch-candidate` and
+`modal-continuity` cases. Fourteen passed in the combined run; the 320×568 Sponsor
+case exposed the Next development indicator intercepting the button. After disabling
+that indicator, the same case passed. The reciprocal dialogue case and all three real
+ten-place dot cases passed. This is software-GL evidence, not a physical-phone result.
 
 The four compatibility files Claude left unrun (`phase1`, `phase2-smoke`,
 `waiting-first-watcher` and `traveler-correction`) were updated to the overlay-modal

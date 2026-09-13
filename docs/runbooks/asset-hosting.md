@@ -36,7 +36,11 @@ Options:
    ASSET_S3_SECRET_ACCESS_KEY=
    ```
 
-2. **Custom domain.** In the bucket's **Settings → Custom Domains**, connect a subdomain of a zone on the same Cloudflare account, e.g. `assets.keephimwalking.lol`. Use the custom domain, not `r2.dev`: the `r2.dev` address is rate-limited and bypasses Cloudflare's cache. The public domain is different from the authenticated S3 endpoint.
+   The shorter Cloudflare names `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and
+   `R2_SECRET_ACCESS_KEY` are accepted aliases. `R2_ACCOUNT_ID` is informational when
+   the full endpoint is present.
+
+2. **Custom domain.** In the bucket's **Settings → Custom Domains**, connect `assets.keephimwalking.com`. Use the custom domain, not `r2.dev`: the `r2.dev` address is rate-limited and bypasses Cloudflare's cache. The public domain is different from the authenticated S3 endpoint.
 
 3. **CORS.** WebGL textures and canvas capture need it even though the files open in a browser tab. In **Settings → CORS policy**, add this read-only rule, and add explicit Preview origins if you use them:
 
@@ -67,7 +71,7 @@ Options:
 5. **Verify, without credentials.**
 
    ```sh
-   pnpm assets:verify --pack paris-v2 --base https://assets.keephimwalking.lol --origin https://keephimwalking.lol
+   pnpm assets:verify --pack paris-v3 --base https://assets.keephimwalking.com --origin https://keephimwalking.com
    ```
 
    For every rendition in the pack's manifest it checks:
@@ -80,7 +84,7 @@ Options:
    It exits non-zero on any failure and prints the failures. No real upload or CORS success is claimed until this reports `"failed": 0` against the owner's bucket. Check a character GLB and an audio file by hand as well:
 
    ```sh
-   curl -I -H 'Origin: https://keephimwalking.lol' https://assets.keephimwalking.lol/characters/v3/traveler.glb
+   curl -I -H 'Origin: https://keephimwalking.com' https://assets.keephimwalking.com/characters/v3/traveler.glb
    ```
 
 6. **Activate.** Set `ASSET_BASE_URL` to the public HTTPS **origin only** in Vercel (Production and Preview), then rebuild and redeploy. `next.config.ts` exposes only this non-secret origin to client loaders, as `NEXT_PUBLIC_ASSET_BASE_URL`. Path prefixes, credentials, queries and fragments are rejected. Changing the variable without rebuilding does not update the browser bundle.

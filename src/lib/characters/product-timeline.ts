@@ -2,7 +2,13 @@ import type { CountryPack, TravelerState } from "@/lib/content/schema";
 import type { ActionReview } from "@/lib/traveler/action-preview";
 import { reviewPoseAt } from "@/lib/traveler/action-preview";
 import { STEP_DURATION_SECONDS, type TravelerMotionAction, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
-import { packBaseResident, STOP_ENTRY_CLIP, STOP_ENTRY_SECONDS } from "@/lib/world/activities";
+import {
+  CONVERSATION_APPROACH_SECONDS,
+  RESIDENT_DEPART_SECONDS,
+  packBaseResident,
+  STOP_ENTRY_CLIP,
+  STOP_ENTRY_SECONDS,
+} from "@/lib/world/activities";
 import { CLIP_DURATIONS, type CharacterClip, type ResidentType } from "./manifest";
 import type { CharacterCue } from "./timeline";
 import { waitingBehaviorAt } from "@/lib/presence/waiting";
@@ -14,6 +20,8 @@ export type ProductCharacterScene = {
   conversation: boolean;
   /** The resident model this conversation's script names. */
   residentType?: ResidentType;
+  /** Zero beside him, one just outside the right edge. */
+  residentOffset?: number;
   travelerLeanRadians?: number;
 };
 
@@ -78,27 +86,32 @@ const oppositeCue = (traveler: CharacterCue): CharacterCue => {
     : traveler.clip === "listen"
       ? "talk"
       : traveler.clip === "greet" || traveler.clip === "goodbye"
-        ? traveler.clip
+        ? "listen"
         : "idle";
   return { clip, seconds: traveler.seconds % CLIP_DURATIONS[clip] };
 };
 
-/**
- * She answers his greeting slightly after he offers it, and his goodbye slightly
- * before hers (PRODUCT §5). Every take plays at its own length.
- */
+/** Each speaker moves while the other listens; no gesture is mirrored simultaneously. */
 function conversationCue(pack: CountryPack, action: TravelerMotionAction): ProductCharacterScene {
   const local = action.conversationPhaseSeconds ?? 0;
   let traveler: CharacterCue;
   let resident: CharacterCue;
+  let residentOffset = 0;
   switch (action.conversationPhase) {
     case "notice":
       traveler = naturalCue("notice", local);
-      resident = loopedCue("idle", local);
+      resident = loopedCue("walk", action.elapsedSeconds);
+      residentOffset = 1 - Math.min(1, action.elapsedSeconds / CONVERSATION_APPROACH_SECONDS);
       break;
     case "stop":
       traveler = naturalCue(STOP_ENTRY_CLIP, local);
-      resident = loopedCue("idle", local + CLIP_DURATIONS.notice);
+      resident = loopedCue("walk", action.elapsedSeconds);
+      residentOffset = 1 - Math.min(1, action.elapsedSeconds / CONVERSATION_APPROACH_SECONDS);
+      break;
+    case "approach":
+      traveler = loopedCue("idle", local);
+      resident = loopedCue("walk", action.elapsedSeconds);
+      residentOffset = 1 - Math.min(1, action.elapsedSeconds / CONVERSATION_APPROACH_SECONDS);
       break;
     case "talk":
       traveler = loopedCue("talk", local);
@@ -108,14 +121,30 @@ function conversationCue(pack: CountryPack, action: TravelerMotionAction): Produ
       traveler = loopedCue("listen", local);
       resident = loopedCue("talk", local);
       break;
-    case "goodbye":
-      traveler = naturalCue("goodbye", local);
-      resident = naturalCue("goodbye", Math.max(0, local - 0.25));
-      break;
-    case "greet":
-    default:
+    case "greet_traveler":
       traveler = naturalCue("greet", local);
-      resident = naturalCue("greet", Math.max(0, local - 0.35));
+      resident = loopedCue("listen", local);
+      break;
+    case "greet_resident":
+      traveler = loopedCue("listen", local);
+      resident = naturalCue("greet", local);
+      break;
+    case "goodbye_traveler":
+      traveler = naturalCue("goodbye", local);
+      resident = loopedCue("listen", local);
+      break;
+    case "goodbye_resident":
+      traveler = loopedCue("listen", local);
+      resident = naturalCue("goodbye", local);
+      break;
+    case "depart":
+      traveler = loopedCue("idle", local);
+      resident = loopedCue("walk", local);
+      residentOffset = Math.min(1, local / RESIDENT_DEPART_SECONDS);
+      break;
+    default:
+      traveler = loopedCue("idle", local);
+      resident = loopedCue("idle", local);
       break;
   }
   return {
@@ -124,6 +153,7 @@ function conversationCue(pack: CountryPack, action: TravelerMotionAction): Produ
     showResident: true,
     conversation: true,
     residentType: action.conversation?.residentType ?? packBaseResident(pack),
+    residentOffset,
   };
 }
 

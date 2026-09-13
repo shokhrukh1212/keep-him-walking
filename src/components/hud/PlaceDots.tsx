@@ -53,18 +53,22 @@ export function PlaceDots({ places, currentIndex, secondsToNextVisit, visitSecon
   if (count === 0) return null;
   const openIndex = places.findIndex((place) => place.id === openId);
   const open = openIndex >= 0 ? places[openIndex]! : null;
+  const openPassed = openIndex >= 0 && openIndex < currentIndex;
   const stepsAhead = open ? (openIndex - currentIndex + count) % count : 0;
   const status = !open
     ? ""
     : stepsAhead === 0
       ? `You are here · next place in ${eta.shortText}`
-      : `In ${minutesText(secondsToNextVisit + (stepsAhead - 1) * visitSeconds)}`;
+      : openPassed
+        ? "Completed this loop"
+        : `In ${minutesText(secondsToNextVisit + (stepsAhead - 1) * visitSeconds)}`;
 
   return (
     <div className="place-dots" ref={root} data-hud-region="places">
       <ol className="place-dots-list" aria-label={`${stop.text}. ${eta.ariaText}.`}>
         {places.map((place, index) => {
           const current = index === currentIndex;
+          const passed = index < currentIndex;
           return (
             <li key={place.id}>
               <button
@@ -72,10 +76,11 @@ export function PlaceDots({ places, currentIndex, secondsToNextVisit, visitSecon
                 className="place-dot"
                 ref={current ? currentDot : undefined}
                 data-current={current}
+                data-passed={passed}
                 aria-current={current ? "step" : undefined}
                 aria-expanded={openId === place.id}
                 aria-controls={openId === place.id ? popoverId : undefined}
-                aria-label={`Stop ${index + 1} of ${count}, ${place.label}${current ? ", you are here" : ""}`}
+                aria-label={`Stop ${index + 1} of ${count}, ${place.label}${current ? ", you are here" : passed ? ", completed this loop" : ""}`}
                 onClick={() => setOpenId(openId === place.id ? null : place.id)}
               >
                 <span aria-hidden="true" />

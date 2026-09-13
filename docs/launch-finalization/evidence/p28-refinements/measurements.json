@@ -1,8 +1,13 @@
 {
-  "recordedAt": "2026-09-12T19:25:33Z",
+  "recordedAt": "2026-09-13T02:50:00Z",
   "environment": "Local production build on WSL, headless Chromium software GL, deviceScaleFactor 1.5; not a physical device.",
   "verification": {
-    "unitTests": 538,
+    "latestFullUnitRun": {
+      "passed": 540,
+      "failed": 2,
+      "failureCause": "two stale Paris-v3 registry expectations, both corrected afterward"
+    },
+    "postFixFocusedRegistryTests": 32,
     "coreBrowserCases": 19,
     "focusedLiveAndUnavailableCases": 2,
     "compatibilityBrowserCases": 10,
@@ -66,11 +71,40 @@
     "worldMountCount": 1,
     "presenceSessions": 1
   },
-  "assetUploadDryRun": {
-    "files": 479,
-    "bytes": 70116380,
-    "uploaded": 0,
-    "reason": "R2 credentials and custom domain are not configured"
+  "r2RuntimeUpload": {
+    "files": 574,
+    "bytes": 88848842,
+    "uploaded": 574,
+    "failed": 0,
+    "publicOrigin": "https://assets.keephimwalking.com"
+  },
+  "parisV3": {
+    "places": 10,
+    "loopWalkingMinutes": 70,
+    "conversationScriptsPendingOwnerReview": 14,
+    "ambientConversationSlotsPerLoop": 13,
+    "onceDailyStoryConversationsPerLoop": 1,
+    "largestTwoPlaceDesktopBytes": 1904580,
+    "largestTwoPlaceMobileBytes": 603580,
+    "r2SceneFilesUploaded": 95,
+    "r2SceneBytesUploaded": 18732462,
+    "r2RuntimeFilesUploaded": 574,
+    "r2RuntimeBytesUploaded": 88848842,
+    "publicCdnVerification": {
+      "assetOrigin": "https://assets.keephimwalking.com",
+      "parisV3FromDotComOrigin": { "checked": 95, "failed": 0 },
+      "parisV2FromDotComOrigin": { "checked": 50, "failed": 0 },
+      "travelerAndAudioHeadChecks": "HTTP 200 with correct MIME and CORS",
+      "currentDotLolOrigin": { "checked": 95, "failed": 95, "reason": "Cloudflare CORS does not allow the old app origin" },
+      "activatedInApp": false
+    }
+  },
+  "conversationEvidence": {
+    "travelerStayedAtViewportCentre": true,
+    "residentApproachAndDeparture": true,
+    "simultaneousGreetingGestures": false,
+    "speakerBubbleNamedAndVisibleForLine": true,
+    "renderer": "headless Chromium software GL; not a physical device"
   },
   "liveRecovery": {
     "projectRef": "tkntxptfhmjnqaaveddx",

@@ -30,8 +30,6 @@ export const ACTION_FIRST_SECONDS = 300;
 export const SLOT_JITTER_SECONDS = 30;
 /** A slot this close to a story or the daily stumble gives way to it. */
 export const STORY_CLEARANCE_SECONDS = 90;
-/** Every third conversation is a wordless greeting, so reviewed words never repeat back to back. */
-export const GREETING_EVERY = 3;
 /** A stop is written to the database once it is this close, so every viewer learns of it first. */
 export const MIN_SCHEDULE_LEAD_SECONDS = 20;
 export const MAX_SCHEDULE_LEAD_SECONDS = 75;
@@ -160,7 +158,6 @@ function conversationChoices(
   const storyTimes = blockers.filter((item) => item.kind === "conversation");
   const scripts = conversationScripts(pack);
   const choices: Array<ConversationChoice | null> = [];
-  const scriptedIndices: number[] = [];
   let previous: ConversationScript | null = null;
   let previousSecond = Number.NEGATIVE_INFINITY;
   let pointer = 0;
@@ -169,32 +166,31 @@ function conversationChoices(
     for (const story of storyTimes) {
       if (story.walkingSecond > previousSecond && story.walkingSecond <= second) {
         const storyScript = scripts.find((script) => script.id === story.variant) ?? null;
-        // The story is fixed, so the script just before it gives way to a wordless
-        // greeting rather than say the same words twice in a row.
-        while (storyScript && scriptedIndices.length > 0) {
-          const nearest = scriptedIndices.at(-1)!;
-          const before = choices[nearest]?.script ?? null;
-          if (!before || (before.id !== storyScript.id && !sharesWords(before, storyScript))) break;
-          choices[nearest] = { script: null };
-          scriptedIndices.pop();
-        }
         previous = storyScript ?? previous;
       }
     }
     previousSecond = second;
-    if (blockers.some((item) => Math.abs(item.walkingSecond - second) < STORY_CLEARANCE_SECONDS)) {
+    if (storyTimes.some((item) => Math.abs(item.walkingSecond - second) <= STORY_CLEARANCE_SECONDS)) {
       choices.push(null);
       continue;
     }
-    if (index % GREETING_EVERY === GREETING_EVERY - 1 || rotation.length === 0) {
+    if (rotation.length === 0) {
       choices.push({ script: null });
       continue;
     }
     const zone = placeAt(pack, second);
+    const nextSlot = conversationSlotSecond(seed, index + 1);
+    const upcomingStory = storyTimes.find((story) => story.walkingSecond > second
+      && story.walkingSecond < nextSlot + STORY_CLEARANCE_SECONDS);
+    const upcomingStoryScript = upcomingStory
+      ? scripts.find((script) => script.id === upcomingStory.variant) ?? null
+      : null;
     let chosen: ConversationScript | null = null;
     for (let offset = 0; offset < rotation.length; offset += 1) {
       const candidate = rotation[(pointer + offset) % rotation.length]!;
-      if (!eligibleAt(candidate, zone) || candidate.id === previous?.id || sharesWords(previous, candidate)) continue;
+      if (!eligibleAt(candidate, zone) || candidate.id === previous?.id || sharesWords(previous, candidate)
+        || (upcomingStoryScript !== null
+          && (candidate.id === upcomingStoryScript.id || sharesWords(candidate, upcomingStoryScript)))) continue;
       chosen = candidate;
       pointer = (pointer + offset + 1) % rotation.length;
       break;
@@ -202,7 +198,6 @@ function conversationChoices(
     choices.push({ script: chosen });
     if (chosen) {
       previous = chosen;
-      scriptedIndices.push(index);
     }
   }
   return choices;

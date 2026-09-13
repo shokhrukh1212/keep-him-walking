@@ -339,15 +339,14 @@ export function ProductCharacterStage3D(props: Props) {
       const mobile = width <= 600;
       const [left, right] = frame.stage.walkableX;
       // Panels are overlays: opening one never moves him.
-      const travelerAnchor = Math.min(right, Math.max(left,
-        cue.conversation ? (mobile ? 0.34 : 0.43) : 0.5,
-      ));
+      const travelerAnchor = Math.min(right, Math.max(left, 0.5));
       const residentAnchor = Math.min(right, Math.max(left, mobile ? 0.76 : 0.72));
+      const residentScreenAnchor = residentAnchor + (cue.residentOffset ?? 0) * 0.36;
       travelerRoot.position.x = (travelerAnchor - 0.5) * horizontal;
-      residentRoot.position.x = (residentAnchor - 0.5) * horizontal;
+      residentRoot.position.x = (residentScreenAnchor - 0.5) * horizontal;
       travelerRoot.rotation.x = cue.travelerLeanRadians ?? 0;
       travelerRoot.rotation.y = cue.conversation ? Math.PI / 2 : state.command?.facing === "left" ? -0.68 : 0.68;
-      residentRoot.rotation.y = -Math.PI / 2;
+      residentRoot.rotation.y = motion.action?.conversationPhase === "depart" ? Math.PI / 2 : -Math.PI / 2;
       residentRoot.visible = cue.showResident && Boolean(resident) && residentType === partnerType;
       if (cue.conversation && traveler && resident) {
         traveler.gazeAt(resident.headPosition(), .6);
@@ -359,6 +358,7 @@ export function ProductCharacterStage3D(props: Props) {
         traveler.gazeAt(camera.position.clone(), .6);
       }
       element.dataset.characterState = traveler?.resolvedClip(cue.traveler.clip) ?? cue.traveler.clip;
+      element.dataset.residentState = resident?.resolvedClip(cue.resident.clip) ?? cue.resident.clip;
       // Diagnostic of the accepted command path. The sewn neutral patch remains
       // if a remote sponsor texture fails, so this does not claim the image loaded.
       element.dataset.sponsorCommanded = String(Boolean(state.command?.sponsorPatchUrl));
@@ -367,6 +367,7 @@ export function ProductCharacterStage3D(props: Props) {
       element.dataset.walkTimeScale = String(cue.traveler.timeScale ?? 1);
       element.dataset.forwardLeanDegrees = String((cue.travelerLeanRadians ?? 0) * 180 / Math.PI);
       element.dataset.residentVisible = String(residentRoot.visible);
+      element.dataset.residentOffset = String(cue.residentOffset ?? 0);
       element.dataset.activityKind = motion.action?.kind ?? "";
       // Measured through the actual camera, not just echoed from the input metadata.
       camera.updateMatrixWorld();
@@ -490,7 +491,7 @@ export function ProductCharacterStage3D(props: Props) {
       state.contacts.current = {
         traveler: traveler ? { footX: (foot.x + 1) * width / 2, footY: (1 - foot.y) * height / 2,
           scale: (head.y - foot.y) * height / 2 / 1.78 } : null,
-        resident: residentRoot.visible ? { footX: residentAnchor * width, footY: (1 - foot.y) * height / 2,
+        resident: residentRoot.visible ? { footX: residentScreenAnchor * width, footY: (1 - foot.y) * height / 2,
           scale: frame.layout.pxPerMetre * CHARACTER_MANIFEST.residents[residentType ?? "resident-a"].heightMetres / 1.78 } : null,
         walkers: walkerContacts,
       };

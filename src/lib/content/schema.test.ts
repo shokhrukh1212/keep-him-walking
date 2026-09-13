@@ -38,10 +38,10 @@ describe("Tashkent content pack", () => {
 describe("Phase 2 country packs", () => {
   const packs = registeredCountryPacks().filter((pack): pack is CountryPackV3 => pack.schemaVersion === 3 && !phase3EditorialBufferOrder.includes(pack.assetVersion as typeof phase3EditorialBufferOrder[number]));
 
-  it("registers the immutable launch route and its Tashkent rollback", () => {
+  it("registers the immutable launch route, Paris versions and the Tashkent rollback", () => {
     expect(packs.map((pack) => pack.assetVersion)).toEqual([
       "tashkent-v4", "tashkent-v5", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1",
-      "paris-v1", "paris-v2",
+      "paris-v1", "paris-v2", "paris-v3",
     ]);
     for (const pack of packs) expect(countryPackV3Schema.parse(pack)).toBeTruthy();
   });
@@ -52,13 +52,15 @@ describe("Phase 2 country packs", () => {
         zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
       ),
     );
-    expect(new Set(sceneUrls).size).toBe(45);
+    expect(new Set(sceneUrls).size).toBe(55);
     expect(packs.every((pack) => pack.storyBeats.length >= 4)).toBe(true);
     expect(packs.slice(0, 2).every((pack) => pack.culturalReview.status === "approved")).toBe(true);
-    expect(packs.slice(2, -2).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
-    expect(packs.slice(-2).every((pack) => pack.culturalReview.status === "pending")).toBe(true);
-    expect(packs.slice(-2).every((pack) => pack.route.zones.every((zone) => zone.continuousScene))).toBe(true);
+    expect(packs.slice(2, 8).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
+    const paris = packs.filter((pack) => pack.assetVersion.startsWith("paris-v"));
+    expect(paris.every((pack) => pack.culturalReview.status === "pending")).toBe(true);
+    expect(paris.every((pack) => pack.route.zones.every((zone) => zone.continuousScene))).toBe(true);
     expect(packs.at(-1)?.route.zones.every((zone) => zone.variants && zone.tags.length > 0)).toBe(true);
+    expect(packs.at(-1)?.route.zones).toHaveLength(10);
     expect(new Set(packs.map((pack) => pack.npcSystem.baseType))).toEqual(new Set(["resident-a", "resident-b"]));
   });
 

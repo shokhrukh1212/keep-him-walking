@@ -19,6 +19,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // The default bottom-left dev control covers the Sponsor button at 320 px.
+  // Compile and runtime errors still surface in the browser and terminal.
+  devIndicators: false,
   env: {
     NEXT_PUBLIC_ASSET_BASE_URL: validateAssetBaseUrl(process.env.ASSET_BASE_URL),
     // Non-secret visual configuration consumed by client renderers at build time.

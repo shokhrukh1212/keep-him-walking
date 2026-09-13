@@ -174,16 +174,44 @@ describe("product character timeline", () => {
     expect(scene.traveler.seconds).toBeCloseTo(5.5 % CLIP_DURATIONS.talk, 5);
   });
 
-  it("lets the resident answer his greeting a moment after he offers it", () => {
-    const scene = productCharacterSceneAt(
+  it("waves one speaker at a time while the other listens", () => {
+    const residentGreeting = productCharacterSceneAt(
       almatyCountryPackV1,
-      withAction({ kind: "greeting", state: "greet", conversationPhase: "greet", conversationPhaseSeconds: 1, conversation: {
+      withAction({ kind: "greeting", state: "listen", conversationPhase: "greet_resident", conversationPhaseSeconds: 1, conversation: {
         scriptId: null, speakerName: "Aigerim", residentType: "resident-a", lines: [],
       } }),
       true, undefined, 0,
     );
-    expect(scene.traveler).toEqual({ clip: "greet", seconds: 1 });
-    expect(scene.resident.clip).toBe("greet");
-    expect(scene.resident.seconds).toBeCloseTo(0.65, 5);
+    expect(residentGreeting.traveler.clip).toBe("listen");
+    expect(residentGreeting.resident).toEqual({ clip: "greet", seconds: 1 });
+    const travelerGreeting = productCharacterSceneAt(
+      almatyCountryPackV1,
+      withAction({ kind: "greeting", state: "greet", conversationPhase: "greet_traveler", conversationPhaseSeconds: 1, conversation: {
+        scriptId: null, speakerName: "Aigerim", residentType: "resident-a", lines: [],
+      } }),
+      true, undefined, 0,
+    );
+    expect(travelerGreeting.traveler).toEqual({ clip: "greet", seconds: 1 });
+    expect(travelerGreeting.resident.clip).toBe("listen");
+  });
+
+  it("walks the resident in and out while the traveler stays still", () => {
+    const approaching = productCharacterSceneAt(
+      almatyCountryPackV1,
+      withAction({ kind: "conversation", state: "idle", elapsedSeconds: 2.5,
+        conversationPhase: "approach", conversationPhaseSeconds: .3 }),
+      true, undefined, 0,
+    );
+    expect(approaching.traveler.clip).toBe("idle");
+    expect(approaching.resident.clip).toBe("walk");
+    expect(approaching.residentOffset).toBeGreaterThan(0);
+    const departing = productCharacterSceneAt(
+      almatyCountryPackV1,
+      withAction({ kind: "conversation", state: "idle", conversationPhase: "depart", conversationPhaseSeconds: 1.4 }),
+      true, undefined, 0,
+    );
+    expect(departing.traveler.clip).toBe("idle");
+    expect(departing.resident.clip).toBe("walk");
+    expect(departing.residentOffset).toBeCloseTo(.5, 5);
   });
 });

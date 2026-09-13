@@ -44,21 +44,29 @@ describe("activity catalogue", () => {
   });
 
   it("builds natural-length conversation choreography", () => {
-    expect(conversationSegments([]).map((segment) => segment.phase)).toEqual(["notice", "stop", "greet"]);
-    expect(conversationDurationSeconds([])).toBe(6.93);
+    expect(conversationSegments([]).map((segment) => segment.phase)).toEqual([
+      "notice", "stop", "approach", "greet_resident", "greet_traveler", "depart",
+    ]);
+    expect(conversationDurationSeconds([])).toBe(17.26);
     const lines = [
       { speaker: "npc" as const, text: "Bonjour!", mood: "curious" as const },
       { speaker: "traveler" as const, text: "Bonjour.", mood: "amused" as const, durationMs: 3_000 },
+      { speaker: "npc" as const, text: "The canal is quiet.", mood: "thoughtful" as const },
+      { speaker: "traveler" as const, text: "I will walk there.", mood: "neutral" as const, durationMs: 3_000 },
     ];
     expect(conversationSegments(lines)).toEqual([
       { phase: "notice", start: 0, duration: 1 },
       { phase: "stop", start: 1, duration: 1.2 },
-      { phase: "greet", start: 2.2, duration: 4.73 },
-      { phase: "listen", start: 6.93, duration: 4.5, lineIndex: 0 },
-      { phase: "talk", start: 11.43, duration: 3, lineIndex: 1 },
-      { phase: "goodbye", start: 14.43, duration: 4.73 },
+      { phase: "approach", start: 2.2, duration: 2.8 },
+      { phase: "greet_resident", start: 5, duration: 4.73, lineIndex: 0 },
+      { phase: "greet_traveler", start: 9.73, duration: 4.73, lineIndex: 1 },
+      { phase: "listen", start: 14.46, duration: 4.5, lineIndex: 2 },
+      { phase: "talk", start: 18.96, duration: 3, lineIndex: 3 },
+      { phase: "goodbye_resident", start: 21.96, duration: 4.73 },
+      { phase: "goodbye_traveler", start: 26.69, duration: 4.73 },
+      { phase: "depart", start: 31.42, duration: 2.8 },
     ]);
-    expect(conversationDurationSeconds(lines)).toBe(19.16);
+    expect(conversationDurationSeconds(lines)).toBe(34.22);
   });
 
   it("offers a pack's single encounter as its story until it carries a rotation", () => {

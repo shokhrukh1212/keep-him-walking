@@ -44,11 +44,21 @@ describe("GoalBar", () => {
   });
 
   it("generates one dot per place and marks the current stop", () => {
-    renderBar();
+    const { container } = renderBar();
     expect(screen.getByRole("list")).toHaveAccessibleName("Stop 2 of 3. Next place in about 5 minutes of walking.");
     expect(screen.getAllByRole("button", { name: /^Stop \d of 3/ })).toHaveLength(3);
     expect(screen.getByRole("button", { name: "Stop 2 of 3, Canal Saint-Martin, you are here" }))
       .toHaveAttribute("aria-current", "step");
+    expect(screen.getByRole("button", { name: "Stop 1 of 3, Gare du Nord, completed this loop" }))
+      .toHaveAttribute("data-passed", "true");
+    expect(container.querySelectorAll('.place-dot[data-passed="true"]')).toHaveLength(1);
+  });
+
+  it("describes an earlier place as completed without treating it as a destination", async () => {
+    const user = userEvent.setup();
+    renderBar();
+    await user.click(screen.getByRole("button", { name: "Stop 1 of 3, Gare du Nord, completed this loop" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Completed this loop");
   });
 
   it("describes a tapped place without moving the traveler there", async () => {

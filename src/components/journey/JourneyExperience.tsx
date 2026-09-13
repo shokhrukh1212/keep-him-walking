@@ -499,10 +499,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       ? "notice"
       : motion.action?.conversationPhase === "stop"
         ? "decelerate"
-        : motion.action?.conversationPhase === "greet"
+        : motion.action?.conversationPhase === "approach"
+          ? "approach"
+          : motion.action?.conversationPhase?.startsWith("greet_")
           ? "greeting"
-          : motion.action?.conversationPhase === "goodbye"
+          : motion.action?.conversationPhase?.startsWith("goodbye_")
             ? "goodbye"
+            : motion.action?.conversationPhase === "depart"
+              ? "restore"
             : "dialogue";
   const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
   const activeRouteZone = snapshot.assets.route.zones[routePosition.zoneIndex];
@@ -923,7 +927,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         line={review ? ["talk","listen","greet","goodbye"].includes(review.state)
           ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine}
         speakerLabel={activeLine && activeConversation
-          ? activeLine.speaker === "npc" ? activeConversation.speakerName : "Traveler"
+          ? activeLine.speaker === "npc"
+            ? activeConversation.speakerName
+            : snapshot.journey.travelerName?.trim() || "Traveler"
           : undefined}
         npcSrc={snapshot.assets.npcAssets[(review?review.state==="listen":activeLine?.speaker === "npc") ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral ?? ""}
         motionSeconds={motion.action?.elapsedSeconds}

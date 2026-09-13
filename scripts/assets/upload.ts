@@ -16,14 +16,18 @@ export type UploadConfig = { endpoint: string; bucket: string; region: string; a
 export type UploadArguments = { upload: boolean; prefix: string | null; skipExisting: boolean };
 
 export function uploadConfig(env: Readonly<Record<string, string | undefined>>): UploadConfig {
-  const required = ["ASSET_S3_ENDPOINT", "ASSET_S3_BUCKET", "ASSET_S3_ACCESS_KEY_ID", "ASSET_S3_SECRET_ACCESS_KEY"];
-  if (required.some((key) => !env[key]?.trim())) throw new Error("Upload requires ASSET_S3_ENDPOINT, ASSET_S3_BUCKET, ASSET_S3_ACCESS_KEY_ID and ASSET_S3_SECRET_ACCESS_KEY");
-  const endpoint = validateAssetBaseUrl(env.ASSET_S3_ENDPOINT);
-  const bucket = env.ASSET_S3_BUCKET!;
+  const endpointValue = env.ASSET_S3_ENDPOINT?.trim() || env.R2_ENDPOINT?.trim();
+  const bucket = env.ASSET_S3_BUCKET?.trim() || env.R2_BUCKET?.trim();
+  const accessKeyId = env.ASSET_S3_ACCESS_KEY_ID?.trim() || env.R2_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = env.ASSET_S3_SECRET_ACCESS_KEY?.trim() || env.R2_SECRET_ACCESS_KEY?.trim();
+  if (!endpointValue || !bucket || !accessKeyId || !secretAccessKey) {
+    throw new Error("Upload requires the ASSET_S3_* variables or their R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY aliases");
+  }
+  const endpoint = validateAssetBaseUrl(endpointValue);
   const region = env.ASSET_S3_REGION || "auto";
   if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket)) throw new Error("Invalid R2 bucket name");
-  if (!/^[a-z0-9-]+$/.test(region) || /[\r\n]/.test(env.ASSET_S3_ACCESS_KEY_ID!)) throw new Error("Invalid upload configuration");
-  return { endpoint, bucket, region, accessKeyId: env.ASSET_S3_ACCESS_KEY_ID!, secretAccessKey: env.ASSET_S3_SECRET_ACCESS_KEY! };
+  if (!/^[a-z0-9-]+$/.test(region) || /[\r\n]/.test(accessKeyId)) throw new Error("Invalid upload configuration");
+  return { endpoint, bucket, region, accessKeyId, secretAccessKey };
 }
 
 /** A year for content-addressed renditions; an hour for files that may be repaired in place. */

@@ -86,8 +86,18 @@ export const CROWD_ACTION_DURATION_SECONDS: Record<CrowdActivityKind, number> = 
   photo: actionDurationSeconds("photo"),
 };
 
-/** A resident walks up, both greet, lines alternate, both say goodbye. */
-export type ConversationPhase = "notice" | "stop" | "greet" | "talk" | "listen" | "goodbye";
+/** A resident approaches, each person greets in turn, lines alternate, then the resident leaves. */
+export type ConversationPhase =
+  | "notice"
+  | "stop"
+  | "approach"
+  | "greet_traveler"
+  | "greet_resident"
+  | "talk"
+  | "listen"
+  | "goodbye_traveler"
+  | "goodbye_resident"
+  | "depart";
 
 export type ConversationSegment = {
   phase: ConversationPhase;
@@ -97,8 +107,18 @@ export type ConversationSegment = {
 };
 
 export const DEFAULT_LINE_SECONDS = 4.5;
+export const RESIDENT_APPROACH_SECONDS = 2.8;
+export const RESIDENT_DEPART_SECONDS = 2.8;
+export const CONVERSATION_APPROACH_SECONDS = round3(
+  CLIP_DURATIONS.notice + STOP_ENTRY_SECONDS + RESIDENT_APPROACH_SECONDS,
+);
 
-/** Natural-length choreography. A wordless greeting stops after both have waved. */
+/**
+ * Natural-length choreography. The first two authored lines are the reciprocal
+ * greeting: only their speaker waves, while the other person listens. The line
+ * remains visible for the entire unsqueezed greeting take. A wordless greeting
+ * uses the same two sequential waves without inventing dialogue.
+ */
 export function conversationSegments(lines: readonly DialogueLine[]): ConversationSegment[] {
   const segments: ConversationSegment[] = [];
   let cursor = 0;
@@ -108,11 +128,28 @@ export function conversationSegments(lines: readonly DialogueLine[]): Conversati
   };
   push("notice", CLIP_DURATIONS.notice);
   push("stop", STOP_ENTRY_SECONDS);
-  push("greet", CLIP_DURATIONS.greet);
+  push("approach", RESIDENT_APPROACH_SECONDS);
+  if (lines.length === 0) {
+    push("greet_resident", CLIP_DURATIONS.greet);
+    push("greet_traveler", CLIP_DURATIONS.greet);
+    push("depart", RESIDENT_DEPART_SECONDS);
+    return segments;
+  }
   lines.forEach((line, index) => {
-    push(line.speaker === "traveler" ? "talk" : "listen", (line.durationMs ?? DEFAULT_LINE_SECONDS * 1_000) / 1_000, index);
+    const lineSeconds = (line.durationMs ?? DEFAULT_LINE_SECONDS * 1_000) / 1_000;
+    if (index < 2) {
+      push(
+        line.speaker === "traveler" ? "greet_traveler" : "greet_resident",
+        Math.max(CLIP_DURATIONS.greet, lineSeconds),
+        index,
+      );
+    } else {
+      push(line.speaker === "traveler" ? "talk" : "listen", lineSeconds, index);
+    }
   });
-  if (lines.length > 0) push("goodbye", CLIP_DURATIONS.goodbye);
+  push("goodbye_resident", CLIP_DURATIONS.goodbye);
+  push("goodbye_traveler", CLIP_DURATIONS.goodbye);
+  push("depart", RESIDENT_DEPART_SECONDS);
   return segments;
 }
 

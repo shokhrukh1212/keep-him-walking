@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
-import { parisCountryPackV2 } from "../../src/content/countries/paris.v2";
+import { parisCountryPackV3 } from "../../src/content/countries/paris.v3";
 import type { VoteView } from "../../src/lib/contracts";
 import { evidenceRoot, installJourneyApi, sampleFrames, settled, type JourneyState } from "./helpers/journey-api";
 
@@ -119,6 +119,7 @@ for (const viewport of viewports) {
     await expect(page.locator(".scene-stage")).toBeVisible();
 
     await page.getByRole("button", { name: /^Sponsor a day/ }).click({ force: true });
+    await expect(page).toHaveURL(/panel=sponsor/);
     await expect(page.getByRole("dialog", { name: "Sponsor a day" })).toBeVisible();
     await expectInsideViewport(page, "Sponsor a day", viewport);
     await page.getByRole("button", { name: "Close Sponsor a day" }).click();
@@ -152,26 +153,20 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     test.setTimeout(150_000);
     await mkdir(evidenceRoot, { recursive: true });
     // 500 walking seconds: the second place, with 340 s to the next one.
-    // A UI-only ten-place fixture proves the target layout without adding fake
-    // places or duplicated paintings to a published content pack.
-    const assets = structuredClone(parisCountryPackV2);
-    assets.assetVersion = "paris-v2-ten-place-test";
-    assets.route.zones = Array.from({ length: 10 }, (_, index) => ({
-      ...structuredClone(parisCountryPackV2.route.zones[index % parisCountryPackV2.route.zones.length]!),
-      id: `test-place-${index + 1}`,
-      label: `Review place ${index + 1}`,
-    }));
+    const assets = structuredClone(parisCountryPackV3);
     const state: JourneyState = { rawSeconds: 500, assets };
     await installJourneyApi(page, state);
     await page.setViewportSize(viewport);
     await page.goto("/");
     await settled(page);
     const world = page.locator(".pixi-scene");
-    await expect(world).toHaveAttribute("data-zone-id", "test-place-2");
+    await expect(world).toHaveAttribute("data-zone-id", "paris-lanes");
 
     await expect(page.locator(".place-dot")).toHaveCount(10);
-    await expect(page.getByRole("button", { name: "Stop 2 of 10, Review place 2, you are here" }))
+    await expect(page.getByRole("button", { name: "Stop 2 of 10, Canal Saint-Martin, you are here" }))
       .toHaveAttribute("aria-current", "step");
+    await expect(page.getByRole("button", { name: "Stop 1 of 10, Gare du Nord, completed this loop" }))
+      .toHaveAttribute("data-passed", "true");
     await expect(page.getByRole("list", { name: /^Stop 2 of 10\. Next place in about 6 minutes of walking\.$/ })).toBeAttached();
     await expect(page.locator(".goal-copy strong")).toHaveAttribute("aria-label", /^0\.6 \/ 8 km together · 7%$/);
     await expect(page.locator(".goal-freshness")).toHaveText(/extrapolated|last confirmed/);
@@ -181,14 +176,14 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
       expect(box!.height).toBeGreaterThanOrEqual(44);
     }
 
-    const ninth = page.getByRole("button", { name: "Stop 9 of 10, Review place 9" });
+    const ninth = page.getByRole("button", { name: "Stop 9 of 10, Pont Alexandre III" });
     await ninth.scrollIntoViewIfNeeded();
     await ninth.focus();
     await page.keyboard.press("Enter");
-    await expect(page.locator(".place-popover")).toContainText("Review place 9");
+    await expect(page.locator(".place-popover")).toContainText("Pont Alexandre III");
     await expect(page.locator(".place-popover")).toContainText("In ~48 walking min");
     await page.waitForTimeout(1_200);
-    await expect(world).toHaveAttribute("data-zone-id", "test-place-2");
+    await expect(world).toHaveAttribute("data-zone-id", "paris-lanes");
     await page.screenshot({ path: `${evidenceRoot}/place-dot-popover-${viewport.width}.png` });
     await page.keyboard.press("Escape");
     await expect(page.locator(".place-popover")).toHaveCount(0);

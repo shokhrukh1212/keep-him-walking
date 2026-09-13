@@ -76,10 +76,14 @@ const WALK_FRAME_PHASES = [0, 1 / 6, 2 / 6, 0.5, 4 / 6, 5 / 6];
 const CONVERSATION_STATES: Record<ConversationPhase, TravelerState> = {
   notice: "notice",
   stop: "stop",
-  greet: "greet",
+  approach: "idle",
+  greet_traveler: "greet",
+  greet_resident: "listen",
   talk: "talk",
   listen: "listen",
-  goodbye: "goodbye",
+  goodbye_traveler: "goodbye",
+  goodbye_resident: "listen",
+  depart: "idle",
 };
 
 export function actionTravel(elapsed: number, duration: number) {

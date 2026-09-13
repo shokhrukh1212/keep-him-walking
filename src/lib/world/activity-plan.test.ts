@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { parisCountryPackV1 } from "@/content/countries/paris.v1";
+import { parisCountryPackV3 } from "@/content/countries/paris.v3";
 import { countryPackV3Schema, type CountryPackV3 } from "@/lib/content/schema";
 import { OWN_ACTION_KINDS } from "./activities";
 import {
   ACTION_PERIOD_SECONDS,
   CONVERSATION_PERIOD_SECONDS,
-  GREETING_EVERY,
   STORY_CLEARANCE_SECONDS,
   actionSlotSecond,
   conversationSlotSecond,
@@ -15,7 +15,7 @@ import {
   plannedActivitiesBetween,
   storyActivities,
 } from "./activity-plan";
-import { scenePositionAt } from "./route-clock";
+import { scenePositionAt, sceneVisitSecondsFor } from "./route-clock";
 
 const SEED = "10000000-0000-4000-8000-000000000123";
 
@@ -96,11 +96,10 @@ describe("stories", () => {
 describe("the day's plan", () => {
   const planned = plannedActivitiesBetween(pack, SEED, 0, 6 * 3_600);
 
-  it("gives way to stories and the daily stumble", () => {
+  it("keeps autonomous actions clear of stories and the daily stumble", () => {
     const blockers = planned.filter((item) => item.source === "beat" || item.kind === "stumble");
     expect(blockers.filter((item) => item.kind === "stumble")).toHaveLength(1);
-    for (const item of planned) {
-      if (blockers.includes(item)) continue;
+    for (const item of planned.filter((entry) => entry.occurrenceKey.startsWith("action:"))) {
       for (const blocker of blockers) {
         expect(Math.abs(item.walkingSecond - blocker.walkingSecond)).toBeGreaterThanOrEqual(STORY_CLEARANCE_SECONDS);
       }
@@ -125,12 +124,38 @@ describe("the day's plan", () => {
     }
   });
 
-  it("makes every third conversation a wordless greeting", () => {
-    for (const item of planned.filter((entry) => entry.occurrenceKey.startsWith("conversation:"))) {
-      const index = Number(item.occurrenceKey.split(":")[1]);
-      if (index % GREETING_EVERY === GREETING_EVERY - 1) expect(item.kind).toBe("greeting");
-    }
-    expect(planned.some((item) => item.kind === "greeting")).toBe(true);
+  it("uses reviewed dialogue at every eligible five-minute slot", () => {
+    const slots = planned.filter((entry) => entry.occurrenceKey.startsWith("conversation:"));
+    expect(slots.length).toBeGreaterThan(20);
+    expect(slots.every((item) => item.kind === "conversation" && item.variant)).toBe(true);
+  });
+
+  it("falls back to sequential wordless greetings only when no dialogue is reviewed", () => {
+    const pending = countryPackV3Schema.parse({
+      ...pack,
+      conversations: pack.conversations.map((script) => ({ ...script, review: "pending" as const })),
+    });
+    const slots = plannedActivitiesBetween(pending, SEED, 0, 3_600)
+      .filter((entry) => entry.occurrenceKey.startsWith("conversation:"));
+    expect(slots.length).toBeGreaterThan(5);
+    expect(slots.every((item) => item.kind === "greeting" && item.variant === null)).toBe(true);
+  });
+});
+
+describe("Paris Day 1 conversation rotation", () => {
+  it("has one distinct reviewed conversation for each encounter in a complete ten-place loop", () => {
+    const approved = countryPackV3Schema.parse({
+      ...parisCountryPackV3,
+      conversations: parisCountryPackV3.conversations.map((script) => ({ ...script, review: "approved" as const })),
+    });
+    const loopSeconds = approved.route.zones.length * sceneVisitSecondsFor(approved);
+    const encounters = plannedActivitiesBetween(approved, SEED, 0, loopSeconds)
+      .filter((item) => item.kind === "conversation" || item.kind === "greeting");
+    expect(encounters).toHaveLength(14);
+    expect(encounters.filter((item) => item.source === "beat")).toHaveLength(1);
+    expect(encounters.filter((item) => item.source === "system")).toHaveLength(13);
+    expect(encounters.every((item) => item.kind === "conversation" && item.variant)).toBe(true);
+    expect(new Set(encounters.map((item) => item.variant)).size).toBe(14);
   });
 });
 

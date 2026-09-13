@@ -160,12 +160,12 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
   - **Conversations:** about every 300 walking seconds (first at 150, ±30 s).
   - **Own actions:** an eligible drink or photo about every 300 s, offset between
     conversations (first at 300), alternating without an immediate repeat.
-  - **Greetings:** every third conversation slot is a wordless greeting.
   - **Scripts:** only `approved` or `creator_reviewed` records are eligible, chosen by
     place tag, never the same script or shared words back to back. If no reviewed script
     is eligible, the slot becomes a wordless greeting.
-  - **Story beats:** on the first visit to a place carrying the beat's `placeTag`, kept
-    90 s clear of other stops.
+  - **Story beats:** on the first visit to a place carrying the beat's `placeTag`. The
+    once-daily conversation replaces its nearby ambient slot; photo/drink/stumble beats
+    no longer remove a five-minute conversation and are serialized as separate stops.
 - **Scheduling.**
   - After heartbeat v12, the heartbeat route schedules only the next occurrence whose
     start is 20–75 s ahead, through `schedule_journey_activity`.
@@ -193,6 +193,8 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
     history entry and close with Back.
   - The traveler's anchor no longer shifts for panels (`TravelerCommand.panelOpen` is
     gone).
+  - Next's development indicator is disabled because its fixed bottom-left button
+    intercepted the Sponsor control at 320 px; build and runtime errors still surface.
 - **Unavailable preview data.** A `NO_ACTIVE_DAY` fallback can show the bundled neutral
   review scene and place sequence, but it hides reaction counts and renders distance as
   `unavailable`; zero is never presented as a server-confirmed live value.
@@ -200,7 +202,7 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
   `SceneStage` mounts the Pixi and Three canvases only then, so the world is built once
   rather than at a guessed tier and again a frame later.
 - The first server-rendered snapshot, loading label and live seed all identify Paris
-  (`paris-v2`) and the approved GLB.
+  (`paris-v2`, until an owner-approved switch to v3) and the approved GLB.
 
 ### The server side
 
@@ -745,17 +747,20 @@ localHour, raining, wakeElapsedSeconds)` returns
   retiming `scaledCue`.
   - **Own actions:** look around → `look_up`, stretch → `wait_stretch`,
     yawn → `wait_yawn`, lean → `rest`, laugh → `react`.
-  - **Conversations:** `conversationCue` plays greet and goodbye naturally, with the
-    resident's greet 0.35 s after his and her goodbye 0.25 s after his. Talk and listen
-    loop at natural speed for each line's `durationMs`.
-  - **Greetings:** a greeting is a greet without lines.
+  - **Conversations:** the resident walks in from the right while the traveler stops at
+    his ordinary centre anchor. The first two lines are reciprocal greeting gestures:
+    only the named speaker waves and the other listens. Later lines alternate talk and
+    listen, each visible for its full `durationMs`; goodbyes are also sequential and the
+    resident walks out. Every take keeps its natural playback speed.
+  - **Greetings:** when no reviewed script is eligible, the same approach and two
+    sequential waves play without invented words.
 - `ProductCharacterScene.residentType` follows the active script, so Camille and Inès
   appear as their own residents.
-- The resident takes the complementary role: traveler `talk` → resident `listen`, and
-  vice versa; `greet`/`goodbye` are mirrored; everything else is `idle`.
-- The conversation path walks the same `conversationSegments` (notice, stop, greet,
-  lines, goodbye) as the motion clock, so dialogue text and character pose are driven
-  from one source.
+- The resident takes the complementary role: traveler `talk`/`greet`/`goodbye` means
+  resident `listen`, and vice versa. Gestures are never mirrored simultaneously.
+- The conversation path walks the same `conversationSegments` (notice, stop, approach,
+  reciprocal greetings, lines, reciprocal goodbyes, depart) as the motion clock, so
+  dialogue text and character pose are driven from one source.
 - The ordinary walking path applies the 3× brisk threshold described in §3. Pace is an
   explicit argument; no runtime singleton or module state participates.
 - The non-traveling path accepts explicit waited seconds, deterministically selects the
@@ -1311,6 +1316,16 @@ ten.
 - `content:validate` checks the manifest byte counts against the files, refuses repeated
   paintings, enforces the two-place desktop budget and reports "paris-v2: 5 of 10
   target places".
+
+**Paris v3 candidate.** Five generated, distinct 3:1 masters add Montmartre, Place des
+Vosges, Luxembourg Garden, Pont Alexandre III and Saint-Germain to the original five.
+The manifest has ten places and a 70-walking-minute loop. Its fourteen pending Day 1
+scripts cover thirteen ambient five-minute slots plus one once-daily canal story without
+repeating a script inside the loop. The largest neighbouring pair is 1,904,580 bytes on
+desktop and 603,580 bytes on mobile; the full R2 scene prefix is 95 files / 18,732,462
+bytes. The source service returned 2172×724 masters, which the standard builder
+normalizes to its 3600×1200 canvas before producing renditions. Paris v2 stays available
+and an active day is not switched until the owner accepts the v3 paintings and dialogue.
 
 **Choosing a rendition.** `placeRenditions(zone, renditionRequestFor(zone, width,
 height, resolution))` picks:
@@ -2133,14 +2148,17 @@ Current P28 evidence (12–13 September 2026), in
 - **Database.** Migration 0036 is applied to dev `tkntxptfhmjnqaaveddx`. All 20 pgTAP
   suites pass, including 28 new activity assertions, and remote lint is
   `{"results":[]}`.
-- **Unit tests, lint, typecheck.** All 538 unit tests pass. They cover the clock, planner, motion,
+- **Unit tests, lint, typecheck.** The last complete run reached 540 passing tests and found
+  two stale Paris-v3 registry expectations; both were corrected and their 32 focused tests
+  pass. They cover the clock, planner, motion,
   timeline, walkers, scene assets, texture cache, scene build, progress copy, panel
   history, heartbeat recovery, the status line, the encounter log, upload and verify
   parsing, and the modal, sound, goal and vote components. Two heartbeat-chain
   reproductions failed on the old hook and pass on the fixed one. `pnpm lint` and
   `pnpm typecheck` are clean.
-- **Content.** `content:validate` reports 17 packs, 346 uniquely owned scene assets, and
-  "paris-v2: 5 of 10 target places".
+- **Content.** `content:validate` reports 18 packs and 441 uniquely owned scene assets.
+  Paris v3 contains 10 distinct places; its five new paintings and 14 scripts remain
+  pending owner acceptance, so active days remain pinned to Paris v2.
 - **Browser.** The 19 current core cases in `modal-continuity`, `scene-loading` and
   `launch-candidate` pass against a production build in headless Chromium at device
   scale 1.5. Two focused `review-repairs` cases also prove the current live day and
@@ -2295,7 +2313,9 @@ tsx loader; typed implementation is `scripts/assets/upload.ts`. It defaults to a
 credential-free dry run. Only `--upload` sends S3 Signature V4 PUTs using private
 `ASSET_S3_ENDPOINT`, `ASSET_S3_BUCKET`, `ASSET_S3_ACCESS_KEY_ID`,
 `ASSET_S3_SECRET_ACCESS_KEY` and optional `ASSET_S3_REGION` (default `auto`). These
-credentials are never included in Next configuration or browser code. The command
+credentials are never included in Next configuration or browser code. Cloudflare's
+`R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` names are
+accepted aliases; `R2_ACCOUNT_ID` is not needed when the full endpoint is set. The command
 preflights public runtime file types, rejects symlinks and files above 100 MiB,
 preserves relative object keys and credits, sets MIME types, rejects redirects and stops
 on errors without printing remote bodies or signed headers. Upload replaces matching
@@ -2308,7 +2328,7 @@ P28 additions:
 - **`--prefix scenes/paris/v2`** limits a run to one tree inside the public asset roots.
 - **`--skip-existing`** HEADs each key on `ASSET_BASE_URL` first and skips ones already
   served, so a new pack version uploads only its own files.
-- **`pnpm assets:verify --pack paris-v2 --base <https origin> [--origin <app origin>]`**
+- **`pnpm assets:verify --pack paris-v3 --base <https origin> [--origin <app origin>]`**
   needs no credentials. It sends a HEAD request with an `Origin` header for every rendition in
   the pack's manifest, and checks status 200, MIME type, the immutable cache header,
   `Access-Control-Allow-Origin` and the byte count against the local file. It exits

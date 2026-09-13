@@ -1,5 +1,6 @@
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { expect, test, type BrowserContext } from "@playwright/test";
+import { parisCountryPackV3 } from "../../src/content/countries/paris.v3";
 import { conversationDurationSeconds } from "../../src/lib/world/activities";
 import { evidenceRoot, installJourneyApi, sampleFrames, setRawSeconds, settled, type JourneyState } from "./helpers/journey-api";
 
@@ -95,7 +96,7 @@ test("keeps one world through modals and a seven-minute place change", async ({ 
   }, null, 2)}\n`);
 });
 
-test("records a short motion review: a modal, a place change and a wordless greeting", async ({ browser }, testInfo) => {
+test("records a short motion review: a modal, a place change and reciprocal dialogue", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "The recording runs once");
   test.setTimeout(180_000);
   await mkdir(evidenceRoot, { recursive: true });
@@ -105,7 +106,10 @@ test("records a short motion review: a modal, a place change and a wordless gree
     recordVideo: { dir: evidenceRoot, size: { width: 390, height: 844 } },
   });
   const page = await context.newPage();
-  const state: JourneyState = { rawSeconds: 405, advancing: true };
+  const assets = structuredClone(parisCountryPackV3);
+  assets.conversations = assets.conversations.map((script) => ({ ...script, review: "approved" as const }));
+  const script = assets.conversations.find((item) => item.id === "paris-canal-footbridge")!;
+  const state: JourneyState = { rawSeconds: 405, advancing: true, assets };
   await installJourneyApi(page, state);
   await page.goto("/");
   await settled(page);
@@ -118,17 +122,31 @@ test("records a short motion review: a modal, a place change and a wordless gree
   await expect(world).toHaveAttribute("data-zone-id", "paris-lanes", { timeout: 30_000 });
   const at = 432;
   state.scheduled = [{
-    kind: "greeting",
+    kind: "conversation",
     atActiveSecond: at,
-    endsAtActiveSecond: at + conversationDurationSeconds([]),
-    occurrenceKey: "greeting:e2e-review",
+    endsAtActiveSecond: at + conversationDurationSeconds(script.lines),
+    occurrenceKey: "conversation:e2e-review",
+    variant: script.id,
     source: "system",
   }];
+  setRawSeconds(state, at + 0.1);
   const status = page.getByRole("status", { name: /Walking rule/ });
-  await expect(status).toContainText("Saying hello", { timeout: 30_000 });
-  await expect(page.locator(".dialogue-bubble")).toHaveCount(0);
-  await page.screenshot({ path: `${evidenceRoot}/greeting-390.png` });
-  await page.waitForTimeout(4_000);
+  await expect(status).toContainText("Talking with Inès", { timeout: 30_000 });
+  const character = page.getByTestId("product-character-stage");
+  await expect(character).toHaveAttribute("data-resident-state", "walk");
+  const travelerFootX = Number(await character.getAttribute("data-foot-x"));
+  expect(Math.abs(travelerFootX - 195)).toBeLessThan(12);
+  await expect(page.locator(".dialogue-bubble")).toContainText("The canal suits your walking pace today.", { timeout: 10_000 });
+  await expect(page.locator(".dialogue-bubble .eyebrow")).toHaveText("Inès");
+  await expect(character).toHaveAttribute("data-character-state", "listen");
+  await expect(character).toHaveAttribute("data-resident-state", "greet");
+  await page.screenshot({ path: `${evidenceRoot}/conversation-resident-speaks-390.png` });
+  await expect(page.locator(".dialogue-bubble")).toContainText("It is difficult to hurry beside this water.", { timeout: 8_000 });
+  await expect(page.locator(".dialogue-bubble .eyebrow")).toHaveText("Traveler");
+  await expect(character).toHaveAttribute("data-character-state", "greet");
+  await expect(character).toHaveAttribute("data-resident-state", "listen");
+  await page.screenshot({ path: `${evidenceRoot}/conversation-traveler-speaks-390.png` });
+  await page.waitForTimeout(2_000);
   await context.close();
   if (video) await copyFile(await video.path(), `${evidenceRoot}/mobile-motion-review.webm`);
 });

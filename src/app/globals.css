@@ -3058,9 +3058,11 @@ button:focus-visible,
   box-shadow: 0 0 0 1px rgb(3 16 21 / 40%);
   transition: width 200ms ease, height 200ms ease, background 200ms ease;
 }
+.place-dot[data-passed="true"] span { background: #65d69a; box-shadow: 0 0 0 2px rgb(101 214 154 / 24%); }
 .place-dot[data-current="true"] span { width: 0.85rem; height: 0.85rem; background: #ffd777; box-shadow: 0 0 0 3px rgb(255 215 119 / 28%); }
 .place-dot[aria-expanded="true"] span { outline: 2px solid #fff3d9; outline-offset: 2px; }
 .place-dot:hover span { background: rgb(255 247 229 / 80%); }
+.place-dot[data-passed="true"]:hover span { background: #8ce9b5; }
 .place-dot[data-current="true"]:hover span { background: #ffe39a; }
 .place-dot:focus-visible { outline: 2px solid #ffd777; outline-offset: -6px; }
 .place-dots-summary { display: grid; gap: 0.05rem; font-size: 0.72rem; line-height: 1.2; white-space: nowrap; }

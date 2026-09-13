@@ -23,8 +23,8 @@ finish rather than what it got wrong.
 | D5 | The production scheduler may run launch jobs late | **Code resolved; external Vercel Pro configuration remains** | Owner (hosting) |
 | D6 | Some of his new movements do not fit the moment they are used for | **Resolved — current motion accepted** | Owner decision (12 Sep 2026) |
 | D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved, then superseded — every place lasts 7 walking minutes and the list repeats** | P25, then P28 (12 Sep 2026) |
-| D8 | Paintings are served from the app itself, not from Cloudflare R2 | No — same-origin works; R2 is needed before real traffic | Owner (Cloudflare account) |
-| D9 | Paris has five places, not ten, and nine authored conversation records await review | No — five real places loop honestly; pending words stay hidden | Owner (art and cultural review) |
+| D8 | R2 is uploaded and verified for the new `.com` app origin, but not activated | No — same-origin stays active until the separate app-domain deployment | Owner (Vercel domain and setting) |
+| D9 | Paris v3 has five new paintings and fourteen Day 1 conversations awaiting acceptance | No — Paris v2 stays pinned and pending words stay hidden | Owner (visual and dialogue acceptance) |
 
 ---
 
@@ -333,81 +333,61 @@ does.
 
 ## D8 — Paintings are served from the app itself, not from Cloudflare R2
 
-**Found 12 September 2026 (P28).** Everything on the code side is ready: sized paintings
-with permanent file names, year-long browser caching, an upload command and a check
-command. What is missing is the Cloudflare side, which needs the owner's account.
+**Updated 13 September 2026.** All 574 runtime files (88,848,842 bytes) are uploaded to
+R2, including characters, NPCs, audio, Paris v2/v3 and preview scenes. The public asset
+domain is `assets.keephimwalking.com`: Paris v3 passed 95/95 checks, Paris v2 passed
+50/50, and direct traveler/audio checks returned HTTP 200 with correct CORS and MIME.
 
-**What it is.** The city paintings should come from a Cloudflare R2 bucket on your own
-web address, so they load fast everywhere and do not use the app's bandwidth. Until that
-bucket exists, the app sends the same files itself, with the same long caching.
+**What it is.** R2 is ready for `https://keephimwalking.com`, but Cloudflare correctly
+rejects the old `https://keephimwalking.lol` origin. Activating `ASSET_BASE_URL` before
+the separate app-domain deployment would therefore break current visitors.
 
-**What happens if nothing changes.** Everything works. Every painting download counts
-against the app host's bandwidth and comes from its servers instead of Cloudflare's
-network. That is fine for a small validation, but a busy day would cost more and load
-slower far from the app's region.
+**What happens if nothing changes.** The current app keeps working from same-origin
+assets. The already-uploaded R2 copies remain unused until the `.com` app deployment.
 
 **What to do.** In Cloudflare, once:
 
-1. Create an R2 bucket, for example `keep-him-walking-assets`.
-2. Create an R2 API token with **Object Read & Write** on that bucket only. Put these
-   four values in `.env.local` on the machine that uploads, never in chat or git:
-
-   ```dotenv
-   ASSET_S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-   ASSET_S3_BUCKET=keep-him-walking-assets
-   ASSET_S3_ACCESS_KEY_ID=<from the token>
-   ASSET_S3_SECRET_ACCESS_KEY=<from the token>
-   ```
-
-3. In the bucket's **Settings → Custom Domains**, connect a subdomain you own, for example
-   `assets.keephimwalking.lol`. Do not use the `r2.dev` address: it is rate-limited and
-   has no caching.
-4. In **Settings → CORS policy**, paste the read-only rule from
-   `docs/runbooks/asset-hosting.md`.
-5. Upload and check, from the repository:
+1. In the separate `.com` deployment work, set this Vercel variable for Preview and
+   Production:
 
    ```sh
-   pnpm assets:upload --upload
-   ASSET_BASE_URL=https://assets.keephimwalking.lol pnpm assets:verify --pack paris-v2
+   ASSET_BASE_URL=https://assets.keephimwalking.com
    ```
 
-6. When the check prints `"failed": 0`, set `ASSET_BASE_URL=https://assets.keephimwalking.lol`
-   in the Vercel project for Production and Preview, then redeploy. To undo it, clear
-   that variable and redeploy.
+2. Redeploy only when the app itself serves from `https://keephimwalking.com`. To undo
+   the asset migration, clear `ASSET_BASE_URL` and redeploy; the local copies remain.
 
 This uses R2's free allowance for a small validation. Nothing is bought by the code.
 
 ---
 
-## D9 — Paris has five places, not ten, and nine authored conversation records await review
+## D9 — Paris v3 artwork and Day 1 conversations await owner acceptance
 
-**Found 12 September 2026 (P28).** The app now takes any number of places per city, up to
-24, aiming for ten. Paris has five real paintings, so it loops five.
+**Updated 13 September 2026.** The variable manifest work is complete and Paris v3 now
+contains ten distinct places. The current development day remains pinned to Paris v2.
 
-**What it is.** Two pieces of content only the owner can supply.
+**What it is.** Two candidate content sets need the owner's acceptance before Paris v3
+can replace the pinned Paris v2 day.
 
-- **Five more Paris places.** Each needs a new, genuinely different painting in the
-  same style as the existing five. Copies or crops of existing paintings are refused by
-  the build.
-- **Cultural review of words.** Paris has one six-line story, three shorter splits and
-  five new exchanges: peaches at the market, a minute at the café, the footbridge view,
-  the book stalls and the tower lights. All nine records in
-  `art/paris/conversations.json` are marked `"review": "pending"`.
+- **Five paintings.** Montmartre, Place des Vosges, Luxembourg Garden, Pont Alexandre III
+  and Saint-Germain were generated as distinct 3:1 candidates under `art/paris/zones/`.
+  The image service returned 2172×724 masters; the normal scene build maps them to the
+  3600×1200 canvas and produced responsive immutable renditions without duplicates.
+- **Fourteen conversations.** A 70-minute loop is ten places × seven walking minutes.
+  It contains thirteen ambient five-minute slots plus the once-daily canal story, so
+  `art/paris/conversations.json` now has exactly fourteen distinct scripts. All remain
+  `"review": "pending"` until the owner accepts the wording.
 
-**What happens if nothing changes.** Viewers see the same five Paris places every 35
-walking minutes. The five-minute conversation cadence continues with wordless greetings;
-pending dialogue is not shown or added to Journey transcripts.
+**What happens if nothing changes.** An active Paris v2 day keeps its original five-place
+order. Five-minute slots use sequential wordless greetings because pending dialogue is
+never shown or added to Journey transcripts; Paris v3 is not switched into that day.
 
 **What to do.**
 
-- **Paintings.** For each new place, save the day painting as
-  `art/paris/places/<place-id>/day.png`, and optionally a matching night painting as
-  `night.png`. Use the same 3:1 shape as the others (3600×1200 or larger). Add the place
-  to `art/paris/places.json` with its id, name, tags and a one-line description, then
-  raise `packVersion` to 3 so the day already running keeps its list. Run
-  `pnpm scenes:build paris`, then `pnpm content:validate`. Once D8 is done, run
-  `pnpm assets:upload --upload --prefix scenes/paris/v3`. A day switches to the new list
-  only with `pnpm launch:switch-pack --day-id <id> --from paris-v2 --to paris-v3`
-  (dry run first, then `--apply`).
-- **Conversations.** Read the nine authored records and either approve them (change
-  `"pending"` to `"approved"`), rewrite them, or delete them. Then rebuild as above.
+- **Paintings.** Open the five `master.png` files under the new `art/paris/zones/paris-*`
+  folders and accept them by id, or name the ids that need another generation.
+- **Conversations.** Read `art/paris/conversations.json` and reply “approve all Paris Day
+  1 conversations”, or list the script ids and replacement wording. After acceptance,
+  change their review state to `approved`, rebuild, upload and verify Paris v3, then run
+  `pnpm launch:switch-pack --day-id <id> --from paris-v2 --to paris-v3` before adding
+  `--apply`.
