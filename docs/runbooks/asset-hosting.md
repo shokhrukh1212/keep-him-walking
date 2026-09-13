@@ -47,7 +47,7 @@ Options:
    ```json
    [
      {
-       "AllowedOrigins": ["https://keephimwalking.lol", "https://www.keephimwalking.lol", "http://localhost:3100"],
+       "AllowedOrigins": ["https://keephimwalking.com", "https://www.keephimwalking.com", "http://localhost:3100"],
        "AllowedMethods": ["GET", "HEAD"],
        "AllowedHeaders": ["*"],
        "ExposeHeaders": ["ETag", "Content-Length"],
