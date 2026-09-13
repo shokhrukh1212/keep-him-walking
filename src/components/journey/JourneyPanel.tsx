@@ -25,7 +25,7 @@ type Props = {
   freshness: "extrapolated" | "last confirmed" | "reconnecting" | "unavailable";
   activeViewers: number | null;
   prelaunch: boolean;
-  contribution: { seconds: number; steps: number; globalSteps: number; stale: boolean };
+  contribution: { seconds: number | null; status: "pending" | "confirmed" | "last_confirmed" | "unavailable" };
   streak: number;
   collectedToday: boolean;
   secondsToCollect: number;
@@ -36,7 +36,6 @@ type Props = {
   wakeCard?: ReactNode;
   postcard?: ReactNode;
   onShare: () => void;
-  onShareSteps: () => void;
   onSponsor: () => void;
 };
 
@@ -46,7 +45,7 @@ export function JourneyPanel({
   distanceMetres, dailyGoalMetres, marathonMetres, freshness, activeViewers,
   prelaunch, contribution, streak, collectedToday, secondsToCollect,
   encounters, photos, tomorrow, ticket, wakeCard, postcard,
-  onShare, onShareSteps, onSponsor,
+  onShare, onSponsor,
 }: Props) {
   const ids = useId();
   const yourPart = useRef<HTMLElement>(null);
@@ -84,14 +83,17 @@ export function JourneyPanel({
           </div>
         ) : null}
         {count > 1 ? (
-          <ol className="journey-places" aria-label="Places on today's loop">
-            {places.map((place, index) => (
-              <li key={place.id} aria-current={index === currentPlaceIndex ? "step" : undefined}>
-                <span>{place.label}</span>
-                {index === currentPlaceIndex ? <small>You are here</small> : null}
-              </li>
-            ))}
-          </ol>
+          <details className="journey-route-details">
+            <summary>See all {count} stops</summary>
+            <ol className="journey-places" aria-label="Places on today's loop">
+              {places.map((place, index) => (
+                <li key={place.id} aria-current={index === currentPlaceIndex ? "step" : undefined}>
+                  <span>{place.label}</span>
+                  {index === currentPlaceIndex ? <small>You are here</small> : null}
+                </li>
+              ))}
+            </ol>
+          </details>
         ) : null}
         <p className="journey-muted">
           Each place lasts about {visitMinutes} walking minutes, then the loop begins again. Stops and waiting pause that clock.
@@ -122,10 +124,7 @@ export function JourneyPanel({
         <h3 className="journey-section-title" id={`${ids}-you`}>Your part</h3>
         <ContributionMeter
           seconds={contribution.seconds}
-          steps={contribution.steps}
-          globalSteps={contribution.globalSteps}
-          stale={contribution.stale}
-          onShare={onShareSteps}
+          status={contribution.status}
         />
         {!prelaunch ? (
           <p className="dock-streak" data-testid="dock-streak">

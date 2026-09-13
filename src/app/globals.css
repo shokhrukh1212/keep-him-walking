@@ -3447,3 +3447,97 @@ a:focus-visible,
     border-radius: 12px 12px 0 0;
   }
 }
+
+/* Prompt 1 layout pass: one stable footer region and quiet header utilities. */
+.journey-hud-audience {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.journey-hud-audience .sound-toggle {
+  position: static;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.journey-footer-region {
+  position: absolute;
+  z-index: 24;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(.65rem, env(safe-area-inset-bottom));
+  left: max(1rem, env(safe-area-inset-left));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .42rem .75rem;
+  pointer-events: none;
+}
+
+.journey-footer-region > * { pointer-events: auto; }
+
+.journey-footer-region .traveler-state,
+.journey-footer-region .goal-bar,
+.journey-footer-region .compact-dock {
+  position: static;
+  inset: auto;
+  transform: none;
+}
+
+.journey-footer-region .traveler-state {
+  grid-column: 1;
+  align-self: center;
+  max-width: min(32rem, 100%);
+}
+
+.journey-footer-region .goal-bar {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.journey-footer-region .compact-dock {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+.journey-route-details {
+  border: 1px solid var(--quiet-border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.journey-route-details summary {
+  min-height: 2.75rem;
+  padding: .7rem .8rem;
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .78rem;
+  cursor: pointer;
+}
+
+.journey-route-details .journey-places { padding: 0 .8rem .8rem; }
+
+.wake-card { gap: .3rem; padding: .8rem; }
+.wake-card h2 { font-size: 1.15rem; }
+.wake-card button { margin-top: .25rem; padding: .55rem .8rem; }
+
+@media (max-width: 600px) {
+  .journey-hud-audience { gap: .35rem; }
+  .journey-hud-audience .sound-toggle { width: 2.75rem; height: 2.75rem; }
+  .journey-footer-region {
+    right: max(.5rem, env(safe-area-inset-right));
+    bottom: max(.45rem, env(safe-area-inset-bottom));
+    left: max(.5rem, env(safe-area-inset-left));
+    gap: .3rem;
+  }
+  .journey-footer-region .compact-dock {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .journey-footer-region .compact-dock > * { flex: 1 1 0; min-width: 0; }
+  .traveler-wrap { bottom: clamp(8.5rem, 17vh, 10.5rem); }
+  .dialogue-bubble,
+  .dialogue-traveler,
+  .dialogue-npc { bottom: calc(10.75rem + env(safe-area-inset-bottom)); }
+  .reaction-buttons { top: calc(6.75rem + env(safe-area-inset-top)); }
+}

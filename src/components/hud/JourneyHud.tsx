@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { ConnectionStatus, CountryDayView } from "@/lib/contracts";
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
   audienceOpen: boolean;
   onAudienceOpen: () => void;
   onJourneyOpen: () => void;
+  soundControl?: ReactNode;
 };
 
 export function JourneyHud({
@@ -23,6 +25,7 @@ export function JourneyHud({
   audienceOpen,
   onAudienceOpen,
   onJourneyOpen,
+  soundControl,
 }: Props) {
   const audienceLabel = activeViewers === null
     ? "Live count unavailable"
@@ -43,6 +46,7 @@ export function JourneyHud({
           <span className={`live-dot ${status}`} aria-hidden="true" />
           <strong>{launchCountdown ? `Starts ${launchCountdown}` : audienceLabel}</strong>
         </button>
+        {soundControl}
       </div>
     </header>
   );

@@ -43,7 +43,7 @@ export function distanceProgress(
       goal: "daily",
       fill,
       percent,
-      text: `${done} / ${goal} km together · ${percent}%`,
+      text: `${done} / ${goal} km today · ${percent}%`,
       shortText: `${done}/${goal} km · ${percent}%`,
       nextGoalText: `After ${goal} km the next goal is a ${formatGoalKm(marathonMetres)} km marathon.`,
     };
@@ -56,7 +56,7 @@ export function distanceProgress(
       goal: "marathon",
       fill,
       percent,
-      text: `${done} / ${goal} km together · ${percent}%`,
+      text: `${done} / ${goal} km marathon · ${percent}%`,
       shortText: `${done}/${goal} km · ${percent}%`,
       nextGoalText: null,
     };
@@ -65,7 +65,7 @@ export function distanceProgress(
     goal: "complete",
     fill: 1,
     percent: 100,
-    text: `${done} km together · marathon reached`,
+    text: `${done} km today · marathon reached`,
     shortText: `${done} km · marathon`,
     nextGoalText: null,
   };

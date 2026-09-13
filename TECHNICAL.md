@@ -1635,11 +1635,20 @@ colour grade remain separate from the chrome rules.
 
 The scene HUD is marked as the explicit `where-when`, `who`, `status`, `goal`,
 `reactions`, `vote`, `dock`, and `sponsor` regions from the product specification.
-The desktop presentation keeps those regions around the scene; the ≤600 px rules stack
-the goal and thumb-sized reactions above the compact dock. The old season-day total is
-not rendered. `firstVisit` comes only from creation of the existing HTTP-only visitor
-cookie, so the four-second onboarding line is neither local-storage authority nor a
-repeat tutorial.
+The desktop presentation keeps those regions around the scene; status, place/distance
+progress and the compact dock now occupy one stable footer grid at every viewport, while
+sound sits with the audience control in the header. The ≤600 px rules keep thumb-sized
+reactions below the full header and raise the traveler above the reserved footer. The old
+season-day total is not rendered. `firstVisit` comes only from creation of the existing
+HTTP-only visitor cookie, so the four-second onboarding line is neither local-storage
+authority nor a repeat tutorial.
+
+Journey presents the current stop first and collapses the complete route list by default.
+Its personal contribution is `visitorActiveSeconds` from the latest heartbeat, formatted
+as confirmed watching time; it shows a pending state before the first heartbeat and a
+`last confirmed` label while disconnected. The public UI no longer derives or shares a
+personal step estimate. The signed legacy steps-card endpoint remains available to old
+links and reads its number from `visitor_day_contributions` rather than the browser.
 
 `POST /api/reactions` returns the end of its authoritative 30-second request bucket.
 `ReactionButtons` uses it only for feedback: if a below-threshold request reaches that

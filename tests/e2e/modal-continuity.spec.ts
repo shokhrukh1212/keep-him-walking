@@ -168,7 +168,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     await expect(page.getByRole("button", { name: "Stop 1 of 10, Gare du Nord, completed this loop" }))
       .toHaveAttribute("data-passed", "true");
     await expect(page.getByRole("list", { name: /^Stop 2 of 10\. Next place in about 6 minutes of walking\.$/ })).toBeAttached();
-    await expect(page.locator(".goal-copy strong")).toHaveAttribute("aria-label", /^0\.6 \/ 8 km together · 7%$/);
+    await expect(page.locator(".goal-copy strong")).toHaveAttribute("aria-label", /^0\.6 \/ 8 km today · 7%$/);
     await expect(page.locator(".goal-freshness")).toHaveText(/extrapolated|last confirmed/);
     for (const dot of await page.locator(".place-dot").all()) {
       const box = await dot.boundingBox();

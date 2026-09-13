@@ -14,20 +14,20 @@ describe("distance copy", () => {
     expect(distanceProgress(4_320, 8_000, 42_195)).toMatchObject({
       goal: "daily",
       percent: 54,
-      text: "4.3 / 8 km together · 54%",
+      text: "4.3 / 8 km today · 54%",
       shortText: "4.3/8 km · 54%",
       nextGoalText: "After 8 km the next goal is a 42.2 km marathon.",
     });
     expect(distanceProgress(9_120, 8_000, 42_195)).toMatchObject({
       goal: "marathon",
       percent: 21,
-      text: "9.1 / 42.2 km together · 21%",
+      text: "9.1 / 42.2 km marathon · 21%",
       nextGoalText: null,
     });
     expect(distanceProgress(45_000, 8_000, 42_195)).toMatchObject({
       goal: "complete",
       fill: 1,
-      text: "45.0 km together · marathon reached",
+      text: "45.0 km today · marathon reached",
     });
   });
 });

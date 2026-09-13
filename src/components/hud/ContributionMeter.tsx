@@ -1,18 +1,25 @@
 type Props = {
-  seconds: number;
-  steps: number;
-  globalSteps: number;
-  stale: boolean;
-  onShare?: () => void;
+  seconds: number | null;
+  status: "pending" | "confirmed" | "last_confirmed" | "unavailable";
 };
 
-export function ContributionMeter({ seconds, steps, globalSteps, stale, onShare }: Props) {
+export function formatWatchingTime(seconds: number): string {
+  const total = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
+  const minutes = Math.floor(total / 60);
+  const remainder = total % 60;
+  if (minutes === 0) return `${remainder}s`;
+  return `${minutes}m ${remainder.toString().padStart(2, "0")}s`;
+}
+
+export function ContributionMeter({ seconds, status }: Props) {
+  const confirmed = seconds !== null && status !== "pending" && status !== "unavailable";
   return (
     <div className="contribution-meter">
-      <span className="eyebrow">YOUR CONTRIBUTION</span>
-      <strong>{steps.toLocaleString()} steps</strong>
-      <small>{Math.floor(seconds)} active seconds · {globalSteps.toLocaleString()} global steps{stale ? " (last confirmed)" : ""}</small>
-      {onShare ? <button type="button" onClick={onShare}>Share my steps</button> : null}
+      <strong>{confirmed ? formatWatchingTime(seconds) : status === "pending" ? "Confirming…" : "Unavailable"}</strong>
+      <small>
+        {confirmed ? `watching today${status === "last_confirmed" ? " · last confirmed" : " · server confirmed"}` :
+          status === "pending" ? "Waiting for the first server confirmation" : "Watching time is not available in preview mode"}
+      </small>
     </div>
   );
 }

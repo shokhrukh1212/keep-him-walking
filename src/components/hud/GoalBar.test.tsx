@@ -29,7 +29,7 @@ function renderBar(overrides: Partial<ComponentProps<typeof GoalBar>> = {}) {
 describe("GoalBar", () => {
   it("states the shared distance, the goal and how fresh the number is", () => {
     const { container } = renderBar();
-    expect(screen.getByLabelText("4.0 / 8 km together · 50%")).toBeInTheDocument();
+    expect(screen.getByLabelText("4.0 / 8 km today · 50%")).toBeInTheDocument();
     expect(screen.getByText("extrapolated")).toBeInTheDocument();
     expect(container.querySelector(".goal-track span")).toHaveStyle({ width: "50%" });
   });
@@ -83,7 +83,7 @@ describe("GoalBar", () => {
 
   it("measures against the marathon once the daily goal is behind him", () => {
     const { container } = renderBar({ distanceMetres: 9_100, freshness: "last confirmed" });
-    expect(screen.getByLabelText("9.1 / 42.2 km together · 21%")).toBeInTheDocument();
+    expect(screen.getByLabelText("9.1 / 42.2 km marathon · 21%")).toBeInTheDocument();
     expect(container.querySelector(".goal-bar")).toHaveAttribute("data-marathon", "true");
   });
 });

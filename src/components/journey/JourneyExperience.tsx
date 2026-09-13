@@ -14,7 +14,7 @@ import {
   synchronizeClock,
 } from "@/lib/story-clock";
 import type { TravelerCommand } from "@/lib/traveler/types";
-import { crowdActionKindOf, travelerMotionAt, visibleStepsBetween, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { crowdActionKindOf, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import { weatherEffect } from "@/lib/weather/effects";
 import { localHourFraction } from "@/lib/world/time-grade";
 import { formatTemperature, weatherGlyph } from "@/lib/weather/format";
@@ -137,9 +137,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     return ()=>window.clearInterval(timer);
   },[previewDemoSponsor,actionReview]);
   const review=previewDemoSponsor?reviewPoseAt(actionReview,reviewNow):null;
-  const [visitorSteps,setVisitorSteps]=useState(0);
   const newestHeartbeat = useRef(-Infinity);
-  const confirmedContribution = useRef({day:initialSnapshot.countryDay.id,raw:0,visitor:0,steps:0});
   const broadcastHint = useRef<() => void>(() => undefined);
   const [loadingLive, setLoadingLive] = useState(true);
   const [bootstrapIssue, setBootstrapIssue] = useState("The live journey is temporarily unavailable. Retrying…");
@@ -305,15 +303,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     const stamp = Date.parse(next.routeAuthoritativeAt);
     if (stamp < newestHeartbeat.current) return;
     newestHeartbeat.current = stamp;
-    const previous=confirmedContribution.current;
-    const sameDay=previous.day===snapshot.countryDay.id;
-    const contributed=sameDay ? Math.max(0,next.visitorActiveSeconds-previous.visitor) : 0;
-    // Only the newly acknowledged interval contributes; never slide an entire
-    // session-length window forward through someone else's progress.
-    confirmedContribution.current={day:snapshot.countryDay.id,raw:next.globalActiveSeconds,visitor:next.visitorActiveSeconds,
-      steps:(sameDay?previous.steps:0)+visibleStepsBetween(snapshot.assets,
-        Math.max(sameDay?previous.raw:next.globalActiveSeconds,next.globalActiveSeconds-contributed),next.globalActiveSeconds)};
-    setVisitorSteps(confirmedContribution.current.steps);
     setHeartbeat({ countryDayId: snapshot.countryDay.id, response: next });
     // This heartbeat committed a new stop for everyone; tell the other viewers now
     // instead of letting them find it on their own next beat.
@@ -355,7 +344,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       next.ttlSeconds,
       new Date(next.realServerNow ?? next.serverNow).getTime(),
     ));
-  }, [snapshot.countryDay.id,snapshot.assets]);
+  }, [snapshot.countryDay.id]);
 
   // Presence belongs to the authoritative journey, not the visitor's GPU. Once
   // a painting renderer is ready, a slow or unavailable 3D traveler must not be
@@ -674,7 +663,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         seenMilestones.current.add(milestone);
         trackVisitorEvent("contribution_milestone", {
           seconds: milestone,
-          steps: Math.floor(milestone / 0.6),
           day: snapshot.countryDay.dayNumber,
         });
       }
@@ -777,12 +765,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const shareUrl = async () => {
     await shareCard({ title: "Keep Him Walking", text: "Bring a friend → keep him walking.", url: window.location.href });
   };
-  const shareSteps = async () => {
-    const response = await fetch("/api/share/steps", { method: "POST" }).catch(() => null);
-    if (!response?.ok) return;
-    const card = await response.json() as { text: string; url: string; imageUrl: string };
-    await shareCard({ title: "My part of Keep Him Walking", text: card.text, url: card.url, imageUrl: card.imageUrl, fileName: "my-walking-steps.png" });
-  };
   const shareWake = async (moment: WakeMoment) => {
     const text = `I found him waiting alone in ${snapshot.countryDay.cityName} at ${formatWaitingLocalTime(moment.wokeAt, snapshot.countryDay.timeZone)}. He'd been standing there ${formatWaitDuration(moment.waitedSeconds)}. →`;
     await shareCard({
@@ -883,6 +865,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         audienceOpen={openPanel === "audience"}
         onAudienceOpen={() => showPanel("audience")}
         onJourneyOpen={() => showPanel("journey")}
+        soundControl={(
+          <SoundToggle
+            enabled={soundEnabled}
+            available={soundAvailable}
+            resumesOnTap={soundResumesOnTap}
+            onToggle={() => void toggleSound()}
+          />
+        )}
       />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
@@ -895,11 +885,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           model reports ready. The sprite and Rive renderers it used to sit in
           front of were retired in P18; nothing else remains of that path. */}
       {!puppetReady && sceneRenderer !== "static" ? <div className="traveler-loading" role="status">Loading the walk…</div> : null}
-      <WalkingRuleStatus
-        walking={review ? review.moving : walking}
-        label={walkingStatus.text}
-        tone={walkingStatus.tone}
-      />
       {snapshot.journeyState !== "prelaunch" && snapshot.mode === "live" ? <ReactionButtons
         counts={heartbeat?.reactions.counts ?? snapshot.reactions.counts}
         activeViewers={activeViewers}
@@ -912,16 +897,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           void refreshReactions();
           broadcastReactionHint();
         }}
-      /> : null}
-      {snapshot.journeyState !== "prelaunch" ? <GoalBar
-        distanceMetres={confirmedDistance}
-        dailyGoalMetres={snapshot.assets.dayRouteMetres}
-        marathonMetres={snapshot.assets.marathonMetres}
-        freshness={distanceFreshness}
-        places={places}
-        currentPlaceIndex={routePosition.zoneIndex}
-        secondsToNextVisit={routePosition.secondsToNextVisit}
-        visitSeconds={routePosition.visitSeconds}
       /> : null}
       <EncounterDialogue
         line={review ? ["talk","listen","greet","goodbye"].includes(review.state)
@@ -937,35 +912,46 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         showNpcImage={!residentReady}
       />
 
-      <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
-        {sponsor ? <aside className="sponsor-card" data-hud-region="sponsor" aria-label={sponsor.disclosure}>
-          {sponsor.logo ? /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={sponsor.logo} alt="" width={40} height={40} /> : null}
-          <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
-            {sponsor.href ? <a href={sponsor.href}>{sponsor.cta} ↗</a> : null}</div>
-        </aside> : <button className="sponsor-invitation" data-hud-region="sponsor" type="button" aria-haspopup="dialog" aria-label={sponsorLabel} onClick={() => showPanel("sponsor")}>
-          <span className="dock-label-long" aria-hidden="true">{sponsorLabel}</span>
-          <span className="dock-label-short" aria-hidden="true">Sponsor</span>
-        </button>}
-        {previewDemoSponsor ? <label className="action-review-select">Preview action
-          <select aria-label="Preview action" value={actionReview.action} onChange={event=>{
-            const now=performance.now();setReviewNow(now);
-            setActionReview({action:event.target.value as ReviewAction,startedAt:now});
-          }}>{REVIEW_ACTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
-        </label> : null}
-        <VoteChip
-          vote={snapshot.vote}
-          rolloverUtcHour={snapshot.journey.rolloverUtcHour}
-          onOpen={() => showPanel("vote")}
+      <div className="journey-footer-region">
+        <WalkingRuleStatus
+          walking={review ? review.moving : walking}
+          label={walkingStatus.text}
+          tone={walkingStatus.tone}
         />
-        <button className="dock-journey" type="button" aria-haspopup="dialog" onClick={() => showPanel("journey")}>Journey</button>
-      </section>
-      <SoundToggle
-        enabled={soundEnabled}
-        available={soundAvailable}
-        resumesOnTap={soundResumesOnTap}
-        onToggle={() => void toggleSound()}
-      />
+        {snapshot.journeyState !== "prelaunch" ? <GoalBar
+          distanceMetres={confirmedDistance}
+          dailyGoalMetres={snapshot.assets.dayRouteMetres}
+          marathonMetres={snapshot.assets.marathonMetres}
+          freshness={distanceFreshness}
+          places={places}
+          currentPlaceIndex={routePosition.zoneIndex}
+          secondsToNextVisit={routePosition.secondsToNextVisit}
+          visitSeconds={routePosition.visitSeconds}
+        /> : null}
+        <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
+          {sponsor ? <aside className="sponsor-card" data-hud-region="sponsor" aria-label={sponsor.disclosure}>
+            {sponsor.logo ? /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={sponsor.logo} alt="" width={40} height={40} /> : null}
+            <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
+              {sponsor.href ? <a href={sponsor.href}>{sponsor.cta} ↗</a> : null}</div>
+          </aside> : <button className="sponsor-invitation" data-hud-region="sponsor" type="button" aria-haspopup="dialog" aria-label={sponsorLabel} onClick={() => showPanel("sponsor")}>
+            <span className="dock-label-long" aria-hidden="true">{sponsorLabel}</span>
+            <span className="dock-label-short" aria-hidden="true">Sponsor</span>
+          </button>}
+          {previewDemoSponsor ? <label className="action-review-select">Preview action
+            <select aria-label="Preview action" value={actionReview.action} onChange={event=>{
+              const now=performance.now();setReviewNow(now);
+              setActionReview({action:event.target.value as ReviewAction,startedAt:now});
+            }}>{REVIEW_ACTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
+          </label> : null}
+          <VoteChip
+            vote={snapshot.vote}
+            rolloverUtcHour={snapshot.journey.rolloverUtcHour}
+            onOpen={() => showPanel("vote")}
+          />
+          <button className="dock-journey" type="button" aria-haspopup="dialog" onClick={() => showPanel("journey")}>Journey</button>
+        </section>
+      </div>
 
       <OverlayModal
         open={openPanel === "journey"}
@@ -988,10 +974,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           activeViewers={activeViewers}
           prelaunch={snapshot.journeyState === "prelaunch"}
           contribution={{
-            seconds: visitorSeconds,
-            steps: visitorSteps,
-            globalSteps: connectionStatus === "live" ? motion.plantIndex : travelerMotionAt(snapshot.assets,heartbeat?.globalActiveSeconds ?? snapshot.route.globalActiveSeconds).plantIndex,
-            stale: connectionStatus !== "live" || snapshot.steps.stale,
+            seconds: heartbeat?.visitorActiveSeconds ?? null,
+            status: snapshot.mode !== "live" ? "unavailable" : heartbeat === null ? "pending" : connectionStatus === "live" ? "confirmed" : "last_confirmed",
           }}
           streak={snapshot.passport.streak}
           collectedToday={collectedToday}
@@ -1020,7 +1004,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             />
           ) : null}
           onShare={() => void share()}
-          onShareSteps={() => void shareSteps()}
           onSponsor={() => showPanel("sponsor")}
         />
       </OverlayModal>
