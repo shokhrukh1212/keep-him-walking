@@ -20,7 +20,7 @@ The owner has selected these values. Domain ownership and service readiness stil
 
 | Choice | Selected value | Recommendation from 01-PRODUCT §0 | Needed before |
 |---|---|---|---|
-| Product name + domain | **Keep Him Walking**; **keephimwalking.lol** | Owner confirmed Q1. | P4 planning checkpoint; final copy, share URLs, assets and launch |
+| Product name + domain | **Keep Him Walking**; **keephimwalking.com** | Owner confirmed Q1; the owner bought the `.com` on 13 September 2026. | P4 planning checkpoint; final copy, share URLs, assets and launch |
 | Character naming | Day-1 vote: **Milo, Nur, Sami, Bek**; final name: unset until vote closes | Owner confirmed Q2. | P4 planning checkpoint; P9 name-vote seed |
 | Season length | **30 days** | 30 days; already established by README decision 1, rather than a new inferred owner choice. | P9 scheduling; P21 seed |
 | Rollover time | **16:00 UTC** | Owner confirmed Q3. | P4 planning checkpoint; P9 rollover, P15 inventory, P21 cron/seed |

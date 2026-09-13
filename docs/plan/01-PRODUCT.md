@@ -7,7 +7,7 @@
 
 | Decision | My recommendation | Why |
 |---|---|---|
-| Product name + domain | **Keep Him Walking** — `keephimwalking.lol` if free (fallback `.com`, then `.live`) | The name is the instruction. The `.lol` TLD reads "internet experiment", which is exactly what got outbid.lol shared in August; it lowers expectations and raises curiosity. |
+| Product name + domain | **Keep Him Walking** — `keephimwalking.com` (bought 13 September 2026) | The name is the instruction. The owner bought the `.com`, and it is the address in every share URL, card and asset origin. |
 | Character name | **Let Day 1's vote name him.** Shortlist: Milo, Nur, Sami, Bek. My pick if you skip the vote: **Milo** | A crowd that named him feels ownership. All four are two syllables, pronounceable in every language he will visit, and free of historical baggage (do not use Timur — he sacked half the cities on this route). |
 | Season length | **30 days** for Season 1 | 195 consecutive days of solo content production is a burnout plan, not a product plan. A finale is a marketing event. |
 | Rollover time | **16:00 UTC** every day | 09:00 San Francisco, 12:00 New York, 17:00 London, 21:00 Tashkent. The maximum overlap of the people who share things. |
@@ -16,7 +16,7 @@ Other name options, ranked, in case the first is taken:
 
 | Product | Domain to try | Note |
 |---|---|---|
-| Keep Him Walking | keephimwalking.lol / .com | Current brand; imperative; the CTA is the name. |
+| Keep Him Walking | keephimwalking.com (owned) | Current brand; imperative; the CTA is the name. |
 | He Only Walks | heonlywalks.com / .lol | The rule as a sentence. |
 | Is Anyone Watching | isanyonewatching.com | The question people ask themselves at 3 a.m. Great for the waiting state. |
 | Watched | watched.lol | Short, slightly eerie, memorable. |
@@ -233,9 +233,9 @@ CTAs (in order of visual weight):
 5. `Your passport` — stamps
 
 Share card text (auto-generated):
-- Steps card: "I kept him walking for 14 min in Tbilisi. 1,240 steps were mine. He only walks while someone is watching → keephimwalking.lol"
-- First-watcher card: "I found him waiting alone in Baku at 04:12. He'd been standing there 2h 41m. → keephimwalking.lol"
-- Country card: "🇬🇪 Georgia carried him 3h 12m today — #1 in the world. → keephimwalking.lol/country/ge"
+- Steps card: "I kept him walking for 14 min in Tbilisi. 1,240 steps were mine. He only walks while someone is watching → keephimwalking.com"
+- First-watcher card: "I found him waiting alone in Baku at 04:12. He'd been standing there 2h 41m. → keephimwalking.com"
+- Country card: "🇬🇪 Georgia carried him 3h 12m today — #1 in the world. → keephimwalking.com/country/ge"
 - Recap card: "Day 6 · Tbilisi ✅ landmark reached · 31.4 km · 4,120 watchers from 61 countries · tomorrow: 🇦🇲 Armenia (52%)"
 
 Footer: `Map · Passport · Sponsors · Locals: tell us what we got wrong · Privacy · Built by one person in Tashkent`

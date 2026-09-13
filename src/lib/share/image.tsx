@@ -26,7 +26,7 @@ export function shareImage(input: {
         <div style={{ display: "flex", gap: 18 }}>
           {(input.stats ?? []).map((stat) => <div key={stat} style={{ display: "flex", padding: "14px 20px", border: "1px solid #ffffff38", borderRadius: 999, fontSize: 25 }}>{stat}</div>)}
         </div>
-        <div style={{ display: "flex", fontSize: 22, color: "#d7e3dc" }}>{input.footer ?? "keephimwalking.lol"}</div>
+        <div style={{ display: "flex", fontSize: 22, color: "#d7e3dc" }}>{input.footer ?? "keephimwalking.com"}</div>
       </div>
     </div>,
     { width: 1200, height: 630, headers: SHARE_IMAGE_HEADERS },

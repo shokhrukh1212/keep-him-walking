@@ -18,7 +18,7 @@ async function publicDirectory() {
   return directory;
 }
 
-const options = { base: "https://assets.example.com", origin: "https://keephimwalking.lol" };
+const options = { base: "https://assets.example.com", origin: "https://keephimwalking.com" };
 
 describe("asset verification", () => {
   it("lists every rendition of a variable manifest, all content-addressed", () => {
@@ -37,7 +37,7 @@ describe("asset verification", () => {
     await expect(verifyAssetPaths([assetPath], { ...options, publicDirectory: await publicDirectory(), fetcher }))
       .resolves.toEqual([{ path: assetPath, url: `https://assets.example.com${assetPath}`, problems: [] }]);
     expect(fetcher).toHaveBeenCalledWith(`https://assets.example.com${assetPath}`, expect.objectContaining({
-      method: "HEAD", headers: { Origin: "https://keephimwalking.lol" }, redirect: "error",
+      method: "HEAD", headers: { Origin: "https://keephimwalking.com" }, redirect: "error",
     }));
   });
 
@@ -51,7 +51,7 @@ describe("asset verification", () => {
     expect(check!.problems).toEqual([
       "content-type text/plain, expected image/webp",
       "cache-control \"public, max-age=3600\" is not a one-year immutable cache",
-      "no CORS permission for https://keephimwalking.lol",
+      "no CORS permission for https://keephimwalking.com",
       "serves 9 bytes, the checked-in file has 4",
     ]);
     const unreachable = vi.fn<typeof fetch>().mockRejectedValue(new Error("dns"));

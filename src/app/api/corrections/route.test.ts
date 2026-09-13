@@ -15,9 +15,9 @@ vi.mock("@/lib/observability/route", () => ({ withRouteTelemetry: (_name: string
 import { handleCorrectionPost } from "./handler";
 
 function request(body: unknown) {
-  return new NextRequest("https://keephimwalking.lol/api/corrections", {
+  return new NextRequest("https://keephimwalking.com/api/corrections", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Origin: "https://keephimwalking.lol", "x-vercel-ip-country": "uz" },
+    headers: { "Content-Type": "application/json", Origin: "https://keephimwalking.com", "x-vercel-ip-country": "uz" },
     body: JSON.stringify(body),
   });
 }

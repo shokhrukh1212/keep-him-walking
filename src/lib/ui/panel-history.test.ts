@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { closePanelStep, openPanelStep, panelFromSearch } from "./panel-history";
 
-const home = "https://keephimwalking.lol/?demo=1";
+const home = "https://keephimwalking.com/?demo=1";
 
 describe("panel history", () => {
   it("reads the modal from the URL and keeps old passport links working", () => {
@@ -15,29 +15,29 @@ describe("panel history", () => {
     const open = openPanelStep(home, { next: true }, "journey");
     expect(open).toEqual({
       method: "push",
-      url: "https://keephimwalking.lol/?demo=1&panel=journey",
+      url: "https://keephimwalking.com/?demo=1&panel=journey",
       state: { next: true, khwPanel: "journey", khwPanelPushed: true },
     });
-    expect(closePanelStep("https://keephimwalking.lol/?demo=1&panel=journey", open.method === "push" ? open.state : null))
+    expect(closePanelStep("https://keephimwalking.com/?demo=1&panel=journey", open.method === "push" ? open.state : null))
       .toEqual({ method: "back" });
   });
 
   it("replaces the entry when switching modals", () => {
     expect(openPanelStep(
-      "https://keephimwalking.lol/?panel=journey",
+      "https://keephimwalking.com/?panel=journey",
       { khwPanel: "journey", khwPanelPushed: true },
       "sponsor",
     )).toEqual({
       method: "replace",
-      url: "https://keephimwalking.lol/?panel=sponsor",
+      url: "https://keephimwalking.com/?panel=sponsor",
       state: { khwPanel: "sponsor", khwPanelPushed: true },
     });
   });
 
   it("closes a modal opened from a shared link without leaving the page", () => {
-    expect(closePanelStep("https://keephimwalking.lol/?panel=vote", null)).toEqual({
+    expect(closePanelStep("https://keephimwalking.com/?panel=vote", null)).toEqual({
       method: "replace",
-      url: "https://keephimwalking.lol/",
+      url: "https://keephimwalking.com/",
       state: { khwPanel: null, khwPanelPushed: false },
     });
   });
