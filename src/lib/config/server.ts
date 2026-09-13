@@ -22,7 +22,10 @@ export function serverRuntimeConfig() {
       numericEnv("PRESENCE_TTL_SECONDS", DEFAULT_PRESENCE_TTL_SECONDS),
     ),
     stepsPerActiveSecond: numericEnv("STEPS_PER_ACTIVE_SECOND", 1.8),
-    paceCap: Math.min(5, Math.max(1, numericEnv("PACE_CAP", 5))),
+    // Kept in the RPC wire contract during rolling deploys. Audience size no
+    // longer changes locomotion or distance; stale PACE_CAP values cannot opt
+    // the old acceleration back in.
+    paceCap: 1,
     firstWatcherGapSeconds: Math.min(
       86_400,
       Math.max(0, Math.round(numericEnv("FIRST_WATCHER_GAP_SECONDS", 600))),

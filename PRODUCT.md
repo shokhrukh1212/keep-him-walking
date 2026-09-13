@@ -38,6 +38,8 @@ Presence is the fuel. Nothing else moves him.
   loading.
 - While at least one lease is alive, the server accrues **global active seconds** for the
   current country-day. While no lease is alive, it accrues nothing.
+- Audience size decides whether he can move, never how fast he moves. When walking, he
+  and the street advance at one natural pace: **1.25 metres per second**.
 - Distance, step count, which zone of the city he is in, and which action he is
   performing are all derived from server-confirmed runtime and action windows.
 
@@ -174,7 +176,7 @@ that is hashed before it ever reaches the database.
 - **Day marker and city** — for example “DAY 1 · LONDON” with country and time in the city's own
   local time.
 - **Audience control** — one top-right control combines the country summary, confirmed
-  watcher count and pace with the honest movement status.
+  watcher count and honest movement status.
 - **Reactions** — Wave, Water and Photo sit at top centre. One confirmed watcher can
   trigger one; Realtime is only an update hint and every viewer then reads the action
   window from the server.
@@ -222,8 +224,9 @@ button close it.
   sheet, the confirmed totals, the route map and a share card.
 - **A city that lives** — subtle birds, café steam and an optional tram share the
   authoritative clock. Every couple of minutes one or two rigged residents walk past on
-  his pavement, a little smaller than him, just behind him or just in front; each walks
-  in at one edge of the screen and out at the other. The unconvincing procedural cat was
+  his pavement, a little smaller than him, just behind him or just in front. Every passer
+  enters from the right and leaves on the left. The man matches the traveler's natural
+  pace; the woman is only about five percent slower. The unconvincing procedural cat was
   removed. When a hundred people are watching at once, bunting goes up for the rest of
   the day.
 - **Tomorrow** — only a committed next `country_days` row may name the next city, start

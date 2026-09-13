@@ -1,9 +1,7 @@
 import type { ConnectionStatus } from "@/lib/contracts";
-import { formatPaceRate } from "@/lib/presence";
 
 type Props = {
   activeViewers: number | null;
-  paceRate: number;
   walking: boolean;
   status: ConnectionStatus;
   onShare: () => void;
@@ -15,7 +13,6 @@ type Props = {
 
 export function LiveStatus({
   activeViewers,
-  paceRate,
   walking,
   status,
   onShare,
@@ -37,7 +34,7 @@ export function LiveStatus({
     : status === "offline"
       ? "He only moves while someone is watching."
       : walking
-        ? `The internet is keeping him moving · ×${formatPaceRate(paceRate)} pace`
+        ? "The internet is keeping him moving."
         : wakeCountdown
           ? `You’re here · he starts walking in ${wakeCountdown}…`
           : waitingSinceLocalTime
@@ -51,7 +48,7 @@ export function LiveStatus({
         <small>{detail}</small>
         {walking && status === "live" ? (
           <button className="live-status-share" type="button" onClick={onShare}>
-            bring a friend → faster
+            Bring a friend →
           </button>
         ) : null}
       </div>

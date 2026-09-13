@@ -60,7 +60,7 @@ describe("route clock", () => {
     expect(extrapolatedRouteSeconds(paused, later)).toBe(50);
     expect(extrapolatedRouteSeconds(walking, later)).toBe(110);
     expect(extrapolatedRouteDistance(paused, later)).toBe(125);
-    expect(extrapolatedRouteDistance(walking, later)).toBe(275);
+    expect(extrapolatedRouteDistance(walking, later)).toBe(200);
   });
 
   it("holds server-confirmed distance for a crowd action and resumes afterward", () => {
@@ -79,8 +79,8 @@ describe("route clock", () => {
     }];
     expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:03Z"), action))
       .toBe(255);
-    expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:08Z"), action))
-      .toBe(260);
+    expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:09Z"), action))
+      .toBe(256.25);
   });
 
   it("holds distance through a scheduled stop that plants no distance of its own", () => {
@@ -92,10 +92,10 @@ describe("route clock", () => {
       walking: true,
     };
     const conversation = [{ kind: "conversation" as const, atActiveSecond: 102, endsAtActiveSecond: 122, source: "system" as const }];
-    expect(projectedRouteDistance(runtime, 2, conversation)).toBe(255);
-    expect(projectedRouteDistance(runtime, 10, conversation)).toBe(255);
-    expect(projectedRouteDistance(runtime, 30, conversation)).toBe(275);
-    expect(projectedRouteDistance(runtime, 30, [{ ...conversation[0]!, cancelled: true }])).toBe(325);
+    expect(projectedRouteDistance(runtime, 2, conversation)).toBe(252.5);
+    expect(projectedRouteDistance(runtime, 10, conversation)).toBe(252.5);
+    expect(projectedRouteDistance(runtime, 30, conversation)).toBe(262.5);
+    expect(projectedRouteDistance(runtime, 30, [{ ...conversation[0]!, cancelled: true }])).toBe(287.5);
   });
 
   it("supports action rows from the rollback contract without new fields", () => {

@@ -100,7 +100,7 @@ describe("product character timeline", () => {
     expect(wake(900, 2).seconds).toBeCloseTo(1.2);
   });
 
-  it("uses a brisk planted-foot sample and two-degree lean from pace three", () => {
+  it("keeps the natural walk and posture when a stale payload reports a higher pace", () => {
     const ordinary = productCharacterSceneAt(
       almatyCountryPackV1,
       { ...baseMotion, locomotionSeconds: 12.3, stepPhase: 0.5 },
@@ -119,9 +119,9 @@ describe("product character timeline", () => {
     );
 
     expect(ordinary.traveler.timeScale).toBe(1);
-    expect(brisk.traveler.timeScale).toBe(1.25);
-    expect(brisk.traveler.seconds).toBeCloseTo(0.375, 5);
-    expect(brisk.travelerLeanRadians).toBeCloseTo(2 * Math.PI / 180, 8);
+    expect(brisk.traveler).toEqual(ordinary.traveler);
+    expect(brisk.traveler.timeScale).toBe(1);
+    expect(brisk.travelerLeanRadians).toBe(0);
 
     const atPlant = productCharacterSceneAt(
       almatyCountryPackV1,

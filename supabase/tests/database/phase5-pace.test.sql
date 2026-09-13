@@ -66,8 +66,8 @@ select is(
     '10000000-0000-4000-8000-000000000095', lpad('2', 64, '0'), lpad('s2', 64, 's'),
     'active', true, '2026-09-14T00:00:00Z', 50, 1.8, 5
   )),
-  2::real,
-  'two live visitors produce 2x pace'
+  1::real,
+  'two live visitors keep the natural pace'
 );
 
 do $$
@@ -86,8 +86,8 @@ select is(
     '10000000-0000-4000-8000-000000000095', lpad('4', 64, '0'), lpad('s4', 64, 's'),
     'active', true, '2026-09-14T00:00:00Z', 50, 1.8, 5
   )),
-  3::real,
-  'four live visitors produce 3x pace'
+  1::real,
+  'four live visitors keep the natural pace'
 );
 
 do $$
@@ -106,8 +106,8 @@ select is(
     '10000000-0000-4000-8000-000000000095', lpad('8', 64, '0'), lpad('s8', 64, 's'),
     'active', true, '2026-09-14T00:00:00Z', 50, 1.8, 5
   )),
-  4::real,
-  'eight live visitors produce 4x pace'
+  1::real,
+  'eight live visitors keep the natural pace'
 );
 
 do $$
@@ -126,8 +126,8 @@ select is(
     '10000000-0000-4000-8000-000000000095', lpad('16', 64, '0'), lpad('s16', 64, 's'),
     'active', true, '2026-09-14T00:00:00Z', 50, 1.8, 5
   )),
-  5::real,
-  'sixteen live visitors produce the 5x cap'
+  1::real,
+  'sixteen live visitors keep the natural pace'
 );
 
 do $$
@@ -146,8 +146,8 @@ select is(
     '10000000-0000-4000-8000-000000000095', lpad('40', 64, '0'), lpad('s40', 64, 's'),
     'active', true, '2026-09-14T00:00:00Z', 50, 1.8, 5
   )),
-  5::real,
-  'forty live visitors remain capped at 5x pace'
+  1::real,
+  'forty live visitors keep the natural pace'
 );
 select is(
   (select out_active_viewers from public.record_presence_heartbeat_v4(
@@ -155,7 +155,7 @@ select is(
     'active', true, '2026-09-14T00:00:00Z', 50, 1.8, 5
   )),
   40::bigint,
-  'a second session for one visitor does not increase watchers or pace'
+  'a second session for one visitor does not increase watchers'
 );
 
 select is(
@@ -179,15 +179,15 @@ select is(
     '10000000-0000-4000-8000-000000000096', lpad('a', 64, 'a'), lpad('sa', 64, 's'),
     'active', true, '2026-09-15T00:00:20Z', 50, 1.8, 5
   )),
-  37.5::double precision,
-  'two confirmed viewers accrue distance at 2x pace'
+  25::double precision,
+  'two confirmed viewers still accrue distance at the natural pace'
 );
 select is(
   (select out_global_distance_metres from public.read_journey_runtime_v4(
     '10000000-0000-4000-8000-000000000096', '2026-09-15T00:01:05Z', 50, 1.8, 5
   )),
-  143.75::double precision,
-  'projected distance drops to 1x at the earlier lease expiry'
+  81.25::double precision,
+  'projected distance stops at the final lease expiry without crowd acceleration'
 );
 select is(
   (select out_active_viewers from public.read_journey_runtime_v4(
@@ -201,13 +201,13 @@ select is(
     '10000000-0000-4000-8000-000000000096', '2026-09-15T00:01:05Z', 50, 1.8, 5
   )),
   1::real,
-  'the bootstrap runtime pace matches its projected watcher count'
+  'the bootstrap runtime always reports the natural pace'
 );
 select is(
   (select pace_rate from public.journey_runtime
     where country_day_id = '10000000-0000-4000-8000-000000000096'),
-  2::real,
-  'read-only projection does not mutate the persisted pace authority'
+  1::real,
+  'read-only projection leaves the natural persisted pace unchanged'
 );
 
 select * from finish();

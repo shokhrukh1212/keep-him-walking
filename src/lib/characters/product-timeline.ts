@@ -1,7 +1,7 @@
 import type { CountryPack, TravelerState } from "@/lib/content/schema";
 import type { ActionReview } from "@/lib/traveler/action-preview";
 import { reviewPoseAt } from "@/lib/traveler/action-preview";
-import { STEP_DURATION_SECONDS, type TravelerMotionAction, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
+import { type TravelerMotionAction, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
 import {
   CONVERSATION_APPROACH_SECONDS,
   RESIDENT_DEPART_SECONDS,
@@ -25,9 +25,6 @@ export type ProductCharacterScene = {
   travelerLeanRadians?: number;
 };
 
-const BRISK_PACE_THRESHOLD = 3;
-const BRISK_WALK_TIME_SCALE = 1.25;
-const BRISK_FORWARD_LEAN_RADIANS = 2 * Math.PI / 180;
 export const clipForState = (state: TravelerState): CharacterClip => {
   const clips: Partial<Record<TravelerState, CharacterClip>> = {
     loading: "idle",
@@ -184,7 +181,7 @@ export function productCharacterSceneAt(
   traveling: boolean,
   review: ActionReview | undefined,
   now: number,
-  paceRate = 1,
+  _paceRate = 1,
   waitedSeconds = 0,
   localHour = 12,
   raining = false,
@@ -192,6 +189,8 @@ export function productCharacterSceneAt(
   locomotionState: TravelerState | undefined = undefined,
   motionPhaseSeconds = 0,
 ): ProductCharacterScene {
+  // Retained for rolling-deploy compatibility; audience size no longer alters motion.
+  void _paceRate;
   const localReview = review ? reviewCue(review, now) : null;
   if (localReview) return localReview;
   if (!motion.action && locomotionState) {
@@ -242,25 +241,15 @@ export function productCharacterSceneAt(
     return conversationCue(pack, motion.action);
   }
   if (motion.action) return actionCue(motion.action);
-  const brisk = paceRate >= BRISK_PACE_THRESHOLD;
-  const stepStart = Math.floor(motion.locomotionSeconds / STEP_DURATION_SECONDS)
-    * STEP_DURATION_SECONDS;
-  const stepElapsed = motion.locomotionSeconds - stepStart;
-  const visualLocomotionSeconds = brisk
-    ? stepStart + Math.min(
-        STEP_DURATION_SECONDS - 1e-5,
-        stepElapsed * BRISK_WALK_TIME_SCALE,
-      )
-    : motion.locomotionSeconds;
   return {
     traveler: {
-      clip: raining ? "umbrella_walk" : brisk ? "walk_brisk" : "walk",
-      seconds: visualLocomotionSeconds % CLIP_DURATIONS.walk,
-      timeScale: brisk ? BRISK_WALK_TIME_SCALE : 1,
+      clip: raining ? "umbrella_walk" : "walk",
+      seconds: motion.locomotionSeconds % CLIP_DURATIONS.walk,
+      timeScale: 1,
     },
     resident: { clip: "idle", seconds: 0 },
     showResident: false,
     conversation: false,
-    travelerLeanRadians: brisk ? BRISK_FORWARD_LEAN_RADIANS : 0,
+    travelerLeanRadians: 0,
   };
 }

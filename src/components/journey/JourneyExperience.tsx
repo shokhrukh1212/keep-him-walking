@@ -775,7 +775,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     });
   };
   const shareUrl = async () => {
-    await shareCard({ title: "Keep Him Walking", text: "Bring a friend → he walks faster.", url: window.location.href });
+    await shareCard({ title: "Keep Him Walking", text: "Bring a friend → keep him walking.", url: window.location.href });
   };
   const shareSteps = async () => {
     const response = await fetch("/api/share/steps", { method: "POST" }).catch(() => null);
@@ -986,7 +986,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           marathonMetres={snapshot.assets.marathonMetres}
           freshness={distanceFreshness}
           activeViewers={activeViewers}
-          paceRate={routeRuntime.paceRate}
           prelaunch={snapshot.journeyState === "prelaunch"}
           contribution={{
             seconds: visitorSeconds,
@@ -1061,7 +1060,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         <CountryLeaderboardSheet
           todayTop={snapshot.countries.todayTop}
           activeViewers={activeViewers}
-          paceRate={routeRuntime.paceRate}
           walking={walking}
           status={connectionStatus}
           waitingSinceLocalTime={waitingLocalTime}

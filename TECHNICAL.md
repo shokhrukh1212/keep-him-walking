@@ -220,25 +220,23 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
 records a durable per-visitor contribution as `max(active_seconds)` across that
 visitor's leases — never the sum, so multiple tabs cannot inflate a contribution.
 `_v4` keeps the v3 contract intact and takes the same authority-row lock. Before it
-mutates the caller's lease, it accrues the interval owned by the previously persisted
-pace. The interval is split at every lease expiry, so an expired visitor stops affecting
-distance exactly at the TTL boundary. It then delegates the lease/contribution mutation
-to v3 and computes the post-mutation pace from its confirmed watcher count:
+mutates the caller's lease, it accrues the interval owned by the existing live leases.
+The interval is split at lease expiry so distance stops exactly when the final eligible
+viewer leaves. Migration 0037 removes crowd acceleration while preserving the wire
+contract:
 
 ```
 n = count(distinct visitor_hash) of live visible + scene-ready leases
-pace = min(1 + log2(max(n, 1)), PACE_CAP)
-distance += interval_seconds × 1.25 m/s × interval_pace
+pace = 1                              (compatibility output)
+distance += interval_seconds × 1.25 m/s, while n > 0
 ```
 
-An active caller is therefore included in `n`, but its new pace is never applied
-retroactively to time before it arrived. The new pace is persisted to
-`journey_runtime.pace_rate`; the response carries both `out_active_viewers` and
-`out_pace_rate`. The read-only v4 projection uses the same expiry splitting without
-mutating authority, and bootstrap v5 returns that projected distance, watcher count and
-pace in one admitted bundle. The old v4/v5 signatures remain as 5×-cap rollback
-wrappers; server routes pass the configured cap explicitly. `_v3` remains callable for
-rollback.
+An active caller is included in `n`, but never applies progress retroactively to time
+before it arrived. `journey_runtime.pace_rate` and `out_pace_rate` remain at `1` so older
+clients and RPC wrappers keep their shape; stale `PACE_CAP` values cannot restore
+acceleration. The read-only v4 projection uses the same expiry splitting without
+mutating authority, and bootstrap v5 returns the projected distance and watcher count in
+one admitted bundle. `_v3` remains callable for rollback.
 
 `_v5` wraps v4 to credit watch time by country. It reads the caller's own lease
 `active_seconds` before delegating and again after, so only that visitor's confirmed
@@ -271,7 +269,7 @@ new lease exists; wake-card eligibility is never present in bootstrap.
   the newest already seen, so out-of-order responses cannot rewind the world.
 - Network updates change the clock's **target**, never its origin.
 - `sample()` exposes `rawSeconds` and `distanceMetres`. Seconds ease at up to 1.05× real
-  time; distance eases at `1.25 × paceRate`, with the equivalent two-second snap
+  time; distance eases at the constant `1.25 m/s`, with the equivalent two-second snap
   threshold. Both snap to their target when authority expires.
 - It reports `traveling` only while `walking && now < leaseExpiry`.
 
@@ -321,13 +319,10 @@ the whole computation is pure in its explicit inputs:
 - `plantIndex`, `plantedFoot` and `cyclePhase` remain deterministic while route distance
   comes only from the confirmed/extrapolated distance authority.
 
-At `paceRate >= 3`, `productCharacterSceneAt` makes only the visual walk clip brisk:
-it samples that clip at 1.25× within each canonical 0.6 s step and clamps just before the
-next plant, holding there until the authoritative step boundary. `CharacterActor` also
-sets the active walk action's effective time scale to 1.25, while deterministic
-`cue.seconds` seeking remains the pose authority. The traveler leans 2° forward. The
-underlying `travelerMotionAt` sample is untouched, so `plantIndex`, `plantedFoot`, HUD
-footfalls, route actions and distance all retain their original derivation.
+Normal travel always uses the approved `walk` take at natural time scale with no
+crowd-induced forward lean. `paceRate` remains an explicit compatibility parameter on
+the pure presentation function, but changing it cannot change the clip, pose, gait,
+street speed or distance.
 
 Crowd actions are the fourth authoritative input to `travelerMotionAt`. They are
 scheduled by the server on the raw watched-second clock and snapped to the same 0.6 s
@@ -636,9 +631,9 @@ change.
   over the same scheduled interval. That covers the V2 resident and any V2 fallback. There
   is no accumulated delta, so the same input second always produces the same pose — this is
   what lets two viewers, a reload, and a scrubbed review timeline all agree.
-- **Pace is an explicit cue input.** The active action receives its cue time scale via
-  `setEffectiveTimeScale`; the brisk walk still seeks the pure, step-bounded sampled
-  second described in §3 rather than accumulating frame delta.
+- **Playback remains deterministic.** The active action receives its declared cue time
+  scale via `setEffectiveTimeScale`; the ordinary walk is always sampled at natural
+  speed rather than accumulating frame delta.
 - **Face is driven procedurally**, not baked (no clip carries morph tracks): a 3.7 s
   blink cycle with a 0.28 s sine closure, a 0.17 smile bias with `react`/`greet`
   accents, a `sin²(9t)` speaking envelope active only on `talk`, and small brow accents.
@@ -709,9 +704,8 @@ are read through a ref so the renderer is never torn down mid-journey.
   The live GLB therefore plays `walk_start`, `stop` / `walk_stop`, and `resume` across
   the same 650 ms / 450 ms state-machine windows instead of jumping directly between
   walking and the first waiting take after the retired sprite renderer was removed.
-- The confirmed/projected `routeRuntime.paceRate` is passed into that pure timeline.
-  At 3× and above the host applies its returned 2° forward lean; actions and encounters
-  are not retimed or leaned.
+- The compatibility `routeRuntime.paceRate` is still passed into that pure timeline, but
+  normal walking always returns the same natural clip, time scale and zero lean.
 - Staging: in conversation the traveler moves to viewport anchor 0.43 (0.34 on mobile)
   and both actors yaw ±π/2 to face each other; otherwise the traveler sits at the pack's
   `travelerViewportAnchor` (0.61) with a slight ±0.68 rad turn toward travel.
@@ -761,8 +755,8 @@ localHour, raining, wakeElapsedSeconds)` returns
 - The conversation path walks the same `conversationSegments` (notice, stop, approach,
   reciprocal greetings, lines, reciprocal goodbyes, depart) as the motion clock, so
   dialogue text and character pose are driven from one source.
-- The ordinary walking path applies the 3× brisk threshold described in §3. Pace is an
-  explicit argument; no runtime singleton or module state participates.
+- The ordinary walking path ignores the compatibility pace argument and always uses the
+  natural walk. No runtime singleton or module state participates.
 - The non-traveling path accepts explicit waited seconds, deterministically selects the
   idle/look-around/rest fallback described in §4, and never reads wall-clock module
   state.
@@ -1461,6 +1455,14 @@ remote database lint result was `{"results":[]}`.
   12 September 2026. All 20 pgTAP suites pass, including 28 new assertions in
   `phase23-journey-activities.test.sql`, and remote lint is `{"results":[]}`.
 
+**Migration 0037, natural walking pace (13 September 2026):** Existing distance is
+preserved, every runtime `pace_rate` is normalized to 1, and the locked heartbeat/read
+v4 authority accrues eligible intervals at exactly 1.25 m/s regardless of distinct
+viewer count. The pace cap stays as a validated compatibility argument so rolling
+deployments and older wrappers keep working, but it no longer affects progress. It was
+applied to development project `tkntxptfhmjnqaaveddx`; all 20 remote pgTAP suites pass
+and remote lint reports `{"results":[]}`.
+
 **Season 1 migration 0030, Tickets:** `tickets` links one future date, one Standard
 sponsorship and one curated versioned pack. `reserve_ticket` locks the date-keyed slot,
 requires journey Day 8+, enforces D+3 through the configured horizon, and snapshots
@@ -1772,8 +1774,8 @@ otherwise the fallback remains colour grading.
 Quality tiers use `walkers 0/1/2` and `birds 0/2/4`. Reduced motion already forces the
 low tier, so a reduced-motion viewer gets neither — the same rule the storm flash follows.
 
-**People passing on his pavement** (`src/lib/world/walkers.ts`, reworked 2026-09-11 at
-the owner's request). A *pass* is one person who walks in beyond one screen edge and out
+**People passing on his pavement** (`src/lib/world/walkers.ts`, refined 2026-09-13 at
+the owner's request). A *pass* is one person who walks in beyond the right edge and out
 beyond the other. It replaces `walkerPopulation`, which gave walkers a 12–18 s window of
 existence while their position looped across the screen every 21–30 s, and which dropped
 to zero whenever he stopped, acted or talked. A replay of that code for an hour at 13:00
@@ -1781,7 +1783,7 @@ had about 41 of 45 walkers appear and 40–43 of 45 vanish in the middle of the 
 two dozen jumps from one edge to the other with half a body in view.
 
 - **When.** `walkerPassesBetween(from, to, localHour, seed, tierLimit)` is pure. Each
-  120 s block leads one pass 0–30 s in (gaps 90–150 s); about half the blocks send a
+  150 s block leads one pass 0–30 s in (gaps 120–180 s); about half the blocks send a
   second person 5–9 s later in the other lane where the tier allows two. Nobody starts
   22:00–05:00 local, and a frame that skips more than 2 s of watched time starts nobody,
   so a viewer who arrives mid-pass never sees someone materialise mid-street. Coin flips
@@ -1791,22 +1793,13 @@ two dozen jumps from one edge to the other with half a body in view.
 - **Where.** Two lanes. `behind` has perspective 0.9: feet 0.16 m further up the
   pavement, drawn behind him. `front` has 1.04: feet 0.06 m lower, drawn over him. Foot
   height follows a 1.6 m eye-level horizon (02 §3); drawn scale is capped at 95% of his
-  height, so both residents show at 85–95% of him. Only people coming towards him use
-  the front lane, so they cover him for about half a second. Behind him, half come
-  towards him at 1.2–1.36 m/s and half overtake at 1.8–1.96 m/s.
-- **Facing** (fixed 2026-09-12 after the owner saw it at ×2 pace). Everyone faces the way
-  they move across the screen: in from the right facing left, in from the left facing
-  right. The pavement moves left under everyone at his speed, so someone walking his way
-  moves right on screen only while they outpace him. The first version also had strollers
-  at 0.8–0.96 m/s and let an overtaker enter at any pace; he walked past both, and they
-  drifted backwards while facing forwards. Now nobody walks his way slower than him.
-  `enterWalker` lets an overtaking pass in from the left only if it still crosses
-  rightwards at 0.2 m/s or more (one watcher's pace, or while he stands still), and
-  otherwise sends the same person towards him from the right. If he outpaces an overtaker
-  mid-crossing because a watcher arrives, `advanceWalker` turns them round to walk back
-  out on the left. Both decisions use his authoritative ground speed,
-  `METRES_PER_SECOND × paceRate` while he walks and 0 while an action or waiting holds his
-  distance, never a per-frame measurement that a heartbeat correction could spike.
+  height, so both residents show at 85–95% of him.
+- **Direction and pace.** Every passer enters from the right, faces left and leaves on
+  the left; neither a heartbeat correction nor a viewer-count change can reverse them.
+  Resident B (the man) walks at the traveler's natural 1.25 m/s. Resident A (the woman)
+  walks at 95% of that, 1.1875 m/s: perceptibly but only slightly slower. Their gait
+  time scale follows that physical speed, and `advanceWalker` keeps it unchanged for the
+  complete crossing.
 - **How they move.** The stage keeps each walker's `streetMetres` on his distance axis,
   and screen x is `streetMetres − distance`, so the pavement carries them exactly as the
   Pixi ground tile scrolls (`distance × pxPerMetre`). `advanceWalker` adds their own
@@ -1816,10 +1809,10 @@ two dozen jumps from one edge to the other with half a body in view.
   edge by 0.9 m plus 0.25 m, or when the tier drops to low (reduced motion). New passes
   start only while he is walking with no action or conversation, and only after the
   conversation partner's model has loaded. Someone already crossing walks on through his
-  stops, a crowd wave, waiting, a pace change and 22:00.
+  stops, a crowd wave, waiting and 22:00.
 - **Kept on purpose.** A pass's start is shared, but its path is integrated per viewer
-  from that viewer's frames and his extrapolated distance, because his pace history is
-  not an input. Viewers watching together see the same person within a fraction of a
+  from that viewer's frames and his bounded extrapolated distance. Viewers watching
+  together see the same person within a fraction of a
   metre. A viewer who reloads mid-pass does not see that person. A walker of the partner's
   model who is already crossing when an encounter begins finishes crossing beside the
   partner.
@@ -2149,9 +2142,9 @@ pnpm verify:phase3       the current full gate
 Current P28 evidence (12–13 September 2026), in
 `docs/launch-finalization/evidence/p28-refinements/`:
 
-- **Database.** Migration 0036 is applied to dev `tkntxptfhmjnqaaveddx`. All 20 pgTAP
-  suites pass, including 28 new activity assertions, and remote lint is
-  `{"results":[]}`.
+- **Database.** Migrations through 0037 are applied to dev `tkntxptfhmjnqaaveddx`. All
+  20 pgTAP suites pass, including 28 activity assertions and 17 natural-pace regression
+  assertions, and remote lint is `{"results":[]}`.
 - **Unit tests, lint, typecheck.** The last complete run reached 540 passing tests and found
   two stale Paris-v3 registry expectations; both were corrected and their 32 focused tests
   pass. They cover the clock, planner, motion,
@@ -2284,7 +2277,7 @@ Runtime configuration (`serverRuntimeConfig()`):
 |---|---|---|
 | `PRESENCE_TTL_SECONDS` | 50 | Lease lifetime |
 | `STEPS_PER_ACTIVE_SECOND` | 1.8 | Database step rate (see §3) |
-| `PACE_CAP` | 5 | Maximum logarithmic watcher pace (clamped to 1…5) |
+| `PACE_CAP` | 1 | Compatibility input only; audience size cannot change walking speed |
 | `FIRST_WATCHER_GAP_SECONDS` | 600 | Minimum zero-watcher gap that earns the wake card |
 | `POSTCARD_UNLOCK_SECONDS` | 60 | Contribution needed for a postcard |
 | `POSTCARD_RETENTION_DAYS` | 365 | Postcard expiry |

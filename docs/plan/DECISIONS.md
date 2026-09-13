@@ -9,7 +9,7 @@ These describe the intended product, not features already implemented.
 | Decision | Value | Implementation prompts |
 |---|---|---|
 | Journey promise | Season 1 lasts **30 days**. Visiting 195 countries remains the dream, not a promise of 195 consecutive days. | P9, P12, P16, P21 |
-| Collective pace | More watchers make him walk faster: one watcher = 1×, two = 2×, four = 3×, eight = 4×, sixteen or more = 5×. No watchers means no progress. | P4–P5 |
+| Natural pace | Audience presence decides whether he walks, not his speed. While at least one confirmed watcher is present, he moves at one natural 1.25 m/s pace. No watchers means no progress. | Final launch pass; migration 0037 |
 | Daily stakes | Reach a **collective daily distance goal of 8,000 metres**; marathon stretch goal at **42,195 metres**. The 8 km number is a reward threshold, not an assertion that the painting depicts arrival there. Completed days retain grey, colour, or gold outcomes. | P4, P13, P16, P25 |
 | Destination vote | Prefer neighbouring ready countries. Explicit train/flight fallback is allowed; apply the Season-1 blocked-pair policy below. Day 1 uses sequential name and destination votes, with the bounded Dushanbe fallback below. | P9, P22 |
 | Watching countries | Show, rank, and thank the countries contributing watch time, using server-confirmed aggregates. | P7, P12–P14 |
@@ -55,7 +55,7 @@ These are the controlling product decisions for the reviewable launch candidate.
 | Traveler | Keep the approved 2,598,064-byte model and 1,973,112-byte animation pack. The exact combined traveler transfer budget is 4,571,176 bytes. Preserve current Mixamo motion. | D1/D6, `src/lib/characters/manifest.ts` |
 | Scene clock | Five paintings repeat indefinitely, each after exactly 1,080 seconds of global active walking. Viewer count and pace do not select the painting. Stops pause the walking clock. | P25 |
 | Scene motion | Keep the city painting stationary and move only the road/ground-life layer. Center the traveler; move him left only while a desktop panel needs space. | P24/P26 |
-| Distance | Preserve collective pace, accumulated distance and 8 km/42.195 km rewards. Call 8 km the collective daily distance goal, not arrival at a depicted landmark. | P25 |
+| Distance | Preserve accumulated distance and the 8 km/42.195 km rewards, but accrue new distance at one natural pace regardless of audience size. Call 8 km the collective daily distance goal, not arrival at a depicted landmark. | P25; final launch pass |
 | Interface | One compact location/rule/audience header, Wave/Water/Photo, lower-left activity, restrained progress, and Sponsor/Journey/contextual Vote. Passport lives in Journey; panels are URL-addressed and do not recreate the scene. | P24 |
 | Rollover | The logical boundary is exactly 16:00 UTC. An authenticated idempotent minute reconciler prewarms at 15:55–15:59 and catches up the most recent boundary; authoritative reads also reconcile. | P25; production still needs Vercel Pro cron and `CRON_SECRET` configuration. |
 | Sponsorship | Keep the seven-day inventory and existing records. Standard remains informational. Premium is unavailable unless its bottle and café placements are fulfilled. Paid booking defaults off pending a provider that accepts this advertising offer and merchant. | P26 |

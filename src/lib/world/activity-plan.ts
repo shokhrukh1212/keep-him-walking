@@ -310,7 +310,7 @@ export function nextActivityToSchedule(input: ScheduleInput): ScheduleCandidate 
 
   const candidates: ScheduleCandidate[] = [];
   const distance = Number.isFinite(input.distanceMetres) ? input.distanceMetres : 0;
-  const cheerWindow = 1.25 * Math.max(1, Number.isFinite(input.paceRate) ? input.paceRate : 1) * CHEER_WINDOW_SECONDS;
+  const cheerWindow = 1.25 * CHEER_WINDOW_SECONDS;
   if (distance >= pack.marathonMetres && distance < pack.marathonMetres + cheerWindow && !written.has("cheer")) {
     const walkingSecond = walking + minLead;
     candidates.push({

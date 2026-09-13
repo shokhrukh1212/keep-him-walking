@@ -7,10 +7,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "Keep Him Walking — live across the world",
   description:
-    "One traveler. One country a day. He only moves while someone is watching — and the more people watch, the faster he goes. Tomorrow, the internet votes where he walks next.",
+    "One traveler. One country a day. He only moves while someone is watching. Tomorrow, the internet votes where he walks next.",
   openGraph: {
     title: "Keep Him Walking",
-    description: "One traveler. One country a day. He only moves while someone is watching — and the more people watch, the faster he goes.",
+    description: "One traveler. One country a day. He only moves while someone is watching.",
     images: ["/api/og/day"],
     type: "website",
   },

@@ -10,7 +10,6 @@ export class PresentationClock {
   private lastTick = 0;
   private secondsAnchor = 0;
   private distanceAnchor = 0;
-  private paceRate = 1;
   private receivedAt = 0;
   private stamp = -Infinity;
   private walking = false;
@@ -30,7 +29,6 @@ export class PresentationClock {
     this.stamp = stamp;
     this.secondsAnchor = runtime.globalActiveSeconds;
     this.distanceAnchor = runtime.globalDistanceMetres;
-    this.paceRate = runtime.paceRate;
     this.receivedAt = now;
     this.walking = runtime.walking;
     // Lease lifetime and presentation authority are separate. Even a future
@@ -51,11 +49,11 @@ export class PresentationClock {
       ? Math.max(0, (Math.min(now, this.expiry) - this.receivedAt) / 1_000)
       : 0;
     const secondsTarget = this.secondsAnchor + elapsed;
-    const distanceRate = 1.25 * this.paceRate;
+    const distanceRate = 1.25;
     const distanceTarget = projectedRouteDistance({
       globalActiveSeconds: this.secondsAnchor,
       globalDistanceMetres: this.distanceAnchor,
-      paceRate: this.paceRate,
+      paceRate: 1,
       authoritativeAt: new Date(0).toISOString(),
       walking: this.walking,
     }, elapsed, scheduledActions);

@@ -5,7 +5,6 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { BootstrapSnapshot, DayPhotoView } from "@/lib/contracts";
 import { flagEmoji } from "@/lib/countries/flags";
 import type { PlayedEncounter } from "@/lib/journey/encounter-log";
-import { formatPaceRate } from "@/lib/presence";
 import { distanceProgress, formatGoalKm, nextPlaceEta, stopLabel } from "@/lib/world/progress-copy";
 import { ContributionMeter } from "@/components/hud/ContributionMeter";
 import type { PlaceDot } from "@/components/hud/PlaceDots";
@@ -25,7 +24,6 @@ type Props = {
   marathonMetres: number;
   freshness: "extrapolated" | "last confirmed" | "reconnecting" | "unavailable";
   activeViewers: number | null;
-  paceRate: number;
   prelaunch: boolean;
   contribution: { seconds: number; steps: number; globalSteps: number; stale: boolean };
   streak: number;
@@ -45,7 +43,7 @@ type Props = {
 /** The Journey modal's contents, grouped from "where is he" to "what's next". */
 export function JourneyPanel({
   section, places, currentPlaceIndex, secondsToNextVisit, visitSeconds,
-  distanceMetres, dailyGoalMetres, marathonMetres, freshness, activeViewers, paceRate,
+  distanceMetres, dailyGoalMetres, marathonMetres, freshness, activeViewers,
   prelaunch, contribution, streak, collectedToday, secondsToCollect,
   encounters, photos, tomorrow, ticket, wakeCard, postcard,
   onShare, onShareSteps, onSponsor,
@@ -111,11 +109,11 @@ export function JourneyPanel({
         </div>
         <p className="journey-muted">
           {formatGoalKm(dailyGoalMetres)} km is today&apos;s shared goal, and a {formatGoalKm(marathonMetres)} km marathon
-          comes after it. Distance grows only while he walks, faster when more people watch.
+          comes after it. Distance grows only while he walks.
         </p>
         {activeViewers !== null ? (
           <p className="journey-muted">
-            {activeViewers} watching now · pace ×{formatPaceRate(paceRate)}
+            {activeViewers} watching now
           </p>
         ) : null}
       </section>

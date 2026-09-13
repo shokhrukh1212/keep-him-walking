@@ -188,7 +188,7 @@ export function projectedRouteDistance(
   }
   if (frozenDistance !== null) return frozenDistance;
   return runtime.globalDistanceMetres
-    + Math.max(0, elapsed - Math.min(elapsed, heldSeconds)) * 1.25 * runtime.paceRate;
+    + Math.max(0, elapsed - Math.min(elapsed, heldSeconds)) * 1.25;
 }
 
 export function deterministicVariant(seed: string, index: number, count: number): number {

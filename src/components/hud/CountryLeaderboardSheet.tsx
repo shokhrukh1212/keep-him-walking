@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { countryDisplayName, flagEmoji, formatWatchDuration } from "@/lib/countries/flags";
 import type { ConnectionStatus, CountryWatchView } from "@/lib/contracts";
-import { formatPaceRate } from "@/lib/presence";
 
 type Props = {
   todayTop: CountryWatchView[];
   activeViewers: number | null;
-  paceRate: number;
   walking: boolean;
   status: ConnectionStatus;
   waitingSinceLocalTime?: string | null;
@@ -18,7 +16,7 @@ type Props = {
 
 /** The day's audience: who is carrying him and from where. Every number is server-confirmed. */
 export function CountryLeaderboardSheet({
-  todayTop, activeViewers, paceRate, walking, status,
+  todayTop, activeViewers, walking, status,
   waitingSinceLocalTime, waitingDuration, wakeCountdown, launchCountdown, onShare,
 }: Props) {
   return (
@@ -31,14 +29,14 @@ export function CountryLeaderboardSheet({
             : activeViewers === null
               ? "The live count is unavailable."
               : walking
-                ? `${activeViewers} watching · collective pace ×${formatPaceRate(paceRate)}.`
+                ? `${activeViewers} watching · keeping him walking.`
                 : wakeCountdown
                   ? `He starts walking in ${wakeCountdown}…`
                   : waitingSinceLocalTime
                     ? `He has been waiting ${waitingDuration ?? `since ${waitingSinceLocalTime}`}.`
                     : "He is waiting for a viewer."}
       </p>
-      <button className="audience-share" type="button" onClick={onShare}>Bring a friend → faster</button>
+      <button className="audience-share" type="button" onClick={onShare}>Bring a friend →</button>
       {todayTop.length === 0 ? (
         <p className="country-sheet-empty">No country has carried him yet today.</p>
       ) : (

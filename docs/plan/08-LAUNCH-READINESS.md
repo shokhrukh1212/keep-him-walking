@@ -20,6 +20,7 @@ below while preserving them as history.
 | Minimal responsive shell and overlay modals (P28) | Implemented; modal continuity checked in a production build at 320×568, 390×844, 667×375, 768×1024 and 1440×900 |
 | Stationary painting, centered traveler, 7-minute places from a manifest (P28) | Implemented; Paris v3 has 10 owner-accepted places and is pinned to development Day 2 (D9 resolved) |
 | Every stop a server window, natural clip speed (P28) | Implemented; migration 0036 remote-verified on dev |
+| Natural walking pace | Migration 0037 applied and remote-verified on dev: audience presence starts/stops the journey, but viewer count never changes speed |
 | Image delivery | Hashed immutable renditions, current + next place only. The complete 574-file runtime tree is uploaded to R2 and verified at `assets.keephimwalking.com` from `https://keephimwalking.com` (Paris v3 95/95). `ASSET_BASE_URL` is set in Vercel Production and Preview, and the production build of `82e517a` uses it. Preview origins are refused by CDN CORS, and desktop needs a real-browser check (D8) |
 | "Waiting for the internet" while watching | Heartbeat chain fix and watchdog unit-tested; the status line separates "Reconnecting…" from a confirmed empty audience, and no-WebGL recovery still starts presence through the static painting |
 | Wave request → shared state → rendered clip | Implemented; unit, browser and remote pgTAP verified |
@@ -128,7 +129,7 @@ Every package has two independent completion marks:
 ### R3 — one calm HUD
 
 - [x] Put Wave, Water and Photo at top centre, each at least 44×44 CSS pixels.
-- [x] Merge globe, watching-country summary, confirmed watcher count and pace into one
+- [x] Merge globe, watching-country summary and confirmed watcher count into one
   top-right audience control.
 - [x] Keep the current named action in a compact lower-centre status pill.
 - [x] Give progress a dedicated full-width row above the footer.
@@ -144,12 +145,11 @@ Every package has two independent completion marks:
   B as distinct male/female characters.
 - [x] Historical resident-window implementation; P28 replaces its cadence with
   passers-by every 120–180 active-walking seconds and conversations about every 300.
-- Refined 11 September 2026 at the owner's request: passers-by walk on his pavement at
-  85–95% of his height, in a lane just behind him or just in front (in front only when
-  coming towards him). Each walks in at one screen edge and out at the other, facing the
-  way they move (fixed 12 September), so a pass lasts as long as the crossing takes —
-  about 4 s coming towards him, up to about 30 s overtaking him at one watcher's pace —
-  instead of a 12–18 s window.
+- Refined 13 September 2026 at the owner's request: passers-by walk on his pavement at
+  85–95% of his height, in a lane just behind him or just in front. Every passer enters
+  from the right and leaves on the left. The man uses the traveler's natural 1.25 m/s
+  pace; the woman is only five percent slower. Viewer-count updates cannot accelerate,
+  reverse or redirect either of them.
   Gaps stay 120–180 s and never more than two show at once. Nobody new sets off at night,
   on the low tier, before launch, while he waits, or during an action or encounter;
   someone already crossing finishes. Verified by unit tests; not yet accepted on screen.

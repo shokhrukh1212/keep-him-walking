@@ -18,7 +18,8 @@ import { METRES_PER_SECOND, travelerMotionAt } from "@/lib/traveler/motion-clock
 import { wavingWalker } from "@/lib/world/ambient";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import {
-  advanceWalker, enterWalker, walkerHasLeft, walkerPassesBetween, walkerPlacement, walkerScreenX,
+  advanceWalker, enterWalker, walkerHasLeft, walkerPassesBetween, walkerPlacement,
+  walkerScreenX, walkerSpeedMetresPerSecond,
   type StreetWalker, type WalkerLane, type WalkerPlacement,
 } from "@/lib/world/walkers";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
@@ -388,12 +389,11 @@ export function ProductCharacterStage3D(props: Props) {
       // The tier is read here, not at mount: this effect has an empty dependency list.
       const walkerLimit = QUALITY_LIMITS[state.qualityTier].walkers;
       const travelerHeight = CHARACTER_MANIFEST.traveler.heightMetres;
-      // How fast the pavement moves under everyone: his authoritative rate while he
-      // walks, nothing while an action or waiting holds his distance. It decides which
-      // way a walker faces, so it is never a per-frame measurement that a heartbeat
-      // correction could spike into turning an overtaker round.
+      // How fast the pavement moves under everyone: one natural pace while he walks,
+      // nothing while an action or waiting holds his distance. Passers keep their own
+      // fixed direction and natural speed throughout the crossing.
       const groundSpeed = sample.traveling && !motion.action
-        ? METRES_PER_SECOND * Math.max(0, state.routeRuntime.paceRate)
+        ? METRES_PER_SECOND
         : 0;
       const stopSoon = rows.some((row) => {
         const window = activityWindow(row);
@@ -429,7 +429,13 @@ export function ProductCharacterStage3D(props: Props) {
         if (typeof model !== "object") continue;
         const heightMetres = CHARACTER_MANIFEST.residents[type].heightMetres;
         const placement = walkerPlacement(pass.lane, heightMetres, travelerHeight);
-        const street = enterWalker(pass, placement, sample.distanceMetres, groundSpeed, horizontal);
+        const street = enterWalker(
+          { ...pass, speedMetresPerSecond: walkerSpeedMetresPerSecond(type) },
+          placement,
+          sample.distanceMetres,
+          groundSpeed,
+          horizontal,
+        );
         if (!street) continue;
         const actor = residentActor(type, model);
         const anchor = new THREE.Group();
@@ -461,9 +467,8 @@ export function ProductCharacterStage3D(props: Props) {
         wavingBack ||= waving;
         const x = walkerScreenX(walker.street, sample.distanceMetres);
         walker.anchor.position.set(x, walker.placement.footY, walker.placement.z);
-        // Facing the way they move across the screen, three-quarters to the camera as he
-        // is. An overtaker he outpaces turns round here rather than drift backwards.
-        walker.anchor.rotation.y = walker.street.direction > 0 ? 0.68 : -0.68;
+        // Every passer-by approaches from the right and faces the way they move.
+        walker.anchor.rotation.y = -0.68;
         walker.actor.sample(
           waving
             ? { clip: "greet", seconds: crowdWave?.elapsedSeconds ?? 0 }

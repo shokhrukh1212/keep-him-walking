@@ -61,7 +61,7 @@ export function GoalBar({
           <div id={infoId} className="goal-info-popover" role="note">
             <p>
               <strong>{formatGoalKm(dailyGoalMetres)} km</strong> is today&apos;s shared goal. It grows only while he walks,
-              faster when more people watch, and pauses while he stops.
+              and pauses while he stops.
             </p>
             <p>
               After that, the next goal is a <strong>{formatGoalKm(marathonMetres)} km</strong> marathon, counted
