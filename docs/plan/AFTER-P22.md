@@ -20,10 +20,10 @@ finish rather than what it got wrong.
 | D2 | The 1,000-viewer load test has not been run on current code | No — owner deferred it to after launch (11 Sep 2026) | Owner (needs a deployed Preview) |
 | D3 | Lit windows at dusk have no artwork | **Resolved — optional windows skipped** | Owner decision (12 Sep 2026) |
 | D4 | Sofia has one source painting instead of the six the pack builder needs | **Superseded — Paris is Day 1** | Owner decision (12 Sep 2026) |
-| D5 | The production scheduler may run launch jobs late | **Code resolved; external Vercel Pro configuration remains** | Owner (hosting) |
+| D5 | Minute-accurate scheduling on the free Vercel plan | **Chosen 13 Sep — external minute job (cron-job.org) plus a daily Vercel backup; owner creates the job and `CRON_SECRET`** | Owner (cron-job.org account, Vercel setting) |
 | D6 | Some of his new movements do not fit the moment they are used for | **Resolved — current motion accepted** | Owner decision (12 Sep 2026) |
 | D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved, then superseded — every place lasts 7 walking minutes and the list repeats** | P25, then P28 (12 Sep 2026) |
-| D8 | R2 is uploaded and verified for the new `.com` app origin, but not activated | No — `.com` domains are attached; same-origin stays active until the separate environment-variable deployment | Owner (Vercel setting and deployment) |
+| D8 | R2 is verified and the Vercel setting is on, but the live site is still the old build; Preview addresses are refused by the CDN | No — the live site keeps serving its own copies until the next production build (blocked by D5) | Owner (Cloudflare CORS rule; deployment via D5) |
 | D9 | Paris v3 paintings and Day 1 conversations | **Resolved — owner approved and development Day 2 switched to v3** | Owner decision (13 Sep 2026) |
 
 ---
@@ -165,6 +165,33 @@ minute-accurate host) and configure `CRON_SECRET`; no plan was purchased here.
 **What happens if nothing changes.** Prewarming or a daily border crossing can happen up to 59 minutes late, so the launch and every later day can show the wrong state.
 
 **What to do.** Before launch, choose a production scheduler that guarantees minute-level runs and point it at the two authenticated cron URLs; Vercel Pro is the simplest paid choice, while a free external scheduler avoids that cost but adds another account and failure point.
+
+**Update 13 September 2026 — this now blocks deployment, not just timing.** Vercel
+refuses to deploy this repository on the free (Hobby) plan: "Hobby accounts are limited
+to daily cron jobs. This cron expression (* * * * *) would run more than once per day."
+The every-minute schedule entered `main` in `9672fbc` (12 September, 14:32 +05). The last
+production build that succeeded is from 12 September, 12:16 +05, before it. So
+`keephimwalking.com` still runs that build, without Paris v3 and without the CDN.
+
+**Decision 13 September 2026: stay free.** `vercel.json` now schedules
+`/api/cron/reconcile` once a day at 16:00 UTC as a backup. The free plan accepts that.
+The minute-accurate runs come from an external scheduler the owner controls.
+
+- **What it is.** A free cron-job.org job calls the reconciler every minute. Vercel's own
+  daily run is only a safety net.
+- **What happens if nothing changes.** If the external job is missing or failing, the
+  15:55 prewarm does not run. The 16:00 border crossing then waits for one of two things:
+  the daily backup, up to an hour late, or the next visitor's page load, which runs the
+  same catch-up.
+- **What to do.**
+  1. Add `CRON_SECRET` to Vercel Production, a long random value that never goes in chat
+     or git. Then redeploy so the running build can read it.
+  2. On cron-job.org, create a job with:
+     - URL `https://keephimwalking.com/api/cron/reconcile`
+     - schedule every minute, method GET
+     - header `Authorization: Bearer <CRON_SECRET>`
+  3. After a few minutes, confirm its history shows HTTP 200. A 403 means the header
+     and the Vercel value differ.
 
 ---
 
@@ -341,24 +368,37 @@ The owner has attached `keephimwalking.com` and `www.keephimwalking.com` to the 
 project; setting the asset origin and deploying are intentionally left to the separate
 domain/deployment work.
 
-**What it is.** R2 is ready for `https://keephimwalking.com`, but Cloudflare correctly
-rejects the old `https://keephimwalking.lol` origin. Activating `ASSET_BASE_URL` before
-the separate app-domain deployment would therefore break current visitors.
+**Update 13 September 2026 (activation attempt).**
+- **Vercel setting.** `ASSET_BASE_URL=https://assets.keephimwalking.com` is now set in
+  Production and Preview.
+- **CDN rechecked from `https://keephimwalking.com`.** Paris v3 passed 95/95 checks. The
+  traveler model, its animations and both residents are byte-identical to the local files
+  and carry the right CORS header.
+- **Not yet live.** The setting only takes effect in a new build, and Vercel refused that
+  build on the free plan (D5). The live site therefore still serves its own copies.
+- **Preview addresses refused.** The R2 CORS rule allows only
+  `https://keephimwalking.com`. `https://www.keephimwalking.com`, every `*.vercel.app`
+  Preview address and `http://localhost:3100` get HTTP 403.
 
-**What happens if nothing changes.** The current app keeps working from same-origin
-assets. The already-uploaded R2 copies remain unused until the `.com` app deployment.
+**What it is.** The CDN is ready for the real site. Its security rule, however, turns away
+every other address the app is opened from.
 
-**What to do.** In the separate Vercel deployment work:
+**What happens if nothing changes.** The real site is unaffected; `www` forwards to the
+plain address first. A new Preview build would ask the CDN for its paintings and 3D
+people, be refused, and show a neutral street with no traveler model.
 
-1. In the separate `.com` deployment work, set this Vercel variable for Preview and
-   Production:
+**What to do.**
 
-   ```sh
-   ASSET_BASE_URL=https://assets.keephimwalking.com
-   ```
+1. **Unblock deployment (D5).** Once that is decided, redeploy Production. No other
+   setting is needed.
+2. **Preview addresses.** In Cloudflare → R2 → `keephimwalking-assets` → Settings →
+   CORS policy, choose one:
+   - **Allow any address.** Change `AllowedOrigins` to `["*"]`. The files are public
+     and read-only, so this is safe.
+   - **Keep the rule strict.** Clear `ASSET_BASE_URL` for Preview only, so Preview
+     builds keep serving their own copies.
 
-2. Redeploy only when the app itself serves from `https://keephimwalking.com`. To undo
-   the asset migration, clear `ASSET_BASE_URL` and redeploy; the local copies remain.
+To undo the asset migration, clear `ASSET_BASE_URL` and redeploy; the local copies remain.
 
 This uses R2's free allowance for a small validation. Nothing is bought by the code.
 

@@ -2002,14 +2002,17 @@ registered. The actual production date and launch switch remain unset. The Day-1
 winner resolves to `paris-v1`; rollover records that transfer as `train`, then returns
 to reviewed neighbour-first destination voting.
 
-Vercel now declares one authenticated `/api/cron/reconcile` invocation every minute.
+The minute schedule comes from an external scheduler in the owner's cron-job.org account. Every minute it calls
+`GET /api/cron/reconcile` with `Authorization: Bearer $CRON_SECRET`. `vercel.json`
+declares the same route once a day at 16:00 UTC as a backup. The Vercel Hobby plan
+rejects any deployment whose cron runs more than once a day (AFTER-P22 D5).
 The reconciler derives its work from immutable UTC boundaries: prewarm is due only from
 15:55 through 15:59, and rollover is always stamped at the most recent exact 16:00 UTC
 boundary. A late or duplicate invocation therefore cannot shift the logical day. The
 operation ledger and RPC row locks make it idempotent, and an authoritative bootstrap
 read runs the same catch-up when it finds no active day. Prewarm reuses the existing
-service function. Production still needs Vercel Pro minute scheduling and `CRON_SECRET`;
-neither an account upgrade nor deployment is claimed here. `/api/health` reports the
+service function. Production needs `CRON_SECRET` in Vercel and the external minute job.
+That job's run history lives in the owner's cron-job.org account. `/api/health` reports the
 free-validation and paid-booking modes separately.
 
 Migrations `202609100028_season1_launch.sql` and
@@ -2290,7 +2293,7 @@ Runtime configuration (`serverRuntimeConfig()`):
 | `SPONSOR_BOOKING_ENABLED` | unset / false | First half of the paid-booking fail-closed gate |
 | `SPONSOR_PROVIDER_APPROVED` | unset / false | Confirms the provider permits this offer and merchant |
 | `SPONSOR_PREMIUM_FULFILLED` | unset / false | Allows Premium only after bottle and café fulfillment is verified |
-| `CRON_SECRET` | unset | Required bearer secret for the minute reconciler in Production |
+| `CRON_SECRET` | unset | Required bearer secret for `/api/cron/reconcile` in Production. Vercel's daily cron sends it automatically; the external minute job sends it as `Authorization: Bearer …` |
 | `PHASE2_REHEARSAL_SCALE` | 144 | Story-clock multiplier, rehearsal only |
 
 ### Optional asset origin and upload command (2026-09-08)
@@ -2337,9 +2340,19 @@ P28 additions:
 
 Local assets remain checked in. Same-origin fallback means clearing the origin and
 rebuilding. In the browser a failed painting is retried and the last good one kept
-(§8.7), but there is no automatic switch back to the application origin. Until the
-owner's bucket exists, the application origin serves the same immutable renditions
-(AFTER-P22 D8). See [asset hosting runbook](docs/runbooks/asset-hosting.md).
+(§8.7), but there is no automatic switch back to the application origin.
+
+State on 13 September 2026:
+- **Vercel setting.** `ASSET_BASE_URL=https://assets.keephimwalking.com` is set for Vercel
+  Production and Preview.
+- **Not yet in a deployed build.** The production deployment is still the 12 September
+  build, because Vercel's free plan rejects the every-minute cron in `vercel.json`
+  (AFTER-P22 D5). Until a new build, the application origin serves the same immutable
+  renditions.
+- **CORS.** The R2 rule allows `https://keephimwalking.com` only; Preview origins get 403
+  (AFTER-P22 D8).
+
+See [asset hosting runbook](docs/runbooks/asset-hosting.md).
 
 Hard rules stated in the repository and worth repeating: never use the analytics
 provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or
