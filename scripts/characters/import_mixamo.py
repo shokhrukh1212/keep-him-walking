@@ -58,7 +58,7 @@ SOURCE = ROOT / '.cache' / 'character-authoring' / 'v3'
 FPS = 30
 STEP_SECONDS = 0.6
 CYCLES = ('walk', 'walk_brisk', 'umbrella_walk')
-ROUTE_METRES_PER_SECOND = 1.25
+ROUTE_METRES_PER_SECOND = 1.5
 TRAVEL_METRES = 0.5
 HELD_POSE_SECONDS = 1.0
 # Owner-approved Mixamo takes that kept their Mixamo file names (2026-09-10).

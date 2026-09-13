@@ -25,7 +25,7 @@
 | Validation | Zod 4 for every content pack and every API body |
 | Payments | Existing Lemon Squeezy adapter and records retained, but public paid booking defaults **off** pending a provider that permits the advertising offer; deterministic no-money fixture remains rehearsal-only |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest + Playwright production-browser flows + pgTAP (**381 assertions** on the current dev schema) |
+| Testing | Vitest + Playwright production-browser flows + pgTAP (**437 assertions** on the current dev schema) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
@@ -56,7 +56,7 @@ scripts/
   characters/             Blender/MPFB build pipeline (Python) + browser checks (mjs)
   process-phase*-art.mjs  sharp-based image derivation
   phase2/ phase3/         preflight, seeding, scheduling, rehearsal, reporting
-supabase/migrations/      35 forward migrations, 381 pgTAP assertions
+supabase/migrations/      39 forward migrations, 437 pgTAP assertions
 ```
 
 ---
@@ -223,12 +223,12 @@ visitor's leases — never the sum, so multiple tabs cannot inflate a contributi
 mutates the caller's lease, it accrues the interval owned by the existing live leases.
 The interval is split at lease expiry so distance stops exactly when the final eligible
 viewer leaves. Migration 0037 removes crowd acceleration while preserving the wire
-contract:
+contract, and migration 0039 sets the one pace to 1.5 m/s:
 
 ```
 n = count(distinct visitor_hash) of live visible + scene-ready leases
 pace = 1                              (compatibility output)
-distance += interval_seconds × 1.25 m/s, while n > 0
+distance += interval_seconds × 1.5 m/s, while n > 0   (walking_metres_per_second())
 ```
 
 An active caller is included in `n`, but never applies progress retroactively to time
@@ -269,8 +269,8 @@ new lease exists; wake-card eligibility is never present in bootstrap.
   the newest already seen, so out-of-order responses cannot rewind the world.
 - Network updates change the clock's **target**, never its origin.
 - `sample()` exposes `rawSeconds` and `distanceMetres`. Seconds ease at up to 1.05× real
-  time; distance eases at the constant `1.25 m/s`, with the equivalent two-second snap
-  threshold. Both snap to their target when authority expires.
+  time; distance eases at the constant `METRES_PER_SECOND` (1.5 m/s), with the
+  equivalent two-second snap threshold. Both snap to their target when authority expires.
 - It reports `traveling` only while `walking && now < leaseExpiry`.
 
 Both extrapolation helpers and the presentation clock cap invention at 60 seconds,
@@ -293,8 +293,8 @@ invent a newer public state.
 ```
 STEP_DURATION_SECONDS = 0.6     one footfall
 GAIT_CYCLE_SECONDS    = 1.2     two steps
-METRES_PER_STEP       = 0.75
-METRES_PER_SECOND     = 1.25
+METRES_PER_STEP       = 0.9      (src/lib/traveler/pace.ts)
+METRES_PER_SECOND     = 1.5      (the database's walking_metres_per_second())
 zone.lengthMetres     = 1200 / 1600 / 1600 / 1400 / 2200
 dayRouteMetres        = 8000
 marathonMetres        = 42195
@@ -564,7 +564,7 @@ transforms, arm IK, explicit palm frames and joint-specific finger flexion.
 - **Rest-pose alignment.** Every take returns the skeleton re-rested with level arms, 48.8° from this rig's A-pose. Each bone is posed onto that rest, parent first, before its world rotation delta is copied. That is the alignment the Mesh2Motion experiment lacked.
 - **Takes keep their own length.** Nothing is trimmed, mirrored or retimed except the walk, as the owner approved. `CLIP_SPECS` durations record each installed take's length, for example `phone` 23.57 s and `react` 9.77 s. `CharacterActor.sample` maps nominal cue seconds onto the length of the take a character actually carries (§6.1), so the V2 resident and any fallback still play their whole take over the scheduled interval. Scheduled actions keep their `ACTION_DURATIONS` windows, so a long take plays faster than it was recorded inside one.
 - **Placement.** Each take is placed by where its feet start, so Stand To Sit, Sitting Idle and Sit To Stand meet where the previous take left off. Start Walking travels 1.91 m and Tripping 2.38 m, so their hips are held in place, because horizontal travel belongs to the scene clock. Male Laying Pose is a single frame, held for one second.
-- **Walk timing.** The 1.03 s source cycle is cut at left-foot placement and resampled piecewise to 1.2 s, with the right foot at 0.6 s. The planted foot travels at 1.48 m/s against the 1.25 m/s route speed.
+- **Walk timing.** The 1.03 s source cycle is cut at left-foot placement and resampled piecewise to 1.2 s, with the right foot at 0.6 s. The planted foot travels at 1.48 m/s. It slid about 18% against the former 1.25 m/s route speed; since migration 0039 the route speed is 1.5 m/s and it stays planted.
 - **Waiting and arrival.** The waiting cycle plays each take whole at its own speed (§4). The first-arrival beat stands the traveler up only if his wait had reached the seated phase, because Sit To Stand starts seated.
 - **Props.** The `props.ts` drink and phone windows follow Drinking and Texting While Standing, and a V2 fallback uses the same windows. Drinking holds the bottle in the left hand while the runtime bottle sits in the right hand; `docs/plan/AFTER-P22.md` D6 lists this with the other clips to review.
 - **Size.** The animation file is 1.88 MiB compressed (3.18 MiB raw), so a first visit now fetches 2.48 + 1.88 MiB of traveler.
@@ -1397,7 +1397,7 @@ Postgres: the manifest is versioned code.
 
 ## 9. Data model and API surface
 
-### Tables (36 forward migrations)
+### Tables (39 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1499,6 +1499,19 @@ after a review of what hundreds of simultaneous clicks do.
 - **Verification.** Applied to development project `tkntxptfhmjnqaaveddx`. All 21 pgTAP
   suites pass (436 assertions), including 27 new ones in
   `phase24-reaction-watchers.test.sql`, and remote lint is `{"results":[]}`.
+
+**Migration 0039, walking pace 1.5 m/s (14 September 2026):** the owner raised his one
+natural pace from 1.25 to 1.5 m/s. The approved walk take moves its planted foot at about
+1.48 m/s, so at 1.25 m/s his feet slid backwards over the pavement by about a fifth; at
+1.5 m/s they stay planted to within 2%. `walking_metres_per_second()` now returns 1.5,
+and heartbeat v4 and runtime read v4 accrue through it, so heartbeat v12, runtime v6,
+bootstrap v14 and crowd bookings all follow. Distance already accrued is kept. Crowd
+actions booked for a moment still to come had their planted distance recomputed at the
+new pace. The client's `METRES_PER_STEP` is 0.9 (still 0.6 s a step), so the street,
+the bounded projection and the database agree. The 8 km goal now takes about 89 watched
+walking minutes instead of 107, and a day watched for all 24 hours covers about 130 km.
+Applied to development project `tkntxptfhmjnqaaveddx`; all 21 pgTAP suites pass (437
+assertions) and remote lint is `{"results":[]}`.
 
 **Season 1 migration 0030, Tickets:** `tickets` links one future date, one Standard
 sponsorship and one curated versioned pack. `reserve_ticket` locks the date-keyed slot,
@@ -2230,9 +2243,9 @@ pnpm verify:phase3       the current full gate
 Current P28 evidence (12–13 September 2026), in
 `docs/launch-finalization/evidence/p28-refinements/`:
 
-- **Database.** Migrations through 0037 are applied to dev `tkntxptfhmjnqaaveddx`. All
-  20 pgTAP suites pass, including 28 activity assertions and 17 natural-pace regression
-  assertions, and remote lint is `{"results":[]}`.
+- **Database.** Migrations through 0039 are applied to dev `tkntxptfhmjnqaaveddx`. All
+  21 pgTAP suites pass (437 assertions), including 28 activity, 27 reaction-watcher and
+  17 natural-pace regression assertions, and remote lint is `{"results":[]}`.
 - **Unit tests, lint, typecheck.** The last complete run reached 540 passing tests and found
   two stale Paris-v3 registry expectations; both were corrected and their 32 focused tests
   pass. They cover the clock, planner, motion,

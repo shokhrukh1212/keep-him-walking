@@ -39,7 +39,7 @@ Presence is the fuel. Nothing else moves him.
 - While at least one lease is alive, the server accrues **global active seconds** for the
   current country-day. While no lease is alive, it accrues nothing.
 - Audience size decides whether he can move, never how fast he moves. When walking, he
-  and the street advance at one natural pace: **1.25 metres per second**.
+  and the street advance at one natural pace: **1.5 metres per second**.
 - Distance, step count, which zone of the city he is in, and which action he is
   performing are all derived from server-confirmed runtime and action windows.
 

@@ -203,6 +203,10 @@ The minute-accurate runs come from an external scheduler the owner controls.
 Mixamo motion for validation. Premium remains unavailable unless its placements are
 actually fulfilled. The visual observations below remain as an honest historical record.
 
+**Update 13 September 2026.** The walking pace is now 1.5 m/s (migration 0039), so the
+walk's planted foot, which moves at about 1.48 m/s, no longer slides over the pavement.
+The "He walks" row below describes the former 1.25 m/s pace.
+
 **What it is.** On 10 September 2026 his movements were replaced with Mixamo motion the owner
 picked. The owner approved using every clip exactly as downloaded, so they all went in, and
 the ones that look wrong in a specific moment are listed here to judge on screen at

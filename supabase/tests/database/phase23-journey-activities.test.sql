@@ -158,7 +158,7 @@ select * from public.record_presence_heartbeat_v12(
 
 select is(
   round((select out_global_distance_metres from after_conversation)::numeric, 3),
-  61.675::numeric,
+  74.010::numeric,
   'thirty watched seconds advance distance only outside the conversation'
 );
 select is(

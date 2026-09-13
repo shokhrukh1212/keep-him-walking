@@ -10,6 +10,7 @@ import {
   type ActivityKind,
   type OwnActionKind,
 } from "./activities";
+import { METRES_PER_SECOND } from "@/lib/traveler/pace";
 import { deterministicVariant, sceneVisitSecondsFor, scenePositionAt } from "./route-clock";
 
 /**
@@ -310,7 +311,7 @@ export function nextActivityToSchedule(input: ScheduleInput): ScheduleCandidate 
 
   const candidates: ScheduleCandidate[] = [];
   const distance = Number.isFinite(input.distanceMetres) ? input.distanceMetres : 0;
-  const cheerWindow = 1.25 * CHEER_WINDOW_SECONDS;
+  const cheerWindow = METRES_PER_SECOND * CHEER_WINDOW_SECONDS;
   if (distance >= pack.marathonMetres && distance < pack.marathonMetres + cheerWindow && !written.has("cheer")) {
     const walkingSecond = walking + minLead;
     candidates.push({

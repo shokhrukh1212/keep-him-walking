@@ -152,7 +152,7 @@ select is(
 select is(
   (select frozen_distance_metres from public.scheduled_actions
     where country_day_id = '10000000-0000-4000-8000-000000000079'),
-  3.75::double precision,
+  4.5::double precision,
   'the scheduled action projects authority to request time before planting distance'
 );
 
@@ -161,8 +161,8 @@ create temporary table solo_after_action as select * from public.record_presence
   'active', true, '2026-09-24T00:10:10Z', 50, 1.8, 5, 600, 'GB'
 );
 select is(
-  (select out_global_distance_metres from solo_after_action),
-  6.0::double precision,
+  round((select out_global_distance_metres from solo_after_action)::numeric, 3),
+  7.200::numeric,
   'ten watched seconds advance distance for only 4.8 seconds around the photo hold'
 );
 

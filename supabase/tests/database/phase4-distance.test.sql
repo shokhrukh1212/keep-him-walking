@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(16);
 
 insert into public.journeys (
   id, slug, title, starts_at, total_days, status,
@@ -23,6 +23,7 @@ insert into public.country_days (
 
 select has_column('public', 'journey_runtime', 'global_distance_metres', 'runtime stores authoritative metres');
 select has_column('public', 'journey_runtime', 'pace_rate', 'runtime stores the sampled pace');
+select is(public.walking_metres_per_second(), 1.5::double precision, 'he walks at one natural 1.5 metres per second');
 select has_table('public', 'day_outcomes', 'day outcomes table exists');
 select ok((select relrowsecurity from pg_class where oid = 'public.day_outcomes'::regclass), 'day outcomes enforce RLS');
 select is(has_table_privilege('anon', 'public.day_outcomes', 'SELECT'), false, 'anon cannot enumerate day outcomes');
@@ -43,23 +44,23 @@ select is(
     '10000000-0000-4000-8000-000000000094', repeat('d', 64), repeat('4', 64),
     'active', true, '2026-09-12T00:00:20Z', 50, 1.8
   )),
-  25::double precision,
-  'twenty watched seconds accrue twenty-five metres at 1.25 m/s'
+  30::double precision,
+  'twenty watched seconds accrue thirty metres at 1.5 m/s'
 );
 select is(
   (select out_global_distance_metres from public.record_presence_heartbeat_v4(
     '10000000-0000-4000-8000-000000000094', repeat('d', 64), repeat('4', 64),
     'inactive', true, '2026-09-12T00:00:40Z', 50, 1.8
   )),
-  50::double precision,
+  60::double precision,
   'the previously confirmed live interval accrues before the lease becomes inactive'
 );
 select is((select pace_rate from public.journey_runtime where country_day_id = '10000000-0000-4000-8000-000000000094'), 1::real, 'P4 retains the default 1x pace');
-select is((select global_distance_metres from public.journey_runtime where country_day_id = '10000000-0000-4000-8000-000000000094'), 50::double precision, 'confirmed distance persists on the authority row');
+select is((select global_distance_metres from public.journey_runtime where country_day_id = '10000000-0000-4000-8000-000000000094'), 60::double precision, 'confirmed distance persists on the authority row');
 select has_function('public', 'read_bootstrap_bundle_v5', array['text', 'timestamp with time zone', 'integer', 'numeric', 'integer', 'integer'], 'distance bootstrap bundle exists');
 select is(
   ((public.read_bootstrap_bundle_v5(repeat('e', 64), '2026-09-12T00:00:41Z', 50, 1.8, 10, 60) #>> '{bundle,runtime,out_global_distance_metres}'))::double precision,
-  50::double precision,
+  60::double precision,
   'bootstrap returns the confirmed distance'
 );
 

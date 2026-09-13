@@ -32,12 +32,12 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
               countryName: pack.countryName, cityName: pack.cityName, timeZone: pack.timeZone, scenePackId: pack.assetVersion},
             refresh: {nextAt: null, afterMs: 300_000, reason: "none"},
             presence: {status: "live", activeViewers: 1, ttlSeconds: 50},
-            route: {globalActiveSeconds: rawSeconds, globalDistanceMetres: rawSeconds*1.25, paceRate:1, walking: true, authoritativeAt: now}}});
+            route: {globalActiveSeconds: rawSeconds, globalDistanceMetres: rawSeconds*1.5, paceRate:1, walking: true, authoritativeAt: now}}});
         } else if (route.request().url().includes("/presence/heartbeat")) {
           await route.fulfill({json: {countryDayId: "stage-test-day", serverNow: now, realServerNow: now,
             activeViewers: 1, walking: true, globalSteps: 0, visitorActiveSeconds: 5,
             ttlSeconds: 50, nextHeartbeatInMs: 1000, globalActiveSeconds: rawSeconds,
-            globalDistanceMetres: rawSeconds*1.25, paceRate:1, routeAuthoritativeAt: now}});
+            globalDistanceMetres: rawSeconds*1.5, paceRate:1, routeAuthoritativeAt: now}});
         } else await route.fulfill({json: {ok: true}});
       });
       await page.goto("/");

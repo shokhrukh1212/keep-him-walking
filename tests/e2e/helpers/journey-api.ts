@@ -35,7 +35,7 @@ function distanceAt(state: JourneyState, seconds: number) {
     const window = activityWindow(row);
     if (window) held += Math.max(0, Math.min(seconds, window[1]) - window[0]);
   }
-  return Math.max(0, seconds - held) * 1.25;
+  return Math.max(0, seconds - held) * 1.5;
 }
 
 function reactions(state: JourneyState) {

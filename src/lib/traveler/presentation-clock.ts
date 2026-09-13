@@ -2,6 +2,7 @@ import type { RouteRuntime } from "@/lib/world/types";
 import type { ScheduledActionView } from "@/lib/contracts";
 import { activityWindow } from "@/lib/world/activities";
 import { projectedRouteDistance } from "@/lib/world/route-clock";
+import { METRES_PER_SECOND } from "./pace";
 
 /** Two monotonic tracks shared by the scene and rig. Network updates change targets, not origins. */
 export class PresentationClock {
@@ -49,7 +50,7 @@ export class PresentationClock {
       ? Math.max(0, (Math.min(now, this.expiry) - this.receivedAt) / 1_000)
       : 0;
     const secondsTarget = this.secondsAnchor + elapsed;
-    const distanceRate = 1.25;
+    const distanceRate = METRES_PER_SECOND;
     const distanceTarget = projectedRouteDistance({
       globalActiveSeconds: this.secondsAnchor,
       globalDistanceMetres: this.distanceAnchor,

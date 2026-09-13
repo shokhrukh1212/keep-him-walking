@@ -38,7 +38,7 @@ function makeSnapshot(server: MotionServer): BootstrapSnapshot {
     steps: { global: Math.floor(server.routeSeconds * 1.8), updatedAt: now.toISOString(), stale: false },
     route: {
       globalActiveSeconds: server.routeSeconds,
-      globalDistanceMetres: server.routeSeconds * 1.25,
+      globalDistanceMetres: server.routeSeconds * 1.5,
       paceRate: 1,
       authoritativeAt: now.toISOString(),
       walking: false,
@@ -73,7 +73,7 @@ async function installMotionApi(page: Page, server: MotionServer) {
         ttlSeconds: 1,
         nextHeartbeatInMs: 300,
         globalActiveSeconds: server.routeSeconds,
-        globalDistanceMetres: server.routeSeconds * 1.25,
+        globalDistanceMetres: server.routeSeconds * 1.5,
         paceRate: 1,
         routeAuthoritativeAt: now,
       },

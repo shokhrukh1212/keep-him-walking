@@ -37,7 +37,7 @@ test("Tbilisi arrival keeps one city painting stationary with no generated strip
         },
         refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
         presence: { status: "live", activeViewers: 1, ttlSeconds: 50 },
-        route: { globalActiveSeconds: seconds, globalDistanceMetres: seconds * 1.25, paceRate: 1, walking: true, authoritativeAt: now },
+        route: { globalActiveSeconds: seconds, globalDistanceMetres: seconds * 1.5, paceRate: 1, walking: true, authoritativeAt: now },
       } });
       return;
     }
@@ -46,7 +46,7 @@ test("Tbilisi arrival keeps one city painting stationary with no generated strip
         countryDayId: "test-day", serverNow: now, realServerNow: now,
         activeViewers: 1, walking: true, globalSteps: 0, visitorActiveSeconds: 5,
         ttlSeconds: 50, nextHeartbeatInMs: 20_000,
-        globalActiveSeconds: seconds, globalDistanceMetres: seconds * 1.25, paceRate: 1,
+        globalActiveSeconds: seconds, globalDistanceMetres: seconds * 1.5, paceRate: 1,
         routeAuthoritativeAt: now,
       } });
       return;

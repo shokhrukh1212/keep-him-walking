@@ -9,7 +9,7 @@ These describe the intended product, not features already implemented.
 | Decision | Value | Implementation prompts |
 |---|---|---|
 | Journey promise | Season 1 lasts **30 days**. Visiting 195 countries remains the dream, not a promise of 195 consecutive days. | P9, P12, P16, P21 |
-| Natural pace | Audience presence decides whether he walks, not his speed. While at least one confirmed watcher is present, he moves at one natural 1.25 m/s pace. No watchers means no progress. | Final launch pass; migration 0037 |
+| Natural pace | Audience presence decides whether he walks, not his speed. While at least one confirmed watcher is present, he moves at one natural 1.5 m/s pace (1.25 m/s until 13 September 2026). No watchers means no progress. | Final launch pass; migrations 0037 and 0039 |
 | Daily stakes | Reach a **collective daily distance goal of 8,000 metres**; marathon stretch goal at **42,195 metres**. The 8 km number is a reward threshold, not an assertion that the painting depicts arrival there. Completed days retain grey, colour, or gold outcomes. | P4, P13, P16, P25 |
 | Destination vote | Prefer neighbouring ready countries. Explicit train/flight fallback is allowed; apply the Season-1 blocked-pair policy below. Day 1 uses sequential name and destination votes, with the bounded Dushanbe fallback below. | P9, P22 |
 | Watching countries | Show, rank, and thank the countries contributing watch time, using server-confirmed aggregates. | P7, P12–P14 |
@@ -85,6 +85,7 @@ These supersede the rows above where they conflict.
 | Area | Approved decision | Implementation record |
 |---|---|---|
 | Reactions | Count distinct live watchers, not clicks, over a rolling 30 seconds. Nothing counts while he rests for two watched minutes after a crowd action. Only the request that completes a crowd takes the authority lock. Each visitor and each network has a per-minute limit. A lost answer is checked against the server before the page says it failed. | Migration 0038, `ReactionButtons`, `TECHNICAL.md` §9 |
+| Walking pace | He walks at 1.5 m/s instead of 1.25 m/s, so the approved walk take (planted foot about 1.48 m/s) no longer slides over the pavement. The 8 km goal takes about 89 watched walking minutes instead of 107. Distance already accrued is kept. | Migration 0039, `src/lib/traveler/pace.ts` |
 
 ## Historical post-P22 launch decisions — 11 September 2026
 

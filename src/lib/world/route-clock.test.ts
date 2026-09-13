@@ -60,7 +60,7 @@ describe("route clock", () => {
     expect(extrapolatedRouteSeconds(paused, later)).toBe(50);
     expect(extrapolatedRouteSeconds(walking, later)).toBe(110);
     expect(extrapolatedRouteDistance(paused, later)).toBe(125);
-    expect(extrapolatedRouteDistance(walking, later)).toBe(200);
+    expect(extrapolatedRouteDistance(walking, later)).toBe(215);
   });
 
   it("holds server-confirmed distance for a crowd action and resumes afterward", () => {
@@ -80,7 +80,7 @@ describe("route clock", () => {
     expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:03Z"), action))
       .toBe(255);
     expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:09Z"), action))
-      .toBe(256.25);
+      .toBe(257.5);
   });
 
   it("holds distance through a scheduled stop that plants no distance of its own", () => {
@@ -92,10 +92,10 @@ describe("route clock", () => {
       walking: true,
     };
     const conversation = [{ kind: "conversation" as const, atActiveSecond: 102, endsAtActiveSecond: 122, source: "system" as const }];
-    expect(projectedRouteDistance(runtime, 2, conversation)).toBe(252.5);
-    expect(projectedRouteDistance(runtime, 10, conversation)).toBe(252.5);
-    expect(projectedRouteDistance(runtime, 30, conversation)).toBe(262.5);
-    expect(projectedRouteDistance(runtime, 30, [{ ...conversation[0]!, cancelled: true }])).toBe(287.5);
+    expect(projectedRouteDistance(runtime, 2, conversation)).toBe(253);
+    expect(projectedRouteDistance(runtime, 10, conversation)).toBe(253);
+    expect(projectedRouteDistance(runtime, 30, conversation)).toBe(265);
+    expect(projectedRouteDistance(runtime, 30, [{ ...conversation[0]!, cancelled: true }])).toBe(295);
   });
 
   it("supports action rows from the rollback contract without new fields", () => {
@@ -109,7 +109,7 @@ describe("route clock", () => {
     // A wave without an end second lasts its natural take: 1.2 s stop plus 4.73 s wave.
     expect(extrapolatedRouteDistance(runtime, Date.parse("2026-09-01T00:00:08Z"), [
       { kind: "wave", atActiveSecond: 2 },
-    ])).toBeCloseTo((8 - 5.93) * 1.25);
+    ])).toBeCloseTo((8 - 5.93) * 1.5);
   });
 
   it("sanitizes invalid and negative distances", () => {

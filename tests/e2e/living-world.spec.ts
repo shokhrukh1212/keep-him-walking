@@ -61,7 +61,7 @@ test("the world stays quiet and error-free through minutes of its own life", asy
       weather: null,
       steps: { global: 0, updatedAt: now.toISOString(), stale: false },
       route: {
-        globalActiveSeconds: seconds, globalDistanceMetres: seconds * 1.25,
+        globalActiveSeconds: seconds, globalDistanceMetres: seconds * 1.5,
         paceRate: 1, authoritativeAt: now.toISOString(), walking: true,
       },
       sponsor: { status: "unsponsored" },
@@ -82,7 +82,7 @@ test("the world stays quiet and error-free through minutes of its own life", asy
       globalSteps: Math.floor(seconds * 1.8), visitorActiveSeconds: seconds,
       ttlSeconds: 50, nextHeartbeatInMs: 1_000,
       globalActiveSeconds: seconds, routeAuthoritativeAt: now,
-      globalDistanceMetres: seconds * 1.25, paceRate: 1,
+      globalDistanceMetres: seconds * 1.5, paceRate: 1,
       waitingSince: null, wokeHim: false, hundredWatchersAt,
       countryCode: "UZ",
       reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null, photos: [] },

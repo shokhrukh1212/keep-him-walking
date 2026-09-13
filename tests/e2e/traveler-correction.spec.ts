@@ -16,9 +16,9 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
         countryDay:{...snapshot.countryDay,id:"test-day",cityName:"Bishkek",scenePackId:bishkekCountryPack.assetVersion},
         sponsor:{status:"sponsored",publicId:"local-fixture-only",name:"Demo fixture",disclosure:"Local automated fixture",patchUrl:DEMO_LOGO,tier:"standard",bottleUrl:null,ctaLabel:"Explore sponsorship",clickUrl:"/sponsors"},
         refresh:{nextAt:null,afterMs:300_000,reason:"none"},presence:{status:"live",activeViewers:walking?1:0,ttlSeconds:50},
-        route:{globalActiveSeconds:seconds,globalDistanceMetres:seconds*1.25,paceRate:1,walking,authoritativeAt:new Date(time).toISOString()}}});
+        route:{globalActiveSeconds:seconds,globalDistanceMetres:seconds*1.5,paceRate:1,walking,authoritativeAt:new Date(time).toISOString()}}});
     } else if(route.request().url().includes("/presence/heartbeat")) {
-      await route.fulfill({json:{countryDayId:"test-day",serverNow:new Date(time).toISOString(),realServerNow:new Date(time).toISOString(),activeViewers:walking?1:0,walking,globalSteps:0,visitorActiveSeconds:5,ttlSeconds:50,nextHeartbeatInMs:20_000,globalActiveSeconds:seconds,globalDistanceMetres:seconds*1.25,paceRate:1,routeAuthoritativeAt:new Date(time).toISOString()}});
+      await route.fulfill({json:{countryDayId:"test-day",serverNow:new Date(time).toISOString(),realServerNow:new Date(time).toISOString(),activeViewers:walking?1:0,walking,globalSteps:0,visitorActiveSeconds:5,ttlSeconds:50,nextHeartbeatInMs:20_000,globalActiveSeconds:seconds,globalDistanceMetres:seconds*1.5,paceRate:1,routeAuthoritativeAt:new Date(time).toISOString()}});
     } else await route.fulfill({json:{ok:true}});
   });
   await page.goto("/");

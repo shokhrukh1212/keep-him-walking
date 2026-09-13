@@ -17,6 +17,7 @@ import {
   type CrowdActivityKind,
 } from "@/lib/world/activities";
 import { activeWalkingSecondsAt } from "@/lib/world/route-clock";
+import { GAIT_CYCLE_SECONDS, METRES_PER_SECOND, STEP_DURATION_SECONDS } from "./pace";
 import type { WalkingClock } from "@/lib/world/types";
 
 const MISSING_CONVERSATION_FALLBACK = [{
@@ -25,10 +26,7 @@ const MISSING_CONVERSATION_FALLBACK = [{
   mood: "neutral" as const,
 }];
 
-export const STEP_DURATION_SECONDS = 0.6;
-export const GAIT_CYCLE_SECONDS = STEP_DURATION_SECONDS * 2;
-export const METRES_PER_STEP = 0.75;
-export const METRES_PER_SECOND = METRES_PER_STEP / STEP_DURATION_SECONDS;
+export { GAIT_CYCLE_SECONDS, METRES_PER_SECOND, METRES_PER_STEP, STEP_DURATION_SECONDS } from "./pace";
 
 /** The three things the crowd can ask for. Server-side these are enums. */
 export type CrowdActionKind = CrowdActivityKind;

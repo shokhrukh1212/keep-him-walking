@@ -1,4 +1,5 @@
 import { DEFAULT_SCENE_VISIT_SECONDS, type CountryPack } from "@/lib/content/schema";
+import { METRES_PER_SECOND } from "@/lib/traveler/pace";
 import { activityWindow, type ActivityWindowRow } from "./activities";
 import type { RoutePosition, RouteRuntime, ScenePosition, WalkingClock } from "./types";
 
@@ -188,7 +189,7 @@ export function projectedRouteDistance(
   }
   if (frozenDistance !== null) return frozenDistance;
   return runtime.globalDistanceMetres
-    + Math.max(0, elapsed - Math.min(elapsed, heldSeconds)) * 1.25;
+    + Math.max(0, elapsed - Math.min(elapsed, heldSeconds)) * METRES_PER_SECOND;
 }
 
 export function deterministicVariant(seed: string, index: number, count: number): number {

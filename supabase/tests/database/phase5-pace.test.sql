@@ -171,7 +171,7 @@ select is(
     '10000000-0000-4000-8000-000000000096', lpad('b', 64, 'b'), lpad('sb', 64, 's'),
     'active', true, '2026-09-15T00:00:10Z', 50, 1.8, 5
   )),
-  12.5::double precision,
+  15::double precision,
   'a new second caller does not apply 2x pace to the preceding interval'
 );
 select is(
@@ -179,14 +179,14 @@ select is(
     '10000000-0000-4000-8000-000000000096', lpad('a', 64, 'a'), lpad('sa', 64, 's'),
     'active', true, '2026-09-15T00:00:20Z', 50, 1.8, 5
   )),
-  25::double precision,
+  30::double precision,
   'two confirmed viewers still accrue distance at the natural pace'
 );
 select is(
   (select out_global_distance_metres from public.read_journey_runtime_v4(
     '10000000-0000-4000-8000-000000000096', '2026-09-15T00:01:05Z', 50, 1.8, 5
   )),
-  81.25::double precision,
+  97.5::double precision,
   'projected distance stops at the final lease expiry without crowd acceleration'
 );
 select is(
