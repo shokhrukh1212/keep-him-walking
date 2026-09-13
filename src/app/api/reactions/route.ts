@@ -9,6 +9,7 @@ import { hasTrustedOrigin } from "@/lib/validation/origin";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
 import { withRouteTelemetry } from "@/lib/observability/route";
 import { reactionsFromRow } from "@/lib/reactions/payload";
+import { REACTION_BUCKET_SECONDS } from "@/lib/reactions/threshold";
 
 async function handleGet() {
   const supabase = getServerSupabase();
@@ -94,14 +95,19 @@ async function handlePost(request: NextRequest) {
   const scheduledAt = row.out_scheduled_at === null || row.out_scheduled_at === undefined
     ? null
     : Number(row.out_scheduled_at);
+  const requestExpiresAt = new Date(
+    (Math.floor(now.getTime() / (REACTION_BUCKET_SECONDS * 1_000)) + 1)
+      * REACTION_BUCKET_SECONDS * 1_000,
+  ).toISOString();
   const response = NextResponse.json({
     accepted: true,
     kind: parsed.data.kind,
     count: Number(row.out_count ?? 0),
     threshold: Number(row.out_threshold ?? 2),
     scheduledAt,
+    requestExpiresAt,
     cooldownSeconds: 60,
-  });
+  }, { headers: { "Cache-Control": "no-store" } });
   attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
   return response;
 }

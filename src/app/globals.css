@@ -3089,3 +3089,361 @@ button:focus-visible,
   .dialogue-traveler,
   .dialogue-npc { bottom: calc(9.4rem + env(safe-area-inset-bottom)); }
 }
+
+/* Final launch visual system — solid ink chrome over the accepted painted world. */
+:root {
+  --ink: #080f19;
+  --surface: #111d2b;
+  --paper: #f3e7c7;
+  --muted: #bfb8a5;
+  --brick: #a33e35;
+  --gold: #d7a34e;
+  --mint: #8fb7a5;
+  --night: #080f19;
+  --control-border: rgb(243 231 199 / 34%);
+  --quiet-border: rgb(243 231 199 / 18%);
+  --font-display: var(--font-anton), "Arial Narrow", Arial, sans-serif;
+  --font-controls: var(--font-plex-mono), Consolas, "Liberation Mono", monospace;
+  --font-copy: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-copy);
+}
+
+button,
+input,
+select,
+textarea,
+.eyebrow,
+.product-mark,
+.journey-rule,
+.goal-bar,
+.compact-dock,
+.country-sheet,
+.vote-panel,
+.journey-section-title,
+.journey-now > span,
+.journey-distance,
+.journey-footer,
+.map-attribution {
+  font-family: var(--font-controls);
+  font-variant-numeric: tabular-nums;
+}
+
+.journey-hud {
+  color: var(--paper);
+  text-shadow: none;
+}
+
+.journey-shell,
+.static-scene,
+.app-loading {
+  background: var(--ink);
+}
+
+.first-visit-overlay {
+  background: rgb(8 15 25 / 78%);
+  backdrop-filter: none;
+}
+
+.journey-hud .day-mark {
+  border: 1px solid var(--quiet-border);
+  border-radius: 7px;
+  padding: 0.55rem 0.65rem;
+  background: var(--ink);
+}
+
+.journey-hud .day-mark .product-mark {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.journey-hud .day-mark strong,
+.overlay-modal-header h2,
+.content-page > h1,
+.journey-map header h1,
+.fixture-checkout h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+}
+
+.journey-hud .day-mark strong {
+  margin-top: 0.12rem;
+  color: var(--paper);
+  line-height: 1.05;
+}
+
+.journey-hud .day-mark > span:last-child,
+.journey-rule,
+.goal-freshness,
+.journey-muted,
+.country-sheet-empty,
+.country-rank,
+.vote-total,
+.sponsor-copy p {
+  color: var(--muted);
+}
+
+.journey-rule {
+  width: fit-content;
+  margin-top: 0.35rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  background: var(--ink);
+  text-shadow: none;
+}
+
+.audience-control,
+.reaction-button,
+.traveler-state,
+.vote-chip,
+.compact-dock button,
+.compact-dock .sponsor-invitation,
+.sound-toggle,
+.goal-info,
+.audience-share,
+.journey-actions > button,
+.journey-footer > button,
+.overlay-modal .postcard-control button,
+.overlay-modal .contribution-meter button,
+.primary-button {
+  border: 1px solid var(--control-border);
+  border-radius: 7px;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.audience-control:hover,
+.reaction-button:hover:not(:disabled),
+.vote-chip:hover,
+.compact-dock button:hover,
+.sound-toggle:hover:not(:disabled),
+.journey-actions > button:hover,
+.journey-footer > button:hover,
+.overlay-modal .postcard-control button:hover:not(:disabled),
+.overlay-modal .contribution-meter button:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--surface);
+}
+
+.reaction-button[data-state="pending"],
+.reaction-button[data-state="queued"],
+.reaction-button[data-state="active"],
+.vote-options button[aria-pressed="true"] {
+  border-color: var(--brick);
+  background: var(--brick);
+  color: var(--paper);
+}
+
+.reaction-button:disabled {
+  opacity: 0.58;
+}
+
+.reaction-count,
+.reaction-feedback,
+.vote-chip-countdown,
+.dock-streak,
+.overlay-modal-header .eyebrow,
+.journey-section-title,
+.place-popover .eyebrow {
+  color: var(--gold);
+}
+
+.live-dot,
+.live-dot.live,
+.live-dot.offline {
+  box-shadow: none;
+}
+
+.live-dot {
+  border: 1px solid rgb(243 231 199 / 60%);
+  background: var(--gold);
+}
+
+.live-dot.live { background: #8fbf9f; }
+.live-dot.offline { background: var(--muted); }
+
+.compact-dock .sponsor-invitation,
+.primary-button {
+  border-color: var(--brick);
+  background: var(--brick);
+  color: var(--paper);
+}
+
+.sound-toggle,
+.goal-info,
+.overlay-modal-close {
+  border-radius: 999px;
+}
+
+.compact-dock .sponsor-invitation:hover,
+.primary-button:hover {
+  border-color: var(--paper);
+  background: #8e342d;
+}
+
+.sponsor-card,
+.country-sheet,
+.ticket-notice,
+.traveler-loading,
+.connection-banner,
+.goal-info-popover,
+.place-popover,
+.dialogue-bubble,
+.journey-encounter,
+.journey-map-details,
+.map-stats > div,
+.country-stats > div,
+.recap-stats > div,
+.postkit-list section {
+  border-color: var(--quiet-border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--paper);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.traveler-state {
+  padding: 0.45rem 0.65rem;
+  font-weight: 500;
+}
+
+.goal-track {
+  border-color: var(--quiet-border);
+  border-radius: 3px;
+  background: var(--ink);
+}
+
+.goal-track span,
+.goal-bar[data-marathon="true"] .goal-track span {
+  background: var(--brick);
+}
+
+.goal-bar[data-marathon="true"] .goal-track span { background: var(--gold); }
+
+.place-dot span,
+.place-dot[data-passed="true"] span,
+.place-dot[data-current="true"] span {
+  box-shadow: none;
+}
+
+.place-dot[data-passed="true"] span { background: var(--muted); }
+.place-dot[data-current="true"] span { background: var(--gold); }
+
+.dialogue-bubble {
+  border: 1px solid rgb(8 15 25 / 28%);
+  color: var(--ink);
+  background: rgb(243 231 199 / 96%);
+}
+
+.dialogue-bubble .eyebrow { color: #6f2c27; }
+.dialogue-bubble p { color: var(--ink); font-family: var(--font-copy); line-height: 1.55; }
+
+.overlay-modal {
+  border-color: var(--quiet-border);
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 0 20px 56px rgb(0 0 0 / 48%);
+}
+
+.overlay-modal-scrim { background: rgb(8 15 25 / 76%); }
+.overlay-modal-header { border-color: var(--quiet-border); }
+.overlay-modal-header h2 { color: var(--paper); }
+
+.overlay-modal-close {
+  border-color: var(--control-border);
+  background: var(--surface);
+  color: var(--paper);
+}
+
+.overlay-modal-close:hover { background: var(--brick); }
+
+.journey-section {
+  border-color: var(--quiet-border);
+}
+
+.journey-now strong,
+.place-popover strong,
+.vote-question,
+.journey-encounter li,
+.passport-card h2,
+.stamp-tile strong,
+.recap-stats strong,
+.recap-phrase h2,
+.map-stats strong,
+.country-stats strong {
+  color: var(--paper);
+  font-family: var(--font-copy);
+}
+
+.vote-options button {
+  border-color: var(--control-border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--paper);
+}
+
+.vote-options button:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: #182638;
+}
+
+.wake-card {
+  border-color: rgb(215 163 78 / 55%);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.wake-card h2 { font-family: var(--font-copy); }
+.wake-card p { color: var(--muted); }
+
+.wake-card button {
+  border: 1px solid var(--control-border);
+  border-radius: 7px;
+  background: var(--brick);
+  color: var(--paper);
+}
+
+.content-page,
+.fixture-checkout,
+.app-loading {
+  background: var(--ink);
+}
+
+.content-page a,
+.journey-footer a,
+.country-sheet-list a {
+  color: var(--paper);
+  text-underline-offset: 0.2em;
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+.day-mark:focus-visible,
+.reaction-button:focus-visible,
+.vote-chip:focus-visible,
+.sound-toggle:focus-visible,
+.overlay-modal-close:focus-visible,
+.goal-info:focus-visible,
+.place-dot:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .overlay-modal,
+  .overlay-modal-wide {
+    border-radius: 12px 12px 0 0;
+  }
+}

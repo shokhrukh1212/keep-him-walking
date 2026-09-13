@@ -26,11 +26,22 @@ describe("reaction lifecycle", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ count: 2, threshold: 3, scheduledAt: null, cooldownSeconds: 60 }),
+      json: async () => ({ count: 2, threshold: 3, scheduledAt: null, requestExpiresAt: new Date(Date.now() + 20_000).toISOString(), cooldownSeconds: 60 }),
     }));
     render(<ReactionButtons counts={counts} activeViewers={7} enabled activeCrowdKind={null} />);
     fireEvent.click(screen.getByRole("button", { name: /Wave\./ }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Wave added · 2/3"));
+  });
+
+  it("explains when a contribution expires before reaching its threshold", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ count: 2, threshold: 3, scheduledAt: null, requestExpiresAt: new Date(Date.now() - 1).toISOString(), cooldownSeconds: 60 }),
+    }));
+    render(<ReactionButtons counts={counts} activeViewers={7} enabled activeCrowdKind={null} />);
+    fireEvent.click(screen.getByRole("button", { name: /Wave\./ }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Wave request expired — ask again."));
   });
 
   it("leaves retry feedback after a failed request", async () => {

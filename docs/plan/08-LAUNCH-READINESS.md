@@ -21,6 +21,7 @@ below while preserving them as history.
 | Stationary painting, centered traveler, 7-minute places from a manifest (P28) | Implemented; Paris v3 has 10 owner-accepted places and is pinned to development Day 2 (D9 resolved) |
 | Every stop a server window, natural clip speed (P28) | Implemented; migration 0036 remote-verified on dev |
 | Natural walking pace | Migration 0037 applied and remote-verified on dev: audience presence starts/stops the journey, but viewer count never changes speed |
+| Restrained launch visual system | Implemented and production-build inspected: solid ink/navy chrome, accessible cream/red contrast, local Anton + IBM Plex Mono subsets, explicit reaction lifecycle feedback; owner visual acceptance remains separate |
 | Image delivery | Hashed immutable renditions, current + next place only. The complete 574-file runtime tree is uploaded to R2 and verified at `assets.keephimwalking.com` from `https://keephimwalking.com` (Paris v3 95/95). `ASSET_BASE_URL` is set in Vercel Production and Preview, and the production build of `82e517a` uses it. Preview origins are refused by CDN CORS, and desktop needs a real-browser check (D8) |
 | "Waiting for the internet" while watching | Heartbeat chain fix and watchdog unit-tested; the status line separates "Reconnecting…" from a confirmed empty audience, and no-WebGL recovery still starts presence through the static painting |
 | Wave request → shared state → rendered clip | Implemented; unit, browser and remote pgTAP verified |

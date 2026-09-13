@@ -1619,6 +1619,20 @@ Every number on it is a stored aggregate; nothing is extrapolated.
 
 ### Landing HUD and sharing (P12)
 
+The final launch visual layer (13 September 2026) defines the public chrome tokens in
+`globals.css`: ink `#080F19`, raised surface `#111D2B`, cream `#F3E7C7`, secondary
+`#BFB8A5`, brick red `#A33E35` and gold `#D7A34E`. The latin WOFF2 subsets for Anton
+400 and IBM Plex Mono 400/500 are co-located under `src/app/fonts`, loaded once through
+`next/font/local`, and shipped with their separate OFL texts. The resulting browser has
+no Google Fonts request. Measured WCAG contrast ratios are 15.62:1 cream/ink, 8.60:1
+secondary/raised surface and 5.18:1 cream/brick red.
+
+Launch chrome is solid rather than blurred/translucent: controls use 7 px corners,
+dialogs 12 px, while icon-only sound/info/close controls remain round. Anton is confined
+to short uppercase display headings, Plex Mono owns controls/metadata/tabular numerals,
+and dialogue/long copy uses the system sans stack. The painted scene and its existing
+colour grade remain separate from the chrome rules.
+
 The scene HUD is marked as the explicit `where-when`, `who`, `status`, `goal`,
 `reactions`, `vote`, `dock`, and `sponsor` regions from the product specification.
 The desktop presentation keeps those regions around the scene; the ≤600 px rules stack
@@ -1627,9 +1641,10 @@ not rendered. `firstVisit` comes only from creation of the existing HTTP-only vi
 cookie, so the four-second onboarding line is neither local-storage authority nor a
 repeat tutorial.
 
-Reaction controls are absolutely anchored above the compact dock at every viewport.
-They do not participate in the page's top flow, where their higher stacking layer would
-otherwise cover the audience-country button even though both controls looked visible.
+`POST /api/reactions` returns the end of its authoritative 30-second request bucket.
+`ReactionButtons` uses it only for feedback: if a below-threshold request reaches that
+boundary without a scheduled action, the live status says it expired and invites the
+visitor to ask again. It does not schedule or extend an action in the browser.
 
 `src/lib/share/token.ts` signs compact, purpose-bound HMAC claims. Personal cards contain
 only a day number, expiry, and confirmed numbers: steps cards are issued after reading

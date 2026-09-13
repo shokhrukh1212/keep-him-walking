@@ -171,6 +171,11 @@ web app rather than a place.
 Everything is anonymous. No sign-up, no email, no password. Identity is an opaque cookie
 that is hashed before it ever reaches the database.
 
+The interface uses solid ink and raised navy surfaces over the accepted painted city,
+with cream text, brick-red primary actions and restrained gold emphasis. Compact Anton
+headings and IBM Plex Mono controls are locally hosted; dialogue stays in a readable
+system sans-serif. There is no glass blur, glow or decorative gradient in the chrome.
+
 **Always visible**
 
 - **Day marker and city** — for example “DAY 1 · LONDON” with country and time in the city's own
@@ -179,7 +184,8 @@ that is hashed before it ever reaches the database.
   watcher count and honest movement status.
 - **Reactions** — Wave, Water and Photo sit at top centre. One confirmed watcher can
   trigger one; Realtime is only an update hint and every viewer then reads the action
-  window from the server.
+  window from the server. Sending, queued, active, cooldown, failure and expired-request
+  feedback are visibly distinct.
 - **Walking rule status** — a small pill reading "→ Walking · Canal Saint-Martin", or the
   current stop's label ("Taking a photo", "Talking with Camille", "Tying a shoe"). It
   names a place only once that place's painting is actually on screen. "Reconnecting…"

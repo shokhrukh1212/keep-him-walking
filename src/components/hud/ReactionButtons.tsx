@@ -31,6 +31,7 @@ type Feedback = {
   phase: "sending" | "contributing" | "queued" | "executing" | "cooldown" | "failed";
   count?: number;
   threshold?: number;
+  expiresAtMs?: number;
 };
 
 export function ReactionButtons({
@@ -98,6 +99,7 @@ export function ReactionButtons({
           phase: "contributing",
           count: Number(result?.count ?? counts[kind]),
           threshold: Number(result?.threshold ?? reactionThreshold(activeViewers ?? 0)),
+          expiresAtMs: Date.parse(String(result?.requestExpiresAt ?? "")),
         });
       }
       if (response.ok) onConfirmed?.();
@@ -118,6 +120,15 @@ export function ReactionButtons({
         const cooling = remaining > 0;
         const disabled = !enabled || cooling || pending !== null;
         const { glyph, label } = REACTION_LABELS[kind];
+        const phase = pending === kind
+          ? "pending"
+          : activeCrowdKind === (kind === "water" ? "drink" : kind)
+            ? "active"
+            : feedback?.kind === kind && feedback.phase === "queued"
+              ? "queued"
+              : cooling
+                ? "cooldown"
+                : "ready";
         return (
           <button
             key={kind}
@@ -125,6 +136,8 @@ export function ReactionButtons({
             type="button"
             disabled={disabled}
             data-kind={kind}
+            data-state={phase}
+            aria-busy={pending === kind}
             onClick={() => void send(kind)}
             aria-label={cooling
               ? `${label}, available again in ${remaining} seconds`
@@ -148,7 +161,14 @@ export function ReactionButtons({
 function feedbackText(feedback: Feedback, cooldownUntil: number, now: number) {
   const label = REACTION_LABELS[feedback.kind].label;
   if (feedback.phase === "sending") return `Sending ${label.toLowerCase()}…`;
-  if (feedback.phase === "contributing") return `${label} added · ${feedback.count}/${feedback.threshold}`;
+  if (feedback.phase === "contributing") {
+    if (feedback.expiresAtMs !== undefined
+      && Number.isFinite(feedback.expiresAtMs)
+      && now >= feedback.expiresAtMs) {
+      return `${label} request expired — ask again.`;
+    }
+    return `${label} added · ${feedback.count}/${feedback.threshold}`;
+  }
   if (feedback.phase === "queued") return `${label} queued`;
   if (feedback.phase === "executing") return feedback.kind === "water"
     ? "He’s taking water"
