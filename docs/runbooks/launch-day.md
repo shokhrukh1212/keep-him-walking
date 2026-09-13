@@ -1,74 +1,100 @@
 # Season 1 launch day
 
-The production switch and the Season 1 timestamp are intentionally unset in this
-commit. Do not improvise a date: complete `docs/plan/AFTER-P22.md`, then replace every
-`<...>` below with the reviewed production value.
+Production remains launch-disabled until both prompts are reviewed. The canonical site is
+`https://keephimwalking.com`, Day 1 uses the reviewed `paris-v3` pack, and the day boundary
+remains 16:00 UTC. The one scheduler is the existing cron-job.org minute job calling
+`POST /api/cron/reconcile`; do not add another scheduler.
 
-## Before launch day
+## Prepare the clean Production project
 
-1. Confirm every precondition in `docs/runbooks/launch.md`, including the current
-   1,000-viewer gate and a real test-mode payment/refund rehearsal.
-2. Confirm the production scheduler is minute-accurate; D5 in
-   `docs/plan/AFTER-P22.md` is a launch blocker until that is true.
-3. Print the exact database write without applying it:
+Create `.env.production.local` locally (it is ignored) with these exact names:
 
-   ```sh
-   pnpm seed:season1 --launch-at <YYYY-MM-DDT16:00:00Z>
-   ```
-
-4. Check that it says 30 days, `tashkent-v5`, 16:00 UTC, four name choices, and seven
-   $29 founding slots. Then apply that same plan once:
-
-   ```sh
-   pnpm seed:season1 --launch-at <YYYY-MM-DDT16:00:00Z> --apply
-   ```
-
-5. Keep Production `LAUNCH_ENABLED=false`. Deploy the immutable launch commit and
-   confirm `/api/health` reports the stored launch time, registered pack, providers,
-   weather age and asset origin. A missing prelaunch weather reading becomes fresh
-   after the 15:55 prewarm.
-
-## 15:30–16:10 UTC
-
-| UTC | Check |
-|---|---|
-| 15:30 | Confirm the production domain serves the intended commit. Set both `PHASE2_ENABLED=true` and `LAUNCH_ENABLED=true` in Production, redeploy, and confirm two phones show `Starts …`; neither phone may appear in a live count or move him. |
-| 15:40 | Open `/api/health`. Database, content, payment/weather providers and the asset base must be ready. Confirm the stored launch time is today at 16:00 UTC. |
-| 15:50 | Confirm `vercel.json` has `/api/cron/prewarm` at `55 15 * * *` and `/api/cron/rollover` at `0 16 * * *`. Confirm both jobs are enabled in the production scheduler. |
-| 15:55 | Watch the prewarm invocation finish with HTTP 200. It must name `tashkent-v5` and report every requested asset and OG image ready. Recheck `/api/health`; weather must now be fresh. |
-| 16:00 | Refresh both phones. The countdown must become Day 1 live in Tashkent with the name vote; the first ready, visible phone becomes one confirmed watcher and only then may he move. Publish the launch post from `docs/plan/06-LAUNCH-AND-GROWTH.md` §3. |
-| 16:05 | Publish Show HN. On the phones, cast two different name votes and confirm each visitor keeps one vote, the public total is server-confirmed, and hiding one tab removes its lease after the server TTL. |
-| 16:10 | Publish the five separate Reddit posts. Recheck `/api/health`, error rate, p95 latency, database connections, live leases and scene loading on both phones. Continue the launch-day schedule in §3. |
-
-Stop immediately for a false live count, any prelaunch progress, a missing/wrong pack,
-a payment security issue, error rate above 1%, p95 above 800 ms for five minutes, or a
-critical phone/accessibility regression.
-
-## Rollback
-
-Disable the live runtime first, then redeploy Production:
-
-```sh
-printf 'false\n' | pnpm exec vercel env add LAUNCH_ENABLED production --force --yes
-pnpm exec vercel deploy --prod
+```dotenv
+PRODUCTION_SUPABASE_PROJECT_REF=<new-production-project-ref>
+NEXT_PUBLIC_SUPABASE_URL=<new-production-project-url>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<new-production-publishable-key>
+SUPABASE_SECRET_KEY=<new-production-secret-key>
+SUPABASE_DB_URL=<new-production-direct-or-pooler-url>
 ```
 
-This leaves the database intact and returns Production to the non-live preview. Record
-the incident and the deployment URL before changing anything else.
-
-If only Tashkent v5 is wrong, keep the launch disabled and validate the guarded v4
-switch without writing:
+The guarded commands refuse the known Development and Preview project references and
+require the public URL, database URL and explicit reference to agree. They print a project
+reference, never a credential.
 
 ```sh
-pnpm launch:switch-pack --day-id <country-day-uuid> --from tashkent-v5 --to tashkent-v4
+pnpm production:db:plan
+pnpm production:db:apply
+pnpm production:db:test
+pnpm production:db:lint
+pnpm production:seed --launch-at <YYYY-MM-DDT16:00:00Z>
+pnpm production:seed --launch-at <YYYY-MM-DDT16:00:00Z> --apply
 ```
 
-After confirming that both registered versions are Uzbekistan, apply it and redeploy:
+Run the seed first without `--apply`. Confirm it names `paris-v3`, the intended timestamp,
+30 days, four name choices and seven founding slots. Before applying, inspect Production
+for genuine customer data. The seed must begin with zero distance, viewers, votes and
+sponsors; never copy rehearsal rows.
 
-```sh
-pnpm launch:switch-pack --day-id <country-day-uuid> --from tashkent-v5 --to tashkent-v4 --apply
-pnpm exec vercel deploy --prod
-```
+Map the same Production project into Vercel Production only: `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_DB_URL`.
+Keep `LAUNCH_ENABLED` and `PHASE2_ENABLED` absent or false. They are read by the deployed
+server process, so changing either Vercel environment variable requires a redeploy.
 
-Do not turn `LAUNCH_ENABLED` back on until `/api/health` and the two-phone prelaunch
-check are green again.
+## Verify prelaunch
+
+1. Deploy the reviewed commit with launch flags disabled.
+2. Confirm `/api/health` names the intended release, clean database, `paris-v3` content,
+   asset origin and disabled launch.
+3. Confirm `/api/bootstrap` exposes no rehearsal counts, votes or sponsors.
+4. In cron-job.org, confirm the only enabled minute job targets
+   `https://keephimwalking.com/api/cron/reconcile`, sends the bearer secret, and recent
+   authenticated runs are 200. Before launch its response must be a safe no-op; a 200 by
+   itself does not prove the database identity.
+5. Check Terms, Privacy and refund/cancellation text. Add a real monitored contact route
+   before offering paid sponsorship.
+
+## Activate and roll back
+
+At 15:30 UTC confirm the intended deployment and two physical phones. At 15:40 confirm
+health and the stored 16:00 UTC timestamp. At 15:55 confirm reconcile is healthy and
+weather is fresh if enabled. Set both launch flags true in Vercel Production and redeploy
+before 16:00. At 16:00 verify Paris Day 1, one confirmed visible watcher, natural walking,
+the name vote and no rehearsal totals before publishing.
+
+Stop for a false live count, prelaunch progress, wrong pack/database, payment security
+issue, error rate above 1%, p95 above 800 ms for five minutes, or a critical phone or
+accessibility regression. To roll back, set both Production launch flags false and
+redeploy the last known-good commit. Do not delete or reseed the database.
+
+## Owner-only prerequisites
+
+### Separate Production database
+
+**WHAT:** Production needs its own Supabase project; the current Vercel variables are
+scoped to Production and Preview together, so separation is not proven.
+
+**WHAT HAPPENS:** If nothing changes, a launch could expose or advance rehearsal data.
+
+**WHAT TO DO:** Create the Production project, create `.env.production.local` with the five
+variables above, run the guarded commands, then replace the four Supabase variables in
+Vercel Production only and redeploy. Keep Preview on its existing project.
+
+### Monitored contact route
+
+**WHAT:** No public support contact is configured, and the repository must not invent one.
+
+**WHAT HAPPENS:** If nothing changes, paid sponsorship must stay off because visitors
+cannot reliably ask about privacy, refunds or sponsorship.
+
+**WHAT TO DO:** Choose an inbox you actively monitor and configure it as the public contact
+before enabling paid sponsorship; the free viewing launch can proceed without payments.
+
+### Physical-phone acceptance
+
+**WHAT:** Real phone smoothness and touch behavior cannot be established by emulation.
+
+**WHAT HAPPENS:** If nothing changes, the candidate must not be declared phone-approved.
+
+**WHAT TO DO:** Before activation, use iPhone/Safari and Android/Chrome for five minutes
+each; open every modal, watch an encounter and reject launch if controls overlap or motion
+stutters.

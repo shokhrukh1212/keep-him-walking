@@ -2029,10 +2029,10 @@ postcards and visitor-private refreshes do not run. At the database boundary hea
 v12 delegates to the launch guard and refuses an instant before
 `coalesce(launch_at, starts_at)`.
 
-`pnpm seed:season1 --launch-at <...> --pack <reviewed-pack>` is a no-write plan. `--apply`
+`pnpm seed:season1 --launch-at <...> --pack <reviewed-pack>` is a no-write plan. Its
+reviewed default is `paris-v3`. `--apply`
 calls the atomic seed RPC; a same-data retry returns `exists`, while drift is rejected.
-The default is `london-v1`, which intentionally fails until the owner-approved pack is
-registered. The actual production date and launch switch remain unset. The Day-1 name
+The actual production date and launch switch remain unset. The Day-1 name
 winner resolves to `paris-v1`; rollover records that transfer as `train`, then returns
 to reviewed neighbour-first destination voting.
 
