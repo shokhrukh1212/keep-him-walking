@@ -146,11 +146,11 @@ Every package has two independent completion marks:
   B as distinct male/female characters.
 - [x] Historical resident-window implementation; P28 replaces its cadence with
   passers-by every 120–180 active-walking seconds and conversations about every 300.
-- Refined 13 September 2026 at the owner's request: passers-by walk on his pavement at
-  85–95% of his height, in a lane just behind him or just in front. Every passer enters
-  from the right and leaves on the left. The man uses the traveler's natural 1.25 m/s
-  pace; the woman is only five percent slower. Viewer-count updates cannot accelerate,
-  reverse or redirect either of them.
+- Refined again on 13 September 2026 at the owner's request: passers-by stroll in one
+  lane just behind him at 85–88% of his height, never carried by the moving pavement.
+  Every passer enters from the right and leaves on the left. The woman walks at 1.0 m/s
+  and the man at 1.15 m/s, clearly slower than his 1.5 m/s. Viewer-count updates cannot
+  accelerate, reverse or redirect either of them.
   Gaps stay 120–180 s and never more than two show at once. Nobody new sets off at night,
   on the low tier, before launch, while he waits, or during an action or encounter;
   someone already crossing finishes. Verified by unit tests; not yet accepted on screen.

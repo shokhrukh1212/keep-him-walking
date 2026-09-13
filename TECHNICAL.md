@@ -180,7 +180,8 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
   runs at a time.
 - **Passers-by** are client-derived from walking seconds in 150-second blocks
   (`WALKER_BLOCK_SECONDS`), at most two by tier plus one conversation partner. No pass
-  starts during a stop or within 12 s of one, and they never stop him.
+  starts during a stop or within 12 s of one, and they never stop him. They stroll just
+  behind him at their own slow pace and the moving pavement never carries them.
 - Distance still drives the 8 km daily collective goal and the 42.195 km marathon.
 - **Stationary scenery.** The painting never pans. Only the seamless pavement tile and
   ground life move with distance. `stageLayout` uses cover sizing in nominal painting
@@ -1883,37 +1884,46 @@ two dozen jumps from one edge to the other with half a body in view.
   are thresholds on a prime modulus: `deterministicVariant(key, index, 2^k)` depends only
   on the index's low bits (its multiplier is odd), and a modulus of 2 simply alternated
   the lane by block.
-- **Where.** Two lanes. `behind` has perspective 0.9: feet 0.16 m further up the
-  pavement, drawn behind him. `front` has 1.04: feet 0.06 m lower, drawn over him. Foot
-  height follows a 1.6 m eye-level horizon (02 §3); drawn scale is capped at 95% of his
-  height, so both residents show at 85–95% of him.
+- **Where.** One lane, just behind him: perspective 0.9, so feet 0.16 m further up the
+  street, drawn behind him. Their feet stand on the painted street above the top edge of
+  the moving pavement tile, which starts at his foot line. Foot height follows a 1.6 m
+  eye-level horizon (02 §3); the drawn scale is capped at 95% of his height, so the woman
+  shows at 85% of him and the man at 88%. The former front lane, whose feet stood on the
+  moving tile, was removed on 13 September 2026.
 - **Direction and pace.** Every passer enters from the right, faces left and leaves on
-  the left; neither a heartbeat correction nor a viewer-count change can reverse them.
-  Resident B (the man) walks at the traveler's natural 1.25 m/s. Resident A (the woman)
-  walks at 95% of that, 1.1875 m/s: perceptibly but only slightly slower. Their gait
-  time scale follows that physical speed, and `advanceWalker` keeps it unchanged for the
-  complete crossing.
-- **How they move.** The stage keeps each walker's `streetMetres` on his distance axis,
-  and screen x is `streetMetres − distance`, so the pavement carries them exactly as the
-  Pixi ground tile scrolls (`distance × pxPerMetre`). `advanceWalker` adds their own
-  steps, and the gait advances by metres walked over his 1.25 m/s stride scaled to their
-  height, so their feet stay planted.
+  the left. The owner chose a slow stroll on 13 September 2026: resident A (the woman)
+  walks at 1.0 m/s and resident B (the man) at 1.15 m/s (`WALKER_SPEEDS`), because his
+  walk take has longer steps and at 1.0 m/s would look like slow motion. On a 1440 px
+  laptop screen they cross in about 10.5 s and 9 s, clearly slower than the pavement under
+  him (6.3 s). Nothing he does and no heartbeat changes their pace.
+- **How they move.** Screen x comes from their own steps only; the moving pavement never
+  carries them, because their feet are not on it. Until 13 September they rode the
+  pavement: walking towards him at his pace they crossed at almost twice his speed, and
+  the rear lane glided over still painting. `advanceWalker` advances the gait by metres
+  walked over that resident's measured walk take (`walkMetresPerSecond` in the character
+  manifest: 1.20 m/s for the woman and 1.48 m/s for the man, at their heights), so their
+  feet stay planted. `walk-speed.test.ts` measures every take from the shipped files. The
+  old code assumed the traveler's stride scaled by height, which let the man's feet slide
+  about 20%.
+- **Two in one lane.** A follower sets off only if `walkerCanFollow` shows they can never
+  close to less than 1.2 m before the person ahead leaves. Someone who comes up behind a
+  person waving back stops in an idle pose (`walkerMustWait`) until the gap has reopened
+  by 0.4 m.
 - **When they leave.** A walker is removed only once `walkerHasLeft` says it is past the
   edge by 0.9 m plus 0.25 m, or when the tier drops to low (reduced motion). New passes
   start only while he is walking with no action or conversation, and only after the
   conversation partner's model has loaded. Someone already crossing walks on through his
   stops, a crowd wave, waiting and 22:00.
 - **Kept on purpose.** A pass's start is shared, but its path is integrated per viewer
-  from that viewer's frames and his bounded extrapolated distance. Viewers watching
-  together see the same person within a fraction of a
-  metre. A viewer who reloads mid-pass does not see that person. A walker of the partner's
+  from that viewer's own frames. Viewers watching together see the same person within a
+  fraction of a metre. A viewer who reloads mid-pass does not see that person. A walker of the partner's
   model who is already crossing when an encounter begins finishes crossing beside the
   partner.
 
 Walkers are the two residents, never two of the same model. `walkerResidentType` picks
 a block's first walker by the shared active-seconds block, so every viewer sees the same
 person, and makes a second walker the other resident; the stage never creates more
-walkers than there are residents, or two in one lane. Each is a `SkeletonUtils.clone` of
+walkers than there are residents. Each is a `SkeletonUtils.clone` of
 an untouched copy of that resident's model, which the stage keeps for the purpose:
 cloning the conversation partner's converted scene, as walkers once did, copied its
 outline meshes and then outlined them again. `CharacterActor` mutates the scene it is
@@ -1926,8 +1936,8 @@ the other resident's or arriving late mid-street. Walkers face the way they walk
 When a crowd wave fires, `wavingWalker`, keyed on the wave's start second, picks one
 person who stops and waves for the whole wave. The old window removed every walker the
 moment the wave began, so until now nobody ever waved back. Probes on the character
-stage: `data-walkers`, `data-walker-residents`, `data-walker-lanes`, `data-walker-foot-x`
-and `data-walker-waving`; on the world: `data-walker-shadows`.
+stage: `data-walkers`, `data-walker-residents`, `data-walker-foot-x` and
+`data-walker-waving`; on the world: `data-walker-shadows`.
 
 **Not shipped: awning flutter.** `props = coherentPanorama ? [] : …` disables foreground
 cutouts for every live pack; they were removed in Phase 3 because they rendered as a

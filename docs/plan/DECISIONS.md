@@ -86,6 +86,7 @@ These supersede the rows above where they conflict.
 |---|---|---|
 | Reactions | Count distinct live watchers, not clicks, over a rolling 30 seconds. Nothing counts while he rests for two watched minutes after a crowd action. Only the request that completes a crowd takes the authority lock. Each visitor and each network has a per-minute limit. A lost answer is checked against the server before the page says it failed. | Migration 0038, `ReactionButtons`, `TECHNICAL.md` §9 |
 | Walking pace | He walks at 1.5 m/s instead of 1.25 m/s, so the approved walk take (planted foot about 1.48 m/s) no longer slides over the pavement. The 8 km goal takes about 89 watched walking minutes instead of 107. Distance already accrued is kept. | Migration 0039, `src/lib/traveler/pace.ts` |
+| Passers-by | A slow stroll in one lane just behind him, never carried by the moving pavement: the woman at 1.0 m/s, the man at 1.15 m/s, about ten seconds to cross a laptop screen. Their feet follow each resident's measured walk take. The lane in front of him is removed. Two people in the lane keep a gap. | `src/lib/world/walkers.ts`, `TECHNICAL.md` §P17 |
 
 ## Historical post-P22 launch decisions — 11 September 2026
 

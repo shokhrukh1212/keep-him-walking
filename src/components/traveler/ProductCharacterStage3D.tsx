@@ -14,13 +14,13 @@ import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { packResidentType, walkerResidentType } from "@/lib/characters/residents";
 import { actorLayout } from "@/lib/traveler/actor-layout";
 import { frameFitsViewport, type StageFrame } from "@/lib/world/stage-layout";
-import { METRES_PER_SECOND, travelerMotionAt } from "@/lib/traveler/motion-clock";
+import { travelerMotionAt } from "@/lib/traveler/motion-clock";
 import { wavingWalker } from "@/lib/world/ambient";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import {
-  advanceWalker, enterWalker, walkerHasLeft, walkerPassesBetween, walkerPlacement,
-  walkerScreenX, walkerSpeedMetresPerSecond,
-  type StreetWalker, type WalkerLane, type WalkerPlacement,
+  advanceWalker, enterWalker, walkerCanFollow, walkerHasLeft, walkerMustWait, walkerPassesBetween,
+  walkerPlacement, walkerSpeedMetresPerSecond, walkerTakeMetresPerSecond,
+  type StreetWalker, type WalkerPlacement,
 } from "@/lib/world/walkers";
 import { PresentationClock } from "@/lib/traveler/presentation-clock";
 import type { CharacterContact } from "@/lib/world/visual-grade";
@@ -161,7 +161,7 @@ export function ProductCharacterStage3D(props: Props) {
     // removed only after walking out of view (src/lib/world/walkers.ts).
     type Walker = {
       actor: CharacterActor; anchor: THREE.Group; type: ResidentType; heightMetres: number;
-      lane: WalkerLane; placement: WalkerPlacement; street: StreetWalker;
+      placement: WalkerPlacement; street: StreetWalker;
     };
     let walkers: Walker[] = [];
     // The walking second the walkers last moved at; passes start in the interval since.
@@ -389,12 +389,6 @@ export function ProductCharacterStage3D(props: Props) {
       // The tier is read here, not at mount: this effect has an empty dependency list.
       const walkerLimit = QUALITY_LIMITS[state.qualityTier].walkers;
       const travelerHeight = CHARACTER_MANIFEST.traveler.heightMetres;
-      // How fast the pavement moves under everyone: one natural pace while he walks,
-      // nothing while an action or waiting holds his distance. Passers keep their own
-      // fixed direction and natural speed throughout the crossing.
-      const groundSpeed = sample.traveling && !motion.action
-        ? METRES_PER_SECOND
-        : 0;
       const stopSoon = rows.some((row) => {
         const window = activityWindow(row);
         return window !== null && window[1] > sample.rawSeconds
@@ -419,62 +413,70 @@ export function ProductCharacterStage3D(props: Props) {
         walkers = [];
       }
       for (const pass of passes) {
-        // Never two in one lane, who would walk through each other, and never more
-        // walkers than residents, because two are never the same model.
-        if (walkers.length >= Math.min(walkerLimit, RESIDENT_TYPES.length)
-          || walkers.some((walker) => walker.lane === pass.lane)) continue;
+        // Never more walkers than residents, because two are never the same model.
+        if (walkers.length >= Math.min(walkerLimit, RESIDENT_TYPES.length)) continue;
         const type = walkerResidentType(walkers.map((walker) => walker.type), state.pack.assetVersion, pass.startSecond);
         // A model still downloading misses this pass rather than appearing late, mid-street.
         const model = residentModel(type);
         if (typeof model !== "object") continue;
         const heightMetres = CHARACTER_MANIFEST.residents[type].heightMetres;
-        const placement = walkerPlacement(pass.lane, heightMetres, travelerHeight);
-        const street = enterWalker(
-          { ...pass, speedMetresPerSecond: walkerSpeedMetresPerSecond(type) },
-          placement,
-          sample.distanceMetres,
-          groundSpeed,
-          horizontal,
+        const placement = walkerPlacement(heightMetres, travelerHeight);
+        const speed = walkerSpeedMetresPerSecond(type);
+        // Everyone strolls in the one lane behind him, so someone sets off only if they
+        // can never catch up with the person furthest back before that person has left.
+        const rearmost = walkers.reduce<Walker | undefined>(
+          (back, walker) => (back === undefined || walker.street.x > back.street.x ? walker : back),
+          undefined,
         );
+        if (!walkerCanFollow(rearmost?.street, speed, placement, horizontal)) continue;
+        const street = enterWalker(speed, walkerTakeMetresPerSecond(type), horizontal);
         if (!street) continue;
         const actor = residentActor(type, model);
         const anchor = new THREE.Group();
         anchor.add(actor.root);
         anchor.scale.setScalar(placement.scale);
         walkerRoot.add(anchor);
-        walkers.push({ actor, anchor, type, heightMetres, lane: pass.lane, placement, street });
+        walkers.push({ actor, anchor, type, heightMetres, placement, street });
       }
 
       // One of them stops and waves back for as long as a crowd wave lasts, chosen from
       // the wave's start second so every viewer sees the same person answer.
       const crowdWave = motion.action?.source === "crowd" && motion.action.kind === "wave" ? motion.action : undefined;
       const waver = crowdWave
-        ? wavingWalker(Math.round(sample.rawSeconds - crowdWave.elapsedSeconds), state.pack.assetVersion, walkers.length)
-        : -1;
+        ? walkers[wavingWalker(Math.round(sample.rawSeconds - crowdWave.elapsedSeconds), state.pack.assetVersion, walkers.length)]
+        : undefined;
       let wavingBack = false;
       const walkerContacts: CharacterContact[] = [];
-      const passing: Walker[] = [];
-      walkers.forEach((walker, index) => {
-        const waving = index === waver;
-        walker.street = advanceWalker(
-          walker.street, dt, walker.placement, walker.heightMetres, travelerHeight, groundSpeed, waving,
-        );
-        if (walkerHasLeft(walker.street, sample.distanceMetres, horizontal)) {
+      const passing = new Set<Walker>();
+      // Front to back, so each person measures the gap to the one ahead after that one moved.
+      let ahead: StreetWalker | undefined;
+      for (const walker of [...walkers].sort((left, right) => left.street.x - right.street.x)) {
+        const waving = walker === waver;
+        // Someone who comes up behind a person waving back waits instead of walking through them.
+        const waiting = !waving && walkerMustWait(walker.street, ahead);
+        walker.street = {
+          ...advanceWalker(walker.street, dt, walker.placement, waving || waiting),
+          waiting,
+        };
+        if (walkerHasLeft(walker.street, horizontal)) {
           removeWalker(walker);
-          return;
+          continue;
         }
-        passing.push(walker);
+        ahead = walker.street;
+        passing.add(walker);
         wavingBack ||= waving;
-        const x = walkerScreenX(walker.street, sample.distanceMetres);
+        const x = walker.street.x;
         walker.anchor.position.set(x, walker.placement.footY, walker.placement.z);
         // Every passer-by approaches from the right and faces the way they move.
         walker.anchor.rotation.y = -0.68;
         walker.actor.sample(
           waving
             ? { clip: "greet", seconds: crowdWave?.elapsedSeconds ?? 0 }
-            // The gait is advanced by their own steps, so it wraps inside the clip and
-            // the feet keep pace with the pavement rather than sliding over it.
-            : { clip: "walk", seconds: walker.street.gaitSeconds },
+            : waiting
+              ? { clip: "idle", seconds: 0 }
+              // The gait is advanced by their own steps, so it wraps inside the clip and
+              // the feet stay planted on the painted street rather than sliding over it.
+              : { clip: "walk", seconds: walker.street.gaitSeconds },
           dt,
           false,
           1.8,
@@ -485,11 +487,11 @@ export function ProductCharacterStage3D(props: Props) {
           footY: frame.layout.groundY - walker.placement.footY * frame.layout.pxPerMetre,
           scale: frame.layout.pxPerMetre * walker.placement.scale * walker.heightMetres / 1.78,
         });
-      });
-      walkers = passing;
+      }
+      // Arrival order is kept, because the person who waves back is chosen by it.
+      walkers = walkers.filter((walker) => passing.has(walker));
       element.dataset.walkers = String(walkers.length);
       element.dataset.walkerResidents = walkers.map((walker) => walker.type).join(" ");
-      element.dataset.walkerLanes = walkers.map((walker) => walker.lane).join(" ");
       element.dataset.walkerFootX = walkerContacts.map((contact) => contact.footX.toFixed(1)).join(" ");
       element.dataset.walkerWaving = String(wavingBack);
 

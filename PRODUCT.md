@@ -233,10 +233,10 @@ button close it.
 - **Season sheet** — `/season/1` is the whole passport as one shareable poster: the stamp
   sheet, the confirmed totals, the route map and a share card.
 - **A city that lives** — subtle birds, café steam and an optional tram share the
-  authoritative clock. Every couple of minutes one or two rigged residents walk past on
-  his pavement, a little smaller than him, just behind him or just in front. Every passer
-  enters from the right and leaves on the left. The man matches the traveler's natural
-  pace; the woman is only about five percent slower. The unconvincing procedural cat was
+  authoritative clock. Every couple of minutes one or two rigged residents stroll past
+  just behind him, a little smaller than him. Every passer enters from the right and
+  leaves on the left at a slow stroll, clearly slower than his walk: the woman at 1.0 m/s
+  and the man at 1.15 m/s, about ten seconds to cross a laptop screen. The unconvincing procedural cat was
   removed. When a hundred people are watching at once, bunting goes up for the rest of
   the day.
 - **Tomorrow** — only a committed next `country_days` row may name the next city, start

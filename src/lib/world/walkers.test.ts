@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CHARACTER_MANIFEST, RESIDENT_TYPES } from "@/lib/characters/manifest";
-import { GAIT_CYCLE_SECONDS, METRES_PER_SECOND } from "@/lib/traveler/motion-clock";
+import { CHARACTER_MANIFEST, RESIDENT_TYPES, type ResidentType } from "@/lib/characters/manifest";
+import { GAIT_CYCLE_SECONDS, METRES_PER_SECOND } from "@/lib/traveler/pace";
 import {
-  WALKER_EDGE_MARGIN_METRES, WALKER_LANES, WALKER_MAX_CATCH_UP_SECONDS, WALKER_WOMAN_SPEED_RATIO,
-  advanceWalker, enterWalker, walkerHasLeft, walkerPassesBetween, walkerPlacement, walkerScreenSpeed, walkerScreenX,
-  walkerSpeedMetresPerSecond,
-  type StreetWalker, type WalkerLane, type WalkerPass, type WalkerPlacement,
+  WALKER_EDGE_MARGIN_METRES, WALKER_LANE, WALKER_MAX_CATCH_UP_SECONDS, WALKER_MIN_GAP_METRES, WALKER_SPEEDS,
+  advanceWalker, enterWalker, walkerCanFollow, walkerHasLeft, walkerMustWait, walkerPassesBetween,
+  walkerPlacement, walkerScreenSpeed, walkerSpeedMetresPerSecond, walkerTakeMetresPerSecond,
+  type StreetWalker, type WalkerPass, type WalkerPlacement,
 } from "./walkers";
 
 const SEED = "london-v1";
@@ -14,6 +14,7 @@ const TRAVELER_HEIGHT = CHARACTER_MANIFEST.traveler.heightMetres;
 const DESKTOP_WIDTH_METRES = (1.78 * 900 / 270) * (1440 / 900);
 /** Half a body with a swinging arm: a centre nearer the middle than this is at least partly in view. */
 const BODY_HALF_WIDTH_METRES = 0.6;
+const ENTRY = DESKTOP_WIDTH_METRES / 2 + WALKER_EDGE_MARGIN_METRES;
 
 function passesOver(seconds: number, tierLimit: number, localHour = 13, seed = SEED, step = 1) {
   const passes: WalkerPass[] = [];
@@ -23,8 +24,15 @@ function passesOver(seconds: number, tierLimit: number, localHour = 13, seed = S
   return passes;
 }
 
-function residentHeight(index: number) {
-  return CHARACTER_MANIFEST.residents[RESIDENT_TYPES[index % RESIDENT_TYPES.length]!].heightMetres;
+function placementOf(type: ResidentType) {
+  return walkerPlacement(CHARACTER_MANIFEST.residents[type].heightMetres, TRAVELER_HEIGHT);
+}
+
+function stroller(type: ResidentType, x: number): StreetWalker {
+  return {
+    ...enterWalker(walkerSpeedMetresPerSecond(type), walkerTakeMetresPerSecond(type), DESKTOP_WIDTH_METRES)!,
+    x,
+  };
 }
 
 describe("walkerPassesBetween", () => {
@@ -54,31 +62,16 @@ describe("walkerPassesBetween", () => {
     }
   });
 
-  it("sends a second person only where the tier allows two, a little later and in the other lane", () => {
+  it("sends a second person only where the tier allows two, a few seconds later", () => {
     expect(passesOver(3600, 1).every((pass) => pass.slot === 0)).toBe(true);
     const passes = passesOver(3600, 2);
     const followers = passes.filter((pass) => pass.slot === 1);
     expect(followers.length).toBeGreaterThan(0);
     for (const follower of followers) {
       const lead = passes.find((pass) => pass.id === follower.id.replace(/:1$/, ":0"))!;
-      expect(follower.lane).not.toBe(lead.lane);
       expect(follower.startSecond - lead.startSecond).toBeGreaterThanOrEqual(5);
       expect(follower.startSecond - lead.startSecond).toBeLessThanOrEqual(10);
     }
-  });
-
-  it("sends every passer from right to left at the neutral natural pace", () => {
-    const passes = passesOver(7200, 2);
-    for (const pass of passes) {
-      expect(pass.direction).toBe(-1);
-      expect(pass.speedMetresPerSecond).toBe(METRES_PER_SECOND);
-    }
-  });
-
-  it("gives the man the traveler's pace and the woman a subtly slower pace", () => {
-    expect(walkerSpeedMetresPerSecond("resident-b")).toBe(METRES_PER_SECOND);
-    expect(walkerSpeedMetresPerSecond("resident-a")).toBe(METRES_PER_SECOND * WALKER_WOMAN_SPEED_RATIO);
-    expect(WALKER_WOMAN_SPEED_RATIO).toBeCloseTo(0.95);
   });
 
   it("is the same for every viewer, whatever their frame rate", () => {
@@ -93,180 +86,193 @@ describe("walkerPassesBetween", () => {
   });
 });
 
-describe("walkerPlacement", () => {
-  it("draws both residents a little smaller than him, in either lane", () => {
+describe("a slow stroll behind him", () => {
+  it("walks the woman at 1.0 m/s and the man at 1.15 m/s, both slower than him", () => {
+    expect(walkerSpeedMetresPerSecond("resident-a")).toBe(1);
+    expect(walkerSpeedMetresPerSecond("resident-b")).toBe(1.15);
     for (const type of RESIDENT_TYPES) {
-      for (const lane of Object.keys(WALKER_LANES) as WalkerLane[]) {
-        const height = CHARACTER_MANIFEST.residents[type].heightMetres;
-        const ratio = walkerPlacement(lane, height, TRAVELER_HEIGHT).scale * height / TRAVELER_HEIGHT;
-        expect(ratio, `${type} ${lane}`).toBeGreaterThanOrEqual(0.8);
-        expect(ratio, `${type} ${lane}`).toBeLessThanOrEqual(0.95);
-      }
+      expect(WALKER_SPEEDS[type], type).toBeLessThan(METRES_PER_SECOND);
+      expect(walkerScreenSpeed(stroller(type, 0), placementOf(type)), type).toBeLessThan(METRES_PER_SECOND);
     }
   });
 
-  it("keeps both lanes on his pavement, one behind him and one in front", () => {
-    const behind = walkerPlacement("behind", 1.68, TRAVELER_HEIGHT);
-    const front = walkerPlacement("front", 1.68, TRAVELER_HEIGHT);
-    expect(behind.footY).toBeGreaterThan(0);
-    expect(behind.z).toBeLessThan(0);
-    expect(front.footY).toBeLessThan(0);
-    expect(front.z).toBeGreaterThan(0);
-    // Feet within a fifth of a metre of his: on the pavement, never up on a wall or railing.
-    expect(Math.abs(behind.footY)).toBeLessThanOrEqual(0.2);
-    expect(Math.abs(front.footY)).toBeLessThanOrEqual(0.2);
+  it("draws both residents a little smaller than him, on the street just behind him", () => {
+    for (const type of RESIDENT_TYPES) {
+      const placement = placementOf(type);
+      const ratio = placement.scale * CHARACTER_MANIFEST.residents[type].heightMetres / TRAVELER_HEIGHT;
+      expect(ratio, type).toBeGreaterThanOrEqual(0.8);
+      expect(ratio, type).toBeLessThanOrEqual(0.9);
+      // Feet 0.16 m further up the street: above the moving pavement, never up on a wall.
+      expect(placement.footY, type).toBeCloseTo(0.16);
+      expect(placement.z, type).toBe(WALKER_LANE.z);
+      expect(placement.z, type).toBeLessThan(0);
+    }
+  });
+
+  it("takes nine to fifteen seconds to cross a laptop screen, longer than the pavement does", () => {
+    for (const type of RESIDENT_TYPES) {
+      const seconds = DESKTOP_WIDTH_METRES / walkerScreenSpeed(stroller(type, 0), placementOf(type));
+      expect(seconds, type).toBeGreaterThanOrEqual(9);
+      expect(seconds, type).toBeLessThanOrEqual(15);
+      expect(seconds, type).toBeGreaterThan(DESKTOP_WIDTH_METRES / METRES_PER_SECOND);
+    }
+  });
+
+  it("walks in from the right and moves only by its own steps", () => {
+    const walker = enterWalker(1, 1.2, DESKTOP_WIDTH_METRES)!;
+    expect(walker.x).toBeCloseTo(ENTRY);
+    expect(walker.waiting).toBe(false);
+    expect(walkerHasLeft(walker, DESKTOP_WIDTH_METRES)).toBe(false);
+    const placement = placementOf("resident-a");
+    const moved = advanceWalker(walker, 0.5, placement);
+    expect(moved.x).toBeCloseTo(walker.x - 0.5 * placement.scale);
+    expect(enterWalker(Number.NaN, 1.2, DESKTOP_WIDTH_METRES)).toBeNull();
+    expect(enterWalker(1, 0, DESKTOP_WIDTH_METRES)).toBeNull();
+    expect(enterWalker(0, 1.2, DESKTOP_WIDTH_METRES)).toBeNull();
+  });
+
+  it("steps exactly as far as it moves, so its feet stay planted", () => {
+    for (const type of RESIDENT_TYPES) {
+      const placement = placementOf(type);
+      const walker = stroller(type, 3);
+      const moved = advanceWalker(walker, 0.25, placement);
+      const clipSeconds = moved.gaitSeconds - walker.gaitSeconds;
+      const footTravel = clipSeconds * walkerTakeMetresPerSecond(type) * placement.scale;
+      expect(footTravel, type).toBeCloseTo(walker.x - moved.x, 6);
+    }
+  });
+
+  it("uses each resident's measured walk take", () => {
+    for (const type of RESIDENT_TYPES) {
+      expect(walkerTakeMetresPerSecond(type), type).toBe(CHARACTER_MANIFEST.residents[type].walkMetresPerSecond);
+    }
+  });
+
+  it("wraps its gait inside the walk cycle and stands still while standing", () => {
+    const placement = placementOf("resident-b");
+    let walker = stroller("resident-b", 4);
+    expect(advanceWalker(walker, 0.5, placement, true)).toBe(walker);
+    for (let frame = 0; frame < 600; frame += 1) walker = advanceWalker(walker, 1 / 60, placement);
+    expect(walker.gaitSeconds).toBeGreaterThanOrEqual(0);
+    expect(walker.gaitSeconds).toBeLessThan(GAIT_CYCLE_SECONDS);
+  });
+
+  it("is removed only once it is beyond an edge", () => {
+    expect(walkerHasLeft(stroller("resident-a", 0), DESKTOP_WIDTH_METRES)).toBe(false);
+    expect(walkerHasLeft(stroller("resident-a", -ENTRY), DESKTOP_WIDTH_METRES)).toBe(false);
+    expect(walkerHasLeft(stroller("resident-a", -ENTRY - 0.3), DESKTOP_WIDTH_METRES)).toBe(true);
+    expect(walkerHasLeft(stroller("resident-a", ENTRY + 0.3), DESKTOP_WIDTH_METRES)).toBe(true);
+    expect(walkerHasLeft(stroller("resident-a", Number.NaN), DESKTOP_WIDTH_METRES)).toBe(true);
   });
 });
 
-describe("a walker on the street", () => {
-  const pass = (direction: 1 | -1, speed: number, lane: WalkerLane = "behind"): WalkerPass => ({
-    id: "0:0", startSecond: 10, slot: 0, lane, direction, speedMetresPerSecond: speed,
-  });
-  const placement = walkerPlacement("behind", 1.68, TRAVELER_HEIGHT);
-  const edge = DESKTOP_WIDTH_METRES / 2 + WALKER_EDGE_MARGIN_METRES;
-  const advance = (walker: StreetWalker, dt: number, groundSpeed: number, standing = false) =>
-    advanceWalker(walker, dt, placement, 1.68, TRAVELER_HEIGHT, groundSpeed, standing);
+describe("two people in one lane", () => {
+  const placement = placementOf("resident-a");
 
-  it("always walks in from the right facing left", () => {
-    const towards = enterWalker(pass(-1, 1.3), placement, 500, METRES_PER_SECOND, DESKTOP_WIDTH_METRES)!;
-    expect(towards.direction).toBe(-1);
-    expect(walkerScreenX(towards, 500)).toBeCloseTo(edge);
-    const staleOppositePass = enterWalker(pass(1, 1.9), placement, 500, METRES_PER_SECOND, DESKTOP_WIDTH_METRES)!;
-    expect(staleOppositePass.direction).toBe(-1);
-    expect(walkerScreenX(staleOppositePass, 500)).toBeCloseTo(edge);
-    for (const walker of [towards, staleOppositePass]) {
-      expect(walkerHasLeft(walker, 500, DESKTOP_WIDTH_METRES)).toBe(false);
-    }
+  it("lets someone set off only when they can never catch up", () => {
+    expect(walkerCanFollow(undefined, 1.15, placement, DESKTOP_WIDTH_METRES)).toBe(true);
+    // The person ahead has only just set off.
+    expect(walkerCanFollow(stroller("resident-a", ENTRY - 0.5), 1, placement, DESKTOP_WIDTH_METRES)).toBe(false);
+    // A slower follower only opens the gap.
+    expect(walkerCanFollow(stroller("resident-b", ENTRY - 1.3), 1, placement, DESKTOP_WIDTH_METRES)).toBe(true);
+    // The faster man behind the woman: fine with a head start, refused without one.
+    expect(walkerCanFollow(stroller("resident-a", ENTRY - 3.5), 1.15, placement, DESKTOP_WIDTH_METRES)).toBe(true);
+    expect(walkerCanFollow(stroller("resident-a", ENTRY - 1.3), 1.15, placement, DESKTOP_WIDTH_METRES)).toBe(false);
   });
 
-  it("cannot be redirected by a stale crowd-speed payload", () => {
-    for (let groundSpeed = 0; groundSpeed <= 7; groundSpeed += 0.05) {
-      for (const candidate of [pass(-1, 1.2), pass(-1, 1.36), pass(1, 1.8), pass(1, 1.96)]) {
-        const walker = enterWalker(candidate, placement, 0, groundSpeed, DESKTOP_WIDTH_METRES)!;
-        const across = walkerScreenSpeed(walker.direction, walker.speedMetresPerSecond, placement, groundSpeed);
-        expect(walker.direction).toBe(-1);
-        expect(across).toBeLessThan(0);
-        expect(Math.sign(walkerScreenX(walker, 0))).toBe(1);
-      }
-    }
-    expect(enterWalker(pass(1, 1.9), placement, 0, Number.NaN, DESKTOP_WIDTH_METRES)).toBeNull();
-  });
-
-  it("steps in time with the ground it covers, and stands still when standing", () => {
-    const walker: StreetWalker = { streetMetres: 0, direction: -1, speedMetresPerSecond: 1.3, gaitSeconds: 0 };
-    const moved = advance(walker, 0.5, METRES_PER_SECOND);
-    expect(moved.streetMetres).toBeCloseTo(-1.3 * 0.5 * placement.scale);
-    expect(moved.gaitSeconds).toBeCloseTo((1.3 * 0.5) / (METRES_PER_SECOND * 1.68 / TRAVELER_HEIGHT));
-    expect(advance(walker, 0.5, METRES_PER_SECOND, true)).toBe(walker);
-    let cycling = walker;
-    for (let frame = 0; frame < 600; frame += 1) cycling = advance(cycling, 1 / 60, METRES_PER_SECOND);
-    expect(cycling.gaitSeconds).toBeGreaterThanOrEqual(0);
-    expect(cycling.gaitSeconds).toBeLessThan(GAIT_CYCLE_SECONDS);
-  });
-
-  it("keeps its direction and pace for the whole crossing", () => {
-    const walker: StreetWalker = { streetMetres: 0, direction: -1, speedMetresPerSecond: 1.2, gaitSeconds: 0 };
-    for (let groundSpeed = 0; groundSpeed <= 7; groundSpeed += 0.25) {
-      const moved = advance(walker, 0.1, groundSpeed);
-      expect(moved.direction).toBe(-1);
-      expect(moved.streetMetres).toBeCloseTo(-1.2 * 0.1 * placement.scale);
-    }
-  });
-
-  it("is removed only once it is beyond the edge", () => {
-    const at = (x: number): StreetWalker => ({ streetMetres: 100 + x, direction: 1, speedMetresPerSecond: 1, gaitSeconds: 0 });
-    expect(walkerHasLeft(at(0), 100, DESKTOP_WIDTH_METRES)).toBe(false);
-    expect(walkerHasLeft(at(-edge), 100, DESKTOP_WIDTH_METRES)).toBe(false);
-    expect(walkerHasLeft(at(edge + 0.3), 100, DESKTOP_WIDTH_METRES)).toBe(true);
-    expect(walkerHasLeft(at(-edge - 0.3), 100, DESKTOP_WIDTH_METRES)).toBe(true);
-    expect(walkerHasLeft(at(0), Number.NaN, DESKTOP_WIDTH_METRES)).toBe(true);
+  it("waits behind someone who stopped, and sets off again once the gap has reopened", () => {
+    const ahead = stroller("resident-a", 0);
+    expect(walkerMustWait(stroller("resident-b", WALKER_MIN_GAP_METRES + 0.1), ahead)).toBe(false);
+    expect(walkerMustWait(stroller("resident-b", WALKER_MIN_GAP_METRES - 0.05), ahead)).toBe(true);
+    const stopped = { ...stroller("resident-b", WALKER_MIN_GAP_METRES + 0.1), waiting: true };
+    expect(walkerMustWait(stopped, ahead)).toBe(true);
+    expect(walkerMustWait({ ...stopped, x: WALKER_MIN_GAP_METRES + 0.5 }, ahead)).toBe(false);
+    expect(walkerMustWait(stopped, undefined)).toBe(false);
   });
 });
 
 describe("people passing him over a long watch", () => {
-  type Simulated = {
-    street: StreetWalker; placement: WalkerPlacement; lane: WalkerLane; height: number; inView: number; previousX: number;
-  };
+  type Simulated = { street: StreetWalker; placement: WalkerPlacement; type: ResidentType; inView: number; previousX: number };
 
   /**
-   * Plays the stage's own rules at 60 frames a second for 40 minutes: his pace minute
-   * by minute from `paces`, his regular stops for an action (distance held, nobody new
-   * sets off) and two minutes of waiting for the internet (the watched clock stands still).
+   * Plays the stage's own rules at 60 frames a second for 40 minutes: his regular stops
+   * (nobody new sets off), two minutes of waiting for the internet (the watched clock
+   * stands still), and a crowd wave every nine minutes that stops the person in front.
    */
-  function watch(paces: readonly number[]) {
+  function watch() {
     const frame = 1 / 60;
     const events = {
-      entries: [] as number[], exits: [] as number[], sides: new Set<string>(), longestInView: 0, backwards: 0, turns: 0,
+      entries: [] as number[], exits: [] as number[], inView: [] as number[], backwards: 0, closest: Number.POSITIVE_INFINITY,
     };
     let raw = 0;
-    let distance = 0;
     let walkers: Simulated[] = [];
     for (let wall = 0; wall < 2400; wall += frame) {
       const waiting = wall >= 1500 && wall < 1620;
       const acting = !waiting && wall % 97 < 5;
+      const waving = wall % 540 < 6;
       const previousRaw = raw;
-      const previousDistance = distance;
       if (!waiting) raw += frame;
-      if (!waiting && !acting) distance += METRES_PER_SECOND * paces[Math.floor(wall / 60) % paces.length]! * frame;
-      const groundSpeed = (distance - previousDistance) / frame;
       const passes = waiting || acting ? [] : walkerPassesBetween(previousRaw, raw, 13, SEED, 2);
       for (const pass of passes) {
-        if (walkers.length >= 2 || walkers.some((walker) => walker.lane === pass.lane)) continue;
-        const height = residentHeight(pass.slot);
-        const placement = walkerPlacement(pass.lane, height, TRAVELER_HEIGHT);
-        const street = enterWalker(pass, placement, distance, groundSpeed, DESKTOP_WIDTH_METRES);
-        if (!street) continue;
-        const x = walkerScreenX(street, distance);
-        events.entries.push(x);
-        events.sides.add(x > 0 ? "right" : "left");
-        walkers.push({ street, placement, lane: pass.lane, height, inView: 0, previousX: x });
-      }
-      walkers = walkers.filter((walker) => {
-        const facing = walker.street.direction;
-        walker.street = advanceWalker(
-          walker.street, frame, walker.placement, walker.height, TRAVELER_HEIGHT, groundSpeed,
+        if (walkers.length >= RESIDENT_TYPES.length) continue;
+        const present = walkers[0]?.type;
+        const type = present === undefined ? RESIDENT_TYPES[pass.slot]! : present === "resident-a" ? "resident-b" : "resident-a";
+        const placement = placementOf(type);
+        const rearmost = walkers.reduce<Simulated | undefined>(
+          (back, walker) => (back === undefined || walker.street.x > back.street.x ? walker : back),
+          undefined,
         );
-        if (walker.street.direction !== facing) events.turns += 1;
-        const x = walkerScreenX(walker.street, distance);
-        // Moving across the screen against the way they face is the bug this guards.
-        if ((x - walker.previousX) * walker.street.direction < 0) events.backwards += 1;
-        walker.previousX = x;
-        if (Math.abs(x) < DESKTOP_WIDTH_METRES / 2 + BODY_HALF_WIDTH_METRES) walker.inView += frame;
-        if (!walkerHasLeft(walker.street, distance, DESKTOP_WIDTH_METRES)) return true;
-        events.exits.push(x);
-        events.longestInView = Math.max(events.longestInView, walker.inView);
-        return false;
-      });
+        if (!walkerCanFollow(rearmost?.street, walkerSpeedMetresPerSecond(type), placement, DESKTOP_WIDTH_METRES)) continue;
+        const street = enterWalker(walkerSpeedMetresPerSecond(type), walkerTakeMetresPerSecond(type), DESKTOP_WIDTH_METRES)!;
+        events.entries.push(street.x);
+        walkers.push({ street, placement, type, inView: 0, previousX: street.x });
+      }
+      const remaining = new Set<Simulated>();
+      let ahead: StreetWalker | undefined;
+      const ordered = [...walkers].sort((left, right) => left.street.x - right.street.x);
+      for (const [index, walker] of ordered.entries()) {
+        const stands = waving && index === 0;
+        const waits = !stands && walkerMustWait(walker.street, ahead);
+        walker.street = { ...advanceWalker(walker.street, frame, walker.placement, stands || waits), waiting: waits };
+        if (walker.street.x > walker.previousX + 1e-9) events.backwards += 1;
+        walker.previousX = walker.street.x;
+        if (ahead) events.closest = Math.min(events.closest, walker.street.x - ahead.x);
+        if (Math.abs(walker.street.x) < DESKTOP_WIDTH_METRES / 2 + BODY_HALF_WIDTH_METRES) walker.inView += frame;
+        if (walkerHasLeft(walker.street, DESKTOP_WIDTH_METRES)) {
+          events.exits.push(walker.street.x);
+          events.inView.push(walker.inView);
+          continue;
+        }
+        ahead = walker.street;
+        remaining.add(walker);
+      }
+      walkers = walkers.filter((walker) => remaining.has(walker));
     }
     return events;
   }
 
+  const events = watch();
   const outOfView = DESKTOP_WIDTH_METRES / 2 + BODY_HALF_WIDTH_METRES;
-  const changingPace = watch([1, 1, 2, 1, 5, 1, 2.58, 1, 3, 1]);
-  const oneWatcher = watch([1]);
 
-  it("never lets anyone appear or disappear in view, through pace changes, stops and waiting", () => {
-    for (const events of [changingPace, oneWatcher]) {
-      expect(events.entries.length).toBeGreaterThanOrEqual(20);
-      for (const x of [...events.entries, ...events.exits]) expect(Math.abs(x)).toBeGreaterThan(outOfView);
-      expect(events.exits.length).toBeGreaterThanOrEqual(events.entries.length - 2);
-    }
+  it("never lets anyone appear or disappear in view, through stops, waiting and waves", () => {
+    expect(events.entries.length).toBeGreaterThanOrEqual(12);
+    for (const x of [...events.entries, ...events.exits]) expect(Math.abs(x)).toBeGreaterThan(outOfView);
+    expect(events.exits.length).toBeGreaterThanOrEqual(events.entries.length - 2);
   });
 
-  it("never shows anyone walking one way while moving the other", () => {
-    for (const events of [changingPace, oneWatcher]) expect(events.backwards).toBe(0);
-    expect(changingPace.turns).toBe(0);
-    expect(oneWatcher.turns).toBe(0);
+  it("never moves anyone backwards", () => {
+    expect(events.backwards).toBe(0);
   });
 
-  it("brings every person in from the right", () => {
-    expect([...oneWatcher.sides]).toEqual(["right"]);
+  it("never lets two people come closer than the gap", () => {
+    expect(events.closest).toBeGreaterThanOrEqual(WALKER_MIN_GAP_METRES - 0.05);
   });
 
-  it("keeps each person passing rather than lingering beside him", () => {
-    for (const events of [changingPace, oneWatcher]) {
-      expect(events.longestInView).toBeGreaterThan(1);
-      expect(events.longestInView).toBeLessThan(60);
+  it("keeps each person strolling past in well under a minute", () => {
+    expect(events.inView.length).toBeGreaterThan(0);
+    for (const seconds of events.inView) {
+      expect(seconds).toBeGreaterThan(9);
+      expect(seconds).toBeLessThan(40);
     }
   });
 });

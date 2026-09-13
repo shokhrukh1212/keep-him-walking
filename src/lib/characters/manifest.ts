@@ -6,6 +6,11 @@ export type CharacterDefinition = {
   fallbackUrl?: string;
   /** Optional skeleton-only GLB. Tracks bind to the mesh skeleton by bone name. */
   animationUrl?: string;
+  /**
+   * Metres the walk take carries its planted feet per second of natural playback, at
+   * `heightMetres`. Measured from the shipped files; walk-speed.test.ts checks it.
+   */
+  walkMetresPerSecond?: number;
 };
 
 /** The two base residents. A route pack names its own in `npcSystem.baseType`. */
@@ -30,6 +35,7 @@ export const CHARACTER_MANIFEST: {
     fallbackUrl: "/characters/v2/traveler.glb?rev=interactions-1",
     animationUrl: "/characters/v3/traveler-animations.glb",
     heightMetres: 1.78,
+    walkMetresPerSecond: 1.48,
   },
   // Both residents carry only their own Mixamo takes (2026-09-11). Their models hold no
   // clips, so a missing take plays its declared fallback rather than a V2 procedural one.
@@ -40,12 +46,14 @@ export const CHARACTER_MANIFEST: {
       fallbackUrl: "/characters/v2/almaty-host.glb?rev=interactions-1",
       animationUrl: "/characters/v3/resident-a-animations.glb",
       heightMetres: 1.68,
+      walkMetresPerSecond: 1.2,
     },
     // The man. A little shorter than the traveler, so he stays the tallest figure in frame.
     "resident-b": {
       url: "/characters/v3/resident-b.glb",
       animationUrl: "/characters/v3/resident-b-animations.glb",
       heightMetres: 1.75,
+      walkMetresPerSecond: 1.48,
     },
   },
   // D1 accepts the reviewed model as-is. Keep exact, separate budgets so a future
