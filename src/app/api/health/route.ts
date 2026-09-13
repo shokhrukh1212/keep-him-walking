@@ -46,7 +46,9 @@ export async function GET(request: NextRequest) {
   }
   const packs = registeredCountryPacks();
   const pack = getCountryPack(scenePackId) ?? getCountryPack("paris-v3");
-  const representativePath = pack ? packPrewarmPaths(pack)[0] : null;
+  const representativePath = pack
+    ? packPrewarmPaths(pack).find((path) => !path.startsWith("/postcards/")) ?? null
+    : null;
   let assetUrlValue: string | null = null;
   let assetBase: "ready" | "unavailable" = "unavailable";
   if (representativePath) {
