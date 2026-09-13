@@ -63,5 +63,15 @@
   "postcard": {
     "title": "Evening beside the Seine",
     "copy": "Ten Paris places later, the river opened and the tower caught the last light."
+  },
+  "culturalReview": {
+    "reviewerName": "Shokhrukh Karimov",
+    "reviewedAt": "2026-09-13T00:00:00.000Z",
+    "status": "creator_reviewed",
+    "qualification": "Owner visual and dialogue review for this Paris journey candidate",
+    "disposition": "Approved by the owner for the Paris v3 journey candidate",
+    "publicLaunchRequirement": "Qualified local review remains required before public launch.",
+    "citations": [],
+    "notes": "Owner approved the ten paintings and Day 1 conversations on 13 September 2026."
   }
 }

@@ -43,6 +43,19 @@ async function fixtureRoot(): Promise<string> {
 describe("pack authoring", () => {
   it("accepts only the documented input slots", () => {
     expect(packAuthoringSchema.parse(input).iso2).toBe("PT");
+    expect(packAuthoringSchema.parse({
+      ...input,
+      culturalReview: {
+        reviewerName: "Content owner",
+        reviewedAt: "2026-09-13T00:00:00.000Z",
+        status: "creator_reviewed",
+        qualification: "Owner visual and dialogue review",
+        disposition: "Approved for the candidate journey",
+        publicLaunchRequirement: "Qualified local review remains required before public launch.",
+        citations: [],
+        notes: "Owner acceptance recorded.",
+      },
+    }).culturalReview?.status).toBe("creator_reviewed");
     expect(() => packAuthoringSchema.parse({ ...input, visitorCaption: "surprise" })).toThrow(/Unrecognized key/);
     expect(() => packAuthoringSchema.parse({ ...input, postcard: { ...input.postcard, subtitle: "surprise" } })).toThrow(/Unrecognized key/);
   });

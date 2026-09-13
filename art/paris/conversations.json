@@ -6,7 +6,7 @@
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["lanes"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! Are you finding your way from the station?", "mood": "curious", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. Yes, I am discovering Paris on foot.", "mood": "amused", "durationMs": 4800 },
@@ -21,7 +21,7 @@
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["arrival", "station"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! You look ready for a long walk.", "mood": "curious", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. I am, once I choose the right street.", "mood": "amused", "durationMs": 4800 },
@@ -34,7 +34,7 @@
       "residentType": "resident-a",
       "speakerName": "Inès",
       "placeTags": ["canal"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! The canal suits your walking pace today.", "mood": "amused", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. It is difficult to hurry beside this water.", "mood": "thoughtful", "durationMs": 4800 },
@@ -47,7 +47,7 @@
       "residentType": "resident-a",
       "speakerName": "Inès",
       "placeTags": ["market"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! Have you seen the fruit stall around the corner?", "mood": "curious", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. Not yet, but I can smell something sweet.", "mood": "amused", "durationMs": 4800 },
@@ -60,7 +60,7 @@
       "residentType": "resident-a",
       "speakerName": "Inès",
       "placeTags": ["cafe"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! Are you stopping for coffee or only passing through?", "mood": "curious", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. Coffee, if I can enjoy it without rushing.", "mood": "amused", "durationMs": 4800 },
@@ -73,7 +73,7 @@
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["cafe", "eiffel-view"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! Did the café persuade you to stay?", "mood": "amused", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. Nearly, but I still want to reach the river.", "mood": "thoughtful", "durationMs": 4800 },
@@ -86,7 +86,7 @@
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["eiffel-view"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! The river has given you a little more sky.", "mood": "amused", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. I noticed that before I noticed the tower.", "mood": "thoughtful", "durationMs": 4800 },
@@ -99,7 +99,7 @@
       "residentType": "resident-a",
       "speakerName": "Inès",
       "placeTags": ["montmartre", "steps"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! Those steps are easier if you do not race them.", "mood": "amused", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. I was hoping they would reward patience.", "mood": "amused", "durationMs": 4800 },
@@ -112,7 +112,7 @@
       "residentType": "resident-a",
       "speakerName": "Inès",
       "placeTags": ["vosges"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! You found one of the calmest corners of the square.", "mood": "neutral", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. The arcades make the whole place feel sheltered.", "mood": "thoughtful", "durationMs": 4800 },
@@ -125,7 +125,7 @@
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["vosges"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! Have you tried the path beneath the trees?", "mood": "curious", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. Not yet; I was following the red-brick arcade.", "mood": "neutral", "durationMs": 4800 },
@@ -138,7 +138,7 @@
       "residentType": "resident-a",
       "speakerName": "Inès",
       "placeTags": ["garden"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! The green chairs are an invitation, you know.", "mood": "amused", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. My feet understood the invitation immediately.", "mood": "amused", "durationMs": 4800 },
@@ -151,7 +151,7 @@
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["bridge"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! The bridge is making you look in every direction.", "mood": "amused", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. There is too much detail for one glance.", "mood": "surprised", "durationMs": 4800 },
@@ -164,7 +164,7 @@
       "residentType": "resident-a",
       "speakerName": "Inès",
       "placeTags": ["bridge", "bookshop"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! Are you following the river or looking for the bookshops?", "mood": "curious", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. I was following the river, but books could change the route.", "mood": "amused", "durationMs": 5000 },
@@ -177,7 +177,7 @@
       "residentType": "resident-b",
       "speakerName": "Camille",
       "placeTags": ["bookshop"],
-      "review": "pending",
+      "review": "approved",
       "lines": [
         { "speaker": "npc", "text": "Bonjour! Did a bookshop window finally stop you?", "mood": "amused", "durationMs": 4800 },
         { "speaker": "traveler", "text": "Bonjour. Only for a moment, but it was a convincing window.", "mood": "amused", "durationMs": 4800 },

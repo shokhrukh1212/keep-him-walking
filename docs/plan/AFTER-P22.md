@@ -23,8 +23,8 @@ finish rather than what it got wrong.
 | D5 | The production scheduler may run launch jobs late | **Code resolved; external Vercel Pro configuration remains** | Owner (hosting) |
 | D6 | Some of his new movements do not fit the moment they are used for | **Resolved — current motion accepted** | Owner decision (12 Sep 2026) |
 | D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved, then superseded — every place lasts 7 walking minutes and the list repeats** | P25, then P28 (12 Sep 2026) |
-| D8 | R2 is uploaded and verified for the new `.com` app origin, but not activated | No — same-origin stays active until the separate app-domain deployment | Owner (Vercel domain and setting) |
-| D9 | Paris v3 has five new paintings and fourteen Day 1 conversations awaiting acceptance | No — Paris v2 stays pinned and pending words stay hidden | Owner (visual and dialogue acceptance) |
+| D8 | R2 is uploaded and verified for the new `.com` app origin, but not activated | No — `.com` domains are attached; same-origin stays active until the separate environment-variable deployment | Owner (Vercel setting and deployment) |
+| D9 | Paris v3 paintings and Day 1 conversations | **Resolved — owner approved and development Day 2 switched to v3** | Owner decision (13 Sep 2026) |
 
 ---
 
@@ -337,6 +337,9 @@ does.
 R2, including characters, NPCs, audio, Paris v2/v3 and preview scenes. The public asset
 domain is `assets.keephimwalking.com`: Paris v3 passed 95/95 checks, Paris v2 passed
 50/50, and direct traveler/audio checks returned HTTP 200 with correct CORS and MIME.
+The owner has attached `keephimwalking.com` and `www.keephimwalking.com` to the Vercel
+project; setting the asset origin and deploying are intentionally left to the separate
+domain/deployment work.
 
 **What it is.** R2 is ready for `https://keephimwalking.com`, but Cloudflare correctly
 rejects the old `https://keephimwalking.lol` origin. Activating `ASSET_BASE_URL` before
@@ -345,7 +348,7 @@ the separate app-domain deployment would therefore break current visitors.
 **What happens if nothing changes.** The current app keeps working from same-origin
 assets. The already-uploaded R2 copies remain unused until the `.com` app deployment.
 
-**What to do.** In Cloudflare, once:
+**What to do.** In the separate Vercel deployment work:
 
 1. In the separate `.com` deployment work, set this Vercel variable for Preview and
    Production:
@@ -361,13 +364,15 @@ This uses R2's free allowance for a small validation. Nothing is bought by the c
 
 ---
 
-## D9 — Paris v3 artwork and Day 1 conversations await owner acceptance
+## D9 — Paris v3 artwork and Day 1 conversations
 
-**Updated 13 September 2026.** The variable manifest work is complete and Paris v3 now
-contains ten distinct places. The current development day remains pinned to Paris v2.
+**Resolved 13 September 2026.** The owner approved all five new paintings and all
+fourteen Day 1 conversations. Every script is recorded as `approved`; the generated
+pack records the owner's creator review without claiming qualified local review.
+Development Day 2 (`cc1a3437-8d61-473a-9099-0ea354f7ed65`) was switched from
+Paris v2 to Paris v3 through the guarded `switch_country_day_pack` RPC.
 
-**What it is.** Two candidate content sets need the owner's acceptance before Paris v3
-can replace the pinned Paris v2 day.
+**What it is.** The accepted candidate contains ten places and fourteen conversations.
 
 - **Five paintings.** Montmartre, Place des Vosges, Luxembourg Garden, Pont Alexandre III
   and Saint-Germain were generated as distinct 3:1 candidates under `art/paris/zones/`.
@@ -375,19 +380,9 @@ can replace the pinned Paris v2 day.
   3600×1200 canvas and produced responsive immutable renditions without duplicates.
 - **Fourteen conversations.** A 70-minute loop is ten places × seven walking minutes.
   It contains thirteen ambient five-minute slots plus the once-daily canal story, so
-  `art/paris/conversations.json` now has exactly fourteen distinct scripts. All remain
-  `"review": "pending"` until the owner accepts the wording.
+  `art/paris/conversations.json` has exactly fourteen distinct approved scripts.
 
-**What happens if nothing changes.** An active Paris v2 day keeps its original five-place
-order. Five-minute slots use sequential wordless greetings because pending dialogue is
-never shown or added to Journey transcripts; Paris v3 is not switched into that day.
+**What happens if nothing changes.** Paris v3 remains the pinned content for the current
+development day; Paris v2 remains registered as a safe rollback.
 
-**What to do.**
-
-- **Paintings.** Open the five `master.png` files under the new `art/paris/zones/paris-*`
-  folders and accept them by id, or name the ids that need another generation.
-- **Conversations.** Read `art/paris/conversations.json` and reply “approve all Paris Day
-  1 conversations”, or list the script ids and replacement wording. After acceptance,
-  change their review state to `approved`, rebuild, upload and verify Paris v3, then run
-  `pnpm launch:switch-pack --day-id <id> --from paris-v2 --to paris-v3` before adding
-  `--apply`.
+**What to do.** No owner action remains for D9.

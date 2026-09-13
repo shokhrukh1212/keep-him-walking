@@ -306,7 +306,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "lanes"
       ],
       "role": "story",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -355,7 +355,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "station"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -391,7 +391,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "canal"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -427,7 +427,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "market"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -463,7 +463,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "cafe"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -500,7 +500,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "eiffel-view"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -536,7 +536,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "eiffel-view"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -573,7 +573,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "steps"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -609,7 +609,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "vosges"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -645,7 +645,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "vosges"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -681,7 +681,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "garden"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -717,7 +717,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "bridge"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -754,7 +754,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "bookshop"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -790,7 +790,7 @@ export const parisCountryPackV3 = createPhase2CountryPack({
         "bookshop"
       ],
       "role": "ambient",
-      "review": "pending",
+      "review": "approved",
       "lines": [
         {
           "speaker": "npc",
@@ -837,18 +837,18 @@ export const parisCountryPackV3 = createPhase2CountryPack({
   "postcardTitle": "Evening beside the Seine",
   "postcardCopy": "Ten Paris places later, the river opened and the tower caught the last light.",
   "sourceNotes": [
-    "Scene manifest v3 for Paris: 10 places; cultural-safety review is still required.",
+    "Scene manifest v3 for Paris: 10 places; owner/creator review is recorded.",
     "AI-assisted source paintings are preserved under art/paris; the build derives content-addressed renditions and makes no cultural claims."
   ],
   "culturalReview": {
-    "reviewerName": null,
-    "reviewedAt": null,
-    "status": "pending",
-    "qualification": null,
-    "disposition": null,
-    "publicLaunchRequirement": null,
+    "reviewerName": "Shokhrukh Karimov",
+    "reviewedAt": "2026-09-13T00:00:00.000Z",
+    "status": "creator_reviewed",
+    "qualification": "Owner visual and dialogue review for this Paris journey candidate",
+    "disposition": "Approved by the owner for the Paris v3 journey candidate",
+    "publicLaunchRequirement": "Qualified local review remains required before public launch.",
     "citations": [],
-    "notes": "Generated scene manifest awaiting the owner's documented cultural-safety review."
+    "notes": "Owner approved the ten paintings and Day 1 conversations on 13 September 2026."
   },
   "assetBudgetBytes": 5767168,
   "authoredAssets": {

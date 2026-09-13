@@ -3,6 +3,16 @@ import path from "node:path";
 import { z } from "zod";
 
 const moodSchema = z.enum(["neutral", "curious", "surprised", "amused", "thoughtful"]);
+const culturalReviewAuthoringSchema = z.object({
+  reviewerName: z.string().min(2),
+  reviewedAt: z.string().datetime(),
+  status: z.enum(["approved", "creator_reviewed"]),
+  qualification: z.string().min(2),
+  disposition: z.string().min(2),
+  publicLaunchRequirement: z.string().min(2).nullable().default(null),
+  citations: z.array(z.object({ title: z.string().min(2), url: z.string().url() }).strict()).default([]),
+  notes: z.string().min(2).max(1_000),
+}).strict();
 
 export const packAuthoringSchema = z.object({
   country: z.string().min(2).max(80),
@@ -34,6 +44,8 @@ export const packAuthoringSchema = z.object({
     title: z.string().min(1).max(80),
     copy: z.string().min(1).max(240),
   }).strict(),
+  /** Explicit owner/creator review for a generated pack. */
+  culturalReview: culturalReviewAuthoringSchema.optional(),
 }).strict();
 
 export type PackAuthoring = z.infer<typeof packAuthoringSchema>;

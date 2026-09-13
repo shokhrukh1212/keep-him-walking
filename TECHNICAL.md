@@ -1317,15 +1317,16 @@ ten.
   paintings, enforces the two-place desktop budget and reports "paris-v2: 5 of 10
   target places".
 
-**Paris v3 candidate.** Five generated, distinct 3:1 masters add Montmartre, Place des
+**Paris v3.** Five generated, distinct 3:1 masters add Montmartre, Place des
 Vosges, Luxembourg Garden, Pont Alexandre III and Saint-Germain to the original five.
-The manifest has ten places and a 70-walking-minute loop. Its fourteen pending Day 1
+The manifest has ten places and a 70-walking-minute loop. Its fourteen approved Day 1
 scripts cover thirteen ambient five-minute slots plus one once-daily canal story without
 repeating a script inside the loop. The largest neighbouring pair is 1,904,580 bytes on
 desktop and 603,580 bytes on mobile; the full R2 scene prefix is 95 files / 18,732,462
 bytes. The source service returned 2172×724 masters, which the standard builder
-normalizes to its 3600×1200 canvas before producing renditions. Paris v2 stays available
-and an active day is not switched until the owner accepts the v3 paintings and dialogue.
+normalizes to its 3600×1200 canvas before producing renditions. The owner accepted the
+paintings and dialogue on 13 September 2026, and development Day 2 was switched through
+the guarded RPC. Paris v2 stays registered for rollback.
 
 **Choosing a rendition.** `placeRenditions(zone, renditionRequestFor(zone, width,
 height, resolution))` picks:
@@ -2157,8 +2158,8 @@ Current P28 evidence (12–13 September 2026), in
   reproductions failed on the old hook and pass on the fixed one. `pnpm lint` and
   `pnpm typecheck` are clean.
 - **Content.** `content:validate` reports 18 packs and 441 uniquely owned scene assets.
-  Paris v3 contains 10 distinct places; its five new paintings and 14 scripts remain
-  pending owner acceptance, so active days remain pinned to Paris v2.
+  Paris v3 contains 10 distinct owner-accepted places and 14 approved scripts;
+  development Day 2 is pinned to Paris v3 and Paris v2 remains available for rollback.
 - **Browser.** The 19 current core cases in `modal-continuity`, `scene-loading` and
   `launch-candidate` pass against a production build in headless Chromium at device
   scale 1.5. Two focused `review-repairs` cases also prove the current live day and

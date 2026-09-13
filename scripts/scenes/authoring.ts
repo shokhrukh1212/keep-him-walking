@@ -243,6 +243,16 @@ export function renderScenePackModule(
   const storyPlace = places.places.find((place) => story?.placeTags.some((tag) => place.tags.includes(tag)))
     ?? places.places.find((place) => place.tags.includes("lanes"))
     ?? places.places[0]!;
+  const culturalReview = pack.culturalReview ?? {
+    reviewerName: null,
+    reviewedAt: null,
+    status: "pending" as const,
+    qualification: null,
+    disposition: null,
+    publicLaunchRequirement: null,
+    citations: [],
+    notes: "Generated scene manifest awaiting the owner's documented cultural-safety review.",
+  };
   const value = {
     packId: `${slug}-v${places.packVersion}`,
     countryCode: pack.iso2,
@@ -277,19 +287,10 @@ export function renderScenePackModule(
     postcardTitle: pack.postcard.title,
     postcardCopy: pack.postcard.copy,
     sourceNotes: [
-      `Scene manifest v${places.packVersion} for ${pack.city}: ${places.places.length} places; cultural-safety review is still required.`,
+      `Scene manifest v${places.packVersion} for ${pack.city}: ${places.places.length} places; ${culturalReview.status === "pending" ? "cultural-safety review is still required" : "owner/creator review is recorded"}.`,
       `AI-assisted source paintings are preserved under art/${slug}; the build derives content-addressed renditions and makes no cultural claims.`,
     ],
-    culturalReview: {
-      reviewerName: null,
-      reviewedAt: null,
-      status: "pending",
-      qualification: null,
-      disposition: null,
-      publicLaunchRequirement: null,
-      citations: [],
-      notes: "Generated scene manifest awaiting the owner's documented cultural-safety review.",
-    },
+    culturalReview,
     assetBudgetBytes,
     authoredAssets: { variants },
   };

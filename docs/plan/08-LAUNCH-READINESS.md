@@ -18,7 +18,7 @@ below while preserving them as history.
 |---|---|
 | Paris Day 1, coherent startup identity | Implemented and production-build browser checked |
 | Minimal responsive shell and overlay modals (P28) | Implemented; modal continuity checked in a production build at 320×568, 390×844, 667×375, 768×1024 and 1440×900 |
-| Stationary painting, centered traveler, 7-minute places from a manifest (P28) | Implemented; Paris v3 has 10 distinct places and awaits owner visual/dialogue acceptance (D9) |
+| Stationary painting, centered traveler, 7-minute places from a manifest (P28) | Implemented; Paris v3 has 10 owner-accepted places and is pinned to development Day 2 (D9 resolved) |
 | Every stop a server window, natural clip speed (P28) | Implemented; migration 0036 remote-verified on dev |
 | Image delivery | Hashed immutable renditions, current + next place only. The complete 574-file runtime tree is uploaded to R2 and verified at `assets.keephimwalking.com`; activation waits for the separate main-app `.com` deployment because the current `.lol` origin is not allowed by CDN CORS (D8) |
 | "Waiting for the internet" while watching | Heartbeat chain fix and watchdog unit-tested; the status line separates "Reconnecting…" from a confirmed empty audience, and no-WebGL recovery still starts presence through the static painting |

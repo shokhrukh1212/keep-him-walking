@@ -81,7 +81,7 @@
   "parisV3": {
     "places": 10,
     "loopWalkingMinutes": 70,
-    "conversationScriptsPendingOwnerReview": 14,
+    "conversationScriptsApproved": 14,
     "ambientConversationSlotsPerLoop": 13,
     "onceDailyStoryConversationsPerLoop": 1,
     "largestTwoPlaceDesktopBytes": 1904580,
@@ -97,6 +97,14 @@
       "travelerAndAudioHeadChecks": "HTTP 200 with correct MIME and CORS",
       "currentDotLolOrigin": { "checked": 95, "failed": 95, "reason": "Cloudflare CORS does not allow the old app origin" },
       "activatedInApp": false
+    },
+    "approvedByOwnerAt": "2026-09-13T00:00:00.000Z",
+    "developmentDay": {
+      "id": "cc1a3437-8d61-473a-9099-0ea354f7ed65",
+      "dayNumber": 2,
+      "previousPack": "paris-v2",
+      "currentPack": "paris-v3",
+      "switchChanged": true
     }
   },
   "conversationEvidence": {

@@ -57,7 +57,12 @@ describe("Phase 2 country packs", () => {
     expect(packs.slice(0, 2).every((pack) => pack.culturalReview.status === "approved")).toBe(true);
     expect(packs.slice(2, 8).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
     const paris = packs.filter((pack) => pack.assetVersion.startsWith("paris-v"));
-    expect(paris.every((pack) => pack.culturalReview.status === "pending")).toBe(true);
+    expect(paris.slice(0, 2).every((pack) => pack.culturalReview.status === "pending")).toBe(true);
+    expect(paris.at(-1)?.culturalReview).toMatchObject({
+      reviewerName: "Shokhrukh Karimov",
+      status: "creator_reviewed",
+      disposition: "Approved by the owner for the Paris v3 journey candidate",
+    });
     expect(paris.every((pack) => pack.route.zones.every((zone) => zone.continuousScene))).toBe(true);
     expect(packs.at(-1)?.route.zones.every((zone) => zone.variants && zone.tags.length > 0)).toBe(true);
     expect(packs.at(-1)?.route.zones).toHaveLength(10);

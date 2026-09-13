@@ -35,6 +35,16 @@ const pack = {
   notebookLines: Array.from({ length: 8 }, (_, index) => `Notebook observation ${index + 1}.`),
   voteBlurb: "Tiled lanes climb from the river.",
   postcard: { title: "Lisbon above the river", copy: "The shared walk climbed Lisbon's lanes." },
+  culturalReview: {
+    reviewerName: "Content owner",
+    reviewedAt: "2026-09-13T00:00:00.000Z",
+    status: "creator_reviewed",
+    qualification: "Owner visual and dialogue review",
+    disposition: "Approved for the candidate journey",
+    publicLaunchRequirement: "Qualified local review remains required before public launch.",
+    citations: [],
+    notes: "Owner acceptance recorded.",
+  },
 };
 
 async function painting(file: string, hue: number) {
@@ -101,6 +111,7 @@ describe("scene manifest build", () => {
     const generated = await readFile(path.join(root, "src", "content", "countries", "lisbon.v2.ts"), "utf8");
     expect(generated).toContain("lisbonCountryPackV2");
     expect(generated).toContain("\"sceneVisitSeconds\": 420");
+    expect(generated).toContain("\"status\": \"creator_reviewed\"");
     expect(generated).toContain("/scenes/lisbon/v2/places/lisbon-viewpoint/night-center-120.");
     expect(await readFile(path.join(root, "src", "content", "countries", "authored.ts"), "utf8")).toContain("lisbonCountryPackV2");
 

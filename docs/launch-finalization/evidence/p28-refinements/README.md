@@ -38,3 +38,8 @@ The four compatibility files Claude left unrun (`phase1`, `phase2-smoke`,
 and current renderer contract and run together: 10/10 passed. The no-WebGL case also
 confirmed that a GPU failure selects the static painting while presence still counts
 the online viewer; it no longer becomes a false internet/offline state.
+
+On 13 September the owner accepted all Paris v3 paintings and dialogue. The source
+review states were changed to approved, the generated pack records creator review, and
+the live development Day 2 pack pointer was changed from Paris v2 to Paris v3 through
+the guarded database RPC. CDN activation remains separate from this content approval.
