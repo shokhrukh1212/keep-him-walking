@@ -92,6 +92,27 @@ export function SceneStage({
   const grade = useRef<VisualGrade>({ exposure: 1, tint: { r: 1, g: 1, b: 1 } });
   const warnedScale = useRef(new Set<string>());
   const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // A GPU/context failure is not an internet failure. Detect an unavailable
+    // WebGL context before the asynchronous Pixi startup can hang, then let the
+    // static painting become the renderer and allow presence to start normally.
+    const check = window.requestAnimationFrame(() => {
+      const canvas = document.createElement("canvas");
+      let context: WebGLRenderingContext | WebGL2RenderingContext | null = null;
+      try {
+        context = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
+      } catch {
+        context = null;
+      }
+      if (!context) {
+        setPixiFailed(true);
+        onWorldFailure();
+        return;
+      }
+      context.getExtension("WEBGL_lose_context")?.loseContext();
+    });
+    return () => window.cancelAnimationFrame(check);
+  }, [onWorldFailure]);
   const publishStage = useCallback((frame: StageFrame, source: "static" | "pixi") => {
     if (source === "static" && activeRenderer.current === "pixi") return;
     stageFrame.current = frame;
@@ -169,7 +190,7 @@ export function SceneStage({
           onFailure={liveFailed}
         />
       ) : null}
-      {qualityTier ? (
+      {qualityTier && !pixiFailed ? (
         <ProductCharacterStage3D
           contacts={contacts}
           grade={grade}

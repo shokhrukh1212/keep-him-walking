@@ -1354,6 +1354,10 @@ following the route once the world is up.
   (`fallback`). It still publishes the stage frame and reports ready, so he keeps
   walking and heartbeats keep flowing.
 - `onFailure`, and with it the static poster, is reserved for WebGL start-up failure.
+- `SceneStage` probes context creation before asynchronous Pixi startup. If WebGL is
+  unavailable it skips both GPU renderers and immediately uses the static painting.
+  Presence starts when that painting renderer is ready; traveler/GPU readiness is not
+  an internet signal and cannot hold the authoritative heartbeat chain offline.
 
 **Diagnostics.** `.pixi-scene` exposes these attributes:
 - `data-mount-count`
@@ -2140,7 +2144,11 @@ Current P28 evidence (12–13 September 2026), in
 - **Browser.** The 19 current core cases in `modal-continuity`, `scene-loading` and
   `launch-candidate` pass against a production build in headless Chromium at device
   scale 1.5. Two focused `review-repairs` cases also prove the current live day and
-  honest 503 presentation. Results and measurements are in `measurements.json`.
+  honest 503 presentation. The four older Phase 1/2 compatibility files were brought
+  up to the modal/current-renderer contract and all 10 cases now pass too. Their
+  no-WebGL case proves the static painting becomes ready, the online viewer is counted,
+  and GPU failure is not presented as an internet failure. Results and measurements
+  are in `measurements.json`.
 - **Live development recovery.** The screenshot's unavailable state had two causes:
   Day 1 had expired and local Phase 2 rehearsal flags were absent. `dev:prepare --apply`
   preserved Day 1 and contributions, created Paris Day 2 through the locked RPC, and a

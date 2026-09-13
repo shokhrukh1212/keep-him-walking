@@ -359,6 +359,9 @@ export function ProductCharacterStage3D(props: Props) {
         traveler.gazeAt(camera.position.clone(), .6);
       }
       element.dataset.characterState = traveler?.resolvedClip(cue.traveler.clip) ?? cue.traveler.clip;
+      // Diagnostic of the accepted command path. The sewn neutral patch remains
+      // if a remote sponsor texture fails, so this does not claim the image loaded.
+      element.dataset.sponsorCommanded = String(Boolean(state.command?.sponsorPatchUrl));
       element.dataset.characterSeconds = String(cue.traveler.seconds);
       element.dataset.characterViewportOffset = "0";
       element.dataset.walkTimeScale = String(cue.traveler.timeScale ?? 1);

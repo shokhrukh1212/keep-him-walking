@@ -25,3 +25,9 @@ The current core browser candidate is 19 passing cases across `launch-candidate`
 `modal-continuity` and `scene-loading`, plus two focused live/unavailable-state checks.
 They were run in focused invocations because software rendering makes the two
 three-loop cases take several minutes each.
+
+The four compatibility files Claude left unrun (`phase1`, `phase2-smoke`,
+`waiting-first-watcher` and `traveler-correction`) were updated to the overlay-modal
+and current renderer contract and run together: 10/10 passed. The no-WebGL case also
+confirmed that a GPU failure selects the static painting while presence still counts
+the online viewer; it no longer becomes a false internet/offline state.

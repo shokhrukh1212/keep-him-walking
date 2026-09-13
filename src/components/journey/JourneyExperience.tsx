@@ -121,7 +121,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   ).getTime());
   const [sceneRenderer, setSceneRenderer] = useState<"pixi" | "static" | null>(null);
   const [sceneAssetState, setSceneAssetState] = useState<SceneAssetState>("loading");
-  const [travelerReady, setTravelerReady] = useState(false);
   const [puppetReady, setPuppetReady] = useState(false);
   const [residentReady, setResidentReady] = useState(false);
   const [presentationFrame,setPresentationFrame]=useState<{assetVersion:string;motion:TravelerMotionSnapshot}|null>(null);
@@ -358,7 +357,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     ));
   }, [snapshot.countryDay.id,snapshot.assets]);
 
-  const experienceReady = sceneRenderer !== null && travelerReady;
+  // Presence belongs to the authoritative journey, not the visitor's GPU. Once
+  // a painting renderer is ready, a slow or unavailable 3D traveler must not be
+  // misreported as an offline viewer or keep the shared walk paused.
+  const experienceReady = sceneRenderer !== null;
   const refreshReactions = useCallback(async () => {
     try {
       const response = await fetch("/api/reactions", { cache: "no-store" });
@@ -856,10 +858,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         qualityTier={qualityTier}
         reducedMotion={reducedMotion}
         travelerCommand={command}
-        onTravelerReady={(ready) => {
-          setPuppetReady(ready);
-          if (ready) setTravelerReady(true);
-        }}
+        onTravelerReady={setPuppetReady}
         onResidentReady={setResidentReady}
         onMotionSample={setPresentationFrame}
         onZoneChange={zoneDidChange}
@@ -891,7 +890,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       {/* A single connected idle frame holds the traveler's place until the 3D
           model reports ready. The sprite and Rive renderers it used to sit in
           front of were retired in P18; nothing else remains of that path. */}
-      {!puppetReady ? <div className="traveler-loading" role="status">Loading the walk…</div> : null}
+      {!puppetReady && sceneRenderer !== "static" ? <div className="traveler-loading" role="status">Loading the walk…</div> : null}
       <WalkingRuleStatus
         walking={review ? review.moving : walking}
         label={walkingStatus.text}

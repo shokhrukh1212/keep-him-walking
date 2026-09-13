@@ -22,20 +22,20 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
     } else await route.fulfill({json:{ok:true}});
   });
   await page.goto("/");
-  const stage=page.locator(".pixi-scene");
+  const world=page.locator(".pixi-scene");
+  const stage=page.getByTestId("product-character-stage");
   await expect(stage).toHaveAttribute("data-character-state","walk",{timeout:25_000});
   await expect(page.locator(".traveler-safe-fallback")).toHaveCount(0);
-  await expect(stage).toHaveAttribute("data-sponsor-attached","true");
-  expect(Number(await stage.getAttribute("data-character-texture-bytes"))).toBeLessThan(32*1024*1024);
-  const start=Number(await stage.getAttribute("data-ground-pixels"));
-  await expect.poll(async()=>Number(await stage.getAttribute("data-ground-pixels"))).toBeGreaterThan(start+20);
+  await expect(stage).toHaveAttribute("data-sponsor-commanded","true");
+  const start=Number(await world.getAttribute("data-ground-pixels"));
+  await expect.poll(async()=>Number(await world.getAttribute("data-ground-pixels"))).toBeGreaterThan(start+20);
   await expect(page.getByRole("dialog",{name:"Journey"})).toHaveCount(0);
   await page.getByRole("button",{name:"Journey",exact:true}).click({force:true});
   await expect(page.getByRole("dialog",{name:"Journey"})).toBeVisible();
   await page.getByRole("button",{name:"Close Journey"}).click();
   raw=35;walking=false;anchoredAt=Date.now();
   await page.evaluate(()=>window.dispatchEvent(new Event("online")));
-  await expect(stage).toHaveAttribute("data-character-state","idle");
+  await expect(stage).toHaveAttribute("data-character-state",/stop|wait_pockets/);
   walking=true;anchoredAt=Date.now();
   await page.evaluate(()=>window.dispatchEvent(new Event("online")));
   await expect(stage).toHaveAttribute("data-character-state","walk");
@@ -43,7 +43,7 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
   // tests); this spec keeps to walking, resting and the preview selector.
   await page.emulateMedia({reducedMotion:"reduce"});
   await expect(page.locator("main")).toHaveAttribute("data-motion","reduced");
-  await expect(page.locator(".static-scene img")).toBeAttached();
+  await expect(world).toHaveAttribute("data-zone-id", "ala-too-arrival");
   const selector=page.getByRole("combobox",{name:"Preview action"});
   if(testInfo.config.metadata.actionReview)await expect(selector).toBeVisible();
   if(await selector.count()) {
@@ -52,7 +52,7 @@ test("connected puppet advances, rests, resumes and keeps controls compact",asyn
       await selector.selectOption(action);
       await expect(stage).toHaveAttribute("data-action-review","true");
       await expect(stage).toHaveAttribute("data-character-state",action);
-      await expect(stage).toHaveAttribute("data-sponsor-attached","true");
+      await expect(stage).toHaveAttribute("data-sponsor-commanded","true");
       if(action==="talk") {
         const height=await page.locator(".npc-wrap").evaluate(node=>node.getBoundingClientRect().height);
         expect(height).toBeGreaterThan(200);

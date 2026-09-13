@@ -5,6 +5,7 @@
     "unitTests": 538,
     "coreBrowserCases": 19,
     "focusedLiveAndUnavailableCases": 2,
+    "compatibilityBrowserCases": 10,
     "remoteDatabaseSuites": 20,
     "remoteDatabaseAssertions": 409,
     "remoteDatabaseLintFindings": 0
@@ -78,6 +79,11 @@
     "scenePackId": "paris-v2",
     "bootstrapStatus": 200,
     "bootstrapMode": "live"
+  },
+  "gpuFailureRecovery": {
+    "staticPaintingVisible": true,
+    "onlineViewerCounted": true,
+    "internetStatusUsedForGpuFailure": false
   },
   "limitations": [
     "Software-rendered Chromium has severe frame gaps and cannot prove physical-device smoothness.",

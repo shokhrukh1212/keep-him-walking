@@ -44,14 +44,18 @@ async function install(page: Page, getSnapshot: () => BootstrapSnapshot = () => 
   await page.route("**/api/postcards", (route) => route.fulfill({ json: { token: "x".repeat(43), url: "https://example.test/p/postcard", imageUrl: "https://example.test/card.webp", idempotent: false } }));
 }
 
-test("Phase 2 visitor surface exposes passport, sponsor, and eligible postcard without hiding the walk", async ({ page }) => {
+test("Phase 2 visitor surface keeps sponsor and postcard while omitting the redundant Passport link", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await install(page);
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /He only walks/ })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Journey links" })).toContainText("Passport");
-  await expect(page.getByRole("button", { name: /Postcard/ })).toBeEnabled();
-  await expect(page.locator(".static-scene img")).toHaveAttribute("src", /tashkent\/v4\/zones\/arrival-boulevard\/fallback\.webp/);
+  await expect(page.getByText("He only walks while someone is watching.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sponsor a day" })).toBeVisible();
+  await page.getByRole("button", { name: "Journey", exact: true }).click();
+  const journey = page.getByRole("dialog", { name: "Journey" });
+  await expect(journey).toBeVisible();
+  await expect(journey.getByRole("link", { name: /Passport/ })).toHaveCount(0);
+  await expect(journey.getByRole("button", { name: /Postcard/ })).toBeEnabled();
+  await expect(page.locator(".pixi-scene")).toHaveAttribute("data-zone-id", "arrival-boulevard");
 });
 
 test("all seven reduced-motion country packs retain distinct complete environments", async ({ page }) => {
@@ -63,15 +67,19 @@ test("all seven reduced-motion country packs retain distinct complete environmen
 
   for (const [index, expected] of PHASE2_ROUTE.entries()) {
     routeIndex = index;
+    const expectedPack = getCountryPack(expected.scenePackId);
+    if (!expectedPack) throw new Error(`Missing smoke-test pack ${expected.scenePackId}`);
     await page.goto(`/`);
     await expect(page.locator(".day-mark")).toContainText(expected.cityName);
-    await expect(page.getByRole("button", { name: /Postcard/ })).toBeEnabled();
-    const scene = page.locator(".static-scene img");
-    await expect(scene).toBeVisible();
-    const expectedPath = `/${expected.scenePackId.replace("-v", "/v")}/zones/`;
-    await expect(scene).toHaveAttribute("src", new RegExp(expectedPath));
-    await expect(scene).toHaveJSProperty("complete", true);
-    const source = await scene.getAttribute("src");
+    await page.getByRole("button", { name: "Journey", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Journey" }).getByRole("button", { name: /Postcard/ })).toBeEnabled();
+    const scene = page.locator(".pixi-scene");
+    await expect(scene).toHaveAttribute("data-zone-id", expectedPack.route.zones[0]!.id);
+    // Tashkent v5 intentionally pins the approved immutable v4 image URLs, so
+    // assert the authored URL rather than deriving one from the pack identity.
+    const expectedPath = expectedPack.route.zones[0]!.fallbackUrl;
+    await expect(scene).toHaveAttribute("data-scene-textures", new RegExp(expectedPath));
+    const source = await scene.getAttribute("data-scene-textures");
     expect(source).toContain(expectedPath);
     renderedSources.add(source ?? "");
   }
@@ -109,14 +117,15 @@ test("postcard state resets when the live country rolls over without navigation"
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: /^Postcard$/ }).click();
+  await page.getByRole("button", { name: "Journey", exact: true }).click();
+  await page.getByRole("dialog", { name: "Journey" }).getByRole("button", { name: /^Postcard$/ }).click();
   await expect(page.getByRole("button", { name: "View postcard" })).toBeVisible();
   routeIndex = 1;
   await expect(page.locator(".day-mark")).toContainText("Dushanbe", { timeout: 5_000 });
-  await expect(page.getByRole("button", { name: /^Postcard$/ })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Journey" }).getByRole("button", { name: /^Postcard$/ })).toBeVisible();
 });
 
-test("a closed daily vote presents deterministic result counts", async ({ page }) => {
+test("a closed daily vote is not presented as an open ballot", async ({ page }) => {
   const closed = snapshot();
   closed.vote = {
     id: "20000000-0000-4000-8000-000000000001",
@@ -135,10 +144,6 @@ test("a closed daily vote presents deterministic result counts", async ({ page }
   };
   await install(page, () => closed);
   await page.goto("/");
-  await page.getByRole("button", { name: "Daily vote" }).click();
-  const panel = page.getByRole("region", { name: "Daily vote" });
-  await expect(panel).toContainText("5 votes");
-  await expect(panel).toContainText("2 votes");
-  await expect(panel).toContainText("7 people have voted");
-  await expect(panel.locator(".vote-options button:not([disabled])")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Destination vote/ })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Tomorrow’s vote" })).toHaveCount(0);
 });

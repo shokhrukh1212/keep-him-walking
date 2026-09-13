@@ -189,14 +189,14 @@ test("the first viewport explains the live rule and remains keyboard accessible"
   await installApi(page, server);
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "He only walks while someone is watching." })).toBeVisible();
-  await expect(page.getByText("DAY 1 · SEASON 1")).toBeVisible();
+  await expect(page.getByText("He only walks while someone is watching.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Journey from Tashkent" })).toContainText("Tashkent · Day 1");
   await expect(page.getByText(/person watching/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Today’s choice", { exact: false })).not.toBeVisible();
 
   await page.getByRole("button", { name: /Destination vote/ }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("region", { name: "Daily vote" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Tomorrow’s vote" })).toBeVisible();
   await page.getByRole("button", { name: "Find the best plov" }).click();
   await expect(page.getByRole("button", { name: "Find the best plov" })).toHaveAttribute("aria-pressed", "true");
 
@@ -226,8 +226,8 @@ test("two browsers share presence and preserve steps across reconnects", async (
   await expect.poll(() => server.sessions.size, { timeout: 30_000 }).toBe(2);
   await expect(first.getByText("2 people watching")).toBeVisible();
   await expect(second.getByText("2 people watching")).toBeVisible();
-  await expect(first.getByText("The internet is keeping him moving · ×2")).toBeVisible();
-  await expect(second.getByText("The internet is keeping him moving · ×2")).toBeVisible();
+  await expect(first.getByRole("button", { name: "Wave. 0 of 2 watchers have asked." })).toBeVisible();
+  await expect(second.getByRole("button", { name: "Wave. 0 of 2 watchers have asked." })).toBeVisible();
 
   const secondSession = getSecondSession();
   expect(secondSession).toBeTruthy();
@@ -235,7 +235,7 @@ test("two browsers share presence and preserve steps across reconnects", async (
   server.sessions.delete(secondSession!);
   await first.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(first.getByText("1 person watching")).toBeVisible();
-  await expect(first.getByText("The internet is keeping him moving")).toBeVisible();
+  await expect(first.getByRole("button", { name: "Wave. 0 of 1 watchers have asked." })).toBeVisible();
   await first.getByRole("button", { name: "Journey", exact: true }).click({ force: true });
   await expect(first.getByText(/global steps/)).toBeVisible();
 
@@ -251,7 +251,7 @@ test("two browsers share presence and preserve steps across reconnects", async (
   server.sessions.delete(finalSession!);
   await first.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(first.getByText("0 people watching")).toBeVisible();
-  await expect(first.getByText("Nobody's watching. He's waiting for the internet.")).toBeVisible();
+  await expect(first.getByRole("status", { name: "Walking rule: Waiting for the internet" })).toBeVisible();
 
   await firstContext.close();
   await secondContext.close();
@@ -264,6 +264,7 @@ test("the semantic experience survives without WebGL", async ({ page }, testInfo
   await installApi(page, server);
   await page.goto("/");
   await expect(page.locator(".static-scene img")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "He only walks while someone is watching." })).toBeVisible();
+  await expect(page.getByText("He only walks while someone is watching.", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 person watching")).toBeVisible();
   await expect(page.getByRole("region", { name: "Journey controls" })).toBeVisible();
 });
