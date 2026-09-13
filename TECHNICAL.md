@@ -1659,6 +1659,14 @@ after a visitor gesture, loops the current zone's authored ambience, and labels 
 control “Ambient sound”. The former synthetic Web Audio footstep oscillator is gone;
 there is no speech, TTS or lip-sync audio path.
 
+The root metadata is canonical to `https://keephimwalking.com` regardless of the build
+host. It uses the owner-supplied multi-size `/favicon.ico` and the exact 1200×630
+`/og-image.png?v=1` for Open Graph and Twitter large-image cards, with explicit size and
+alt text. `/logo-dark.png` appears only on the Journey dialog's opaque footer surface,
+not over the live painting. While `LAUNCH_ENABLED` is not exactly `true`, the legacy
+`/api/og/day` route serves that same static card without opening a database connection;
+after launch its verified day card retains the explicit 60-second shared-cache policy.
+
 `POST /api/reactions` returns the end of its authoritative 30-second request bucket.
 `ReactionButtons` uses it only for feedback: if a below-threshold request reaches that
 boundary without a scheduled action, the live status says it expired and invites the

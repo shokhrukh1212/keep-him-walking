@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { BootstrapSnapshot, DayPhotoView } from "@/lib/contracts";
 import { flagEmoji } from "@/lib/countries/flags";
@@ -198,6 +199,7 @@ export function JourneyPanel({
       ) : null}
 
       <footer className="journey-footer">
+        <Image className="journey-brand" src="/logo-dark.png" alt="Keep Him Walking" width={256} height={54} />
         <button type="button" onClick={onSponsor}>Sponsor a day</button>
         <Link href="/privacy">Privacy</Link>
       </footer>

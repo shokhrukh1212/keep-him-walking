@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { latestJourney } from "@/lib/season/data";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const base = "https://keephimwalking.com";
   // Only a season that actually ran is listed; an unrun number would 404.
   const journey = await latestJourney().catch(() => null);
   const seasons = journey ? [`/season/${journey.seasonNumber}`] : [];

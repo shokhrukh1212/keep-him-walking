@@ -24,15 +24,29 @@ const plexMono = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
-  title: "Keep Him Walking — live across the world",
-  description:
-    "One traveler. One country a day. He only moves while someone is watching. Tomorrow, the internet votes where he walks next.",
+  metadataBase: new URL("https://keephimwalking.com"),
+  title: "Keep Him Walking",
+  description: "He only walks while someone is watching. Drop in, meet the locals, and help him explore the world.",
+  alternates: { canonical: "/" },
+  icons: { icon: [{ url: "/favicon.ico", type: "image/x-icon" }] },
   openGraph: {
     title: "Keep Him Walking",
-    description: "One traveler. One country a day. He only moves while someone is watching.",
-    images: ["/api/og/day"],
+    description: "He only walks while someone is watching. Drop in, meet the locals, and help him explore the world.",
+    url: "/",
+    siteName: "Keep Him Walking",
+    images: [{
+      url: "/og-image.png?v=1",
+      width: 1200,
+      height: 630,
+      alt: "Keep Him Walking — he only walks while someone is watching.",
+    }],
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Keep Him Walking",
+    description: "He only walks while someone is watching. Drop in, meet the locals, and help him explore the world.",
+    images: [{ url: "/og-image.png?v=1", alt: "Keep Him Walking — he only walks while someone is watching." }],
   },
 };
 
@@ -40,7 +54,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#101b24",
+  themeColor: "#080f19",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

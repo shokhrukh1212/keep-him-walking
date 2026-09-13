@@ -1,10 +1,23 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { flagEmoji } from "@/lib/countries/flags";
 import { watcherBucket } from "@/lib/share/bucket";
 import { shareDay } from "@/lib/share/data";
 import { shareImage } from "@/lib/share/image";
+import { publicLaunchEnabled } from "@/lib/launch/public-state";
 
 export async function GET() {
+  if (!publicLaunchEnabled()) {
+    const image = await readFile(path.join(process.cwd(), "public", "og-image.png"));
+    return new Response(new Uint8Array(image), {
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=0, s-maxage=86400, stale-while-revalidate=604800",
+      },
+    });
+  }
   const day = await shareDay();
   const supabase = getServerSupabase();
   if (!day || !supabase) return new Response("Day unavailable", { status: 404, headers: { "Cache-Control": "no-store" } });

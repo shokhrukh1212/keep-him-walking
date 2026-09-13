@@ -3517,6 +3517,13 @@ a:focus-visible,
 
 .journey-route-details .journey-places { padding: 0 .8rem .8rem; }
 
+.journey-brand {
+  width: min(16rem, 100%);
+  height: auto;
+  margin-right: auto;
+  border-radius: 4px;
+}
+
 .wake-card { gap: .3rem; padding: .8rem; }
 .wake-card h2 { font-size: 1.15rem; }
 .wake-card button { margin-top: .25rem; padding: .55rem .8rem; }
