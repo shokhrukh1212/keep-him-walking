@@ -2,9 +2,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useJourneyAudio } from "./useJourneyAudio";
 
-class FakeAudioContext {
-  resume = vi.fn().mockResolvedValue(undefined);
-  close = vi.fn().mockResolvedValue(undefined);
+class FakeAudio {
+  loop = false;
+  volume = 1;
+  play = vi.fn().mockResolvedValue(undefined);
+  pause = vi.fn();
 }
 
 afterEach(() => {
@@ -15,8 +17,8 @@ afterEach(() => {
 describe("useJourneyAudio", () => {
   it("always starts muted, even for a visitor who turned sound on before", async () => {
     window.localStorage.setItem("khw_sound", "on");
-    vi.stubGlobal("AudioContext", FakeAudioContext);
-    const { result, unmount } = renderHook(() => useJourneyAudio(false));
+    vi.stubGlobal("Audio", FakeAudio);
+    const { result, unmount } = renderHook(() => useJourneyAudio("/paris.mp3"));
     expect(result.current.enabled).toBe(false);
     await waitFor(() => expect(result.current.resumesOnTap).toBe(true));
 
@@ -31,8 +33,8 @@ describe("useJourneyAudio", () => {
   });
 
   it("does nothing on a tap when sound was never turned on", async () => {
-    vi.stubGlobal("AudioContext", FakeAudioContext);
-    const { result, unmount } = renderHook(() => useJourneyAudio(false));
+    vi.stubGlobal("Audio", FakeAudio);
+    const { result, unmount } = renderHook(() => useJourneyAudio("/paris.mp3"));
     await act(async () => { window.dispatchEvent(new Event("pointerdown")); });
     expect(result.current.enabled).toBe(false);
     expect(result.current.resumesOnTap).toBe(false);

@@ -367,11 +367,13 @@ Three layers produce it:
    landmark → `photo` (4 s). Departure remains a wall-clock event beginning at rollover;
    it is not placed on the distance motion track. Non-encounter actions get a
    0.45 s `stop` entry and a 0.65 s `resume_walk` exit around the held pose.
-3. **Encounter sequencing.** Fixed prologue `notice` 0.6 s → `slow_walk` 0.6 s →
-   `approach` 1.2 s → `greet` 2.5 s, then one segment per dialogue line using that
-   line's real `durationMs` (default 4.5 s) with `talk`/`listen` assigned by speaker and
-   the line index published for the HUD, then `react` 2.5 s → `goodbye` 2.5 s →
-   `resume_walk`. Total duration is `11.1 s + Σ line durations`.
+3. **Encounter sequencing.** The shared `conversationSegments` prologue is `notice` →
+   `stop` → `approach`, followed by one segment per authored line with `talk`/`listen`
+   assigned by speaker, reciprocal goodbyes and departure. A line keeps an explicit
+   `durationMs` or the 4.5 s default, whichever is longer than its calculated reading
+   time. `captionCues` divides a long line at word boundaries and `captionCueAt` selects
+   the visible part from that same segment offset; it never drops authored words or runs
+   an independent caption timer.
 
 `worldCommandForEncounter` separately drives the world: camera zoom 1.08, a small pan,
 and background life dropped to 0.22 during the focused phases.
@@ -746,8 +748,10 @@ localHour, raining, wakeElapsedSeconds)` returns
     only the named speaker waves and the other listens. Later lines alternate talk and
     listen, each visible for its full `durationMs`; goodbyes are also sequential and the
     resident walks out. Every take keeps its natural playback speed.
-  - **Greetings:** when no reviewed script is eligible, the same approach and two
-    sequential waves play without invented words.
+  - **Greetings:** an intentionally planned greeting keeps the same approach and two
+    sequential waves without invented words. A scheduled conversation whose pinned
+    script has disappeared instead uses the explicit one-line fallback “Hello.”, so it
+    cannot produce a full captionless talking sequence.
 - `ProductCharacterScene.residentType` follows the active script, so Camille and Inès
   appear as their own residents.
 - The resident takes the complementary role: traveler `talk`/`greet`/`goodbye` means
@@ -1649,6 +1653,11 @@ as confirmed watching time; it shows a pending state before the first heartbeat 
 `last confirmed` label while disconnected. The public UI no longer derives or shares a
 personal step estimate. The signed legacy steps-card endpoint remains available to old
 links and reads its number from `visitor_day_contributions` rather than the browser.
+
+`useJourneyAudio` is ambient-only. It starts muted, creates an `HTMLAudioElement` only
+after a visitor gesture, loops the current zone's authored ambience, and labels the
+control “Ambient sound”. The former synthetic Web Audio footstep oscillator is gone;
+there is no speech, TTS or lip-sync audio path.
 
 `POST /api/reactions` returns the end of its authoritative 30-second request bucket.
 `ReactionButtons` uses it only for feedback: if a below-threshold request reaches that

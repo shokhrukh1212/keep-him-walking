@@ -3541,3 +3541,36 @@ a:focus-visible,
   .dialogue-npc { bottom: calc(10.75rem + env(safe-area-inset-bottom)); }
   .reaction-buttons { top: calc(6.75rem + env(safe-area-inset-top)); }
 }
+
+/* Captions share the encounter clock with character motion; this box only lays
+   out the current authored cue and never clips a longer line. */
+.dialogue-bubble,
+.dialogue-traveler,
+.dialogue-npc {
+  top: clamp(9rem, 26dvh, 15rem);
+  right: auto;
+  bottom: auto;
+  left: max(1rem, env(safe-area-inset-left));
+  width: min(24rem, 30vw);
+  max-height: none;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  .dialogue-bubble,
+  .dialogue-traveler,
+  .dialogue-npc {
+    top: auto;
+    right: max(.5rem, env(safe-area-inset-right));
+    bottom: calc(10.75rem + env(safe-area-inset-bottom));
+    left: max(.5rem, env(safe-area-inset-left));
+    display: grid;
+    align-content: center;
+    width: auto;
+    min-height: 5.5rem;
+    max-height: none;
+    padding: .7rem .85rem;
+  }
+
+  .dialogue-bubble p { margin: .25rem 0 0; font-size: .95rem; line-height: 1.4; }
+}

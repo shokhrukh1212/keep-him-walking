@@ -1,5 +1,6 @@
 import { CLIP_DURATIONS, type CharacterClip, type ResidentType } from "@/lib/characters/manifest";
 import type { ConversationScript, CountryPack, DialogueLine, TravelerState } from "@/lib/content/schema";
+import { readableLineSeconds } from "./captions";
 
 /**
  * Everything that stops his walk. Each one is a server-owned window in
@@ -136,7 +137,7 @@ export function conversationSegments(lines: readonly DialogueLine[]): Conversati
     return segments;
   }
   lines.forEach((line, index) => {
-    const lineSeconds = (line.durationMs ?? DEFAULT_LINE_SECONDS * 1_000) / 1_000;
+    const lineSeconds = readableLineSeconds(line);
     if (index < 2) {
       push(
         line.speaker === "traveler" ? "greet_traveler" : "greet_resident",

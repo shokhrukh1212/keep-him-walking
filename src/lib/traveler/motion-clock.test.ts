@@ -131,14 +131,14 @@ describe("conversations", () => {
     expect(at(duration - 0.5).conversationPhase).toBe("depart");
   });
 
-  it("labels a wordless greeting honestly and plays a missing script as one", () => {
+  it("labels an intentional wordless greeting and captions a missing script fallback", () => {
     const greeting = travelerMotionAt(pack, 400.5, 9_000, [stop("greeting", 400)]).action!;
     expect(greeting.label).toBe("Saying hello");
     expect(greeting.conversation?.lines).toEqual([]);
     const missing = travelerMotionAt(pack, 500.5, 9_000, [stop("conversation", 500, { variant: "retired-script" })]).action!;
-    expect(missing.kind).toBe("greeting");
-    expect(missing.label).toBe("Saying hello");
-    expect(missing.conversation?.lines).toEqual([]);
+    expect(missing.kind).toBe("conversation");
+    expect(missing.label).toBe("Talking with Local resident");
+    expect(missing.conversation?.lines).toEqual([{ speaker: "traveler", text: "Hello.", mood: "neutral" }]);
   });
 
   it("walks the pavement at his own speed outside every stop", () => {

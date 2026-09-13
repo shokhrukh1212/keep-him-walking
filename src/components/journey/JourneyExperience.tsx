@@ -476,7 +476,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     available: soundAvailable,
     resumesOnTap: soundResumesOnTap,
     toggle: toggleSound,
-  } = useJourneyAudio(walking, ambientAudioUrl);
+  } = useJourneyAudio(ambientAudioUrl);
   const motion=puppetReady && presentationFrame?.assetVersion===snapshot.assets.assetVersion ? presentationFrame.motion : estimatedMotion;
   const activeConversation = motion.action?.conversation ?? null;
   const activeLine = activeConversation && motion.action?.dialogueLineIndex !== undefined
@@ -907,7 +907,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             : snapshot.journey.travelerName?.trim() || "Traveler"
           : undefined}
         npcSrc={snapshot.assets.npcAssets[(review?review.state==="listen":activeLine?.speaker === "npc") ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral ?? ""}
-        motionSeconds={motion.action?.elapsedSeconds}
+        motionSeconds={motion.action?.conversationPhaseSeconds ?? motion.action?.elapsedSeconds}
         reducedMotion={reducedMotion}
         showNpcImage={!residentReady}
       />

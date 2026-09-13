@@ -26,14 +26,14 @@ function savePreference(on: boolean) {
  * their first tap or key press, because browsers only play audio after a gesture;
  * nobody hears anything they did not ask for.
  */
-export function useJourneyAudio(walking: boolean, ambientUrl?: string) {
+export function useJourneyAudio(ambientUrl?: string) {
   const [enabled, setEnabled] = useState(false);
-  const [available, setAvailable] = useState(true);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [resumesOnTap, setResumesOnTap] = useState(false);
-  const context = useRef<AudioContext | null>(null);
   const ambience = useRef<HTMLAudioElement | null>(null);
-  const footstepTimer = useRef<number | null>(null);
+  const playingUrl = useRef<string | undefined>(undefined);
   const ambientRef = useRef(ambientUrl);
+  const available = Boolean(ambientUrl) && failedUrl !== ambientUrl;
 
   useEffect(() => { ambientRef.current = ambientUrl; }, [ambientUrl]);
 
@@ -42,75 +42,52 @@ export function useJourneyAudio(walking: boolean, ambientUrl?: string) {
     return () => window.clearTimeout(read);
   }, []);
 
-  useEffect(() => {
-    if (!enabled || !context.current || !walking) {
-      if (footstepTimer.current) window.clearInterval(footstepTimer.current);
-      footstepTimer.current = null;
-      return;
-    }
-    const audioContext = context.current;
-    const step = () => {
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      oscillator.frequency.setValueAtTime(90, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(52, audioContext.currentTime + 0.08);
-      gain.gain.setValueAtTime(0.025, audioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.11);
-      oscillator.connect(gain).connect(audioContext.destination);
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.12);
-    };
-    footstepTimer.current = window.setInterval(step, 760);
-    return () => {
-      if (footstepTimer.current) window.clearInterval(footstepTimer.current);
-      footstepTimer.current = null;
-    };
-  }, [enabled, walking]);
-
   useEffect(() => () => {
-    if (footstepTimer.current) window.clearInterval(footstepTimer.current);
-    void context.current?.close();
     ambience.current?.pause();
   }, []);
 
   useEffect(() => {
-    if (!enabled || !ambientUrl) return;
+    if (!ambientUrl) {
+      ambience.current?.pause();
+      playingUrl.current = undefined;
+      return;
+    }
+    if (!enabled || playingUrl.current === ambientUrl) return;
     const previous = ambience.current;
     const audio = new Audio(publicAssetUrl(ambientUrl));
     audio.loop = true;
     audio.volume = 0.16;
     ambience.current = audio;
+    playingUrl.current = ambientUrl;
     previous?.pause();
-    void audio.play().catch(() => setAvailable(false));
+    void audio.play().catch(() => setFailedUrl(ambientUrl));
     return () => audio.pause();
   }, [ambientUrl, enabled]);
 
   const start = useCallback(async () => {
     try {
-      const audioContext = context.current ?? new AudioContext();
-      context.current = audioContext;
-      await audioContext.resume();
       const url = ambientRef.current;
-      if (url) {
-        const audio = new Audio(publicAssetUrl(url));
-        audio.loop = true;
-        audio.volume = 0.16;
-        await audio.play();
-        ambience.current?.pause();
-        ambience.current = audio;
-      }
+      if (!url) throw new Error("No ambient audio for this place");
+      const audio = new Audio(publicAssetUrl(url));
+      audio.loop = true;
+      audio.volume = 0.16;
+      await audio.play();
+      ambience.current?.pause();
+      ambience.current = audio;
+      playingUrl.current = url;
       setEnabled(true);
-      setAvailable(true);
+      setFailedUrl(null);
       setResumesOnTap(false);
       savePreference(true);
     } catch {
-      setAvailable(false);
+      setFailedUrl(ambientRef.current ?? null);
       setEnabled(false);
     }
   }, []);
 
   const stop = useCallback(() => {
     ambience.current?.pause();
+    playingUrl.current = undefined;
     setEnabled(false);
     setResumesOnTap(false);
     savePreference(false);
@@ -136,5 +113,5 @@ export function useJourneyAudio(walking: boolean, ambientUrl?: string) {
     else await start();
   }, [enabled, start, stop]);
 
-  return { enabled, available, resumesOnTap, toggle };
+  return { enabled: enabled && available, available, resumesOnTap, toggle };
 }

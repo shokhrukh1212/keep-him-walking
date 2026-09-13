@@ -3,6 +3,7 @@
 import {type CSSProperties} from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import type { DialogueLine } from "@/lib/content/schema";
+import { captionCueAt } from "@/lib/world/captions";
 
 type Props = {
   line: DialogueLine | null;
@@ -22,6 +23,7 @@ export function EncounterDialogue({
   reducedMotion = false,
   showNpcImage = true,
 }: Props) {
+  const caption = line ? captionCueAt(line, motionSeconds) : "";
   return (
     <>
       {line && showNpcImage && npcSrc ? (
@@ -40,7 +42,7 @@ export function EncounterDialogue({
       {line ? (
         <section className={`dialogue-bubble dialogue-${line.speaker}`} aria-live="polite">
           <span className="eyebrow">{speakerLabel ?? (line.speaker === "npc" ? "Local resident" : "Traveler")}</span>
-          <p>{line.text}</p>
+          <p>{caption}</p>
         </section>
       ) : null}
     </>

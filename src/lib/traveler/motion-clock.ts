@@ -19,6 +19,12 @@ import {
 import { activeWalkingSecondsAt } from "@/lib/world/route-clock";
 import type { WalkingClock } from "@/lib/world/types";
 
+const MISSING_CONVERSATION_FALLBACK = [{
+  speaker: "traveler" as const,
+  text: "Hello.",
+  mood: "neutral" as const,
+}];
+
 export const STEP_DURATION_SECONDS = 0.6;
 export const GAIT_CYCLE_SECONDS = STEP_DURATION_SECONDS * 2;
 export const METRES_PER_STEP = 0.75;
@@ -122,8 +128,9 @@ function actionForRow(
   };
   if (row.kind === "conversation" || row.kind === "greeting") {
     const script = row.kind === "conversation" ? conversationScript(pack, row.variant) : null;
-    const kind = script ? "conversation" : "greeting";
-    const lines = script?.lines ?? [];
+    const missingScript = row.kind === "conversation" && !script;
+    const kind = script || missingScript ? "conversation" : "greeting";
+    const lines = script?.lines ?? (missingScript ? MISSING_CONVERSATION_FALLBACK : []);
     const speakerName = conversationSpeakerName(pack, script);
     const segments = conversationSegments(lines);
     const segment = [...segments].reverse().find((candidate) => elapsedSeconds >= candidate.start) ?? segments[0]!;
@@ -131,7 +138,8 @@ function actionForRow(
       ...base,
       kind,
       state: CONVERSATION_STATES[segment.phase],
-      // A script the pinned pack no longer carries plays as the wordless greeting it can honour.
+      // A retired content record gets one explicit, synchronized fallback cue;
+      // an intentional greeting remains wordless.
       label: activityLabel(kind, source, speakerName),
       conversation: {
         scriptId: script?.id ?? null,
