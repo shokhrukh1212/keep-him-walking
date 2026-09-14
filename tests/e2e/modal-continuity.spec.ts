@@ -170,7 +170,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     await page.getByRole("button", { name: "About the distance goals" }).click({ force: true });
     await expect(page.getByRole("note")).toContainText("42.2 km marathon");
     await page.screenshot({ path: `${evidenceRoot}/goal-info-${viewport.width}.png` });
-    await page.getByRole("button", { name: "Journey" }).click();
+    await page.getByRole("button", { name: "Journey", exact: true }).click();
     await page.getByText("See all 10 stops").click();
     await expect(page.getByRole("list", { name: "Places on today's loop" }).getByText("Canal Saint-Martin"))
       .toBeVisible();

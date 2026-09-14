@@ -36,7 +36,7 @@ for (const viewport of [
     expect(measurements.scrollWidth).toBeLessThanOrEqual(measurements.innerWidth);
     expect(measurements.controlHeights.length).toBeGreaterThan(0);
     expect(Math.min(...measurements.controlHeights)).toBeGreaterThanOrEqual(44);
-    await expect(page.getByRole("button", { name: /^Sound off/ })).toBeInViewport();
+    await expect(page.getByRole("button", { name: /^Background music off/ })).toBeInViewport();
     await page.screenshot({ path: `${evidenceRoot}/settled-${viewport.width}x${viewport.height}.png` });
   });
 }

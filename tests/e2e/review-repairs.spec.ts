@@ -77,9 +77,9 @@ test("a server 503 is identified as unavailable service, not lost internet", asy
   await page.route("**/api/bootstrap", (route) => route.fulfill({ status: 503, json: { code: "NO_ACTIVE_DAY" } }));
   await page.goto("/");
   await expect(page.locator(".connection-banner")).toContainText("No journey day is active");
-  await expect(page.locator(".traveler-state")).toContainText("Preview only · waiting for the live journey");
+  await expect(page.locator(".journey-progress-primary")).toContainText("Preview only · waiting for the live journey");
   await expect(page.locator(".reaction-buttons")).toHaveCount(0);
-  await expect(page.getByLabel("Daily distance unavailable")).toBeAttached();
+  await expect(page.getByLabel("Today · distance unavailable")).toBeAttached();
   await expect(page.locator(".goal-freshness")).toHaveText("unavailable");
 });
 
