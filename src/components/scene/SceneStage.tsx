@@ -57,6 +57,11 @@ type Props = {
   onDiagnostics: (snapshot: WorldDiagnosticsSnapshot) => void;
   onWorldFailure: () => void;
   onReady: (renderer: "pixi" | "static") => void;
+  /**
+   * Prelaunch on a phone: screen pixels kept clear below his feet for the caption band.
+   * Both worlds raise their ground by it and the character follows their published frame.
+   */
+  groundReservePx?: number;
 };
 
 export function SceneStage({
@@ -83,6 +88,7 @@ export function SceneStage({
   onDiagnostics,
   onWorldFailure,
   onReady,
+  groundReservePx = 0,
 }: Props) {
   const [pixiFailed, setPixiFailed] = useState(false);
   const [pixiReady, setPixiReady] = useState(false);
@@ -162,7 +168,7 @@ export function SceneStage({
 
   return (
     <div ref={container} className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"}>
-      <StaticScene zone={zone} assetVersion={pack.assetVersion} resolution={resolution}
+      <StaticScene zone={zone} assetVersion={pack.assetVersion} resolution={resolution} groundReservePx={groundReservePx}
         defer={!pixiFailed} active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
       {qualityTier && settled && !pixiFailed ? (
         <PixiScene
@@ -188,6 +194,7 @@ export function SceneStage({
           onDiagnostics={onDiagnostics}
           onReady={liveReady}
           onFailure={liveFailed}
+          groundReservePx={groundReservePx}
         />
       ) : null}
       {qualityTier && !pixiFailed ? (

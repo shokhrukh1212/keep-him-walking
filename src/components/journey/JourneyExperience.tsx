@@ -81,6 +81,8 @@ import { SeasonCompleteCard } from "@/components/journey/SeasonCompleteCard";
 import { SeasonSponsorLine } from "@/components/sponsor/SeasonSponsorLine";
 import { SeasonSponsorOffer } from "@/components/sponsor/SeasonSponsorOffer";
 import { SeasonSponsorRow } from "@/components/sponsor/SeasonSponsorRow";
+import { PreviewCaption } from "@/components/preview/PreviewCaption";
+import { usePreviewMonologue } from "@/hooks/usePreviewMonologue";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -154,7 +156,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const newestHeartbeat = useRef(-Infinity);
   const broadcastHint = useRef<() => void>(() => undefined);
   const [loadingLive, setLoadingLive] = useState(true);
-  const [bootstrapIssue, setBootstrapIssue] = useState("The live journey is temporarily unavailable. Retrying…");
+  // Why the latest read of the shared journey failed; null once a read succeeds.
+  const [bootstrapIssue, setBootstrapIssue] = useState<string | null>(null);
   const [renderedZone, setRenderedZone] = useState(() => ({
     id: initialSnapshot.assets.route.zones[0]?.id ?? "arrival",
     label: initialSnapshot.assets.route.zones[0]?.label ?? initialSnapshot.countryDay.cityName,
@@ -258,6 +261,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         throw new Error("Bootstrap unavailable");
       }
       const next = (await response.json()) as BootstrapSnapshot;
+      setBootstrapIssue(null);
       // A non-live answer over a live page is this browser losing the journey, except a
       // season that has really finished, which must be shown rather than held as reconnecting.
       setSnapshot(current=> next.mode !== "live" && next.mode !== "completed" && current.mode === "live"
@@ -276,7 +280,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       if (next.journeyState !== "prelaunch") void refreshMe();
       return Math.max(1_000, Math.min(5 * 60_000, next.refresh.afterMs));
     } catch {
-      if (!navigator.onLine) setBootstrapIssue("Your browser is offline. Waiting to reconnect…");
+      // Keep the server's own reason; a request that got no answer at all is named too.
+      setBootstrapIssue((current) => !navigator.onLine
+        ? "Your browser is offline. Waiting to reconnect…"
+        : current ?? "The live journey is temporarily unavailable. Retrying…");
       setSnapshot((current) => current.mode === "live"
         ? {
             ...current,
@@ -711,10 +718,53 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     : !walking && locomotionPhase !== "slow_walk" && locomotionPhase !== "stop"
       ? waitingBehavior.state
       : locomotionPhase;
+  // ---- The intentional prelaunch preview. Only the server declares it; a failed read never does.
+  const preview = snapshot.mode === "prelaunch";
+  const prelaunchSeasonNumber = snapshot.prelaunch?.seasonNumber ?? snapshot.season?.number ?? 1;
+  const [worldFailed, setWorldFailed] = useState(false);
+  // A model that never arrives must not silence him: after a while the words come without it.
+  const [modelWaitElapsed, setModelWaitElapsed] = useState(false);
+  useEffect(() => {
+    if (!preview || puppetReady || !experienceReady || modelWaitElapsed) return;
+    const timer = window.setTimeout(() => setModelWaitElapsed(true), 20_000);
+    return () => window.clearTimeout(timer);
+  }, [experienceReady, modelWaitElapsed, preview, puppetReady]);
+  const { controller: previewMonologue, caption: previewCaption } = usePreviewMonologue({
+    active: preview,
+    cityName: snapshot.countryDay.cityName,
+    seasonNumber: prelaunchSeasonNumber,
+    modelReady: puppetReady || worldFailed || modelWaitElapsed,
+    // A modal, or a journey read that just failed, holds back the next line; one under way finishes.
+    deferred: openPanel !== null || bootstrapIssue !== null,
+    reducedMotion,
+  });
+  // On a phone the caption band sits in the footer's flow; his feet stay above the footer's top.
+  const footerRegion = useRef<HTMLDivElement>(null);
+  const [measuredGroundReserve, setMeasuredGroundReserve] = useState(0);
+  useEffect(() => {
+    const footer = footerRegion.current;
+    const shell = footer?.closest<HTMLElement>(".journey-shell");
+    if (!preview || !footer || !shell) return;
+    const observer = new ResizeObserver(() => {
+      const phone = shell.clientWidth <= 600;
+      const reserve = phone
+        ? Math.max(0, Math.round(shell.getBoundingClientRect().bottom - footer.getBoundingClientRect().top + 10))
+        : 0;
+      setMeasuredGroundReserve((current) => (current === reserve ? current : reserve));
+    });
+    observer.observe(footer);
+    observer.observe(shell);
+    return () => observer.disconnect();
+  }, [preview]);
+  const groundReservePx = preview ? measuredGroundReserve : 0;
+
   const command: TravelerCommand = {
     state: travelerState,
     mood: activeLine?.mood ?? "neutral",
-    facing: "right",
+    // The preview faces the viewer; only his root turns, and his anchor never moves.
+    facing: preview ? "camera" : "right",
+    // Prelaunch only: the local monologue controller owns his pose. The live path never sees it.
+    preview: preview ? previewMonologue : undefined,
     walkingSpeed: worldCommand.speedFactor,
     walking,
     motionPhaseSeconds: Math.max(0, (realNowMs - motionTransition.changedAtMs) / 1_000),
@@ -737,6 +787,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     setSceneRenderer(renderer);
   }, []);
   const worldDidFail = useCallback(() => {
+    // No WebGL world means no 3D traveler either: the preview's words must not wait for one.
+    setWorldFailed(true);
     trackVisitorEvent("world_asset_failure", {
       asset_version: snapshot.assets.assetVersion,
     });
@@ -822,9 +874,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       fileName: "first-watcher.png",
     });
   };
-  const startsIn = snapshot.journeyState === "prelaunch"
-    ? launchCountdown(Date.parse(snapshot.countryDay.startsAt), realNowMs)
-    : null;
+  // Only a start the server really configured is counted down. Older payloads carry it on the day.
+  const launchStartsAt = snapshot.journeyState !== "prelaunch"
+    ? null
+    : snapshot.prelaunch !== undefined ? snapshot.prelaunch?.startsAt ?? null : snapshot.countryDay.startsAt;
+  const startsIn = launchStartsAt ? launchCountdown(Date.parse(launchStartsAt), realNowMs) : null;
   const tomorrow = snapshot.tomorrow ?? null;
   // The status line names the place only once its painting is really on screen.
   const renderedPlaceLabel = sceneRenderer === "static"
@@ -837,7 +891,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     : walkingStatusLabel({
         journeyState: snapshot.journeyState,
         mode: snapshot.mode,
-        startsIn,
+        seasonNumber: prelaunchSeasonNumber,
         wakeCountdown: waking ? wakeCountdown : null,
         walking,
         actionLabel: walking && motion.action ? motion.action.label : null,
@@ -862,7 +916,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     ? "Sponsor a season"
     : sponsorPriceCents === null ? "Sponsor a day" : `Sponsor a day · ${formatPriceUsd(sponsorPriceCents)}`;
   const season = snapshot.season ?? null;
-  // The shared season clock runs on the synchronized wall clock, never on watched time.
+  // The shared season clock runs on the synchronized wall clock, never on watched time. A launch
+  // armed without a season still shows its configured start; a start that is not set is never implied.
   const seasonClock = season
     ? seasonClockParts({
       number: season.number,
@@ -873,7 +928,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       dayNumber: season.state === "live" ? snapshot.countryDay.dayNumber : null,
       nowMs: realNowMs,
     })
-    : null;
+    : preview && startsIn
+      ? { where: `Season ${prelaunchSeasonNumber}`, when: `Starts ${startsIn}` }
+      : null;
   const seasonComplete = season?.state === "completed";
 
   const acceptVote = (optionId: string, totalBallots: number) => {
@@ -893,11 +950,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       // A phone reserves a footer line for the season sponsor; the caption band moves up for it.
       data-season-sponsor={liveSeasonSponsor ? "true" : undefined}
       data-season={season?.state}
+      data-preview={preview ? "true" : undefined}
     >
       <SceneStage
         // The first render is a placeholder at second zero; loading its place would
         // download a painting the live journey is not showing.
         settled={!loadingLive}
+        // Prelaunch on a phone: his feet stay above the caption band; zero everywhere else.
+        groundReservePx={groundReservePx}
         scheduledActions={scheduledActions}
         walkingClock={walkingClock}
         weather={weather}
@@ -935,6 +995,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         launchCountdown={startsIn}
         seasonClock={seasonClock}
         seasonComplete={seasonComplete}
+        preview={preview}
         audienceOpen={openPanel === "audience"}
         onAudienceOpen={() => showPanel("audience")}
         onJourneyOpen={() => showPanel("journey")}
@@ -950,8 +1011,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
         <div className="connection-banner offline" role="status">
-          {bootstrapIssue} Preview only · live counts, steps and voting are unavailable.
+          {bootstrapIssue ?? "The live journey is temporarily unavailable. Retrying…"} Preview only · live counts, steps and voting are unavailable.
         </div>
+      ) : null}
+      {/* The prelaunch preview never hides a failed read of the journey. */}
+      {preview && bootstrapIssue ? (
+        <div className="connection-banner offline" role="status">{bootstrapIssue}</div>
       ) : null}
 
       {/* A single connected idle frame holds the traveler's place until the 3D
@@ -989,7 +1054,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         showNpcImage={!residentReady}
       />
 
-      <div className="journey-footer-region">
+      <div className="journey-footer-region" ref={footerRegion}>
+        {/* Prelaunch only: his words. On a phone this band keeps its room whether he speaks or not. */}
+        {preview ? <PreviewCaption caption={previewCaption} reducedMotion={reducedMotion} /> : null}
         <WalkingRuleStatus
           walking={review ? review.moving : walking}
           label={walkingStatus.text}
@@ -1054,6 +1121,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           freshness={distanceFreshness}
           activeViewers={activeViewers}
           prelaunch={snapshot.journeyState === "prelaunch"}
+          seasonNumber={prelaunchSeasonNumber}
           contribution={{
             seconds: heartbeat?.visitorActiveSeconds ?? null,
             status: snapshot.mode !== "live" ? "unavailable" : heartbeat === null ? "pending" : connectionStatus === "live" ? "confirmed" : "last_confirmed",
@@ -1152,7 +1220,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       <p className="sr-only" aria-live="polite">
         {activeLine && activeConversation
           ? `${activeLine.speaker === "npc" ? activeConversation.speakerName : "Traveler"}: ${activeLine.text}`
-          : ""}
+          // The preview's whole line, once, when he starts it; the visible cues are not read out.
+          : preview && previewCaption.speaking ? `Traveler: ${previewCaption.lineText}` : ""}
       </p>
     </main>
   );

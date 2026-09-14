@@ -41,6 +41,8 @@ type Props = {
   /** The season sponsor's one row. */
   seasonSponsor?: ReactNode;
   sponsorLabel?: string;
+  /** The season a prelaunch Journey is waiting for. */
+  seasonNumber?: number;
   onShare: () => void;
   onSponsor: () => void;
 };
@@ -49,7 +51,7 @@ type Props = {
 export function JourneyPanel({
   section, places, currentPlaceIndex, secondsToNextVisit, visitSeconds,
   distanceMetres, dailyGoalMetres, marathonMetres, freshness, activeViewers,
-  prelaunch, contribution, streak, collectedToday, secondsToCollect,
+  prelaunch, seasonNumber = 1, contribution, streak, collectedToday, secondsToCollect,
   encounters, photos, tomorrow, ticket, wakeCard, postcard, seasonRecap, seasonSponsor,
   sponsorLabel = "Sponsor a day", onShare, onSponsor,
 }: Props) {
@@ -109,13 +111,20 @@ export function JourneyPanel({
 
       <section className="journey-section" aria-labelledby={`${ids}-together`}>
         <h3 className="journey-section-title" id={`${ids}-together`}>Together</h3>
-        <p className="journey-distance">
-          <strong>{progress?.text ?? "Daily distance unavailable"}</strong>{" "}
-          <small className="goal-freshness" data-freshness={freshness}>{freshness}</small>
-        </p>
-        <div className="goal-track" aria-hidden="true">
-          {progress ? <span style={{ width: `${progress.fill * 100}%` }} /> : null}
-        </div>
+        {prelaunch ? (
+          // Nothing has been walked yet: say when counting starts rather than "unavailable".
+          <p className="journey-distance"><strong>Shared distance starts counting when Season {seasonNumber} begins.</strong></p>
+        ) : (
+          <>
+            <p className="journey-distance">
+              <strong>{progress?.text ?? "Daily distance unavailable"}</strong>{" "}
+              <small className="goal-freshness" data-freshness={freshness}>{freshness}</small>
+            </p>
+            <div className="goal-track" aria-hidden="true">
+              {progress ? <span style={{ width: `${progress.fill * 100}%` }} /> : null}
+            </div>
+          </>
+        )}
         <p className="journey-muted">
           {formatGoalKm(dailyGoalMetres)} km is today&apos;s shared goal, and a {formatGoalKm(marathonMetres)} km marathon
           comes after it. Distance grows only while he walks.
@@ -129,10 +138,14 @@ export function JourneyPanel({
 
       <section className="journey-section" id="journey-your-part" ref={yourPart} aria-labelledby={`${ids}-you`}>
         <h3 className="journey-section-title" id={`${ids}-you`}>Your part</h3>
-        <ContributionMeter
-          seconds={contribution.seconds}
-          status={contribution.status}
-        />
+        {prelaunch ? (
+          <p className="journey-muted">Your watching time starts counting when Season {seasonNumber} begins.</p>
+        ) : (
+          <ContributionMeter
+            seconds={contribution.seconds}
+            status={contribution.status}
+          />
+        )}
         {!prelaunch ? (
           <p className="dock-streak" data-testid="dock-streak">
             {/* Both halves are server-confirmed: the streak came with the bootstrap,

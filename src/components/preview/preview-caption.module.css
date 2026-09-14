@@ -1,0 +1,77 @@
+/* The prelaunch speech caption. Same ink/cream tokens as the encounter captions, but its
+   own placement: to his left on wider screens, and a reserved band above the footer on
+   phones. Nothing here truncates, clips or scrolls a cue. */
+
+.band,
+:global(.journey-footer-region) > .band {
+  grid-column: 1 / -1;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.caption {
+  box-sizing: border-box;
+  margin: 0;
+  border: 1px solid rgb(8 15 25 / 28%);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  background: rgb(243 231 199 / 96%);
+  color: #080f19;
+  font-family: var(--font-copy, system-ui, -apple-system, "Segoe UI", sans-serif);
+  font-size: 15px;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+
+/* Hidden, not removed: the band keeps its room and the layout never jumps. */
+.caption[data-speaking="false"] {
+  visibility: hidden;
+}
+
+.cue {
+  display: block;
+}
+
+.caption[data-speaking="true"] .cue {
+  animation: caption-in 120ms ease-out both;
+}
+
+.caption[data-motion="reduced"] .cue {
+  animation: none;
+}
+
+@keyframes caption-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caption .cue { animation: none; }
+}
+
+/* Phones: a band above the status and the dock, tall enough for three lines at every width. */
+@media (max-width: 600px) {
+  .caption {
+    display: grid;
+    align-content: center;
+    min-height: calc(3 * 1.45em + 1.4rem + 2px);
+  }
+}
+
+/* Wider screens: the open space to his left, level with his chest, clear of the footer. */
+@media (min-width: 601px) {
+  .band,
+  :global(.journey-footer-region) > .band {
+    position: fixed;
+    right: calc(50% + var(--stage-person-height, 30vh) * 0.2 + 1.25rem);
+    bottom: max(
+      calc(var(--stage-bottom, 14vh) + var(--stage-person-height, 30vh) * 0.42),
+      calc(6.75rem + env(safe-area-inset-bottom))
+    );
+    width: min(24rem, calc(50% - var(--stage-person-height, 30vh) * 0.2 - 1.25rem - max(1rem, env(safe-area-inset-left))));
+  }
+
+  .caption {
+    font-size: clamp(15px, 1.15vw, 18px);
+  }
+}

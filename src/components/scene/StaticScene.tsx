@@ -26,6 +26,8 @@ type Props = {
   defer?: boolean;
   onStageFrame: (frame: StageFrame, source: "static" | "pixi") => void;
   onReady: () => void;
+  /** Screen pixels kept clear below his feet for the prelaunch caption band on a phone. */
+  groundReservePx?: number;
 };
 
 /** How long a starting world may take before the poster fetches its own copy. */
@@ -36,7 +38,7 @@ const POSTER_DELAY_MS = 2_500;
  * It asks for the same rendition the live world will, so a first visit downloads
  * each painting once, and it stops following the route once the live world is up.
  */
-export function StaticScene({ zone, assetVersion, active, resolution, defer = false, onStageFrame, onReady }: Props) {
+export function StaticScene({ zone, assetVersion, active, resolution, defer = false, onStageFrame, onReady, groundReservePx = 0 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const picture = useRef<HTMLImageElement>(null);
   const reported = useRef(false);
@@ -111,7 +113,7 @@ export function StaticScene({ zone, assetVersion, active, resolution, defer = fa
       const nominalHeight = zone.variants?.nominalHeight ?? img?.naturalHeight ?? 0;
       if (!width || !height || !nominalWidth || !nominalHeight) return;
       const layout = stageLayout(
-        width, height, nominalWidth, nominalHeight, zone.stage, CHARACTER_HEIGHT_TARGETS,
+        width, height, nominalWidth, nominalHeight, zone.stage, CHARACTER_HEIGHT_TARGETS, { groundReservePx },
       );
       element.dataset.characterImageScale = String(layout.characterImageScale);
       if (img && shown) {
@@ -132,7 +134,7 @@ export function StaticScene({ zone, assetVersion, active, resolution, defer = fa
     img?.addEventListener("load", resize);
     resize();
     return () => { observer.disconnect(); img?.removeEventListener("load", resize); };
-  }, [shown, zone, assetVersion, active, onStageFrame]);
+  }, [shown, zone, assetVersion, active, onStageFrame, groundReservePx]);
 
   return (
     <div

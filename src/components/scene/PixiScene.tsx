@@ -79,11 +79,13 @@ type Props = {
   onReady: () => void;
   /** WebGL could not start. A painting that fails to load is retried instead. */
   onFailure: () => void;
+  /** Screen pixels kept clear below his feet for the prelaunch caption band on a phone. */
+  groundReservePx?: number;
 };
 
 type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">
   & { scheduledActions: readonly ScheduledActionView[]; walkingClock: WalkingClock | null; weather: JourneyWeather | null;
-      sponsorSignUrl: string | null; hundredWatchersAt: string | null };
+      sponsorSignUrl: string | null; hundredWatchersAt: string | null; groundReservePx: number };
 
 /** One place's drawable layers. Sprites belong to the view; textures belong to the cache. */
 type PlaceView = {
@@ -136,9 +138,10 @@ export function PixiScene({
   onDiagnostics,
   onReady,
   onFailure,
+  groundReservePx = 0,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt });
+  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt, groundReservePx });
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const assetStateCallback = useRef(onAssetState);
@@ -146,13 +149,14 @@ export function PixiScene({
   const captureCallback = useRef(onCaptureReady);
 
   useEffect(() => {
-    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt };
+    // Read by the ticker, never a mount dependency: a new reserve re-lays out without rebuilding the world.
+    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt, groundReservePx };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     assetStateCallback.current = onAssetState;
     diagnosticsCallback.current = onDiagnostics;
     captureCallback.current = onCaptureReady;
-  }, [command, onAssetState, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, walkingClock, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, onMotionSample]);
+  }, [command, onAssetState, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, walkingClock, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, groundReservePx, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -330,7 +334,7 @@ export function PixiScene({
         let displayedLayout: StageLayout | null = null;
         let previousLayout: StageLayout | null = null;
         let layoutChangedAt = 0;
-        let lastWidth = 0, lastHeight = 0;
+        let lastWidth = 0, lastHeight = 0, lastGroundReserve = 0;
 
         const setAssetState = (next: SceneAssetState) => {
           if (next === assetState) return;
@@ -514,6 +518,7 @@ export function PixiScene({
 
         const layoutFor = (view: PlaceView, width: number, height: number) => stageLayout(
           width, height, view.nominalWidth, view.nominalHeight, view.zone.stage, CHARACTER_HEIGHT_TARGETS,
+          { groundReservePx: runtime.current.groundReservePx },
         );
 
         const drawView = (
@@ -668,13 +673,18 @@ export function PixiScene({
           const height = app.screen.height;
           const targetLayout = stageLayout(
             width, height, nominalWidth, nominalHeight, drawnZone.stage, CHARACTER_HEIGHT_TARGETS,
+            { groundReservePx: state.groundReservePx },
           );
-          // Resizing immediately reanchors both canvases; place switches ease for 400 ms.
+          // Resizing immediately reanchors both canvases; place switches ease for 400 ms, and so
+          // does the ground rising for (or settling after) the prelaunch caption band.
           if (width !== lastWidth || height !== lastHeight) {
             previousLayout = null;
             if (current) upgradeCheckAt = tickAt + UPGRADE_SETTLE_MS;
+          } else if (state.groundReservePx !== lastGroundReserve && displayedLayout) {
+            previousLayout = displayedLayout;
+            layoutChangedAt = tickAt;
           }
-          lastWidth = width; lastHeight = height;
+          lastWidth = width; lastHeight = height; lastGroundReserve = state.groundReservePx;
           const layout = previousLayout
             ? blendStageLayout(previousLayout, targetLayout, tickAt - layoutChangedAt) : targetLayout;
           displayedLayout = layout;
