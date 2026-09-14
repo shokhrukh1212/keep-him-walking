@@ -1,0 +1,522 @@
+.publicPage {
+  width: 100%;
+  min-height: 100dvh;
+  overflow: clip;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.pageFrame {
+  width: min(74rem, calc(100% - 3rem));
+  margin: 0 auto;
+  padding: 1.25rem 0 3rem;
+}
+
+.siteHeader {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--quiet-border);
+  font-family: var(--font-controls);
+  font-size: .72rem;
+}
+
+.backLink {
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.backLink:hover { color: var(--paper); }
+
+.wordmark {
+  color: var(--gold);
+  font-size: .66rem;
+  font-weight: 500;
+  letter-spacing: .16em;
+}
+
+.eyebrow {
+  display: block;
+  color: var(--gold);
+  font-family: var(--font-controls);
+  font-size: .72rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+  line-height: 1.3;
+}
+
+.sponsorHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(24rem, .86fr);
+  align-items: end;
+  gap: clamp(2rem, 6vw, 5rem);
+  padding: clamp(3.5rem, 8vw, 7rem) 0 clamp(3rem, 6vw, 5rem);
+}
+
+.heroCopy h1,
+.legalHero h1 {
+  margin: .55rem 0 1.4rem;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 8.4vw, 7rem);
+  font-weight: 400;
+  letter-spacing: .005em;
+  line-height: .86;
+  text-transform: uppercase;
+}
+
+.heroCopy h1 { max-width: 9ch; }
+
+.heroLead {
+  margin: 0;
+  color: var(--paper);
+  font-size: 1.08rem;
+  font-weight: 650;
+}
+
+.offerHeadline {
+  margin: .8rem 0 .7rem;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+  letter-spacing: .01em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.heroBody {
+  max-width: 37rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.offerCard,
+.detailCard,
+.requestCard,
+.legalArticle > section {
+  border: 1px solid var(--quiet-border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.offerCard {
+  padding: clamp(1.2rem, 2.6vw, 1.8rem);
+}
+
+.offerCard > p,
+.taxNote,
+.bookingOff {
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.55;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.sectionHeading h2,
+.requestCard > h2,
+.legalArticle h2 {
+  margin: 0;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 400;
+  letter-spacing: .015em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.sectionNumber {
+  color: var(--gold);
+  font-family: var(--font-controls);
+  font-size: .66rem;
+  letter-spacing: .14em;
+}
+
+.offerFacts {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--quiet-border);
+  font-family: var(--font-controls);
+  font-size: .72rem;
+}
+
+.offerFacts > div {
+  display: grid;
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+  gap: .8rem;
+  padding: .62rem 0;
+  border-bottom: 1px solid var(--quiet-border);
+}
+
+.offerFacts dt { color: var(--muted); }
+.offerFacts dd { margin: 0; color: var(--paper); overflow-wrap: anywhere; }
+.taxNote { margin: 1rem 0 0; }
+
+.bookingOff {
+  margin: 0;
+  border-left: 2px solid var(--gold);
+  padding-left: .85rem;
+}
+
+.sponsorLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(23rem, .82fr);
+  align-items: start;
+  gap: clamp(1.5rem, 4vw, 3rem);
+}
+
+.sponsorDetails {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.detailCard {
+  padding: clamp(1.3rem, 3vw, 2rem);
+}
+
+.detailCard h3 {
+  margin: 2rem 0 .8rem;
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.featureList,
+.stepList {
+  display: grid;
+  gap: .85rem;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: .94rem;
+  line-height: 1.55;
+  list-style: none;
+}
+
+.featureList li,
+.stepList li {
+  position: relative;
+  padding-left: 1.55rem;
+}
+
+.featureList li::before {
+  position: absolute;
+  top: .62em;
+  left: .12rem;
+  width: .34rem;
+  height: .34rem;
+  border-radius: 50%;
+  background: var(--gold);
+  content: "";
+}
+
+.stepList { counter-reset: sponsor-step; }
+.stepList li { counter-increment: sponsor-step; }
+.stepList li::before {
+  position: absolute;
+  top: .02rem;
+  left: 0;
+  color: var(--gold);
+  content: counter(sponsor-step, decimal-leading-zero);
+  font-family: var(--font-controls);
+  font-size: .64rem;
+}
+
+.detailNote {
+  margin: 1.5rem 0 0;
+  border-top: 1px solid var(--quiet-border);
+  padding-top: 1rem;
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.requestColumn { min-width: 0; }
+
+.requestCard {
+  padding: clamp(1.3rem, 3vw, 2rem);
+}
+
+.requestCard > h2 {
+  margin: .45rem 0 0;
+  font-size: 2rem;
+}
+
+.requestCard :global(.sponsor-form) {
+  width: 100%;
+  gap: 1.05rem;
+  margin: 1.6rem 0 0;
+  border: 0;
+  border-radius: 0;
+  padding: 1.4rem 0 0;
+  background: transparent;
+  border-top: 1px solid var(--quiet-border);
+}
+
+.requestCard :global(.sponsor-form label) {
+  gap: .5rem;
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .69rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.requestCard :global(.sponsor-form input) {
+  min-height: 3.2rem;
+  width: 100%;
+  border: 1px solid var(--control-border);
+  border-radius: 7px;
+  padding: .75rem .85rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-copy);
+  font-size: 1rem;
+  outline: none;
+}
+
+.requestCard :global(.sponsor-form input:hover) { border-color: rgb(243 231 199 / 52%); }
+.requestCard :global(.sponsor-form input:focus-visible) {
+  border-color: var(--paper);
+  outline: 3px solid rgb(243 231 199 / 20%);
+  outline-offset: 2px;
+}
+
+.requestCard :global(.sponsor-form input[type="file"]) {
+  min-height: 3.45rem;
+  padding: .42rem;
+  color: var(--muted);
+  font-family: var(--font-controls);
+  font-size: .68rem;
+}
+
+.requestCard :global(.sponsor-form input[type="file"]::file-selector-button) {
+  height: 2.5rem;
+  margin-right: .75rem;
+  border: 1px solid var(--control-border);
+  border-radius: 5px;
+  padding: 0 .75rem;
+  background: var(--surface);
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .68rem;
+  cursor: pointer;
+}
+
+.requestCard :global(.sponsor-rights) {
+  display: grid;
+  grid-template-columns: 1.2rem minmax(0, 1fr);
+  align-items: start;
+  gap: .7rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 7px;
+  padding: .85rem;
+  background: var(--ink);
+  cursor: pointer;
+}
+
+.requestCard :global(.sponsor-rights input[type="checkbox"]) {
+  min-height: 1.15rem;
+  width: 1.15rem;
+  margin: .05rem 0 0;
+  accent-color: var(--brick);
+}
+
+.requestCard :global(.policy-copy) {
+  margin: .1rem 0 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.55;
+}
+
+.requestCard :global(.primary-button) {
+  min-height: 3.2rem;
+  width: 100%;
+  border-radius: 7px;
+  padding: .75rem 1rem;
+  font-family: var(--font-controls);
+  font-size: .82rem;
+}
+
+.requestCard :global(.primary-button:disabled) {
+  cursor: wait;
+  opacity: .65;
+}
+
+.requestCard :global(.form-error) {
+  margin: 0;
+  border-left: 2px solid var(--brick);
+  padding-left: .75rem;
+  color: var(--paper);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.pageFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  margin-top: clamp(3rem, 7vw, 5rem);
+  border-top: 1px solid var(--quiet-border);
+  padding-top: 1.3rem;
+  color: var(--muted);
+  font-family: var(--font-controls);
+  font-size: .68rem;
+}
+
+.pageFooter nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .75rem 1.2rem;
+}
+
+.pageFooter a,
+.legalContact a { color: var(--paper); text-underline-offset: .22em; }
+
+.legalFrame { width: min(64rem, calc(100% - 3rem)); }
+
+.legalHero {
+  max-width: 48rem;
+  padding: clamp(4rem, 10vw, 8rem) 0 clamp(3rem, 7vw, 5rem);
+}
+
+.legalHero h1 { max-width: none; }
+
+.legalHero p {
+  max-width: 46rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  line-height: 1.65;
+}
+
+.legalArticle {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.legalArticle > section {
+  padding: clamp(1.35rem, 3vw, 2rem);
+}
+
+.legalArticle h2 { margin: .55rem 0 1.1rem; }
+
+.legalArticle p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .95rem;
+  line-height: 1.65;
+}
+
+.legalArticle p + p {
+  margin-top: 1.15rem;
+  border-top: 1px solid var(--quiet-border);
+  padding-top: 1.15rem;
+}
+
+.legalContact {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.legalContact p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+@media (max-width: 860px) {
+  .sponsorHero,
+  .sponsorLayout { grid-template-columns: 1fr; }
+  .sponsorHero { align-items: start; }
+  .heroCopy h1 { max-width: none; }
+  .legalArticle { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .pageFrame,
+  .legalFrame {
+    width: min(100% - 1.5rem, 74rem);
+    padding-top: .65rem;
+  }
+
+  .siteHeader { min-height: 3rem; }
+  .wordmark { font-size: .58rem; letter-spacing: .12em; }
+  .backLink { font-size: .66rem; }
+
+  .sponsorHero { gap: 2.25rem; padding: 3.25rem 0 2.25rem; }
+  .heroCopy h1,
+  .legalHero h1 {
+    margin-top: .45rem;
+    font-size: clamp(3.45rem, 18vw, 5rem);
+    line-height: .88;
+  }
+
+  .heroLead { font-size: 1rem; }
+  .offerHeadline { font-size: 1.55rem; }
+  .heroBody { font-size: .94rem; }
+
+  .offerCard,
+  .detailCard,
+  .requestCard,
+  .legalArticle > section { border-radius: 10px; }
+
+  .offerCard,
+  .detailCard,
+  .requestCard { padding: 1.15rem; }
+  .offerFacts > div { grid-template-columns: 6.3rem minmax(0, 1fr); gap: .55rem; }
+  .sectionHeading h2,
+  .legalArticle h2 { font-size: 1.35rem; }
+  .requestCard > h2 { font-size: 1.7rem; }
+  .featureList,
+  .stepList { font-size: .9rem; }
+
+  .requestCard :global(.sponsor-form) { margin-top: 1.25rem; padding-top: 1.2rem; }
+  .requestCard :global(.sponsor-form input) { font-size: 1rem; }
+
+  .pageFooter,
+  .legalContact {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pageFooter nav { justify-content: flex-start; }
+  .legalHero { padding: 3.75rem 0 2.5rem; }
+  .legalArticle > section { padding: 1.2rem; }
+  .legalContact { border-radius: 10px; padding: 1.15rem; }
+}
+
+@media (max-width: 380px) {
+  .pageFrame,
+  .legalFrame { width: min(100% - 1rem, 74rem); }
+  .offerFacts > div { grid-template-columns: 1fr; gap: .18rem; }
+  .heroCopy h1,
+  .legalHero h1 { font-size: 3.3rem; }
+}

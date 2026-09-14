@@ -2335,6 +2335,10 @@ also renders and stores any missing immutable recap cards through the running ap
   text limits and an https website, decodes the logo by content (PNG, JPEG or WebP,
   64–4,096 px) and stores only a re-encoded WebP of at most 512 px in `khw-sponsor-private`.
   The requester keeps an unguessable `/sponsors/request/<publicId>` status page.
+  The public offer and Privacy routes use the same restrained ink, cream and gold document
+  shell as the journey chrome: a bounded desktop grid, solid surfaced sections and a
+  single-column mobile layout. The sponsor form keeps native controls, visible focus and
+  16 px mobile inputs without changing submission or validation behavior.
 - **Payment.** Real checkout needs season mode, `SPONSOR_BOOKING_ENABLED`,
   `SPONSOR_PROVIDER_APPROVED` and a configured provider (`seasonCheckoutState`); Dodo test
   mode is refused on Vercel Production. `POST /api/season-sponsor/checkout` holds the season
