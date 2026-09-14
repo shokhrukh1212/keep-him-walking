@@ -1,7 +1,7 @@
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { expect, test, type BrowserContext } from "@playwright/test";
 import { parisCountryPackV3 } from "../../src/content/countries/paris.v3";
-import { conversationDurationSeconds } from "../../src/lib/world/activities";
+import { conversationDurationSeconds, conversationSegments } from "../../src/lib/world/activities";
 import { evidenceRoot, installJourneyApi, sampleFrames, setRawSeconds, settled, type JourneyState } from "./helpers/journey-api";
 
 test.use({ deviceScaleFactor: 1.5 });
@@ -130,7 +130,7 @@ test("records a short motion review: a modal, a place change and reciprocal dial
     source: "system",
   }];
   setRawSeconds(state, at + 0.1);
-  const status = page.getByRole("status", { name: /Walking rule/ });
+  const status = page.locator(".journey-progress-primary");
   await expect(status).toContainText("Talking with Inès", { timeout: 30_000 });
   const character = page.getByTestId("product-character-stage");
   await expect(character).toHaveAttribute("data-resident-state", "walk");
@@ -138,9 +138,17 @@ test("records a short motion review: a modal, a place change and reciprocal dial
   expect(Math.abs(travelerFootX - 195)).toBeLessThan(12);
   await expect(page.locator(".dialogue-bubble")).toContainText("The canal suits your walking pace today.", { timeout: 10_000 });
   await expect(page.locator(".dialogue-bubble .eyebrow")).toHaveText("Inès");
+  await expect.poll(async () => page.evaluate(() => {
+    const bubble = document.querySelector<HTMLElement>(".dialogue-bubble");
+    const character = document.querySelector<HTMLElement>(".product-character-stage");
+    if (!bubble || !character) return -1;
+    return bubble.getBoundingClientRect().top - Number(character.dataset.footY);
+  })).toBeGreaterThanOrEqual(15);
   await expect(character).toHaveAttribute("data-character-state", "listen");
   await expect(character).toHaveAttribute("data-resident-state", "greet");
   await page.screenshot({ path: `${evidenceRoot}/conversation-resident-speaks-390.png` });
+  const travelerGreeting = conversationSegments(script.lines).find((segment) => segment.lineIndex === 1)!;
+  setRawSeconds(state, at + travelerGreeting.start + 0.1);
   await expect(page.locator(".dialogue-bubble")).toContainText("It is difficult to hurry beside this water.", { timeout: 8_000 });
   await expect(page.locator(".dialogue-bubble .eyebrow")).toHaveText("Traveler");
   await expect(character).toHaveAttribute("data-character-state", "greet");

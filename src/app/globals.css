@@ -3732,7 +3732,7 @@ a:focus-visible,
   .dialogue-npc {
     top: auto;
     right: max(.5rem, env(safe-area-inset-right));
-    bottom: calc(10.75rem + env(safe-area-inset-bottom));
+    bottom: calc(var(--journey-footer-inset, 10.75rem) + 1rem);
     left: max(.5rem, env(safe-area-inset-left));
     display: grid;
     align-content: center;
@@ -4077,7 +4077,12 @@ a:focus-visible,
   position: relative;
   inset: auto;
   display: grid;
+  grid-column: auto;
+  grid-row: auto;
   grid-template-rows: auto auto;
+  align-self: auto;
+  align-content: normal;
+  justify-self: auto;
   gap: .35rem;
   width: 100%;
   max-width: none;

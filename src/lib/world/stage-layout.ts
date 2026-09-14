@@ -5,6 +5,7 @@ import {
 } from "./stage-targets";
 
 export const MAX_STAGE_IMAGE_SCALE = 1.6;
+export const STAGE_PANEL_GAP_PX = 16;
 
 export type StageLayout = {
   imageScale: number;
@@ -44,19 +45,34 @@ export function boundedPanoramaLayout(
 export function stageLayout(
   viewportW: number, viewportH: number, imageW: number, imageH: number, stage: ZoneStage,
   targets: CharacterHeightTargets,
+  bottomInsetPx = 0,
 ): StageLayout {
   if (![viewportW, viewportH, imageW, imageH].every((n) => Number.isFinite(n) && n > 0)) {
     throw new RangeError("Stage dimensions must be finite and positive");
   }
-  const personHeightPx = targetCharacterHeightPx(viewportW, viewportH, targets);
+  const safeBottomInset = Math.min(
+    viewportH - STAGE_PANEL_GAP_PX,
+    Math.max(0, Number.isFinite(bottomInsetPx) ? bottomInsetPx : 0),
+  );
+  const naturalGroundY = viewportH * (viewportW <= 600 ? 0.80 : 0.86);
+  const groundY = Math.min(naturalGroundY, viewportH - safeBottomInset - STAGE_PANEL_GAP_PX);
+  const personHeightPx = Math.min(
+    targetCharacterHeightPx(viewportW, viewportH, targets),
+    Math.max(1, groundY - STAGE_PANEL_GAP_PX),
+  );
   const requiredImageScale = personHeightPx / (stage.personHeightFrac * imageH);
   // The painting is stationary and must cover the measured stage. Character
   // perspective still supplies the preferred scale, but can never expose a
   // blue/transparent strip at a narrow or short aspect ratio.
-  const coverScale = Math.max(viewportW / imageW, viewportH / imageH);
+  const coverScale = bottomInsetPx > 0
+    ? Math.max(
+        viewportW / imageW,
+        groundY / (stage.groundLineY * imageH),
+        (viewportH - groundY) / ((1 - stage.groundLineY) * imageH),
+      )
+    : Math.max(viewportW / imageW, viewportH / imageH);
   const imageScale = Math.max(coverScale, Math.min(requiredImageScale, MAX_STAGE_IMAGE_SCALE));
   const widthFitScale = viewportW / imageW;
-  const groundY = viewportH * (viewportW <= 600 ? 0.80 : 0.86);
   return {
     imageScale,
     imageX: (viewportW - imageW * imageScale) / 2,

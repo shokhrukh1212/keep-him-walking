@@ -148,7 +148,7 @@ for (const viewport of viewports) {
 }
 
 for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
-  test(`place dots come from the manifest and never move him at ${viewport.width}px`, async ({ page }, testInfo) => {
+  test(`the landing summary and Journey stop list stay truthful at ${viewport.width}px`, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "Each viewport is set explicitly");
     test.setTimeout(150_000);
     await mkdir(evidenceRoot, { recursive: true });
@@ -162,35 +162,22 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     const world = page.locator(".pixi-scene");
     await expect(world).toHaveAttribute("data-zone-id", "paris-lanes");
 
-    await expect(page.locator(".place-dot")).toHaveCount(10);
-    await expect(page.getByRole("button", { name: "Stop 2 of 10, Canal Saint-Martin, you are here" }))
-      .toHaveAttribute("aria-current", "step");
-    await expect(page.getByRole("button", { name: "Stop 1 of 10, Gare du Nord, completed this loop" }))
-      .toHaveAttribute("data-passed", "true");
-    await expect(page.getByRole("list", { name: /^Stop 2 of 10\. Next place in about 6 minutes of walking\.$/ })).toBeAttached();
-    await expect(page.locator(".goal-copy strong")).toHaveAttribute("aria-label", /^0\.7 \/ 8 km today · 9%$/);
-    await expect(page.locator(".goal-freshness")).toHaveText(/extrapolated|last confirmed/);
-    for (const dot of await page.locator(".place-dot").all()) {
-      const box = await dot.boundingBox();
-      expect(box!.width).toBeGreaterThanOrEqual(44);
-      expect(box!.height).toBeGreaterThanOrEqual(44);
-    }
-
-    const ninth = page.getByRole("button", { name: "Stop 9 of 10, Pont Alexandre III" });
-    await ninth.scrollIntoViewIfNeeded();
-    await ninth.focus();
-    await page.keyboard.press("Enter");
-    await expect(page.locator(".place-popover")).toContainText("Pont Alexandre III");
-    await expect(page.locator(".place-popover")).toContainText("In ~48 walking min");
-    await page.waitForTimeout(1_200);
-    await expect(world).toHaveAttribute("data-zone-id", "paris-lanes");
-    await page.screenshot({ path: `${evidenceRoot}/place-dot-popover-${viewport.width}.png` });
-    await page.keyboard.press("Escape");
-    await expect(page.locator(".place-popover")).toHaveCount(0);
+    await expect(page.locator(".place-dot")).toHaveCount(0);
+    await expect(page.locator(".journey-progress-secondary")).toHaveText("Stop 2 of 10 · Next scene in ~6 walking min");
+    await expect(page.locator(".goal-copy strong")).toContainText(/Today · ~?0\.7 \/ 8 km/);
+    await expect(page.locator(".goal-freshness")).toHaveText(/estimated|confirmed/);
 
     await page.getByRole("button", { name: "About the distance goals" }).click({ force: true });
     await expect(page.getByRole("note")).toContainText("42.2 km marathon");
     await page.screenshot({ path: `${evidenceRoot}/goal-info-${viewport.width}.png` });
+    await page.getByRole("button", { name: "Journey" }).click();
+    await page.getByText("See all 10 stops").click();
+    await expect(page.getByRole("list", { name: "Places on today's loop" }).getByText("Canal Saint-Martin"))
+      .toBeVisible();
+    await expect(page.getByRole("listitem").filter({ hasText: "Canal Saint-MartinYou are here" }))
+      .toHaveAttribute("aria-current", "step");
+    await expect(world).toHaveAttribute("data-zone-id", "paris-lanes");
+    await page.screenshot({ path: `${evidenceRoot}/journey-stop-list-${viewport.width}.png` });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
   });
 }

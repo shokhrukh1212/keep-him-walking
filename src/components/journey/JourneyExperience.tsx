@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 import { trackVisitorEvent } from "@/lib/analytics/client";
 import type {
@@ -172,6 +172,60 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     initialSnapshot.presence.ttlSeconds,
     new Date(initialSnapshot.realServerNow ?? initialSnapshot.serverNow).getTime(),
   ));
+  const footerRegion = useRef<HTMLDivElement>(null);
+  const [footerInsetPx, setFooterInsetPx] = useState(0);
+  const [bottomInsetPx, setBottomInsetPx] = useState(0);
+
+  useEffect(() => {
+    const footer = footerRegion.current;
+    if (!footer) return;
+    let frame = 0;
+    let dialogue: Element | null = null;
+    const measure = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const bounds = footer.getBoundingClientRect();
+        const viewportBottom = window.visualViewport
+          ? window.visualViewport.offsetTop + window.visualViewport.height
+          : window.innerHeight;
+        const renderedFooterHeight = Math.max(bounds.height, viewportBottom - bounds.top);
+        const nextFooterInset = Math.max(0, Math.ceil(renderedFooterHeight));
+        const dialogueTop = dialogue && window.matchMedia("(max-width: 600px)").matches
+          ? dialogue.getBoundingClientRect().top
+          : bounds.top;
+        const nextBottomInset = Math.max(nextFooterInset, Math.ceil(viewportBottom - dialogueTop));
+        setFooterInsetPx((current) => Math.abs(current - nextFooterInset) >= 1 ? nextFooterInset : current);
+        setBottomInsetPx((current) => Math.abs(current - nextBottomInset) >= 1 ? nextBottomInset : current);
+      });
+    };
+    const observer = new ResizeObserver(measure);
+    const observeDialogue = () => {
+      const next = footer.parentElement?.querySelector(".dialogue-bubble") ?? null;
+      if (next === dialogue) return;
+      if (dialogue) observer.unobserve(dialogue);
+      dialogue = next;
+      if (dialogue) observer.observe(dialogue);
+    };
+    observer.observe(footer);
+    const mutations = new MutationObserver(() => {
+      observeDialogue();
+      measure();
+    });
+    mutations.observe(footer.parentElement ?? footer, { childList: true, characterData: true, subtree: true });
+    observeDialogue();
+    window.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("scroll", measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      mutations.disconnect();
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("scroll", measure);
+    };
+  }, []);
   const readyReported = useRef(new Set<string>());
   const watchReported = useRef(false);
   const seenMilestones = useRef(new Set<number>());
@@ -891,6 +945,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       // A phone reserves a footer line for the season sponsor; the caption band moves up for it.
       data-season-sponsor={liveSeasonSponsor ? "true" : undefined}
       data-season={season?.state}
+      style={{ "--journey-footer-inset": `${footerInsetPx}px` } as CSSProperties}
     >
       <SceneStage
         // The first render is a placeholder at second zero; loading its place would
@@ -912,6 +967,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         command={worldCommand}
         qualityTier={qualityTier}
         reducedMotion={reducedMotion}
+        bottomInsetPx={bottomInsetPx}
         travelerCommand={command}
         onTravelerReady={setPuppetReady}
         onResidentReady={setResidentReady}
@@ -987,7 +1043,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         showNpcImage={!residentReady}
       />
 
-      <div className="journey-footer-region">
+      <div
+        className="journey-footer-region"
+        ref={footerRegion}
+        data-bottom-inset={footerInsetPx}
+        data-scene-bottom-inset={bottomInsetPx}
+      >
         <div className="journey-progress-region">
           <GoalBar
             walking={review ? review.moving : walking}

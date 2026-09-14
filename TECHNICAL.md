@@ -1715,6 +1715,18 @@ modal remains the place for the full data-derived stop list and current-stop hig
 The distance stays against the daily goal even after 8 km, while the marathon remains
 secondary information behind the accessible explanation and in Journey.
 
+`JourneyExperience` measures the complete rendered footer region with a `ResizeObserver`
+and remeasures for window and `visualViewport` changes. That live inset is an explicit
+input to `stageLayout`, which places the shared ground line at least 16 px above the
+footer and reduces the target character height only when the remaining short-screen
+space cannot contain it. Static and Pixi renderers publish the adjusted shared stage
+frame in place, so the Three traveler and any resident keep their horizontal anchor,
+foot grounding, mixer state and mount while buttons, legal links, safe-area padding or
+browser bars change height.
+On phone widths the same observer also includes a rendered conversation caption in the
+usable-scene inset and positions that caption 16 px above the measured footer; desktop
+captions remain beside the centered traveler and therefore do not reduce his stage.
+
 The root metadata is canonical to `https://keephimwalking.com` regardless of the build
 host. It uses the owner-supplied multi-size `/favicon.ico` and the exact 1200×630
 `/og-image.png?v=1` for Open Graph and Twitter large-image cards, with explicit size and

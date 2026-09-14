@@ -70,6 +70,8 @@ type Props = {
   command: WorldCommand;
   reducedMotion: boolean;
   qualityTier: QualityTier;
+  /** Actual rendered footer height plus its viewport/safe-area offset. */
+  bottomInsetPx?: number;
   travelerCommand?: TravelerCommand;
   onMotionSample?: (frame: {assetVersion:string;motion:TravelerMotionSnapshot}) => void;
   /** A painting of this place is now on screen. */
@@ -83,7 +85,7 @@ type Props = {
 
 type RuntimeRefs = Pick<Props, "routeSeconds" | "routeRuntime" | "command" | "reducedMotion" | "travelerCommand">
   & { scheduledActions: readonly ScheduledActionView[]; walkingClock: WalkingClock | null; weather: JourneyWeather | null;
-      sponsorSignUrl: string | null; hundredWatchersAt: string | null };
+      sponsorSignUrl: string | null; hundredWatchersAt: string | null; bottomInsetPx: number };
 
 /** One place's drawable layers. Sprites belong to the view; textures belong to the cache. */
 type PlaceView = {
@@ -129,6 +131,7 @@ export function PixiScene({
   command,
   reducedMotion,
   qualityTier,
+  bottomInsetPx = 0,
   travelerCommand,
   onMotionSample,
   onZoneChange,
@@ -138,7 +141,7 @@ export function PixiScene({
   onFailure,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt });
+  const runtime = useRef<RuntimeRefs>({ routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt, bottomInsetPx });
   const motionCallback = useRef(onMotionSample);
   const zoneCallback = useRef(onZoneChange);
   const assetStateCallback = useRef(onAssetState);
@@ -146,13 +149,13 @@ export function PixiScene({
   const captureCallback = useRef(onCaptureReady);
 
   useEffect(() => {
-    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt };
+    runtime.current = { routeSeconds, routeRuntime, command, reducedMotion, travelerCommand, scheduledActions, walkingClock, weather, sponsorSignUrl, hundredWatchersAt, bottomInsetPx };
     motionCallback.current=onMotionSample;
     zoneCallback.current = onZoneChange;
     assetStateCallback.current = onAssetState;
     diagnosticsCallback.current = onDiagnostics;
     captureCallback.current = onCaptureReady;
-  }, [command, onAssetState, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, walkingClock, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, onMotionSample]);
+  }, [bottomInsetPx, command, onAssetState, onCaptureReady, onDiagnostics, onZoneChange, reducedMotion, routeRuntime, routeSeconds, scheduledActions, walkingClock, travelerCommand, weather, sponsorSignUrl, hundredWatchersAt, onMotionSample]);
 
   useEffect(() => {
     let disposed = false;
@@ -514,6 +517,7 @@ export function PixiScene({
 
         const layoutFor = (view: PlaceView, width: number, height: number) => stageLayout(
           width, height, view.nominalWidth, view.nominalHeight, view.zone.stage, CHARACTER_HEIGHT_TARGETS,
+          runtime.current.bottomInsetPx,
         );
 
         const drawView = (
@@ -668,6 +672,7 @@ export function PixiScene({
           const height = app.screen.height;
           const targetLayout = stageLayout(
             width, height, nominalWidth, nominalHeight, drawnZone.stage, CHARACTER_HEIGHT_TARGETS,
+            runtime.current.bottomInsetPx,
           );
           // Resizing immediately reanchors both canvases; place switches ease for 400 ms.
           if (width !== lastWidth || height !== lastHeight) {

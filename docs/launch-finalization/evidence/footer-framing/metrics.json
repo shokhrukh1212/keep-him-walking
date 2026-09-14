@@ -1,0 +1,156 @@
+[
+  {
+    "viewport": "1440x900",
+    "footerTop": 702.0625,
+    "footerHeight": 187.546875,
+    "measuredInset": 198,
+    "sceneInset": 198,
+    "panel": {
+      "x": 360,
+      "y": 702.0625,
+      "width": 720,
+      "height": 99.640625
+    },
+    "dialogue": null,
+    "actor": {
+      "footY": 686,
+      "top": 416,
+      "height": 270
+    },
+    "feetToObstructionGap": 16.0625,
+    "horizontalOverflow": 0,
+    "characterMounts": 2
+  },
+  {
+    "viewport": "430x932",
+    "footerTop": 735.28125,
+    "footerHeight": 190.328125,
+    "measuredInset": 197,
+    "sceneInset": 197,
+    "panel": {
+      "x": 12,
+      "y": 735.28125,
+      "width": 406,
+      "height": 96.171875
+    },
+    "dialogue": null,
+    "actor": {
+      "footY": 719,
+      "top": 458.04,
+      "height": 260.96
+    },
+    "feetToObstructionGap": 16.28125,
+    "horizontalOverflow": 0,
+    "characterMounts": 2
+  },
+  {
+    "viewport": "390x844",
+    "footerTop": 647.28125,
+    "footerHeight": 190.328125,
+    "measuredInset": 197,
+    "sceneInset": 197,
+    "panel": {
+      "x": 12,
+      "y": 647.28125,
+      "width": 366,
+      "height": 96.171875
+    },
+    "dialogue": null,
+    "actor": {
+      "footY": 631,
+      "top": 394.67999999999995,
+      "height": 236.32000000000002
+    },
+    "feetToObstructionGap": 16.28125,
+    "horizontalOverflow": 0,
+    "characterMounts": 2
+  },
+  {
+    "viewport": "375x812",
+    "footerTop": 615.28125,
+    "footerHeight": 190.328125,
+    "measuredInset": 197,
+    "sceneInset": 197,
+    "panel": {
+      "x": 12,
+      "y": 615.28125,
+      "width": 351,
+      "height": 96.171875
+    },
+    "dialogue": null,
+    "actor": {
+      "footY": 599,
+      "top": 371.64,
+      "height": 227.35999999999999
+    },
+    "feetToObstructionGap": 16.28125,
+    "horizontalOverflow": 0,
+    "characterMounts": 2
+  },
+  {
+    "viewport": "320x667",
+    "footerTop": 439.421875,
+    "footerHeight": 221.1875,
+    "measuredInset": 228,
+    "sceneInset": 228,
+    "panel": {
+      "x": 12,
+      "y": 439.421875,
+      "width": 296,
+      "height": 127.03125
+    },
+    "dialogue": null,
+    "actor": {
+      "footY": 423,
+      "top": 236.23999999999998,
+      "height": 186.76000000000002
+    },
+    "feetToObstructionGap": 16.421875,
+    "horizontalOverflow": 0,
+    "characterMounts": 2
+  },
+  {
+    "viewport": "320x568",
+    "footerTop": 340.421875,
+    "footerHeight": 221.1875,
+    "measuredInset": 228,
+    "sceneInset": 228,
+    "panel": {
+      "x": 12,
+      "y": 340.421875,
+      "width": 296,
+      "height": 127.03125
+    },
+    "dialogue": null,
+    "actor": {
+      "footY": 324,
+      "top": 164.95999999999998,
+      "height": 159.04000000000002
+    },
+    "feetToObstructionGap": 16.421875,
+    "horizontalOverflow": 0,
+    "characterMounts": 2
+  },
+  {
+    "viewport": "844x390",
+    "footerTop": 240.515625,
+    "footerHeight": 139.09375,
+    "measuredInset": 150,
+    "sceneInset": 150,
+    "panel": {
+      "x": 62,
+      "y": 240.515625,
+      "width": 720,
+      "height": 51.1875
+    },
+    "dialogue": null,
+    "actor": {
+      "footY": 223.99999999999997,
+      "top": 106.99999999999997,
+      "height": 117
+    },
+    "feetToObstructionGap": 16.51562500000003,
+    "horizontalOverflow": 0,
+    "characterMounts": 2
+  }
+]

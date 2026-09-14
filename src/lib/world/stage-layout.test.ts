@@ -63,6 +63,25 @@ describe("stage layout", () => {
     expect(stageLayout(601, 900, 1600, 900, defaults, targets).groundY).toBe(774);
   });
 
+  it("reserves the measured footer and keeps the actor above it with a 16px gap", () => {
+    const desktop = stageLayout(1440, 900, 1600, 900, defaults, targets, 190);
+    expect(desktop.groundY).toBe(694);
+    expect(900 - desktop.groundY).toBe(206);
+    expect(desktop.personHeightPx).toBe(270);
+
+    const mobile = stageLayout(390, 844, 1600, 900, defaults, targets, 220);
+    expect(mobile.groundY).toBe(608);
+    expect(844 - mobile.groundY).toBe(236);
+    expect(mobile.personHeightPx).toBeCloseTo(844 * .28);
+  });
+
+  it("shrinks only when a short screen cannot fit the full target above the measured footer", () => {
+    const short = stageLayout(800, 360, 1600, 900, defaults, targets, 260);
+    expect(short.groundY).toBe(84);
+    expect(short.personHeightPx).toBe(68);
+    expect(short.groundY - short.personHeightPx).toBe(16);
+  });
+
   it("clamps unusably distant artwork and produces the required warning", () => {
     const stage = stageSchema.parse({personHeightFrac: 0.05});
     const layout = stageLayout(1440, 900, 1600, 900, stage, targets);

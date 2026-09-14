@@ -48,6 +48,8 @@ type Props = {
   /** The journey snapshot is the real one (or confirmed unavailable), so its place is worth loading. */
   settled?: boolean;
   reducedMotion: boolean;
+  /** Actual rendered footer height plus its viewport/safe-area offset. */
+  bottomInsetPx?: number;
   travelerCommand?: TravelerCommand;
   onTravelerReady?: (ready: boolean) => void;
   onResidentReady?: (ready: boolean) => void;
@@ -74,6 +76,7 @@ export function SceneStage({
   qualityTier,
   settled = true,
   reducedMotion,
+  bottomInsetPx = 0,
   travelerCommand,
   onTravelerReady,
   onResidentReady,
@@ -161,9 +164,9 @@ export function SceneStage({
     : null;
 
   return (
-    <div ref={container} className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"}>
+    <div ref={container} className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"} data-bottom-inset={Math.round(bottomInsetPx)}>
       <StaticScene zone={zone} assetVersion={pack.assetVersion} resolution={resolution}
-        defer={!pixiFailed} active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
+        bottomInsetPx={bottomInsetPx} defer={!pixiFailed} active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
       {qualityTier && settled && !pixiFailed ? (
         <PixiScene
           contacts={contacts}
@@ -180,6 +183,7 @@ export function SceneStage({
           onCaptureReady={onWorldCaptureReady}
           command={command}
           qualityTier={qualityTier}
+          bottomInsetPx={bottomInsetPx}
           reducedMotion={reducedMotion}
           travelerCommand={travelerCommand}
           onMotionSample={onMotionSample}
