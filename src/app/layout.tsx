@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import type { ReactNode } from "react";
 import { WebVitals } from "@/components/observability/WebVitals";
 import "./globals.css";
@@ -63,6 +64,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         {children}
         <WebVitals />
+        <Script
+          src="https://datafa.st/js/script.js"
+          data-website-id="dfid_IXxIkhyG6bDLApMMLYw3U"
+          data-domain="keephimwalking.com"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
