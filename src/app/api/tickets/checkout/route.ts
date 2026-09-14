@@ -8,8 +8,11 @@ import { ticketDestination } from "@/lib/tickets/catalog";
 import { ticketCheckoutBodySchema } from "@/lib/validation/api";
 import { apiError, readLimitedJson } from "@/lib/validation/http";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
+import { legacyPurchasesOpen } from "@/lib/config/sponsorship";
 
 export async function POST(request: NextRequest) {
+  // A Ticket includes a day sponsorship, which season mode never sells.
+  if (!legacyPurchasesOpen()) return apiError(404, "NOT_FOUND", "Tickets are not offered.");
   if (!hasTrustedOrigin(request)) return apiError(403, "FORBIDDEN", "Untrusted request origin.");
   let body: unknown;
   try { body = await readLimitedJson(request); } catch { return apiError(400, "BAD_REQUEST", "Invalid checkout request."); }

@@ -27,6 +27,8 @@
     "seed:phase1": "node --import tsx --env-file=.env.local scripts/seed-phase1.ts",
     "seed:season1:name-vote": "node --import tsx --env-file=.env.local scripts/seed-season1-name-vote.ts",
     "seed:season1": "node --import tsx --env-file=.env.local scripts/seed-season1.ts",
+    "season:configure": "node --import tsx --env-file=.env.local scripts/season/configure.ts",
+    "production:season:configure": "node --import tsx --env-file=.env.production.local scripts/production/run.ts season",
     "production:db:plan": "node --import tsx --env-file=.env.production.local scripts/production/database.ts",
     "production:db:apply": "node --import tsx --env-file=.env.production.local scripts/production/database.ts --apply",
     "production:db:test": "node --import tsx --env-file=.env.production.local scripts/production/run.ts test",

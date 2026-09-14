@@ -7,6 +7,7 @@ import { flagEmoji } from "@/lib/countries/flags";
 import { loadJourneyMap } from "@/lib/map/data";
 import { stampLabel } from "@/lib/outcomes/stamp";
 import { loadSeasonSheet } from "@/lib/season/data";
+import { seasonSponsorAcknowledgment } from "@/lib/sponsors/season-data";
 
 export const revalidate = 60;
 
@@ -31,7 +32,10 @@ export default async function SeasonPage({ params }: Props) {
   if (!sheet) notFound();
   // The map is rendered on the server here: this page is cached, so there is no
   // reason to make every visitor fetch /api/map again.
-  const map = await loadJourneyMap();
+  const [map, sponsor] = await Promise.all([
+    loadJourneyMap(),
+    seasonSponsorAcknowledgment(seasonNumber).catch(() => null),
+  ]);
   const km = (sheet.stats.confirmedDistanceMetres / 1_000).toFixed(1);
 
   return (
@@ -71,6 +75,12 @@ export default async function SeasonPage({ params }: Props) {
         <h2>Where he walked</h2>
         <JourneyMap data={map} compact />
       </section> : null}
+
+      {sponsor ? <p className="recap-sponsor" data-testid="season-sponsor-acknowledgment">
+        Season {sheet.seasonNumber} sponsor:{" "}
+        <a href={sponsor.href} target="_blank" rel="sponsored noopener noreferrer">{sponsor.name} ↗</a>
+        {" "}· {sponsor.description}
+      </p> : null}
 
       <p className="season-share">
         <SeasonShareButton

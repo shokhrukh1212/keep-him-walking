@@ -52,4 +52,9 @@ describe("walking status", () => {
     expect(walkingStatusLabel({ ...base, mode: "offline_preview" }).tone).toBe("preview");
     expect(walkingStatusLabel({ ...base, wakeCountdown: 2 }).text).toBe("Waking up · starts walking in 2…");
   });
+
+  it("names a finished season rather than a wait or a lost connection", () => {
+    expect(walkingStatusLabel({ ...base, journeyState: "completed", mode: "completed", connection: "scheduled" }))
+      .toEqual({ text: "Season complete", tone: "complete" });
+  });
 });

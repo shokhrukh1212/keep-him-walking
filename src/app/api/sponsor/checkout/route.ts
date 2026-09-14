@@ -4,12 +4,15 @@ import { visitorFromRequest, attachVisitorCookie } from "@/lib/identity/cookie";
 import { hashOpaqueValue } from "@/lib/identity/server";
 import { createSponsorCheckout } from "@/lib/payments/provider";
 import { serverRuntimeConfig } from "@/lib/config/server";
+import { legacyPurchasesOpen } from "@/lib/config/sponsorship";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { sponsorCheckoutBodySchema } from "@/lib/validation/api";
 import { apiError, readLimitedJson } from "@/lib/validation/http";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
 
 export async function POST(request: NextRequest) {
+  // Season mode sells one season, never a day: a direct request cannot buy one.
+  if (!legacyPurchasesOpen()) return apiError(404, "NOT_FOUND", "Day sponsorship is not offered.");
   if (!hasTrustedOrigin(request)) return apiError(403, "FORBIDDEN", "Untrusted request origin.");
   const config = serverRuntimeConfig();
   if (!config.sponsorBookingEnabled) {

@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fixturePaymentsAllowed } from "@/lib/config/phase2-policy";
+import {
+  SEASON_SPONSOR_CURRENCY,
+  SEASON_SPONSOR_PRICE_CENTS,
+  legacyPurchasesOpen,
+  seasonSaleCutoffHours,
+} from "@/lib/config/sponsorship";
 import { verifyFixtureToken } from "@/lib/payments/fixture";
+import { applySeasonPayment } from "@/lib/payments/season";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
+
+type Supabase = NonNullable<ReturnType<typeof getServerSupabase>>;
 
 export async function POST(request: NextRequest) {
   if (!fixturePaymentsAllowed() || !hasTrustedOrigin(request)) {
@@ -14,6 +23,11 @@ export async function POST(request: NextRequest) {
   const claims = verifyFixtureToken(token);
   const supabase = getServerSupabase();
   if (!claims || !supabase) return NextResponse.json({ error: "Invalid or expired fixture checkout." }, { status: 400 });
+  if (claims.kind === "season") {
+    return completeSeasonFixture(supabase, { ...claims, kind: "season" }, action);
+  }
+  // Day sponsorship fixtures rehearse daily mode only.
+  if (!legacyPurchasesOpen()) return NextResponse.json({ error: "Fixture checkout is unavailable." }, { status: 404 });
 
   const result = await supabase.from("sponsorships")
     .select("id,public_id,slot_id,status")
@@ -46,4 +60,35 @@ export async function POST(request: NextRequest) {
     ? claims.returnUrl
     : new URL("/?fixture=cancelled", request.url).toString();
   return NextResponse.redirect(redirect, 303);
+}
+
+/**
+ * The no-money season rehearsal. A confirm goes through the same payment path a
+ * verified provider payment does, with one payment id per checkout, so submitting
+ * twice is a duplicate rather than a second sale.
+ */
+async function completeSeasonFixture(
+  supabase: Supabase,
+  claims: { sponsorshipId: string; returnUrl: string; checkoutId?: string; kind: "season" },
+  action: "confirm" | "cancel",
+) {
+  const now = new Date();
+  if (action === "confirm") {
+    const checkoutId = claims.checkoutId ?? `fixture_${claims.sponsorshipId}`;
+    await applySeasonPayment(supabase, "fixture", {
+      paymentId: `${checkoutId}_paid`,
+      bookingId: claims.sponsorshipId,
+      checkoutId,
+      amountCents: SEASON_SPONSOR_PRICE_CENTS,
+      taxCents: 0,
+      currency: SEASON_SPONSOR_CURRENCY,
+      succeeded: true,
+      productMatches: true,
+    }, true, now);
+  } else {
+    await supabase.rpc("release_season_hold", {
+      p_id: claims.sponsorshipId, p_reason: "checkout_cancelled", p_cutoff_hours: seasonSaleCutoffHours(), p_now: now.toISOString(),
+    });
+  }
+  return NextResponse.redirect(claims.returnUrl, 303);
 }

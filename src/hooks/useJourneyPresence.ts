@@ -241,7 +241,7 @@ export function useJourneyPresence({ snapshot, sceneReady, onHeartbeat, onReacti
   }, [heartbeat, sceneReady, snapshot.countryDay.id, snapshot.mode]);
 
   return {
-    status: snapshot.mode === "offline_preview" || snapshot.mode === "prelaunch"
+    status: snapshot.mode === "offline_preview" || snapshot.mode === "prelaunch" || snapshot.mode === "completed"
       ? snapshot.presence.status
       : status,
     broadcastReactionHint,

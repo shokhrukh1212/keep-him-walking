@@ -25,6 +25,9 @@ export const RATE_LIMITS = {
   reaction: { action: "reaction", limit: 12, windowSeconds: 60 },
   dayPhoto: { action: "day_photo", limit: 4, windowSeconds: 300 },
   adminAccess: { action: "admin_access", limit: 5, windowSeconds: 3_600 },
+  seasonSponsorRequest: { action: "season_sponsor_request", limit: 3, windowSeconds: 3_600 },
+  seasonSponsorRequestNetwork: { action: "season_sponsor_request_network", limit: 10, windowSeconds: 3_600 },
+  seasonSponsorCheckout: { action: "season_sponsor_checkout", limit: 6, windowSeconds: 900 },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 export async function consumeRateLimit(keyHash: string, policy: RateLimitPolicy, now = new Date()) {

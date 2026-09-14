@@ -1,12 +1,16 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { TicketCheckoutForm } from "@/components/tickets/TicketCheckoutForm";
+import { legacyPurchasesOpen } from "@/lib/config/sponsorship";
 import { loadTicketOffer } from "@/lib/tickets/data";
 
 export const revalidate = 60;
 export const metadata: Metadata = { title: "Buy him a ticket" };
 
 export default async function TicketsPage() {
+  // A Ticket includes a day sponsorship, which only daily sponsorship mode sells.
+  if (!legacyPurchasesOpen()) notFound();
   const offer = await loadTicketOffer();
   return <main className="content-page sponsors-page">
     <Link className="back-link" href="/">← Return to the walk</Link>

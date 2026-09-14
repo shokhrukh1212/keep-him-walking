@@ -7,6 +7,9 @@ type FixtureClaims = {
   sponsorshipId: string;
   expiresAt: string;
   returnUrl: string;
+  /** Present for a season booking; its id is a season_sponsorships row, not a day sponsorship. */
+  kind?: "season";
+  checkoutId?: string;
 };
 
 function fixtureSecret(): string {

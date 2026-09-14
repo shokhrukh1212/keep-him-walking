@@ -30,6 +30,8 @@ export type RecapDay = {
   phrase: { original: string; transliteration: string; gloss: string; pronunciation: string } | null;
   photos: RecapPhoto[];
   sponsor: { name: string; publicId: string } | null;
+  /** The day's season sponsor, acknowledged as that season's sponsor. */
+  seasonSponsor: { name: string; href: string; seasonNumber: number } | null;
   voteResult: { label: string; countryCode: string | null; votes: number; totalBallots: number; percent: number } | null;
   tomorrow: { dayNumber: number; cityName: string; countryName: string; countryCode: string } | null;
 };
@@ -48,21 +50,26 @@ function parseTopCountries(value: unknown): RecapCountry[] {
   });
 }
 
-export async function loadRecapDay(dayNumber: number): Promise<RecapDay | null> {
+/**
+ * One finished day. Rollover names the journey the day belongs to, because a season
+ * that has just ended is no longer the latest journey; public pages read the latest.
+ */
+export async function loadRecapDay(dayNumber: number, journeyId?: string): Promise<RecapDay | null> {
   if (!Number.isInteger(dayNumber) || dayNumber < 1) return null;
   const supabase = getServerSupabase();
   if (!supabase) return null;
-  const journey = await latestJourney();
-  if (!journey) return null;
-  const { data: day } = await supabase.from("country_days").select("id,journey_id,day_number,city_name,country_name,country_code,starts_at,scene_pack_id").eq("journey_id", journey.id).eq("day_number", dayNumber).maybeSingle();
+  const resolvedJourneyId = journeyId ?? (await latestJourney())?.id;
+  if (!resolvedJourneyId) return null;
+  const { data: day } = await supabase.from("country_days").select("id,journey_id,day_number,city_name,country_name,country_code,starts_at,scene_pack_id").eq("journey_id", resolvedJourneyId).eq("day_number", dayNumber).maybeSingle();
   if (!day) return null;
 
-  const [{ data: outcome }, { data: photoRows }, { data: slot }, { data: vote }, { data: tomorrow }] = await Promise.all([
+  const [{ data: outcome }, { data: photoRows }, { data: slot }, { data: vote }, { data: tomorrow }, { data: seasonBooking }] = await Promise.all([
     supabase.from("day_outcomes").select("distance_metres,landmark_reached,marathon,peak_watchers,unique_watchers,countries_count,top_country,top_countries,recap_image_path").eq("country_day_id", day.id).maybeSingle(),
     supabase.from("day_photos").select("storage_path,at_distance_metres").eq("country_day_id", day.id).order("at_active_second", { ascending: true }),
     supabase.from("sponsor_slots").select("id").eq("country_day_id", day.id).maybeSingle(),
     supabase.from("votes").select("id,result_option_id").eq("country_day_id", day.id).order("opens_at", { ascending: false }).limit(1).maybeSingle(),
-    supabase.from("country_days").select("day_number,city_name,country_name,country_code").eq("journey_id", journey.id).eq("day_number", dayNumber + 1).maybeSingle(),
+    supabase.from("country_days").select("day_number,city_name,country_name,country_code").eq("journey_id", resolvedJourneyId).eq("day_number", dayNumber + 1).maybeSingle(),
+    supabase.from("season_sponsorships").select("public_id,product_name,journeys(season_number)").eq("journey_id", resolvedJourneyId).in("status", ["active", "completed"]).order("paid_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (!outcome) return null;
 
@@ -85,6 +92,9 @@ export async function loadRecapDay(dayNumber: number): Promise<RecapDay | null> 
   const phrase = pack && "localPhrases" in pack ? pack.localPhrases[0] ?? null : null;
   const config = serverRuntimeConfig();
   const recapImagePath = typeof outcome.recap_image_path === "string" ? outcome.recap_image_path : null;
+  const seasonRow = seasonBooking
+    ? (Array.isArray(seasonBooking.journeys) ? seasonBooking.journeys[0] : seasonBooking.journeys) as { season_number: number } | null
+    : null;
 
   return {
     countryDayId: day.id,
@@ -113,6 +123,11 @@ export async function loadRecapDay(dayNumber: number): Promise<RecapDay | null> 
       atDistanceMetres: Number(photo.at_distance_metres),
     })),
     sponsor: sponsorship ? { name: sponsorship.sponsor_name, publicId: sponsorship.public_id } : null,
+    seasonSponsor: seasonBooking ? {
+      name: String(seasonBooking.product_name),
+      href: `/r/season-sponsor/${seasonBooking.public_id}`,
+      seasonNumber: Number(seasonRow?.season_number ?? 0),
+    } : null,
     voteResult: resultOption && vote ? {
       label: resultOption.label,
       countryCode: resultOption.pack_id ? getCountryPack(resultOption.pack_id)?.countryCode ?? null : null,

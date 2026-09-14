@@ -18,7 +18,11 @@ export function trackServerEvent(
     | "sponsor_checkout_started"
     | "sponsor_payment_confirmed"
     | "sponsor_refunded"
-    | "sponsor_creative_approved",
+    | "sponsor_creative_approved"
+    | "season_sponsor_requested"
+    | "season_sponsor_checkout_started"
+    | "season_sponsor_payment_confirmed"
+    | "season_sponsor_refund_required",
   userIdentifier: string,
   eventData: Record<string, string | number | boolean | null>,
 ): void {

@@ -3581,3 +3581,204 @@ a:focus-visible,
 
   .dialogue-bubble p { margin: .25rem 0 0; font-size: .95rem; line-height: 1.4; }
 }
+
+/* Prompt 2: the season clock, the season sponsor slot and a completed season.
+   Same tokens and type as the rest of the chrome; nothing covers him or a caption. */
+.journey-hud .day-mark .season-clock {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .68rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.season-sponsor-line {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  min-width: 0;
+  max-width: min(26rem, 100%);
+  min-height: 2rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 7px;
+  padding: .2rem .55rem;
+  background: var(--ink);
+  color: var(--muted);
+  font-family: var(--font-controls);
+  font-size: .68rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.season-sponsor-line img {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 3px;
+  object-fit: contain;
+}
+
+.season-sponsor-line .season-sponsor-label { flex: none; }
+.season-sponsor-line .season-sponsor-label-short { display: none; }
+
+.season-sponsor-line .season-sponsor-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--paper);
+  text-overflow: ellipsis;
+}
+
+.season-sponsor-line:hover { border-color: var(--gold); }
+
+.journey-footer-region .season-sponsor-line {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  justify-self: end;
+}
+
+/* Beside the status on the right: the centre of the footer belongs to him. */
+.journey-footer-region .season-complete {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  justify-self: end;
+  width: min(32rem, 44vw);
+}
+
+.season-complete {
+  display: grid;
+  gap: .2rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 8px;
+  padding: .6rem .8rem;
+  background: var(--surface);
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.season-complete p { margin: 0; }
+.season-complete a { color: var(--paper); text-underline-offset: .2em; }
+.season-complete-title { color: var(--gold); letter-spacing: .06em; text-transform: uppercase; }
+.season-complete-cities { color: var(--muted); }
+.journey-panel > .season-complete { justify-self: stretch; width: auto; margin-bottom: .75rem; }
+
+.season-sponsor-row {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: .75rem;
+}
+
+.season-sponsor-row img {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.season-sponsor-row > div { display: grid; gap: .2rem; min-width: 0; }
+.season-sponsor-row strong { color: var(--paper); overflow-wrap: anywhere; }
+.season-sponsor-row p { margin: 0; }
+.season-sponsor-row a { width: fit-content; color: var(--paper); font-family: var(--font-controls); font-size: .78rem; text-underline-offset: .2em; }
+
+.sponsor-copy .season-offer-lead { color: var(--paper); font-weight: 600; }
+
+.sponsor-copy .season-offer-headline,
+.content-page .season-offer-headline {
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: .015em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.season-offer-facts {
+  display: grid;
+  gap: .35rem;
+  margin: 0 0 .8rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 8px;
+  padding: .7rem .8rem;
+  background: var(--surface);
+  font-family: var(--font-controls);
+  font-size: .76rem;
+}
+
+.season-offer-facts > div { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: .5rem; }
+.season-offer-facts dt { color: var(--muted); }
+.season-offer-facts dd { margin: 0; color: var(--paper); font-variant-numeric: tabular-nums; }
+
+.season-offer-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: .6rem 1rem;
+  font-family: var(--font-controls);
+  text-decoration: none;
+}
+
+.sponsor-form .sponsor-rights { display: flex; align-items: flex-start; gap: .55rem; }
+.sponsor-form .sponsor-rights input { flex: none; width: auto; margin-top: .2rem; }
+.season-sponsor-queue-body { display: flex; gap: .75rem; align-items: flex-start; }
+.season-sponsor-queue-body p { margin: .2rem 0; }
+
+/* The status label keeps the pill's own colour; only the arrow is gold. */
+.traveler-state .traveler-state-label,
+.traveler-state[data-tone] .traveler-state-label {
+  min-width: 0;
+  color: inherit;
+}
+
+@media (max-width: 600px) {
+  /* The sponsor shares the status row instead of adding one, so nothing rises over him
+     and the caption band stays where it was. The full name stays in its label. */
+  .journey-footer-region .season-sponsor-line {
+    align-self: stretch;
+    max-width: 48vw;
+    min-height: 0;
+    gap: .3rem;
+    padding: 0 .45rem;
+    font-size: .6rem;
+  }
+
+  .season-sponsor-line img { width: 1rem; height: 1rem; }
+  .season-sponsor-line .season-sponsor-label-long { display: none; }
+  .season-sponsor-line .season-sponsor-label-short { display: inline; }
+
+  .journey-shell[data-season-sponsor="true"] .traveler-state .traveler-state-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The season clock stacks under the city instead of being cut off. */
+  .journey-hud .day-mark .season-clock > span { display: block; overflow: hidden; text-overflow: ellipsis; }
+  .journey-hud .day-mark .season-clock-separator { display: none; }
+  .journey-shell[data-season] .reaction-buttons { top: calc(8rem + env(safe-area-inset-top)); }
+
+  .journey-footer-region .season-complete {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    justify-self: stretch;
+    width: auto;
+    padding: .45rem .6rem;
+    font-size: .62rem;
+  }
+
+  .journey-footer-region .season-complete-cities { display: none; }
+  .journey-footer-region .season-complete-sponsor { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+@media (max-width: 420px) {
+  .season-offer-facts > div { grid-template-columns: 1fr; gap: 0; }
+}

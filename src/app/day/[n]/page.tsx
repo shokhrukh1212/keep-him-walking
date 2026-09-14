@@ -65,7 +65,11 @@ export default async function DayRecapPage({ params }: Props) {
         <p>{recap.tomorrow ? <><strong>Tomorrow:</strong> {flagEmoji(recap.tomorrow.countryCode)} {recap.tomorrow.cityName}, {recap.tomorrow.countryName}.</> : "This was the final scheduled day."}</p>
       </section>
 
-      <p className="recap-sponsor">{recap.sponsor ? <>Sponsored by <a href={`/r/sponsor/${recap.sponsor.publicId}`}>{recap.sponsor.name}</a>.</> : "This day was unsponsored."}</p>
+      <p className="recap-sponsor">{recap.sponsor
+        ? <>Sponsored by <a href={`/r/sponsor/${recap.sponsor.publicId}`}>{recap.sponsor.name}</a>.</>
+        : recap.seasonSponsor
+          ? <>Season {recap.seasonSponsor.seasonNumber} sponsor: <a href={recap.seasonSponsor.href} target="_blank" rel="sponsored noopener noreferrer">{recap.seasonSponsor.name} ↗</a></>
+          : "This day was unsponsored."}</p>
     </main>
   );
 }

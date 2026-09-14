@@ -109,15 +109,54 @@ export type ReactionsView = {
   walkingClock?: WalkingClock;
 };
 
+/** A finished season's server-confirmed totals. Distance counts finalized days only. */
+export type SeasonRecapView = {
+  distanceMetres: number;
+  finalizedDays: number;
+  totalDays: number;
+  /** Days on which he actually walked, in order. */
+  citiesWalked: Array<{ dayNumber: number; cityName: string; countryCode: string }>;
+};
+
+/** The shared seven-day season: wall-clock facts, identical for every visitor. */
+export type SeasonView = {
+  id: string;
+  number: number;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  totalDays: number;
+  state: "prelaunch" | "live" | "completed";
+  recap: SeasonRecapView | null;
+  /** The next configured season. Null means none is scheduled, and nothing is implied. */
+  next: { number: number; title: string; startsAt: string } | null;
+};
+
+/** The season's approved, paid sponsor while its placement is live, or in its recap. */
+export type SeasonSponsorView = {
+  publicId: string;
+  seasonNumber: number;
+  name: string;
+  description: string;
+  logoUrl: string;
+  /** First-party click redirect to the sponsor's own website. */
+  href: string;
+  state: "live" | "completed";
+};
+
 export type BootstrapSnapshot = {
   serverNow: string;
   realServerNow: string;
   /** Story-clock multiplier. It is greater than one only in an isolated rehearsal. */
   storyScale?: number;
-  mode: "live" | "prelaunch" | "offline_preview";
+  /** "completed" is a finished season with no next one live: an idle scene, no presence. */
+  mode: "live" | "prelaunch" | "offline_preview" | "completed";
   /** Private response fact derived from the HttpOnly identity cookie. */
   firstVisit?: boolean;
   journeyState: "prelaunch" | "live" | "intermission" | "completed";
+  /** Absent for an open-ended journey and in older payloads. */
+  season?: SeasonView | null;
+  seasonSponsor?: SeasonSponsorView | null;
   refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "launch" | "none" };
   countryDay: CountryDayView;
   /** Season-level facts. travelerName is null until the Day-1 vote names him. */

@@ -76,6 +76,11 @@ import {
 import { WakeCard } from "@/components/journey/WakeCard";
 import { shareCard } from "@/lib/share/client";
 import { launchCountdown } from "@/lib/story-clock/launch";
+import { seasonClockParts } from "@/lib/season/clock";
+import { SeasonCompleteCard } from "@/components/journey/SeasonCompleteCard";
+import { SeasonSponsorLine } from "@/components/sponsor/SeasonSponsorLine";
+import { SeasonSponsorOffer } from "@/components/sponsor/SeasonSponsorOffer";
+import { SeasonSponsorRow } from "@/components/sponsor/SeasonSponsorRow";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -84,6 +89,8 @@ type Props = {
   allowDemoSponsorLogo?: boolean;
   /** The cheapest day still genuinely open, or null when nothing is for sale. */
   sponsorPriceCents?: number | null;
+  /** Season mode sells one sponsor for a seven-day season; daily mode keeps the day offer. */
+  sponsorshipMode?: "season" | "daily";
 };
 
 type WakeMoment = {
@@ -111,7 +118,7 @@ function currentlyActiveEvent(
 
 const subscribeNever = () => () => {};
 
-export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null }: Props) {
+export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "season" }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeatState, setHeartbeat] = useState<{
     countryDayId: string;
@@ -251,7 +258,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         throw new Error("Bootstrap unavailable");
       }
       const next = (await response.json()) as BootstrapSnapshot;
-      setSnapshot(current=> next.mode !== "live" && current.mode === "live"
+      // A non-live answer over a live page is this browser losing the journey, except a
+      // season that has really finished, which must be shown rather than held as reconnecting.
+      setSnapshot(current=> next.mode !== "live" && next.mode !== "completed" && current.mode === "live"
         ? {...current,presence:{...current.presence,status:"reconnecting"},steps:{...current.steps,stale:true}}
         : {...next,assets:current.assets.assetVersion === next.assets.assetVersion ? current.assets : next.assets});
       // A read taken before the newest heartbeat counted fewer people than that heartbeat did.
@@ -763,6 +772,21 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     });
   }, [experienceReady, snapshot.sponsor, visitorSeconds]);
 
+  // The season sponsor shows only while its season is live; one first-party view per page.
+  const liveSeasonSponsor = snapshot.season?.state === "live" ? snapshot.seasonSponsor ?? null : null;
+  const liveSeasonSponsorId = liveSeasonSponsor?.publicId ?? null;
+  const seasonSponsorViewed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!experienceReady || !liveSeasonSponsorId || seasonSponsorViewed.current === liveSeasonSponsorId) return;
+    seasonSponsorViewed.current = liveSeasonSponsorId;
+    void fetch("/api/season-sponsor/metrics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId: liveSeasonSponsorId }),
+    }).catch(() => undefined);
+    trackVisitorEvent("sponsor_impression", { sponsor_id: liveSeasonSponsorId });
+  }, [experienceReady, liveSeasonSponsorId]);
+
   const localTime = useMemo(
     () =>
       new Intl.DateTimeFormat("en", {
@@ -833,7 +857,24 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       : distanceMetres > routeRuntime.globalDistanceMetres + 0.001
         ? "extrapolated" as const
         : "last confirmed" as const;
-  const sponsorLabel = sponsorPriceCents === null ? "Sponsor a day" : `Sponsor a day · ${formatPriceUsd(sponsorPriceCents)}`;
+  // Season mode sells a whole season; the day offer and its moving price stay in daily mode.
+  const sponsorLabel = sponsorshipMode === "season"
+    ? "Sponsor a season"
+    : sponsorPriceCents === null ? "Sponsor a day" : `Sponsor a day · ${formatPriceUsd(sponsorPriceCents)}`;
+  const season = snapshot.season ?? null;
+  // The shared season clock runs on the synchronized wall clock, never on watched time.
+  const seasonClock = season
+    ? seasonClockParts({
+      number: season.number,
+      totalDays: season.totalDays,
+      startsAt: season.startsAt,
+      endsAt: season.endsAt,
+      state: season.state,
+      dayNumber: season.state === "live" ? snapshot.countryDay.dayNumber : null,
+      nowMs: realNowMs,
+    })
+    : null;
+  const seasonComplete = season?.state === "completed";
 
   const acceptVote = (optionId: string, totalBallots: number) => {
     setSnapshot((current) => ({
@@ -845,7 +886,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   };
 
   return (
-    <main className="journey-shell" data-motion={reducedMotion ? "reduced" : "full"} data-panel={openPanel ?? ""}>
+    <main
+      className="journey-shell"
+      data-motion={reducedMotion ? "reduced" : "full"}
+      data-panel={openPanel ?? ""}
+      // A phone reserves a footer line for the season sponsor; the caption band moves up for it.
+      data-season-sponsor={liveSeasonSponsor ? "true" : undefined}
+      data-season={season?.state}
+    >
       <SceneStage
         // The first render is a placeholder at second zero; loading its place would
         // download a painting the live journey is not showing.
@@ -885,6 +933,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         activeViewers={activeViewers}
         status={connectionStatus}
         launchCountdown={startsIn}
+        seasonClock={seasonClock}
+        seasonComplete={seasonComplete}
         audienceOpen={openPanel === "audience"}
         onAudienceOpen={() => showPanel("audience")}
         onJourneyOpen={() => showPanel("journey")}
@@ -945,7 +995,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           label={walkingStatus.text}
           tone={walkingStatus.tone}
         />
-        {snapshot.journeyState !== "prelaunch" ? <GoalBar
+        {/* One fixed slot for the whole season, beside the status and clear of him and the captions. */}
+        {liveSeasonSponsor ? <SeasonSponsorLine sponsor={liveSeasonSponsor} /> : null}
+        {season?.state === "completed" ? <SeasonCompleteCard season={season} sponsor={snapshot.seasonSponsor ?? null} /> : null}
+        {snapshot.journeyState !== "prelaunch" && snapshot.journeyState !== "completed" ? <GoalBar
           distanceMetres={confirmedDistance}
           dailyGoalMetres={snapshot.assets.dayRouteMetres}
           marathonMetres={snapshot.assets.marathonMetres}
@@ -956,7 +1009,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           visitSeconds={routePosition.visitSeconds}
         /> : null}
         <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
-          {sponsor ? <aside className="sponsor-card" data-hud-region="sponsor" aria-label={sponsor.disclosure}>
+          {/* The day sponsor card belongs to daily mode; a season sponsor has its own line. */}
+          {sponsor && sponsorshipMode === "daily" ? <aside className="sponsor-card" data-hud-region="sponsor" aria-label={sponsor.disclosure}>
             {sponsor.logo ? /* eslint-disable-next-line @next/next/no-img-element */
               <img src={sponsor.logo} alt="" width={40} height={40} /> : null}
             <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
@@ -1019,7 +1073,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
               onShare={() => void shareWake(wakeCard)}
             />
           ) : null}
-          postcard={snapshot.journeyState !== "prelaunch" && snapshot.assets.schemaVersion === 3 ? (
+          postcard={snapshot.journeyState === "live" && snapshot.assets.schemaVersion === 3 ? (
             <PostcardButton
               key={snapshot.countryDay.id}
               countryDayId={snapshot.countryDay.id}
@@ -1030,6 +1084,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
               sponsorPublicId={snapshot.sponsor.status === "sponsored" ? snapshot.sponsor.publicId : undefined}
             />
           ) : null}
+          seasonRecap={season?.state === "completed"
+            ? <SeasonCompleteCard season={season} sponsor={snapshot.seasonSponsor ?? null} />
+            : null}
+          seasonSponsor={snapshot.seasonSponsor ? <SeasonSponsorRow sponsor={snapshot.seasonSponsor} /> : null}
+          sponsorLabel={sponsorshipMode === "season" ? "Sponsor a season" : "Sponsor a day"}
           onShare={() => void share()}
           onSponsor={() => showPanel("sponsor")}
         />
@@ -1037,17 +1096,20 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
 
       <OverlayModal
         open={openPanel === "sponsor"}
-        title="Sponsor a day"
+        title={sponsorshipMode === "season" ? "Sponsor a season" : "Sponsor a day"}
         eyebrow="Support the journey"
         onClose={closePanel}
         testId="sponsor-modal"
       >
-        <div className="sponsor-copy">
-          <p>One sponsor can be clearly disclosed on a day of the shared journey.</p>
-          <p>Standard includes the disclosed sponsor card and approved traveler patch. Premium is shown only when both the bottle label and café placement can be fulfilled.</p>
-          <p>Pricing is based on the previous day’s confirmed audience, within the published floor and cap. It can rise or fall.</p>
-          <p className="booking-off"><strong>Public validation:</strong> booking is not accepting payment yet while an eligible advertising payment provider is confirmed.</p>
-        </div>
+        {/* Season mode reads its one offer only while this modal is open. */}
+        {sponsorshipMode === "season" ? (openPanel === "sponsor" ? <SeasonSponsorOffer /> : null) : (
+          <div className="sponsor-copy">
+            <p>One sponsor can be clearly disclosed on a day of the shared journey.</p>
+            <p>Standard includes the disclosed sponsor card and approved traveler patch. Premium is shown only when both the bottle label and café placement can be fulfilled.</p>
+            <p>Pricing is based on the previous day’s confirmed audience, within the published floor and cap. It can rise or fall.</p>
+            <p className="booking-off"><strong>Public validation:</strong> booking is not accepting payment yet while an eligible advertising payment provider is confirmed.</p>
+          </div>
+        )}
       </OverlayModal>
 
       <OverlayModal

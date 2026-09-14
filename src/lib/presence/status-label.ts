@@ -2,7 +2,7 @@ import type { ConnectionStatus } from "@/lib/contracts";
 
 export type WalkingStatusInput = {
   journeyState: "prelaunch" | "live" | "intermission" | "completed";
-  mode: "live" | "prelaunch" | "offline_preview";
+  mode: "live" | "prelaunch" | "offline_preview" | "completed";
   startsIn: string | null;
   wakeCountdown: number | null;
   /** This browser's confirmed walking lease is current. */
@@ -24,7 +24,7 @@ export type WalkingStatusInput = {
 
 export type WalkingStatus = {
   text: string;
-  tone: "walking" | "stopped" | "waiting" | "reconnecting" | "preview" | "prelaunch";
+  tone: "walking" | "stopped" | "waiting" | "reconnecting" | "preview" | "prelaunch" | "complete";
 };
 
 /**
@@ -34,6 +34,8 @@ export type WalkingStatus = {
  */
 export function walkingStatusLabel(input: WalkingStatusInput): WalkingStatus {
   if (input.journeyState === "prelaunch") return { text: `Starts ${input.startsIn ?? "soon"}`, tone: "prelaunch" };
+  // A finished season with nothing live: he is not walking and nobody is being waited for.
+  if (input.journeyState === "completed") return { text: "Season complete", tone: "complete" };
   if (input.mode === "offline_preview") return { text: "Preview only · waiting for the live journey", tone: "preview" };
   if (input.wakeCountdown) {
     return { text: `Waking up · starts walking in ${input.wakeCountdown}…`, tone: "waiting" };

@@ -36,6 +36,11 @@ type Props = {
   ticket: BootstrapSnapshot["ticket"] | null;
   wakeCard?: ReactNode;
   postcard?: ReactNode;
+  /** A finished season's small recap, shown first. */
+  seasonRecap?: ReactNode;
+  /** The season sponsor's one row. */
+  seasonSponsor?: ReactNode;
+  sponsorLabel?: string;
   onShare: () => void;
   onSponsor: () => void;
 };
@@ -45,8 +50,8 @@ export function JourneyPanel({
   section, places, currentPlaceIndex, secondsToNextVisit, visitSeconds,
   distanceMetres, dailyGoalMetres, marathonMetres, freshness, activeViewers,
   prelaunch, contribution, streak, collectedToday, secondsToCollect,
-  encounters, photos, tomorrow, ticket, wakeCard, postcard,
-  onShare, onSponsor,
+  encounters, photos, tomorrow, ticket, wakeCard, postcard, seasonRecap, seasonSponsor,
+  sponsorLabel = "Sponsor a day", onShare, onSponsor,
 }: Props) {
   const ids = useId();
   const yourPart = useRef<HTMLElement>(null);
@@ -67,6 +72,7 @@ export function JourneyPanel({
 
   return (
     <div className="journey-panel">
+      {seasonRecap}
       {ticket ? (
         <p className="ticket-notice" data-testid="ticket-notice">
           Ticket: someone is sending him to {flagEmoji(ticket.countryCode)} {ticket.countryName} on Day {ticket.dayNumber}
@@ -198,9 +204,16 @@ export function JourneyPanel({
         </section>
       ) : null}
 
+      {seasonSponsor ? (
+        <section className="journey-section" aria-labelledby={`${ids}-sponsor`}>
+          <h3 className="journey-section-title" id={`${ids}-sponsor`}>Season sponsor</h3>
+          {seasonSponsor}
+        </section>
+      ) : null}
+
       <footer className="journey-footer">
         <Image className="journey-brand" src="/logo-dark.png" alt="Keep Him Walking" width={256} height={54} />
-        <button type="button" onClick={onSponsor}>Sponsor a day</button>
+        <button type="button" onClick={onSponsor}>{sponsorLabel}</button>
         <Link href="/privacy">Privacy</Link>
       </footer>
     </div>

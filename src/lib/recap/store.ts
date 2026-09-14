@@ -13,7 +13,12 @@ export async function storePendingRecaps(entries: PendingRecap[]) {
   const bucket = serverRuntimeConfig().recapBucket;
   const stored: string[] = [];
   for (const entry of entries) {
-    const recap = await loadRecapDay(entry.dayNumber);
+    // Each card is drawn from its own journey: a season that has just ended is no
+    // longer the latest one when its last day's card is made.
+    const { data: day, error: dayError } = await supabase.from("country_days")
+      .select("journey_id").eq("id", entry.countryDayId).maybeSingle();
+    if (dayError || !day) throw new Error("RECAP_DATA_UNAVAILABLE");
+    const recap = await loadRecapDay(entry.dayNumber, String(day.journey_id));
     if (!recap || recap.countryDayId !== entry.countryDayId) throw new Error("RECAP_DATA_UNAVAILABLE");
     const path = `${recap.journeyId}/day-${recap.dayNumber}.png`;
     const png = new Uint8Array(await renderRecapImage(recap).arrayBuffer());

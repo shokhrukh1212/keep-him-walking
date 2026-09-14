@@ -15,6 +15,15 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { scaledStoryNow } from "@/lib/story-clock/schedule";
 import { RATE_LIMITS } from "@/lib/security/rate-limit";
 import { reactionsFromRow, type RawReactionsPayload } from "@/lib/reactions/payload";
+import type { SeasonPhase } from "@/lib/season/clock";
+import {
+  currentSeasonPhase,
+  reconcileSeasonsNow,
+  seasonRecap,
+  seasonSponsorFor,
+  seasonView,
+  type SeasonRow,
+} from "@/lib/season/state";
 import { weatherFromRow } from "@/lib/weather/payload";
 
 const eventPayloadSchema = z.object({
@@ -121,10 +130,10 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (process.env.VERCEL_ENV === "production" && !config.phase2Enabled) return null;
-  let effectiveNow = now;
-  let journeyId: string | null = null;
-  let storyScale = 1;
-  if (config.phase2Enabled) {
+  type JourneyContext = { journeyId: string | null; storyScale: number; effectiveNow: Date; prelaunch: boolean };
+  const resolveJourney = async (): Promise<JourneyContext> => {
+    const open: JourneyContext = { journeyId: null, storyScale: 1, effectiveNow: now, prelaunch: false };
+    if (!config.phase2Enabled) return open;
     const { data: journey, error: journeyError } = await supabase
       .from("journeys")
       .select("id,real_time_anchor_at,story_time_anchor_at,story_time_scale,launch_at")
@@ -134,20 +143,23 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
       .limit(1)
       .maybeSingle();
     if (journeyError) throw journeyError;
-    if (journey) {
-      if (journey.launch_at && new Date(journey.launch_at).getTime() > now.getTime()) return null;
-      journeyId = journey.id;
-      storyScale = Number(journey.story_time_scale);
-      effectiveNow = scaledStoryNow(
+    if (!journey) return open;
+    if (journey.launch_at && new Date(journey.launch_at).getTime() > now.getTime()) return { ...open, prelaunch: true };
+    return {
+      journeyId: journey.id,
+      storyScale: Number(journey.story_time_scale),
+      effectiveNow: scaledStoryNow(
         now,
         journey.real_time_anchor_at ? new Date(journey.real_time_anchor_at) : null,
         journey.story_time_anchor_at ? new Date(journey.story_time_anchor_at) : null,
         Number(journey.story_time_scale),
-      );
-    }
-  }
-  const iso = effectiveNow.toISOString();
-  const readDay = async () => {
+      ),
+      prelaunch: false,
+    };
+  };
+  const readDay = async (context: JourneyContext) => {
+    const iso = context.effectiveNow.toISOString();
+    const journeyId = context.journeyId;
     const { data, error } = await supabase
       .from("country_days")
       .select(
@@ -164,18 +176,27 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
     if (error) throw error;
     return data;
   };
-  let data = await readDay();
+  let context = await resolveJourney();
+  if (context.prelaunch) return null;
+  let data = await readDay(context);
   if (!data && config.phase2Enabled) {
     // Authoritative reads are the catch-up path when cron was late or absent.
-    // The ledger and row locks make concurrent requests converge on one day.
+    // The ledger and row locks make concurrent requests converge on one day. A
+    // season that began or ended since the journey was read is settled first, and
+    // the journey is read again.
     const [{ reconcilePhase2 }, { logicalDayBoundaryAtOrBefore }] = await Promise.all([
       import("@/lib/story-clock/rollover"),
       import("@/lib/story-clock/boundary"),
     ]);
     await reconcilePhase2(now, logicalDayBoundaryAtOrBefore(now));
-    data = await readDay();
+    await reconcileSeasonsNow(supabase, now);
+    context = await resolveJourney();
+    if (context.prelaunch) return null;
+    data = await readDay(context);
   }
-  return data ? { ...(data as CountryDayRow), story_now: iso, story_scale: storyScale } : null;
+  return data
+    ? { ...(data as CountryDayRow), story_now: context.effectiveNow.toISOString(), story_scale: context.storyScale }
+    : null;
 }
 
 function countryDayView(row: CountryDayRow): CountryDayView {
@@ -220,26 +241,115 @@ async function prelaunchBootstrapSnapshot(
     .maybeSingle();
   if (dayError) throw dayError;
   if (!day) return null;
+  return idleSnapshot({
+    day,
+    totalDays: journey.total_days,
+    travelerName: journey.traveler_name ?? null,
+    rolloverUtcHour: Number(journey.rollover_utc_hour ?? config.rolloverUtcHour),
+    now,
+    config,
+    state: "prelaunch",
+    refreshAt: new Date(journey.launch_at).toISOString(),
+  });
+}
+
+type IdleDay = Omit<CountryDayRow, "journeys" | "story_now" | "story_scale">;
+
+/** The season's own idle scene: Day 1 before it starts, its last day once it has ended. */
+async function seasonIdleSnapshot(
+  phase: SeasonPhase,
+  seasons: SeasonRow[],
+  now: Date,
+  config: ReturnType<typeof serverRuntimeConfig>,
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+): Promise<BootstrapSnapshot | null> {
+  if (phase.kind !== "prelaunch" && phase.kind !== "completed") return null;
+  const season = phase.kind === "prelaunch" ? phase.next : phase.last;
+  const row = seasons.find((entry) => entry.id === season.id);
+  const { data: day, error } = await supabase
+    .from("country_days")
+    .select("id,journey_id,day_number,country_code,country_name,city_name,time_zone,starts_at,ends_at,story_summary,scene_pack_id")
+    .eq("journey_id", season.id)
+    .order("day_number", { ascending: phase.kind === "prelaunch" })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!day) return null;
+  const next = phase.kind === "completed" ? phase.next : null;
+  const snapshot = idleSnapshot({
+    day,
+    totalDays: season.totalDays,
+    travelerName: row?.travelerName ?? null,
+    rolloverUtcHour: row?.rolloverUtcHour ?? config.rolloverUtcHour,
+    now,
+    config,
+    state: phase.kind,
+    refreshAt: phase.kind === "prelaunch" ? season.startsAt : next?.startsAt ?? null,
+  });
+  if (phase.kind === "prelaunch") {
+    return { ...snapshot, season: seasonView(season, "prelaunch", null, null), seasonSponsor: null };
+  }
+  const [recap, sponsor] = await Promise.all([
+    seasonRecap(supabase, season),
+    seasonSponsorFor(supabase, season, "completed"),
+  ]);
+  return { ...snapshot, season: seasonView(season, "completed", recap, next), seasonSponsor: sponsor };
+}
+
+/** A live day of a season carries the shared season clock and the season's live sponsor. */
+async function withLiveSeason(
+  snapshot: BootstrapSnapshot,
+  journeyId: string | undefined,
+  context: { phase: SeasonPhase; seasons: SeasonRow[] } | null,
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+): Promise<BootstrapSnapshot> {
+  const season = journeyId ? context?.seasons.find((entry) => entry.id === journeyId) : undefined;
+  if (!season || snapshot.mode !== "live") return snapshot;
+  const next = context?.phase.kind === "live" ? context.phase.next : null;
+  return {
+    ...snapshot,
+    season: seasonView(season, "live", null, next),
+    seasonSponsor: await seasonSponsorFor(supabase, season, "live"),
+  };
+}
+
+/**
+ * A scene with no live day: before a launch or a season, or after a season with no
+ * next one live. Nothing moves, nothing is counted and no number is invented.
+ */
+function idleSnapshot(input: {
+  day: IdleDay;
+  totalDays: number;
+  travelerName: string | null;
+  rolloverUtcHour: number;
+  now: Date;
+  config: ReturnType<typeof serverRuntimeConfig>;
+  state: "prelaunch" | "completed";
+  refreshAt: string | null;
+}): BootstrapSnapshot {
+  const { day, now, config } = input;
   const pack = getCountryPack(day.scene_pack_id);
   if (!pack || pack.schemaVersion !== 3) {
-    throw new Error(`No matching launch pack for ${day.scene_pack_id}`);
+    throw new Error(`No matching ${input.state === "prelaunch" ? "launch" : "season"} pack for ${day.scene_pack_id}`);
   }
-  const launchAt = new Date(journey.launch_at);
-  const afterMs = Math.max(1_000, Math.min(5 * 60_000, launchAt.getTime() - now.getTime()));
+  const refreshAtMs = input.refreshAt ? Date.parse(input.refreshAt) : Number.NaN;
+  const afterMs = Number.isFinite(refreshAtMs)
+    ? Math.max(1_000, Math.min(5 * 60_000, refreshAtMs - now.getTime()))
+    : 5 * 60_000;
   return {
     serverNow: now.toISOString(),
     realServerNow: now.toISOString(),
     storyScale: 1,
-    mode: "prelaunch",
-    journeyState: "prelaunch",
-    refresh: { nextAt: launchAt.toISOString(), afterMs, reason: "launch" },
+    mode: input.state,
+    journeyState: input.state,
+    refresh: { nextAt: input.refreshAt, afterMs, reason: input.refreshAt ? "launch" : "none" },
     countryDay: countryDayView({
       ...day,
-      journeys: { total_days: journey.total_days, rollover_utc_hour: journey.rollover_utc_hour },
+      journeys: { total_days: input.totalDays, rollover_utc_hour: input.rolloverUtcHour },
     } as CountryDayRow),
     journey: {
-      travelerName: journey.traveler_name ?? null,
-      rolloverUtcHour: Number(journey.rollover_utc_hour ?? config.rolloverUtcHour),
+      travelerName: input.travelerName,
+      rolloverUtcHour: input.rolloverUtcHour,
     },
     activeEvent: null,
     nextEvent: null,
@@ -612,7 +722,10 @@ export async function liveBootstrapSnapshot(
   const supabase = getServerSupabase();
   if (!supabase) return null;
   const config = serverRuntimeConfig();
+  let seasons: { phase: SeasonPhase; seasons: SeasonRow[] } | null = null;
   if (config.phase2Enabled) {
+    // Seasons first: a missed or late scheduler run is caught up before a day is read.
+    seasons = await currentSeasonPhase(supabase, now);
     const prelaunch = await prelaunchBootstrapSnapshot(now, config, supabase);
     if (prelaunch) return withApprovedTicket(prelaunch, supabase);
     const { data: atomic, error: bundleError } = await supabase.rpc("read_bootstrap_bundle_v14", {
@@ -629,11 +742,15 @@ export async function liveBootstrapSnapshot(
     const result = atomic as AtomicBootstrapRow | null;
     if (result && !result.allowed) throw new BootstrapRateLimitError();
     if (result?.bundle) {
-      return withApprovedTicket(
+      const live = await withApprovedTicket(
         bootstrapFromBundle(result.bundle, visitorHash, config, supabase),
         supabase,
       );
+      return withLiveSeason(live, result.bundle.country_day.journey_id, seasons, supabase);
     }
+    // No live day: a configured season's own scene, before it starts or after it ends.
+    const idle = await seasonIdleSnapshot(seasons.phase, seasons.seasons, now, config, supabase);
+    if (idle) return idle;
   }
   const countryDay = await findCurrentCountryDay(now);
   if (!countryDay) return null;
@@ -757,7 +874,7 @@ export async function liveBootstrapSnapshot(
     milestones = { hundredWatchersAt: milestoneRow?.hundred_watchers_at ?? null };
   }
 
-  return {
+  return withLiveSeason({
     serverNow: storyNow.toISOString(),
     realServerNow: now.toISOString(),
     storyScale: countryDay.story_scale ?? 1,
@@ -810,5 +927,5 @@ export async function liveBootstrapSnapshot(
     passport,
     milestones,
     assets: countryPack,
-  };
+  }, countryDay.journey_id, seasons, supabase);
 }

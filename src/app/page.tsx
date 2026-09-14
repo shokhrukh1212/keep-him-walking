@@ -1,5 +1,6 @@
 import { JourneyExperience } from "@/components/journey/JourneyExperience";
 import { offlineBootstrapSnapshot } from "@/lib/bootstrap/offline";
+import { sponsorshipMode } from "@/lib/config/sponsorship";
 import { demoSponsorAllowed, demoSponsorLogoAllowed } from "@/lib/traveler/demo-sponsor";
 
 // The landing page stays cacheable: no cookies, no search params, one indexed
@@ -13,5 +14,6 @@ export default async function HomePage() {
     allowDemoSponsorLogo={demoSponsorLogoAllowed(process.env)}
     // Sponsor inventory is deliberately outside the launch-critical path.
     sponsorPriceCents={null}
+    sponsorshipMode={sponsorshipMode()}
   />;
 }

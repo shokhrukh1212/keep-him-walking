@@ -1,10 +1,14 @@
 import "server-only";
 import { serverRuntimeConfig } from "@/lib/config/server";
+import { sponsorshipMode } from "@/lib/config/sponsorship";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { storePendingRecaps, type PendingRecap } from "@/lib/recap/store";
+import { reconcileSeasonsNow } from "@/lib/season/state";
 import { nextDayPackId, planNextDay, type VoteWinner } from "@/lib/story-clock/next-day";
 import { writeOperationalLog } from "@/lib/observability/logger";
 import { logicalDayBoundaryAtOrBefore } from "./boundary";
+
+type Supabase = NonNullable<ReturnType<typeof getServerSupabase>>;
 
 export async function reconcilePhase2(
   now = new Date(),
@@ -39,37 +43,82 @@ export async function reconcilePhase2(
       supabase.rpc("cleanup_phase2_retention", { p_now: now.toISOString() }),
     ]);
     if (stateError || cleanupError) throw stateError ?? cleanupError;
+    // Seven-day seasons move on the wall clock: activate, finalize and settle them
+    // before the recaps are drawn, so a season's last day has its outcome.
+    const seasons = await reconcileSeasonsNow(supabase, now);
     // Pricing runs after reconciliation, because reconciliation is what finalizes
     // yesterday's unique watchers, and after tomorrow's day exists, so the date it
-    // was sold as can finally point at a real country-day.
-    const sponsorWindow = await openSponsorWindow(supabase, winner, nextDay, effectiveAt);
-    const recapDays = Array.isArray(state?.recapDays) ? state.recapDays as PendingRecap[] : [];
+    // was sold as can finally point at a real country-day. Daily inventory exists
+    // only in daily sponsorship mode; season mode never opens a dated price.
+    const sponsorWindow = sponsorshipMode() === "daily"
+      ? await openSponsorWindow(supabase, winner, nextDay, effectiveAt)
+      : { state: "season_mode" as const };
+    const recapDays = uniqueRecaps([
+      ...(Array.isArray(state?.recapDays) ? state.recapDays as PendingRecap[] : []),
+      ...await endedSeasonRecapDays(supabase, now),
+    ]);
     const recapImages = await storePendingRecaps(recapDays);
     const yesterday = new Date(effectiveAt.getTime() - 86_400_000).toISOString().slice(0, 10);
     const { error: metricsError } = await supabase.rpc("aggregate_sponsor_metrics", { p_metric_date: yesterday, p_now: now.toISOString() });
     if (metricsError) throw metricsError;
-    await supabase.from("operation_ledger").update({ status: "completed", completed_at: now.toISOString(), payload_json: { state, cleanup, winner, nextDay, recapImages, sponsorWindow } }).eq("operation_key", operationKey);
-    return { duplicate: false, operationKey, effectiveAt: effectiveAt.toISOString(), state, cleanup, winner, nextDay, recapImages, sponsorWindow };
+    await supabase.from("operation_ledger").update({ status: "completed", completed_at: now.toISOString(), payload_json: { state, cleanup, winner, nextDay, seasons, recapImages, sponsorWindow } }).eq("operation_key", operationKey);
+    return { duplicate: false, operationKey, effectiveAt: effectiveAt.toISOString(), state, cleanup, winner, nextDay, seasons, recapImages, sponsorWindow };
   } catch (error) {
     await supabase.from("operation_ledger").update({ status: "failed", completed_at: now.toISOString(), error_code: "RECONCILIATION_FAILED" }).eq("operation_key", operationKey);
     throw error;
   }
 }
 
+function uniqueRecaps(entries: PendingRecap[]): PendingRecap[] {
+  const seen = new Set<string>();
+  return entries.filter((entry) => !seen.has(entry.countryDayId) && Boolean(seen.add(entry.countryDayId)));
+}
+
+/**
+ * A season that just ended is no longer the newest active journey, so the daily
+ * reconciliation cannot see its last days. Their finalized outcomes still need
+ * recap cards.
+ */
+async function endedSeasonRecapDays(supabase: Supabase, now: Date): Promise<PendingRecap[]> {
+  const { data: seasons, error } = await supabase.from("journeys")
+    .select("id")
+    .not("ends_at", "is", null)
+    .lte("ends_at", now.toISOString())
+    .gt("ends_at", new Date(now.getTime() - 8 * 86_400_000).toISOString());
+  if (error) throw error;
+  if (!seasons?.length) return [];
+  const { data: days, error: dayError } = await supabase.from("country_days")
+    .select("id,day_number")
+    .in("journey_id", seasons.map((season) => season.id));
+  if (dayError) throw dayError;
+  if (!days?.length) return [];
+  const { data: outcomes, error: outcomeError } = await supabase.from("day_outcomes")
+    .select("country_day_id")
+    .in("country_day_id", days.map((day) => day.id))
+    .is("recap_image_path", null);
+  if (outcomeError) throw outcomeError;
+  const pending = new Set((outcomes ?? []).map((outcome) => String(outcome.country_day_id)));
+  return days
+    .filter((day) => pending.has(String(day.id)))
+    .map((day) => ({ countryDayId: String(day.id), dayNumber: Number(day.day_number) }));
+}
+
 /**
  * Builds tomorrow from the winning pack and hands it to the RPC that writes it.
  * The registry supplies the content; Postgres still owns the write and the
- * (journey_id, day_number) idempotency.
+ * (journey_id, day_number) idempotency. A season's seven days already exist, so a
+ * season never reaches this.
  */
 async function createNextDay(
-  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  supabase: Supabase,
   winner: VoteWinner,
   now: Date,
 ) {
   const { data: journey, error: journeyError } = await supabase.from("journeys")
-    .select("id").eq("phase2_enabled", true).in("status", ["preview", "active"])
+    .select("id,ends_at").eq("phase2_enabled", true).in("status", ["preview", "active"])
     .order("starts_at", { ascending: false }).limit(1).maybeSingle();
   if (journeyError) throw journeyError;
+  if (journey?.ends_at) return null;
   const journeyId = journey?.id ?? winner.journeyId;
   if (!journeyId) return null;
   const { data: days, error } = await supabase
@@ -129,7 +178,7 @@ async function createNextDay(
  * keeps the price it opened at.
  */
 async function openSponsorWindow(
-  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  supabase: Supabase,
   winner: VoteWinner,
   nextDay: unknown,
   now: Date,

@@ -5,6 +5,7 @@ import { packPrewarmPaths, prewarmUrl } from "@/lib/launch/prewarm";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { WEATHER_TTL_SECONDS } from "@/lib/weather/open-meteo";
 import { serverRuntimeConfig } from "@/lib/config/server";
+import { seasonCheckoutState, sponsorshipMode } from "@/lib/config/sponsorship";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,9 @@ export async function GET(request: NextRequest) {
       launchModes: {
         freeValidation: ready ? "ready" : "blocked",
         paidBooking: serverRuntimeConfig().sponsorBookingEnabled ? "configured_unverified" : "disabled",
+        sponsorshipMode: sponsorshipMode(),
+        // Configured is not verified: a real test payment and webhook must still be run.
+        seasonCheckout: seasonCheckoutState().enabled ? "configured_unverified" : "request_only",
       },
       weather: { status: weatherStatus, ageSeconds: weatherAgeSeconds },
       assetBase: {
