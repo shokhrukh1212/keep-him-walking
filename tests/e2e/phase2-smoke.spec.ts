@@ -49,7 +49,7 @@ test("Phase 2 visitor surface keeps sponsor and postcard while omitting the redu
   await install(page);
   await page.goto("/");
   await expect(page.getByText("He only walks while someone is watching.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sponsor a day" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sponsor a season" })).toBeVisible();
   await page.getByRole("button", { name: "Journey", exact: true }).click();
   const journey = page.getByRole("dialog", { name: "Journey" });
   await expect(journey).toBeVisible();

@@ -94,7 +94,7 @@ for (const viewport of viewports) {
     // Removed from Journey; the corrections queue itself still exists elsewhere.
     await expect(journey.getByText(/tell us what we got wrong/i)).toHaveCount(0);
     await expect(journey.getByRole("button", { name: "Passport", exact: true })).toHaveCount(0);
-    await expect(journey.getByRole("button", { name: "Sponsor a day" })).toBeAttached();
+    await expect(journey.getByRole("button", { name: "Sponsor a season" })).toBeAttached();
     await expect(journey.getByRole("link", { name: "Privacy" })).toBeAttached();
 
     // The body scrolls; the header and its X stay put.
@@ -118,12 +118,12 @@ for (const viewport of viewports) {
     await expect(page).not.toHaveURL(/panel=/);
     await expect(page.locator(".scene-stage")).toBeVisible();
 
-    await page.getByRole("button", { name: /^Sponsor a day/ }).click({ force: true });
+    await page.getByRole("button", { name: /^Sponsor a season/ }).click({ force: true });
     await expect(page).toHaveURL(/panel=sponsor/);
-    await expect(page.getByRole("dialog", { name: "Sponsor a day" })).toBeVisible();
-    await expectInsideViewport(page, "Sponsor a day", viewport);
-    await page.getByRole("button", { name: "Close Sponsor a day" }).click();
-    await expect(page.getByRole("dialog", { name: "Sponsor a day" })).toBeHidden();
+    await expect(page.getByRole("dialog", { name: "Sponsor a season" })).toBeVisible();
+    await expectInsideViewport(page, "Sponsor a season", viewport);
+    await page.getByRole("button", { name: "Close Sponsor a season" }).click();
+    await expect(page.getByRole("dialog", { name: "Sponsor a season" })).toBeHidden();
 
     await page.locator(".vote-chip").click({ force: true });
     const ballot = page.getByRole("dialog", { name: "Tomorrow’s vote" });
@@ -168,7 +168,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     await expect(page.getByRole("button", { name: "Stop 1 of 10, Gare du Nord, completed this loop" }))
       .toHaveAttribute("data-passed", "true");
     await expect(page.getByRole("list", { name: /^Stop 2 of 10\. Next place in about 6 minutes of walking\.$/ })).toBeAttached();
-    await expect(page.locator(".goal-copy strong")).toHaveAttribute("aria-label", /^0\.6 \/ 8 km today · 7%$/);
+    await expect(page.locator(".goal-copy strong")).toHaveAttribute("aria-label", /^0\.7 \/ 8 km today · 9%$/);
     await expect(page.locator(".goal-freshness")).toHaveText(/extrapolated|last confirmed/);
     for (const dot of await page.locator(".place-dot").all()) {
       const box = await dot.boundingBox();
