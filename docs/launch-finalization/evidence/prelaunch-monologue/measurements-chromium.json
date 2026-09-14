@@ -1,0 +1,387 @@
+{
+  "recordedAt": "2026-09-14T11:04:05.787Z",
+  "environment": "headless Chromium emulation (SwiftShader), not a physical device",
+  "realTimeInterval": {
+    "intervalSeconds": 180.08690000000595,
+    "lines": [
+      "waiting-in-paris",
+      "packed-for-seven"
+    ],
+    "sync": {
+      "p90FrameMs": 500,
+      "toleranceMs": 750,
+      "lines": [
+        {
+          "sequence": 1,
+          "line": "waiting-in-paris",
+          "captionSeconds": 12.2885,
+          "talkStartDeltaMs": 8.100000008940697,
+          "talkEndDeltaMs": 6.100000008940697
+        },
+        {
+          "sequence": 2,
+          "line": "packed-for-seven",
+          "captionSeconds": 11.85079999999702,
+          "talkStartDeltaMs": 4.299999997019768,
+          "talkEndDeltaMs": 2.7000000029802322
+        }
+      ]
+    }
+  },
+  "longSession-open": {
+    "lines": [
+      "waiting-in-paris",
+      "packed-for-seven",
+      "paris-first",
+      "during-the-season",
+      "first-hello",
+      "one-bag",
+      "looking-for-a-sponsor",
+      "thanks-for-stopping-by",
+      "waiting-in-paris",
+      "packed-for-seven"
+    ],
+    "offerRequests": 1
+  },
+  "longSession-missing": {
+    "lines": [
+      "waiting-in-paris",
+      "packed-for-seven",
+      "paris-first",
+      "during-the-season",
+      "first-hello",
+      "one-bag",
+      "looking-for-a-sponsor.fallback",
+      "thanks-for-stopping-by",
+      "waiting-in-paris",
+      "packed-for-seven"
+    ],
+    "offerRequests": 1
+  },
+  "hiddenTab": {
+    "hiddenForMs": 600000,
+    "lines": [
+      "waiting-in-paris",
+      "packed-for-seven"
+    ]
+  },
+  "modal": {
+    "sync": {
+      "p90FrameMs": 1271,
+      "toleranceMs": 1906.5,
+      "lines": [
+        {
+          "sequence": 1,
+          "line": "waiting-in-paris",
+          "captionSeconds": 20.236,
+          "talkStartDeltaMs": 1384,
+          "talkEndDeltaMs": 0
+        },
+        {
+          "sequence": 2,
+          "line": "packed-for-seven",
+          "captionSeconds": 22.238,
+          "talkStartDeltaMs": 0,
+          "talkEndDeltaMs": 0
+        }
+      ]
+    }
+  },
+  "layout-320x568": {
+    "captionBox": {
+      "x": 8,
+      "y": 386.328125,
+      "w": 304,
+      "h": 89.640625
+    },
+    "band": {
+      "x": 8,
+      "y": 386.328125,
+      "w": 304,
+      "h": 89.640625
+    },
+    "body": {
+      "x": 128.192,
+      "y": 213.77919999999997,
+      "w": 63.616000000000014,
+      "h": 165.40160000000003
+    },
+    "tallestCuePx": 89.640625,
+    "fontSizePx": 15
+  },
+  "layout-360x740": {
+    "captionBox": {
+      "x": 8,
+      "y": 558.328125,
+      "w": 344,
+      "h": 89.640625
+    },
+    "band": {
+      "x": 8,
+      "y": 558.328125,
+      "w": 344,
+      "h": 89.640625
+    },
+    "body": {
+      "x": 138.56,
+      "y": 336.65599999999995,
+      "w": 82.88000000000001,
+      "h": 215.48800000000003
+    },
+    "tallestCuePx": 89.640625,
+    "fontSizePx": 15
+  },
+  "layout-375x667": {
+    "captionBox": {
+      "x": 8,
+      "y": 485.328125,
+      "w": 359,
+      "h": 89.640625
+    },
+    "band": {
+      "x": 8,
+      "y": 485.328125,
+      "w": 359,
+      "h": 89.640625
+    },
+    "body": {
+      "x": 150.148,
+      "y": 284.50480000000005,
+      "w": 74.704,
+      "h": 194.2304
+    },
+    "tallestCuePx": 89.640625,
+    "fontSizePx": 15
+  },
+  "layout-390x844": {
+    "captionBox": {
+      "x": 8,
+      "y": 662.328125,
+      "w": 374,
+      "h": 89.640625
+    },
+    "band": {
+      "x": 8,
+      "y": 662.328125,
+      "w": 374,
+      "h": 89.640625
+    },
+    "body": {
+      "x": 147.736,
+      "y": 410.95359999999994,
+      "w": 94.52800000000002,
+      "h": 245.77280000000002
+    },
+    "tallestCuePx": 89.640625,
+    "fontSizePx": 15
+  },
+  "layout-414x896": {
+    "captionBox": {
+      "x": 8,
+      "y": 714.328125,
+      "w": 398,
+      "h": 89.640625
+    },
+    "band": {
+      "x": 8,
+      "y": 714.328125,
+      "w": 398,
+      "h": 89.640625
+    },
+    "body": {
+      "x": 156.824,
+      "y": 448.1024,
+      "w": 100.35199999999999,
+      "h": 260.91519999999997
+    },
+    "tallestCuePx": 89.640625,
+    "fontSizePx": 15
+  },
+  "layout-430x932": {
+    "captionBox": {
+      "x": 8,
+      "y": 750.328125,
+      "w": 414,
+      "h": 89.640625
+    },
+    "band": {
+      "x": 8,
+      "y": 750.328125,
+      "w": 414,
+      "h": 89.640625
+    },
+    "body": {
+      "x": 162.808,
+      "y": 473.82079999999996,
+      "w": 104.38400000000001,
+      "h": 271.39840000000004
+    },
+    "tallestCuePx": 89.640625,
+    "fontSizePx": 15
+  },
+  "safeArea-390x844": {
+    "insets": {
+      "top": 47,
+      "topMax": 47,
+      "bottom": 34,
+      "bottomMax": 34,
+      "left": 0,
+      "leftMax": 0,
+      "right": 0,
+      "rightMax": 0
+    },
+    "caption": {
+      "x": 8,
+      "y": 635.515625,
+      "w": 374,
+      "h": 89.640625
+    },
+    "dock": [
+      {
+        "x": 8,
+        "y": 766,
+        "w": 176,
+        "h": 44
+      },
+      {
+        "x": 189.59375,
+        "y": 766,
+        "w": 176,
+        "h": 44
+      }
+    ],
+    "header": {
+      "x": 11.1875,
+      "y": 57.390625,
+      "w": 128.5625,
+      "h": 53.015625
+    }
+  },
+  "safeArea-844x390": {
+    "insets": {
+      "top": 0,
+      "topMax": 0,
+      "bottom": 21,
+      "bottomMax": 21,
+      "left": 47,
+      "leftMax": 47,
+      "right": 47,
+      "rightMax": 47
+    },
+    "caption": {
+      "x": 47.015625,
+      "y": 214.875,
+      "w": 331.5625,
+      "h": 46.125
+    },
+    "dock": [
+      {
+        "x": 266,
+        "y": 319,
+        "w": 196,
+        "h": 50
+      },
+      {
+        "x": 472,
+        "y": 319,
+        "w": 106,
+        "h": 50
+      }
+    ],
+    "header": {
+      "x": 47,
+      "y": 14.390625,
+      "w": 141.015625,
+      "h": 76.84375
+    }
+  },
+  "layout-667x375": {
+    "captionBox": {
+      "x": 16,
+      "y": 220.875,
+      "w": 275,
+      "h": 46.125
+    },
+    "band": {
+      "x": 16,
+      "y": 242.625,
+      "w": 275,
+      "h": 24.375
+    },
+    "body": {
+      "x": 311,
+      "y": 207.75,
+      "w": 45,
+      "h": 117
+    },
+    "tallestCuePx": 89.625,
+    "fontSizePx": 15
+  },
+  "layout-768x1024": {
+    "captionBox": {
+      "x": 16.015625,
+      "y": 705.5,
+      "w": 286.546875,
+      "h": 46.125
+    },
+    "band": {
+      "x": 16.015625,
+      "y": 727.25,
+      "w": 286.546875,
+      "h": 24.375
+    },
+    "body": {
+      "x": 322.56,
+      "y": 567.296,
+      "w": 122.88,
+      "h": 319.488
+    },
+    "tallestCuePx": 89.625,
+    "fontSizePx": 15
+  },
+  "layout-1440x900": {
+    "captionBox": {
+      "x": 262,
+      "y": 588.203125,
+      "w": 384,
+      "h": 72.40625
+    },
+    "band": {
+      "x": 262,
+      "y": 636.234375,
+      "w": 384,
+      "h": 24.375
+    },
+    "body": {
+      "x": 666,
+      "y": 498.6,
+      "w": 108,
+      "h": 280.8
+    },
+    "tallestCuePx": 72.40625,
+    "fontSizePx": 16.56
+  },
+  "firstArrival": {
+    "viewport": "1440x900",
+    "welcomeDelaySeconds": 6.523700000002981,
+    "expectedLineSeconds": 11.790000000000001,
+    "sync": {
+      "p90FrameMs": 666.7000000000007,
+      "toleranceMs": 1000.0500000000011,
+      "lines": [
+        {
+          "sequence": 1,
+          "line": "waiting-in-paris",
+          "captionSeconds": 12.77029999999702,
+          "talkStartDeltaMs": 11.400000005960464,
+          "talkEndDeltaMs": 4.799999997019768
+        }
+      ]
+    },
+    "requests": {
+      "/api/observability/vitals": 2,
+      "/api/bootstrap": 1
+    }
+  },
+  "runs": "Full suite (18 passed), then the 4 failures rerun after test-only fixes (all passed)"
+}

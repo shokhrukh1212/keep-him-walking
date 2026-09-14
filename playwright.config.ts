@@ -4,7 +4,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: ["phase15-record.spec.ts", "phase2-record.spec.ts"],
+  testIgnore: ["phase15-record.spec.ts", "phase2-record.spec.ts", "prelaunch-record.spec.ts"],
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 2 : 0,
