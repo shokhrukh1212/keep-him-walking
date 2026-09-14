@@ -4147,7 +4147,20 @@ a:focus-visible,
   width: 100%;
 }
 
+/* The season sponsor is one compact centred line between the panel and the actions,
+   at every width; it only truncates when the name outgrows the footer. */
+.journey-footer-region .season-sponsor-line {
+  align-self: center;
+  max-width: 100%;
+}
+
 @media (max-width: 600px) {
+  .journey-footer-region .season-sponsor-line {
+    min-height: 1.75rem;
+    padding: .15rem .55rem;
+    font-size: .64rem;
+  }
+
   .journey-footer-region {
     right: max(.75rem, env(safe-area-inset-right));
     bottom: max(.4rem, env(safe-area-inset-bottom));

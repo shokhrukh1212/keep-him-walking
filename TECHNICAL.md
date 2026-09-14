@@ -2409,12 +2409,12 @@ also renders and stores any missing immutable recap cards through the running ap
   the hold for the session's 24 hours, and an unreachable provider releases nothing. The
   no-money fixture follows the same database path in non-production rehearsals.
 - **Placement.** `SeasonSponsorLine` ("Season supported by [logo] [name] ↗", new tab,
-  `rel="sponsored noopener noreferrer"`, the full name in its accessible label) shares the
-  footer grid's first row with the status line at every width, so it adds no footer height:
-  on a 390×844 phone the footer already meets his soles, and a row of its own lifted the
-  status over his shins. Phones shorten the disclosure to "Supported by" and truncate the
-  name and the status label with an ellipsis (`data-season-sponsor`); the caption band does
-  not move. The completed card takes the right of that row on desktop and replaces the route
+  `rel="sponsored noopener noreferrer"`, the full name in its accessible label) is one
+  compact centred line between the unified progress panel and the Sponsor/Vote/Journey
+  actions at every width. The status no longer has a row of its own to share since the
+  panel was unified, and the footer-aware framing accounts for the extra line. Phones
+  shorten the disclosure to "Supported by" and truncate the name with an ellipsis only when
+  it outgrows the footer; the caption band does not move. The completed card takes the right of that row on desktop and replaces the route
   row, without the city list, on phones. The season clock stacks under the city on phones,
   and the reactions move down one line (`data-season`). Journey shows
   `SeasonSponsorRow`; the completed card, `/season/<n>` and `/day/<n>` acknowledge the
