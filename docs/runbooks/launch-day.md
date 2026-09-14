@@ -45,7 +45,11 @@ server process, so changing either Vercel environment variable requires a redepl
 1. Deploy the reviewed commit with launch flags disabled.
 2. Confirm `/api/health` names the intended release, clean database, `paris-v3` content,
    asset origin and disabled launch.
-3. Confirm `/api/bootstrap` exposes no rehearsal counts, votes or sponsors.
+3. Confirm `/api/bootstrap` answers 200 with `"mode": "prelaunch"` and
+   `"prelaunch": {"startsAt": null, "seasonNumber": 1}`, and exposes no rehearsal counts,
+   votes or sponsors. The page reads "Paris · Preview" and "Season 1 is preparing to begin.";
+   the traveler faces the viewer and says his first line about five seconds after he loads.
+   A 503 here is a real fault, never the prelaunch state.
 4. In cron-job.org, confirm the only enabled minute job targets
    `https://keephimwalking.com/api/cron/reconcile`, sends the bearer secret, and recent
    authenticated runs are 200. Before launch its response must be a safe no-op; a 200 by
