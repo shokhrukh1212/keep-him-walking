@@ -3647,6 +3647,8 @@ a:focus-visible,
     gap: .35rem;
   }
   .journey-progress-region .goal-distance {
+    position: relative;
+    bottom: .35rem;
     grid-column: 2;
     align-content: end;
     gap: .12rem;
