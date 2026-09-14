@@ -29,6 +29,7 @@ import { safeDemoSponsorLogo, sponsorPresentation } from "@/lib/traveler/demo-sp
 import { formatPriceUsd } from "@/lib/sponsors/pricing";
 import { useJourneyAudio } from "@/hooks/useJourneyAudio";
 import { useJourneyPresence } from "@/hooks/useJourneyPresence";
+import { useOnlineVisitors } from "@/hooks/useOnlineVisitors";
 import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { useQualityTier } from "@/hooks/useQualityTier";
 import { useRouteRuntime } from "@/hooks/useRouteRuntime";
@@ -468,6 +469,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   });
   useEffect(() => { broadcastHint.current = broadcastReactionHint; }, [broadcastReactionHint]);
   const activeViewers = heartbeat?.activeViewers ?? snapshot.presence.activeViewers;
+  // What the page calls "people watching": DataFast's visitors with the site open.
+  const onlineVisitors = useOnlineVisitors();
   const authoritativeWalking = snapshot.mode === "live"
     && walkingLeaseIsActive(walkingLease, realNowMs);
   const wakeBeatEndsAtMs = wakeBeat ? Date.parse(wakeBeat.wokeAt) + 3_000 : 0;
@@ -964,7 +967,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     : preview && startsIn
       ? { where: `Season ${prelaunchSeasonNumber}`, when: `Starts ${startsIn}` }
       : null;
-  const seasonComplete = season?.state === "completed";
 
   const acceptVote = (optionId: string, totalBallots: number) => {
     setSnapshot((current) => ({
@@ -1024,10 +1026,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           ? `${formatTemperature(weather.tempC)} ${weatherGlyph(weather.code, weather.isDay)}`
           : null}
         activeViewers={activeViewers}
+        onlineVisitors={onlineVisitors}
         status={connectionStatus}
-        launchCountdown={startsIn}
         seasonClock={seasonClock}
-        seasonComplete={seasonComplete}
         preview={preview}
         audienceOpen={openPanel === "audience"}
         onAudienceOpen={() => showPanel("audience")}
@@ -1158,7 +1159,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           dailyGoalMetres={snapshot.assets.dayRouteMetres}
           marathonMetres={snapshot.assets.marathonMetres}
           freshness={distanceFreshness}
-          activeViewers={activeViewers}
+          onlineVisitors={onlineVisitors}
           prelaunch={snapshot.journeyState === "prelaunch"}
           seasonNumber={prelaunchSeasonNumber}
           contribution={{
@@ -1241,6 +1242,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           activeViewers={activeViewers}
           walking={walking}
           status={connectionStatus}
+          preview={preview}
           waitingSinceLocalTime={waitingLocalTime}
           waitingDuration={formatWaitDuration(waitedSeconds)}
           wakeCountdown={wakeCountdown}

@@ -7,6 +7,8 @@ type Props = {
   activeViewers: number | null;
   walking: boolean;
   status: ConnectionStatus;
+  /** The intentional prelaunch: nothing is carried yet. */
+  preview?: boolean;
   waitingSinceLocalTime?: string | null;
   waitingDuration?: string | null;
   wakeCountdown?: number | null;
@@ -14,9 +16,12 @@ type Props = {
   onShare: () => void;
 };
 
-/** The day's audience: who is carrying him and from where. Every number is server-confirmed. */
+/**
+ * The day's audience: who is carrying him and from where. Every number is server-confirmed.
+ * The header already shows how many people are watching, so the summary names the state only.
+ */
 export function CountryLeaderboardSheet({
-  todayTop, activeViewers, walking, status,
+  todayTop, activeViewers, walking, status, preview = false,
   waitingSinceLocalTime, waitingDuration, wakeCountdown, launchCountdown, onShare,
 }: Props) {
   return (
@@ -24,17 +29,19 @@ export function CountryLeaderboardSheet({
       <p className="audience-summary">
         {launchCountdown
           ? `The journey starts ${launchCountdown}.`
-          : status === "reconnecting"
-            ? `Reconnecting · last confirmed ${activeViewers ?? 0} watching.`
-            : activeViewers === null
-              ? "The live count is unavailable."
-              : walking
-                ? `${activeViewers} watching · keeping him walking.`
-                : wakeCountdown
-                  ? `He starts walking in ${wakeCountdown}…`
-                  : waitingSinceLocalTime
-                    ? `He has been waiting ${waitingDuration ?? `since ${waitingSinceLocalTime}`}.`
-                    : "He is waiting for a viewer."}
+          : preview
+            ? "The journey has not started yet."
+            : status === "reconnecting"
+              ? "Reconnecting to the live journey."
+              : activeViewers === null
+                ? "The live journey is unavailable."
+                : walking
+                  ? "Watchers are keeping him walking."
+                  : wakeCountdown
+                    ? `He starts walking in ${wakeCountdown}…`
+                    : waitingSinceLocalTime
+                      ? `He has been waiting ${waitingDuration ?? `since ${waitingSinceLocalTime}`}.`
+                      : "He is waiting for a viewer."}
       </p>
       <button className="audience-share" type="button" onClick={onShare}>Bring a friend →</button>
       {todayTop.length === 0 ? (

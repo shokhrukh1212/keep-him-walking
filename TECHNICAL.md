@@ -1630,7 +1630,7 @@ the hundred-watcher moment),
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (35)
+### Route handlers (36)
 
 ```
 GET  /api/bootstrap                 the world only: day, event, vote, presence, steps,
@@ -1672,12 +1672,39 @@ GET  /api/og/first?token=           recipient-only first-watcher card (PNG)
 GET  /api/og/country/[cc]           today's confirmed country contribution (PNG)
 GET  /api/og/recap/[n]              finalized day outcome card (PNG; populated by P13)
 GET  /api/map                       cached season route and current ballot geometry
+GET  /api/audience                  DataFast online, last-24-hour and all-time visitors;
+                                    public, s-maxage=15. 503 without DATAFAST_API_KEY.
 ```
 
 Public pages added in Season 1: `/tickets` exposes the owner-enabled, week-two Ticket
 offer, while `/country/<cc>` renders a watching country's rank and carried time for
 today, its confirmed season total, and the days it hosted the walk.
 Every number on it is a stored aggregate; nothing is extrapolated.
+
+### Site analytics and the header count (DataFast, 15 September 2026)
+
+- **The script.** The root layout loads `https://datafa.st/js/script.js` through `next/script`
+  (`afterInteractive`) with `data-website-id="dfid_IXxIkhyG6bDLApMMLYw3U"` and
+  `data-domain="keephimwalking.com"`, so every route is measured. The repository sets no
+  Content-Security-Policy, so no allowlist change was needed. Vemetric stays as it was.
+- **The counts.** `GET /api/audience` calls `fetchAudienceCounts` (`src/lib/analytics/datafast.ts`)
+  with the server-only `DATAFAST_API_KEY` (a `df_` website key). It returns `online` (DataFast
+  realtime: a pageview in the last ten minutes), `last24Hours` (overview over the 24 hours up
+  to the latest ten-minute boundary) and `allTime` (overview with no dates). Each is a
+  whole non-negative number or `null` on its own failure; all three null, or no key, is 503.
+- **Rate limit.** DataFast allows 60 requests a minute. Each read uses Next's shared fetch
+  cache (`next.revalidate`: online 30 s, both totals 600 s), and the ten-minute boundary keeps
+  the 24-hour URL stable, so the site makes at most about four DataFast calls a minute.
+- **What the page shows.** Owner decision: the header's "N people watching" is DataFast's
+  `online`, before launch, during a season and after it (`useOnlineVisitors` reads the route on
+  mount, every 60 s and on becoming visible; hidden tabs do not ask). Nothing shows until the
+  first answer, and "Live count unavailable" after a failed one. Journey's "N watching now"
+  uses the same number, and the audience sheet names the state without a count. `last24Hours`
+  and `allTime` are returned but not rendered yet.
+- **Walking is unchanged.** He still walks only while the heartbeat lease in Postgres counts at
+  least one ready, visible browser. DataFast is not an input to presence, progress or reactions;
+  its ten-minute window and ad-blocker losses make it unfit to be one. The server's confirmed
+  watcher count is published as `data-confirmed-watchers` on the header for tests.
 
 ### Landing HUD and sharing (P12)
 
@@ -2458,7 +2485,8 @@ also renders and stores any missing immutable recap cards through the running ap
     presence, distance or contribution. The route refreshes weather only for a live day.
 - **What the page shows.** The headline reads "Paris · Preview" and the status line "Season 1 is
   preparing to begin." A configured start still shows as "Season 1 · Starts in …"; none is
-  implied when unset. There is no audience control, reaction, route row or distance, and Journey
+  implied when unset. The header still shows DataFast's "N people watching" (see "Site analytics
+  and the header count"). There is no reaction, route row or distance, and Journey
   says distance and watching time start counting when the season begins. A bootstrap read that
   fails during the preview shows its failure text as a banner.
 - **The lines.** `src/content/prelaunch/monologues.ts` holds the owner's eight lines in order. A

@@ -4,16 +4,16 @@ import type { ConnectionStatus, CountryDayView } from "@/lib/contracts";
 type Props = {
   day: CountryDayView;
   localTime: string;
+  /** The server's confirmed watchers: the count that decides whether he walks. */
   activeViewers: number | null;
+  /** DataFast's people with the site open: undefined until known, null when unavailable. */
+  onlineVisitors: number | null | undefined;
   status: ConnectionStatus;
   /** Real weather for the city, or null when nothing is confirmed. */
   weatherLabel?: string | null;
-  launchCountdown?: string | null;
   /** The shared season clock, e.g. "Season 1 · Day 3 of 7" and "Ends in 4d 6h". */
   seasonClock?: { where: string; when: string } | null;
-  /** A finished season with nothing live: there is no audience count to show. */
-  seasonComplete?: boolean;
-  /** The intentional prelaunch: a preview scene with no audience to count. */
+  /** The intentional prelaunch: a preview scene. */
   preview?: boolean;
   audienceOpen: boolean;
   onAudienceOpen: () => void;
@@ -25,26 +25,29 @@ export function JourneyHud({
   day,
   localTime,
   activeViewers,
+  onlineVisitors,
   status,
   weatherLabel = null,
-  launchCountdown = null,
   seasonClock = null,
-  seasonComplete = false,
   preview = false,
   audienceOpen,
   onAudienceOpen,
   onJourneyOpen,
   soundControl,
 }: Props) {
-  const audienceLabel = activeViewers === null
-    ? "Live count unavailable"
-    : `${activeViewers} ${activeViewers === 1 ? "person" : "people"} watching`;
+  // The owner's choice (15 September 2026): the header counts people with the site open,
+  // from DataFast, before and after launch. Nothing is shown until the first answer.
+  const audienceLabel = onlineVisitors === undefined
+    ? null
+    : onlineVisitors === null
+      ? "Live count unavailable"
+      : `${onlineVisitors} ${onlineVisitors === 1 ? "person" : "people"} watching`;
   // The season clock carries the day number, so the headline names only the city.
   const headline = preview
     ? `${day.cityName} · Preview`
     : seasonClock ? day.cityName : `${day.cityName} · Day ${day.dayNumber}`;
   return (
-    <header className="journey-hud" data-hud-region="header">
+    <header className="journey-hud" data-hud-region="header" data-confirmed-watchers={activeViewers ?? undefined}>
       <button className="day-mark" data-hud-region="where-when" type="button" onClick={onJourneyOpen} aria-haspopup="dialog" aria-label={`Open Journey from ${day.cityName}`}>
         <span className="product-mark">KEEP HIM WALKING</span>
         <strong>{headline}</strong>
@@ -62,11 +65,10 @@ export function JourneyHud({
       </button>
       <p className="journey-rule">He only walks while someone is watching.</p>
       <div className="journey-hud-audience" data-hud-region="who">
-        {/* Nobody can be counted before launch, so the preview shows no audience control at all. */}
-        {preview ? null : (
+        {audienceLabel === null ? null : (
           <button className="audience-control" type="button" onClick={onAudienceOpen} aria-haspopup="dialog" aria-expanded={audienceOpen}>
             <span className={`live-dot ${status}`} aria-hidden="true" />
-            <strong>{launchCountdown ? `Starts ${launchCountdown}` : seasonComplete ? "Season complete" : audienceLabel}</strong>
+            <strong>{audienceLabel}</strong>
           </button>
         )}
         {soundControl}

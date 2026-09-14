@@ -195,7 +195,9 @@ test.describe("prelaunch preview · desktop", () => {
     await expect(page.locator(".day-mark strong")).toHaveText("Paris · Preview");
     await expect(page.locator(".journey-progress-primary")).toContainText("Season 1 is preparing to begin.");
     await expect(page.getByText(/No journey day|Live count unavailable|Retrying|Preview only|unavailable/)).toHaveCount(0);
-    await expect(page.locator(".goal-distance, .reaction-buttons, .audience-control, .connection-banner")).toHaveCount(0);
+    await expect(page.locator(".goal-distance, .reaction-buttons, .connection-banner")).toHaveCount(0);
+    // The header counts people with the site open (DataFast) before launch too.
+    await expect(page.locator(".audience-control")).toHaveText("1 person watching");
     await page.screenshot({ path: `${prelaunchEvidenceRoot}/desktop-1440x900-idle.png` });
 
     const log = await previewLog(page);

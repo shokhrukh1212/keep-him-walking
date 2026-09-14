@@ -114,6 +114,10 @@ async function installApi(page: Page, server: SharedServer) {
   await page.route("**/api/bootstrap", async (route) => {
     await route.fulfill({ json: snapshot(server) });
   });
+  // The header counts DataFast's visitors; presence is checked through data-confirmed-watchers.
+  await page.route("**/api/audience", async (route) => {
+    await route.fulfill({ json: { online: 1, last24Hours: 1, allTime: 1, fetchedAt: new Date().toISOString() } });
+  });
   await page.route("**/api/presence/heartbeat", async (route) => {
     const body = route.request().postDataJSON() as {
       sessionId: string;
@@ -224,8 +228,8 @@ test("two browsers share presence and preserve steps across reconnects", async (
   await Promise.all([first.goto("/"), second.goto("/")]);
 
   await expect.poll(() => server.sessions.size, { timeout: 30_000 }).toBe(2);
-  await expect(first.getByText("2 people watching")).toBeVisible();
-  await expect(second.getByText("2 people watching")).toBeVisible();
+  await expect(first.locator(".journey-hud")).toHaveAttribute("data-confirmed-watchers", "2");
+  await expect(second.locator(".journey-hud")).toHaveAttribute("data-confirmed-watchers", "2");
   await expect(first.getByRole("button", { name: "Wave. 0 of 2 watchers have asked." })).toBeVisible();
   await expect(second.getByRole("button", { name: "Wave. 0 of 2 watchers have asked." })).toBeVisible();
 
@@ -234,7 +238,7 @@ test("two browsers share presence and preserve steps across reconnects", async (
   server.blockedSessions.add(secondSession!);
   server.sessions.delete(secondSession!);
   await first.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-  await expect(first.getByText("1 person watching")).toBeVisible();
+  await expect(first.locator(".journey-hud")).toHaveAttribute("data-confirmed-watchers", "1");
   await expect(first.getByRole("button", { name: "Wave. 0 of 1 watchers have asked." })).toBeVisible();
   await first.getByRole("button", { name: "Journey", exact: true }).click({ force: true });
   await expect(first.getByText(/global steps/)).toBeVisible();
@@ -250,7 +254,7 @@ test("two browsers share presence and preserve steps across reconnects", async (
   server.blockedSessions.add(finalSession!);
   server.sessions.delete(finalSession!);
   await first.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-  await expect(first.getByText("0 people watching")).toBeVisible();
+  await expect(first.locator(".journey-hud")).toHaveAttribute("data-confirmed-watchers", "0");
   await expect(first.getByRole("status", { name: "Walking rule: Waiting for the internet" })).toBeVisible();
 
   await firstContext.close();

@@ -55,6 +55,10 @@ function snapshot(server: WaitingServer): BootstrapSnapshot {
 
 async function installWaitingApi(page: Page, server: WaitingServer) {
   await page.route("**/api/bootstrap", (route) => route.fulfill({ json: snapshot(server) }));
+  // DataFast's visitors with the site open: the header's "people watching".
+  await page.route("**/api/audience", (route) => route.fulfill({ json: {
+    online: 1, last24Hours: 1, allTime: 1, fetchedAt: new Date(server.nowMs).toISOString(),
+  } }));
   await page.route("**/api/presence/heartbeat", async (route) => {
     expireLeases(server);
     const body = route.request().postDataJSON() as {
@@ -108,7 +112,7 @@ test("an arrival after the last lease expires sees the first-watcher beat and wa
   const pageA = await contextA.newPage();
   await installWaitingApi(pageA, server);
   await pageA.goto("/");
-  await expect(pageA.getByText("1 person watching")).toBeVisible();
+  await expect(pageA.locator(".journey-hud")).toHaveAttribute("data-confirmed-watchers", "1");
   await contextA.close();
 
   // Cross both the lease-expiry boundary and the configured first-watcher gap.

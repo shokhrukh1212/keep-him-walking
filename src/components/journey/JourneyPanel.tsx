@@ -24,7 +24,8 @@ type Props = {
   dailyGoalMetres: number;
   marathonMetres: number;
   freshness: "extrapolated" | "last confirmed" | "reconnecting" | "unavailable";
-  activeViewers: number | null;
+  /** DataFast's people with the site open; undefined until known, null when unavailable. */
+  onlineVisitors: number | null | undefined;
   prelaunch: boolean;
   contribution: { seconds: number | null; status: "pending" | "confirmed" | "last_confirmed" | "unavailable" };
   streak: number;
@@ -50,7 +51,7 @@ type Props = {
 /** The Journey modal's contents, grouped from "where is he" to "what's next". */
 export function JourneyPanel({
   section, places, currentPlaceIndex, secondsToNextVisit, visitSeconds,
-  distanceMetres, dailyGoalMetres, marathonMetres, freshness, activeViewers,
+  distanceMetres, dailyGoalMetres, marathonMetres, freshness, onlineVisitors,
   prelaunch, seasonNumber = 1, contribution, streak, collectedToday, secondsToCollect,
   encounters, photos, tomorrow, ticket, wakeCard, postcard, seasonRecap, seasonSponsor,
   sponsorLabel = "Sponsor a day", onShare, onSponsor,
@@ -129,9 +130,9 @@ export function JourneyPanel({
           {formatGoalKm(dailyGoalMetres)} km is today&apos;s shared goal, and a {formatGoalKm(marathonMetres)} km marathon
           comes after it. Distance grows only while he walks.
         </p>
-        {activeViewers !== null ? (
+        {typeof onlineVisitors === "number" ? (
           <p className="journey-muted">
-            {activeViewers} watching now
+            {onlineVisitors} watching now
           </p>
         ) : null}
       </section>

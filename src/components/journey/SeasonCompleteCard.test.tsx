@@ -51,7 +51,7 @@ describe("JourneyHud season line", () => {
     id: "d", dayNumber: 3, totalDays: 7, countryCode: "SI", countryName: "Slovenia", cityName: "Ljubljana",
     timeZone: "Europe/Ljubljana", startsAt: "", endsAt: "", storySummary: null, scenePackId: "ljubljana-v1",
   };
-  const base = { day, localTime: "04:27", activeViewers: 1, status: "live" as const, audienceOpen: false, onAudienceOpen: () => undefined, onJourneyOpen: () => undefined };
+  const base = { day, localTime: "04:27", activeViewers: 1, onlineVisitors: 1, status: "live" as const, audienceOpen: false, onAudienceOpen: () => undefined, onJourneyOpen: () => undefined };
 
   it("keeps the daily headline without a season", () => {
     render(<JourneyHud {...base} />);
@@ -66,9 +66,9 @@ describe("JourneyHud season line", () => {
     expect(screen.getByText("1 person watching")).toBeInTheDocument();
   });
 
-  it("shows no audience count once a season is complete", () => {
-    render(<JourneyHud {...base} activeViewers={null} seasonClock={{ where: "Season 1", when: "Season complete" }} seasonComplete />);
-    expect(screen.getByRole("button", { name: /Season complete/ })).toBeInTheDocument();
-    expect(screen.queryByText(/\d+ (person|people) watching/)).toBeNull();
+  it("keeps counting people with the site open once a season is complete", () => {
+    render(<JourneyHud {...base} activeViewers={null} onlineVisitors={4} seasonClock={{ where: "Season 1", when: "Season complete" }} />);
+    expect(screen.getByTestId("season-clock")).toHaveTextContent("Season 1 · Season complete");
+    expect(screen.getByRole("button", { name: "4 people watching" })).toBeInTheDocument();
   });
 });

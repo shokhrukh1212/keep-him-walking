@@ -78,6 +78,10 @@ export async function installJourneyApi(page: Page, state: JourneyState) {
   await page.route("**/api/**", (route) => route.fulfill({ status: 204 }));
   await page.route("**/api/bootstrap", (route) => route.fulfill({ json: journeySnapshot(state) }));
   await page.route("**/api/me", (route) => route.fulfill({ json: { firstVisit: false } }));
+  // DataFast's visitors with the site open: the header's "people watching".
+  await page.route("**/api/audience", (route) => route.fulfill({ json: {
+    online: 1, last24Hours: 1, allTime: 1, fetchedAt: new Date().toISOString(),
+  } }));
   await page.route("**/api/reactions", (route) => route.fulfill({ json: { countryDayId: dayId, reactions: reactions(state) } }));
   await page.route("**/api/presence/heartbeat", (route) => {
     const body = JSON.parse(route.request().postData() ?? "{}") as { sessionId?: string };

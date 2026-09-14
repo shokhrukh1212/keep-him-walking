@@ -20,28 +20,41 @@ const noop = () => undefined;
 const sound = <button type="button">Ambient sound off</button>;
 
 describe("JourneyHud", () => {
-  it("names the prelaunch preview and shows no audience count", () => {
-    render(<JourneyHud day={day} localTime="12:00" activeViewers={null} status="scheduled" preview
+  it("counts people with the site open during the prelaunch preview", () => {
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={null} onlineVisitors={5} status="scheduled" preview
       audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
     expect(screen.getByRole("button", { name: "Open Journey from Paris" })).toHaveTextContent("Paris · Preview");
-    // The premise line stays; no audience count or "unavailable" live count is shown.
-    expect(screen.queryByText(/people watching|person watching|live count/i)).toBeNull();
+    expect(screen.getByRole("button", { name: "5 people watching" })).toBeInTheDocument();
     expect(screen.queryByTestId("season-clock")).toBeNull();
     expect(screen.getByRole("button", { name: "Ambient sound off" })).toBeInTheDocument();
   });
 
+  it("shows no count until the first answer arrives", () => {
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={2} onlineVisitors={undefined} status="live"
+      audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
+    expect(screen.queryByText(/watching$|live count/i)).toBeNull();
+  });
+
   it("keeps a really configured start beside the preview headline", () => {
-    render(<JourneyHud day={day} localTime="12:00" activeViewers={null} status="scheduled" preview
-      seasonClock={{ where: "Season 1", when: "Starts in 2d 4h" }} launchCountdown="in 2d 4h"
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={null} onlineVisitors={1} status="scheduled" preview
+      seasonClock={{ where: "Season 1", when: "Starts in 2d 4h" }}
       audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
     expect(screen.getByRole("button", { name: "Open Journey from Paris" })).toHaveTextContent("Paris · Preview");
     expect(screen.getByTestId("season-clock")).toHaveTextContent("Season 1 · Starts in 2d 4h");
+    expect(screen.getByRole("button", { name: "1 person watching" })).toBeInTheDocument();
   });
 
-  it("still says a live count is unavailable outside the prelaunch preview", () => {
-    render(<JourneyHud day={day} localTime="12:00" activeViewers={null} status="offline"
+  it("says the count is unavailable when it could not be read", () => {
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={null} onlineVisitors={null} status="offline"
       audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
     expect(screen.getByRole("button", { name: "Open Journey from Paris" })).toHaveTextContent("Paris · Day 1");
     expect(screen.getByRole("button", { name: "Live count unavailable" })).toBeInTheDocument();
+  });
+
+  it("keeps the server's confirmed watchers apart from the visitor count", () => {
+    const { container } = render(<JourneyHud day={day} localTime="12:00" activeViewers={2} onlineVisitors={9} status="live"
+      audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
+    expect(screen.getByRole("button", { name: "9 people watching" })).toBeInTheDocument();
+    expect(container.querySelector("header")).toHaveAttribute("data-confirmed-watchers", "2");
   });
 });
