@@ -32,6 +32,7 @@ import { weatherEffect } from "@/lib/weather/effects";
 import { combineGrade, gradeForHour, localHourFraction, nightMix } from "@/lib/world/time-grade";
 import { birdFlights, buntingVisible, steamPuffs, tramPass } from "@/lib/world/ambient";
 import {
+  pavementBandHeightPx,
   placeLoadPlan,
   placeRenditions,
   renditionRequestFor,
@@ -517,7 +518,7 @@ export function PixiScene({
 
         const layoutFor = (view: PlaceView, width: number, height: number) => stageLayout(
           width, height, view.nominalWidth, view.nominalHeight, view.zone.stage, CHARACTER_HEIGHT_TARGETS,
-          runtime.current.bottomInsetPx,
+          runtime.current.bottomInsetPx, view.ground.length > 0,
         );
 
         const drawView = (
@@ -534,7 +535,7 @@ export function PixiScene({
           const firstTile = view.ground[0];
           if (firstTile) {
             const texture = firstTile.texture;
-            const targetHeight = Math.max(height - layout.groundY, height * (view.zone.continuousScene?.groundHeightFrac ?? 0.22));
+            const targetHeight = pavementBandHeightPx(view.zone, height, layout.groundY);
             const scale = targetHeight / Math.max(1, texture.height);
             const segmentWidth = Math.max(1, texture.width * scale);
             // Only the pavement moves: it is the one layer tied to distance.
@@ -672,7 +673,7 @@ export function PixiScene({
           const height = app.screen.height;
           const targetLayout = stageLayout(
             width, height, nominalWidth, nominalHeight, drawnZone.stage, CHARACTER_HEIGHT_TARGETS,
-            runtime.current.bottomInsetPx,
+            runtime.current.bottomInsetPx, (current?.ground.length ?? 0) > 0,
           );
           // Resizing immediately reanchors both canvases; place switches ease for 400 ms.
           if (width !== lastWidth || height !== lastHeight) {

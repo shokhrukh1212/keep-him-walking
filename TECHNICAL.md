@@ -187,6 +187,9 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
 - **Stationary scenery.** The painting never pans. Only the seamless pavement tile and
   ground life move with distance. `stageLayout` uses cover sizing in nominal painting
   pixels, so no viewport reveals a background strip and no rendition moves anything.
+  Below the ground line a place with its own pavement layer (`hasPavementLayer`) is
+  covered by that tile, which runs to the bottom edge (`pavementBandHeightPx`) in Pixi
+  and in the static poster; only a place without one needs its painting to reach it.
 - **Overlay modals.** Journey, Sponsor, Vote and the audience list are `OverlayModal`s
   portalled to `document.body`.
   - The page behind is only `inert`: the Pixi application, the Three mixer, their
@@ -1719,7 +1722,11 @@ secondary information behind the accessible explanation and in Journey.
 and remeasures for window and `visualViewport` changes. That live inset is an explicit
 input to `stageLayout`, which places the shared ground line at least 16 px above the
 footer and reduces the target character height only when the remaining short-screen
-space cannot contain it. Static and Pixi renderers publish the adjusted shared stage
+space cannot contain it. Lifting the ground line never enlarges the painting of a place
+with a pavement layer: the tile fills the taller band below his feet, so the painting
+keeps the scale his height calls for (Gare du Nord at 1333×811 under a 209 px footer stays
+at 0.72 rather than 1.04, which showed only 65% of its height). A place without one still
+enlarges its painting until it reaches the bottom edge. Static and Pixi renderers publish the adjusted shared stage
 frame in place, so the Three traveler and any resident keep their horizontal anchor,
 foot grounding, mixer state and mount while buttons, legal links, safe-area padding or
 browser bars change height.

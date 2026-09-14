@@ -8,6 +8,8 @@ import {
   choosePainting,
   chooseSky,
   decodedBytes,
+  hasPavementLayer,
+  pavementBandHeightPx,
   placeLoadPlan,
   placeRenditions,
   shouldReplaceRendition,
@@ -27,6 +29,21 @@ function request(width: number, height: number, resolution: number): RenditionRe
     groundHeightPx: Math.max(height - layout.groundY, height * 0.18),
   };
 }
+
+describe("pavement band", () => {
+  it("names exactly the places whose renditions include a pavement tile", () => {
+    expect(hasPavementLayer(cafe)).toBe(true);
+    for (const zone of [...parisCountryPackV2.route.zones, ...tashkentCountryPackV4.route.zones]) {
+      expect(hasPavementLayer(zone)).toBe(placeRenditions(zone, request(1_440, 900, 1)).ground !== null);
+    }
+    expect(tashkentCountryPackV4.route.zones.some(hasPavementLayer)).toBe(false);
+  });
+
+  it("runs from the ground line to the bottom edge, never below the authored share", () => {
+    expect(pavementBandHeightPx(cafe, 811, 586)).toBe(225);
+    expect(pavementBandHeightPx({ ...cafe, continuousScene: undefined }, 900, 880)).toBeCloseTo(198);
+  });
+});
 
 describe("rendition choice", () => {
   it("gives a portrait phone the centre of the painting, not its edges", () => {

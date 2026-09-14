@@ -5,6 +5,8 @@ import { publicAssetUrl } from "@/lib/assets/url";
 import { localSceneFallbackAfter } from "@/lib/assets/fallback";
 import type { RouteZone } from "@/lib/content/schema";
 import {
+  hasPavementLayer,
+  pavementBandHeightPx,
   placeRenditions,
   renditionRequestFor,
   shouldReplaceRendition,
@@ -41,9 +43,12 @@ const POSTER_DELAY_MS = 2_500;
 export function StaticScene({ zone, assetVersion, active, resolution, bottomInsetPx = 0, defer = false, onStageFrame, onReady }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const picture = useRef<HTMLImageElement>(null);
+  const pavement = useRef<HTMLDivElement>(null);
   const reported = useRef(false);
   const onReadyRef = useRef(onReady);
-  const [rendition, setRendition] = useState<{ zoneId: string; choice: RenditionChoice } | null>(null);
+  const [rendition, setRendition] = useState<
+    { zoneId: string; choice: RenditionChoice; ground: RenditionChoice | null } | null
+  >(null);
   const [delayElapsed, setDelayElapsed] = useState(false);
   const posterAllowed = !defer || delayElapsed;
 
@@ -78,7 +83,8 @@ export function StaticScene({ zone, assetVersion, active, resolution, bottomInse
       const width = element.clientWidth;
       const height = element.clientHeight;
       if (!width || !height) return;
-      const next = placeRenditions(zone, renditionRequestFor(zone, width, height, resolution)).city;
+      const renditions = placeRenditions(zone, renditionRequestFor(zone, width, height, resolution));
+      const next = renditions.city;
       setRendition((current) => {
         // Behind a running world the poster keeps what it has, and fetches nothing new.
         if (!active) return current;
@@ -86,7 +92,7 @@ export function StaticScene({ zone, assetVersion, active, resolution, bottomInse
           && (current.choice.url === next.url || !shouldReplaceRendition(current.choice, next))) {
           return current;
         }
-        return { zoneId: zone.id, choice: next };
+        return { zoneId: zone.id, choice: next, ground: renditions.ground };
       });
     };
     const observer = new ResizeObserver(() => {
@@ -102,6 +108,7 @@ export function StaticScene({ zone, assetVersion, active, resolution, bottomInse
   }, [active, posterAllowed, resolution, zone]);
 
   const shown = rendition?.zoneId === zone.id ? rendition.choice : null;
+  const shownGround = rendition?.zoneId === zone.id ? rendition.ground : null;
 
   useEffect(() => {
     const element = host.current;
@@ -114,8 +121,14 @@ export function StaticScene({ zone, assetVersion, active, resolution, bottomInse
       if (!width || !height || !nominalWidth || !nominalHeight) return;
       const layout = stageLayout(
         width, height, nominalWidth, nominalHeight, zone.stage, CHARACTER_HEIGHT_TARGETS, bottomInsetPx,
+        hasPavementLayer(zone),
       );
       element.dataset.characterImageScale = String(layout.characterImageScale);
+      // The same pavement tile the live world lays from the ground line to the bottom edge.
+      if (pavement.current) Object.assign(pavement.current.style, {
+        top: `${layout.groundY}px`,
+        height: `${pavementBandHeightPx(zone, height, layout.groundY)}px`,
+      });
       if (img && shown) {
         const coverWidth = shown.nominalWidth || nominalWidth;
         Object.assign(img.style, {
@@ -134,7 +147,7 @@ export function StaticScene({ zone, assetVersion, active, resolution, bottomInse
     img?.addEventListener("load", resize);
     resize();
     return () => { observer.disconnect(); img?.removeEventListener("load", resize); };
-  }, [shown, zone, assetVersion, active, bottomInsetPx, onStageFrame]);
+  }, [shown, shownGround, zone, assetVersion, active, bottomInsetPx, onStageFrame]);
 
   return (
     <div
@@ -158,6 +171,13 @@ export function StaticScene({ zone, assetVersion, active, resolution, bottomInse
             else report();
           }}
           draggable={false}
+        />
+      ) : null}
+      {shownGround ? (
+        <div
+          ref={pavement}
+          className="static-scene-pavement"
+          style={{ backgroundImage: `url("${publicAssetUrl(shownGround.url)}")` }}
         />
       ) : null}
     </div>

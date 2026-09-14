@@ -46,6 +46,8 @@ export function stageLayout(
   viewportW: number, viewportH: number, imageW: number, imageH: number, stage: ZoneStage,
   targets: CharacterHeightTargets,
   bottomInsetPx = 0,
+  /** The place lays its own pavement tile from the ground line to the bottom of the screen. */
+  pavementLayer = false,
 ): StageLayout {
   if (![viewportW, viewportH, imageW, imageH].every((n) => Number.isFinite(n) && n > 0)) {
     throw new RangeError("Stage dimensions must be finite and positive");
@@ -63,12 +65,14 @@ export function stageLayout(
   const requiredImageScale = personHeightPx / (stage.personHeightFrac * imageH);
   // The painting is stationary and must cover the measured stage. Character
   // perspective still supplies the preferred scale, but can never expose a
-  // blue/transparent strip at a narrow or short aspect ratio.
+  // blue/transparent strip at a narrow or short aspect ratio. A footer lifts the ground
+  // line; the pavement tile fills the taller band below it, so only a place without
+  // one has to enlarge its painting until the painting reaches the bottom edge.
   const coverScale = bottomInsetPx > 0
     ? Math.max(
         viewportW / imageW,
         groundY / (stage.groundLineY * imageH),
-        (viewportH - groundY) / ((1 - stage.groundLineY) * imageH),
+        pavementLayer ? 0 : (viewportH - groundY) / ((1 - stage.groundLineY) * imageH),
       )
     : Math.max(viewportW / imageW, viewportH / imageH);
   const imageScale = Math.max(coverScale, Math.min(requiredImageScale, MAX_STAGE_IMAGE_SCALE));

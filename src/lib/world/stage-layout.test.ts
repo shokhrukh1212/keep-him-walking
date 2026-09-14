@@ -82,6 +82,29 @@ describe("stage layout", () => {
     expect(short.groundY - short.personHeightPx).toBe(16);
   });
 
+  it("keeps the character's scale when a pavement layer fills the band a tall footer opens", () => {
+    // Gare du Nord (default stage, 3600 × 1200) at 1333 × 811 under a 209 px footer.
+    const paved = stageLayout(1333, 811, 3600, 1200, defaults, targets, 209, true);
+    expect(paved.groundY).toBe(586);
+    expect(paved.imageScale).toBeCloseTo(paved.requiredImageScale);
+    expect(paved.imageScale).toBeCloseTo(stageLayout(1333, 811, 3600, 1200, defaults, targets).imageScale);
+    expect(paved.imageY).toBeLessThanOrEqual(0);
+    // Without its own pavement the painting must still reach the bottom edge, so it grows.
+    const painted = stageLayout(1333, 811, 3600, 1200, defaults, targets, 209);
+    expect(painted.imageY + 1200 * painted.imageScale).toBeGreaterThanOrEqual(811 - 1e-9);
+    expect(painted.imageScale).toBeGreaterThan(paved.imageScale * 1.4);
+  });
+
+  it.each(viewports)("never enlarges a paved painting for any footer height at %i × %i", (w, h) => {
+    const noFooter = stageLayout(w, h, 3600, 1200, defaults, targets);
+    for (let inset = 0; inset <= 400; inset += 25) {
+      const layout = stageLayout(w, h, 3600, 1200, defaults, targets, inset, true);
+      expect(layout.imageScale).toBeLessThanOrEqual(noFooter.imageScale * 1.05);
+      expect(3600 * layout.imageScale).toBeGreaterThanOrEqual(w);
+      expect(layout.imageY).toBeLessThanOrEqual(1e-9);
+    }
+  });
+
   it("clamps unusably distant artwork and produces the required warning", () => {
     const stage = stageSchema.parse({personHeightFrac: 0.05});
     const layout = stageLayout(1440, 900, 1600, 900, stage, targets);

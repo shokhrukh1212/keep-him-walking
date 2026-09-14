@@ -3,6 +3,7 @@ import sharp from "sharp";
 import { offlineBootstrapSnapshot } from "../../src/lib/bootstrap/offline";
 import { tbilisiCountryPackV1 } from "../../src/content/countries/tbilisi.v1";
 import { tashkentCountryPackV4 } from "../../src/content/countries/tashkent.v4";
+import { hasPavementLayer } from "../../src/lib/world/scene-assets";
 import { stageLayout } from "../../src/lib/world/stage-layout";
 import { DEFAULT_CHARACTER_HEIGHT_TARGETS } from "../../src/lib/world/stage-targets";
 import { travelerMotionAt } from "../../src/lib/traveler/motion-clock";
@@ -56,6 +57,8 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
         await expect(world).toHaveAttribute("data-zone-id", zone.id, {timeout: 30_000});
         await expect(actor).toHaveAttribute("data-zone-id", zone.id);
         const {width, height} = await sharp(`public${zone.fallbackUrl}`).metadata();
+        // The stage reserves the measured footer, which the page publishes.
+        const bottomInset = Number(await page.locator(".scene-stage").getAttribute("data-bottom-inset"));
         const expected = stageLayout(
           viewport.width,
           viewport.height,
@@ -63,6 +66,8 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
           height!,
           zone.stage,
           DEFAULT_CHARACTER_HEIGHT_TARGETS,
+          bottomInset,
+          hasPavementLayer(zone),
         );
         await expect.poll(async () => Math.abs(Number(await actor.getAttribute("data-foot-y")) - expected.groundY)).toBeLessThanOrEqual(2);
         await expect.poll(async () => Math.abs(Number(await actor.getAttribute("data-person-height")) - expected.personHeightPx)).toBeLessThan(1);
@@ -74,7 +79,10 @@ for (const pack of [tbilisiCountryPackV1, tashkentCountryPackV4]) {
         expect(Math.abs(Number(await actor.getAttribute("data-foot-y")) - Number(await world.getAttribute("data-ground-y")))).toBeLessThanOrEqual(2);
       }
       await page.setViewportSize({width: 320, height: 568});
-      await expect.poll(async () => Number(await actor.getAttribute("data-foot-y"))).toBeCloseTo(568 * 0.8, 0);
+      await expect.poll(async () => {
+        const inset = Number(await page.locator(".scene-stage").getAttribute("data-bottom-inset"));
+        return Number(await actor.getAttribute("data-foot-y")) - Math.min(568 * 0.8, 568 - inset - 16);
+      }).toBeCloseTo(0, 0);
       expect(errors).toEqual([]);
     });
   }

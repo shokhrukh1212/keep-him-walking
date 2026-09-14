@@ -122,6 +122,16 @@ export function chooseGround(variants: readonly SceneVariant[], request: Renditi
   return { url: chosen.url, width: chosen.width, height: chosen.height, crop: chosen.crop, nominalLeft: 0, nominalWidth: chosen.width };
 }
 
+/** Whether the place lays its own pavement tile; it matches what placeRenditions returns. */
+export function hasPavementLayer(zone: RouteZone): boolean {
+  return zone.variants ? zone.variants.ground.length > 0 : Boolean(zone.continuousScene);
+}
+
+/** The pavement tile runs from the ground line to the bottom edge, never below its authored share. */
+export function pavementBandHeightPx(zone: RouteZone, viewportHeight: number, groundY: number): number {
+  return Math.max(viewportHeight - groundY, viewportHeight * (zone.continuousScene?.groundHeightFrac ?? 0.22));
+}
+
 function legacyChoice(url: string): RenditionChoice {
   return { url, width: 0, height: 0, crop: "full", nominalLeft: 0, nominalWidth: 0 };
 }
@@ -142,13 +152,12 @@ export function renditionRequestFor(
   const nominalWidth = zone.variants?.nominalWidth ?? 3_600;
   const nominalHeight = zone.variants?.nominalHeight ?? 1_200;
   const layout = stageLayout(width, height, nominalWidth, nominalHeight, zone.stage, CHARACTER_HEIGHT_TARGETS);
-  const groundHeightFrac = zone.continuousScene?.groundHeightFrac ?? 0.22;
   return {
     viewportWidth: width,
     viewportHeight: height,
     resolution: Math.max(1, resolution),
     imageScale: layout.imageScale,
-    groundHeightPx: Math.max(height - layout.groundY, height * groundHeightFrac),
+    groundHeightPx: pavementBandHeightPx(zone, height, layout.groundY),
     maxTextureSize,
   };
 }
