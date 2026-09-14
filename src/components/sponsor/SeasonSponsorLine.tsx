@@ -5,7 +5,7 @@ import type { SeasonSponsorView } from "@/lib/contracts";
  * status row, never over him, a caption or the route. It opens the sponsor's own
  * site in a new tab so the walk keeps going here.
  */
-export function SeasonSponsorLine({ sponsor, label }: { sponsor: SeasonSponsorView; label?: string }) {
+export function SeasonSponsorLine({ sponsor }: { sponsor: SeasonSponsorView }) {
   return (
     <a
       className="season-sponsor-line"
@@ -13,12 +13,12 @@ export function SeasonSponsorLine({ sponsor, label }: { sponsor: SeasonSponsorVi
       href={sponsor.href}
       target="_blank"
       rel="sponsored noopener noreferrer"
-      aria-label={`${label ?? "Season supported by"} ${sponsor.name}. Opens their website in a new tab.`}
+      aria-label={`Season supported by ${sponsor.name}. Opens their website in a new tab.`}
     >
       <span className="season-sponsor-label">
-        <span className="season-sponsor-label-long">{label ?? "Season supported by"}</span>
+        <span className="season-sponsor-label-long">Season supported by</span>
         {/* A phone keeps the disclosure, in fewer characters. */}
-        <span className="season-sponsor-label-short">{label ?? "Supported by"}</span>
+        <span className="season-sponsor-label-short">Supported by</span>
       </span>
       {/* eslint-disable-next-line @next/next/no-img-element -- an approved, immutable storage URL */}
       <img src={sponsor.logoUrl} alt="" width={20} height={20} decoding="async" />
