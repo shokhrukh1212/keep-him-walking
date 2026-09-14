@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SeasonRequestForm } from "@/components/sponsor/SeasonRequestForm";
-import { seasonHoldMinutes, sponsorshipMode } from "@/lib/config/sponsorship";
+import { SEASON_SPONSOR_PRICE_CENTS, SEASON_SPONSOR_PRICES_CENTS, seasonHoldMinutes, sponsorshipMode } from "@/lib/config/sponsorship";
 import { loadSeasonOffer } from "@/lib/sponsors/season-data";
-import { SEASON_OFFER_COPY, formatSeasonInstant, formatUsdCents, seasonTaxNote } from "@/lib/sponsors/season-offer";
+import { SEASON_OFFER_COPY, formatSeasonInstant, formatUsdCents, seasonOfferHeadline, seasonTaxNote } from "@/lib/sponsors/season-offer";
 import styles from "../public-pages.module.css";
 
 export const revalidate = 60;
@@ -23,6 +23,9 @@ export default async function SponsorsPage() {
   const offer = await loadSeasonOffer().catch(() => null);
   const season = offer?.season ?? null;
   const checkoutEnabled = offer?.checkout === "enabled";
+  const pricing = offer?.pricing ?? Object.entries(SEASON_SPONSOR_PRICES_CENTS).map(([number, priceCents]) => ({
+    number: Number(number), priceCents, startsAt: null, endsAt: null,
+  }));
   return <main className={`${styles.publicPage} ${styles.sponsorPage}`} data-testid="sponsors-page">
     <div className={styles.pageFrame}>
       <header className={styles.siteHeader}>
@@ -35,7 +38,7 @@ export default async function SponsorsPage() {
           <span className={styles.eyebrow}>SUPPORT THE JOURNEY</span>
           <h1 id="sponsor-title">Sponsor a season</h1>
           <p className={styles.heroLead}>{SEASON_OFFER_COPY.lead}</p>
-          <p className={styles.offerHeadline}>{SEASON_OFFER_COPY.headline}</p>
+          <p className={styles.offerHeadline}>{seasonOfferHeadline(offer?.priceCents)}</p>
           <p className={styles.heroBody}>{SEASON_OFFER_COPY.body}</p>
         </div>
 
@@ -54,11 +57,27 @@ export default async function SponsorsPage() {
               <div><dt>Booking closes</dt><dd>{formatSeasonInstant(season.saleClosesAt)}</dd></div>
               <div><dt>Price</dt><dd>{formatUsdCents(offer?.priceCents)}, one-time payment, no renewal</dd></div>
             </dl>
-            <p className={styles.taxNote}>{seasonTaxNote(Boolean(offer?.priceIncludesTax))}</p>
+            <p className={styles.taxNote}>{seasonTaxNote(Boolean(offer?.priceIncludesTax), offer?.priceCents)}</p>
           </> : <p className={styles.bookingOff} data-testid="season-offer-none">
             No season is open for sponsorship right now. The next season’s exact dates are published here as soon as it is scheduled.
           </p>}
         </section>
+      </section>
+
+      <section className={styles.priceSchedule} aria-labelledby="season-pricing">
+        <div>
+          <span className={styles.eyebrow}>FOUNDING SEASON PRICES</span>
+          <h2 id="season-pricing">One placement for all seven days</h2>
+        </div>
+        <ol>
+          {pricing.map((entry) => <li key={entry.number}>
+            <span>Season {entry.number}</span>
+            <strong>{formatUsdCents(entry.priceCents)}</strong>
+            <small>{entry.startsAt && entry.endsAt
+              ? `${formatSeasonInstant(entry.startsAt)} – ${formatSeasonInstant(entry.endsAt)}`
+              : "Dates to be announced"}</small>
+          </li>)}
+        </ol>
       </section>
 
       <div className={styles.sponsorLayout}>
@@ -102,7 +121,7 @@ export default async function SponsorsPage() {
           <section className={styles.requestCard} id="request" aria-labelledby="request-title">
             <span className={styles.eyebrow}>SPONSOR REQUEST</span>
             <h2 id="request-title">Request Season {season.number}</h2>
-            <SeasonRequestForm seasonId={season.id} checkoutEnabled={checkoutEnabled} />
+            <SeasonRequestForm seasonId={season.id} checkoutEnabled={checkoutEnabled} priceCents={offer?.priceCents ?? SEASON_SPONSOR_PRICE_CENTS} />
           </section>
         </aside> : null}
       </div>

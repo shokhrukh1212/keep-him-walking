@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { sponsorshipMode } from "@/lib/config/sponsorship";
-import { formatUsdCents } from "@/lib/sponsors/season-offer";
 
 export default function RefundPolicyPage() {
   if (sponsorshipMode() === "daily") {
@@ -10,8 +9,10 @@ export default function RefundPolicyPage() {
     <Link className="back-link" href="/sponsors">← Sponsor a season</Link>
     <h1>Refund policy</h1>
     <p>
-      This policy covers the season sponsorship: one disclosed placement for one seven-day season, at {formatUsdCents()},
-      paid once, with no renewal. It buys a dated placement on this website, not a guaranteed audience, traffic or result.
+      This policy covers the season sponsorship: one disclosed placement for one seven-day season, paid once, with no
+      renewal. The configured prices are Season 1 USD 499.00, Season 2 USD 599.00 and Season 3 USD 699.00. Your request
+      keeps the price quoted when you submit it. The purchase is a dated placement on this website, not a guaranteed
+      audience, traffic or result.
     </p>
     <h2>Before you pay</h2>
     <p>Your material is reviewed before any payment is requested. If it is not approved, nothing is charged.</p>

@@ -263,9 +263,11 @@ precipitation or freshness claim in the interface.
 
 ## 7. The sponsor model
 
-**One sponsor. Seven days. $499.** Each seven-day season can have one sponsor, for a
-one-time USD 499.00 with no renewal. It is a launch price to validate, not promised revenue
-or promised value. Watching, reactions and votes stay free.
+**One sponsor. Seven days.** Each seven-day season can have one sponsor. The configured
+one-time prices are Season 1 USD 499.00, Season 2 USD 599.00 and Season 3 USD 699.00,
+with no renewal. A request keeps the price quoted when it was submitted. These are launch
+prices to validate, not promised revenue or promised value. Watching, reactions and votes
+stay free.
 
 - **What the sponsor gets.** A disclosed line, "Season supported by [logo] [name] ↗",
   beside the journey on every day of the season; one row in Journey with a short factual
@@ -279,7 +281,8 @@ or promised value. Watching, reactions and votes stay free.
   by hand, and only approved material can be paid for, until 24 hours before the start. The
   database admits one paid sponsor per season; a late or second payment is refunded.
 - **Today.** Payment waits for the payment provider to approve this offer, so the button
-  says "Request this season" and a request takes no money and reserves nothing.
+  says "Request this season" and a request takes no money and reserves nothing. An approved
+  request stays approved and continues from its private link after checkout opens.
 
 ### Daily mode (kept for rollback, `SPONSORSHIP_MODE=daily`)
 

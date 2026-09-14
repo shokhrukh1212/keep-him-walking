@@ -24,7 +24,7 @@
 | Interface | React + plain CSS (`globals.css`), Tailwind v4 available but the journey UI is hand-written CSS |
 | Audio | Web Audio via a `useJourneyAudio` hook, per-zone `.wav` ambience |
 | Validation | Zod 4 for every content pack and every API body |
-| Payments | Season mode (default): one USD 499.00 sponsor per seven-day season through a small Dodo Payments adapter, request-only until the provider approves the offer. The earlier Lemon Squeezy day adapter and its records are retained for `SPONSORSHIP_MODE=daily`; the no-money fixture remains rehearsal-only |
+| Payments | Season mode (default): one sponsor per seven-day season (configured USD 499/599/699 for Seasons 1/2/3) through a small Dodo Payments adapter, request-only until the provider approves the offer. Each request snapshots its quoted price and dates. The earlier Lemon Squeezy day adapter and its records are retained for `SPONSORSHIP_MODE=daily`; the no-money fixture remains rehearsal-only |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
 | Testing | Vitest + Playwright production-browser flows + pgTAP (**526 assertions** on the current dev schema) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
@@ -2291,7 +2291,7 @@ also renders and stores any missing immutable recap cards through the running ap
   (`loadRecapDay(n, journeyId)`), because a season that has just ended is no longer the
   latest journey, and rollover adds recently ended seasons' pending days.
 
-### The season sponsor (Prompt 2, migration 0041)
+### The season sponsor (Prompt 2, migrations 0041–0042)
 
 - **Mode.** `SPONSORSHIP_MODE` is `season` by default; `daily` restores the day offer.
   In season mode `/api/sponsor/checkout`, `/api/tickets/checkout`, the day fixture confirm
@@ -2303,7 +2303,10 @@ also renders and stores any missing immutable recap cards through the running ap
   scheduled → active → completed, with rejected, expired, cancelled, refund_required and
   refunded, enforced by `enforce_season_sponsorship_transition` and table checks (approval
   needs the public logo copy; paid states need `paid_at` and a provider payment).
-  `price_cents` is fixed at 49,900 and `currency` at USD. `season_sponsorships_one_holder_idx`
+  `season_sponsor_prices` configures Seasons 1/2/3 at 49,900/59,900/69,900 cents. The
+  insert trigger snapshots that server-owned price and the offered start/end in each request;
+  existing requests keep their original 49,900-cent quote. A request whose stored dates no
+  longer match its journey cannot enter checkout. `season_sponsorships_one_holder_idx`
   admits one `payment_pending | scheduled | active | completed` row per season. Contact
   details and the private logo stay behind RLS; only the approved name, description, website
   and public logo are published. `status_reason` is a code, never text.
@@ -2317,8 +2320,9 @@ also renders and stores any missing immutable recap cards through the running ap
   season before the cutoff, not already paid, rights confirmed); `review_season_sponsorship`;
   `hold_season_sponsorship` (journey row lock, bounded hold, another sponsor's lapsed hold
   released only after its grace); `attach_season_checkout`; `release_season_hold`;
-  `confirm_season_payment` (re-checks the product, the net 49,900 after processor tax unless
-  `SEASON_SPONSOR_PRICE_INCLUDES_TAX`, the currency, test mode, the booking's state and that
+  `confirm_season_payment` (re-checks the season-specific product, the provider amount against
+  the request's snapshotted price after processor tax unless `SEASON_SPONSOR_PRICE_INCLUDES_TAX`,
+  the currency, test mode, the booking's state, the saved dates again at webhook time, and that
   the season has neither started nor sold; a good payment releases another unpaid hold and
   schedules, anything else records `refund_required` with its reason); `record_season_refund`;
   `mark_season_refund_requested`; `record_season_dispute` (a lost dispute ends the booking as
@@ -2334,7 +2338,12 @@ also renders and stores any missing immutable recap cards through the running ap
   an hour per visitor and 10 an hour per network hash, caps the body at about 1 MB, validates
   text limits and an https website, decodes the logo by content (PNG, JPEG or WebP,
   64–4,096 px) and stores only a re-encoded WebP of at most 512 px in `khw-sponsor-private`.
-  The requester keeps an unguessable `/sponsors/request/<publicId>` status page.
+  The requester keeps an unguessable `/sponsors/request/<publicId>` status page. It displays
+  the saved request and quote. After approval it accurately remains awaiting checkout or,
+  when the gate is enabled and the quoted dates still match, offers `Continue to checkout`
+  without another form. No mail delivery is configured, so admin exposes a copyable absolute
+  continuation link instead of claiming a message was sent. `NEXT_PUBLIC_SPONSOR_X_URL` adds
+  an optional X contact only to the request-only modal and is hidden when checkout is ready.
   The public offer and Privacy routes use the same restrained ink, cream and gold document
   shell as the journey chrome: a bounded desktop grid, solid surfaced sections and a
   single-column mobile layout. The sponsor form keeps native controls, visible focus and
@@ -2342,7 +2351,7 @@ also renders and stores any missing immutable recap cards through the running ap
 - **Payment.** Real checkout needs season mode, `SPONSOR_BOOKING_ENABLED`,
   `SPONSOR_PROVIDER_APPROVED` and a configured provider (`seasonCheckoutState`); Dodo test
   mode is refused on Vercel Production. `POST /api/season-sponsor/checkout` holds the season
-  and creates a Dodo checkout session for the configured one-time product, with the booking in
+  and creates a Dodo checkout session for the configured season-specific one-time product, with the booking in
   its metadata (`src/lib/payments/dodo.ts`, plain HTTPS, no SDK). `POST /api/webhooks/dodo`
   verifies the Standard Webhooks signature over the raw body (five-minute tolerance), claims
   each `webhook-id` once, reads the payment back from Dodo and applies it through

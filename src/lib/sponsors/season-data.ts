@@ -3,9 +3,12 @@ import "server-only";
 import {
   SEASON_SPONSOR_CURRENCY,
   SEASON_SPONSOR_PRICE_CENTS,
+  SEASON_SPONSOR_PRICES_CENTS,
   seasonCheckoutState,
   seasonPriceIncludesTax,
   seasonSaleCutoffHours,
+  seasonSponsorPriceCents,
+  seasonSponsorXUrl,
 } from "@/lib/config/sponsorship";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { seasonPhaseAt } from "@/lib/season/clock";
@@ -28,6 +31,8 @@ export type SeasonOffer = {
   priceIncludesTax: boolean;
   cutoffHours: number;
   checkout: "enabled" | "request_only";
+  pricing: Array<{ number: number; priceCents: number; startsAt: string | null; endsAt: string | null }>;
+  ownerXUrl: string | null;
   /** The live season's sponsor, so the offer can say the current week is taken. */
   currentSponsor: { name: string; seasonNumber: number } | null;
 };
@@ -42,18 +47,35 @@ export async function loadSeasonOffer(now = new Date()): Promise<SeasonOffer> {
     currency: SEASON_SPONSOR_CURRENCY,
     priceIncludesTax: seasonPriceIncludesTax(),
     cutoffHours: seasonSaleCutoffHours(),
-    checkout: seasonCheckoutState().enabled ? "enabled" : "request_only",
+    checkout: "request_only",
+    pricing: Object.entries(SEASON_SPONSOR_PRICES_CENTS).map(([number, priceCents]) => ({
+      number: Number(number), priceCents, startsAt: null, endsAt: null,
+    })),
+    ownerXUrl: seasonSponsorXUrl(),
     currentSponsor: null,
   };
   const supabase = getServerSupabase();
   if (!supabase) return base;
   const seasons = await loadSeasons(supabase);
-  if (!seasons.length) return base;
+  const { data: configuredPrices, error: priceError } = await supabase.from("season_sponsor_prices")
+    .select("season_number,price_cents").in("season_number", [1, 2, 3]).order("season_number", { ascending: true });
+  if (priceError) throw priceError;
+  const priceBySeason = new Map((configuredPrices ?? []).map((row) => [Number(row.season_number), Number(row.price_cents)]));
+  const pricing = base.pricing.map((entry) => {
+    const configured = seasons.find((season) => season.number === entry.number);
+    return {
+      ...entry,
+      priceCents: priceBySeason.get(entry.number) ?? entry.priceCents,
+      startsAt: configured?.startsAt ?? null,
+      endsAt: configured?.endsAt ?? null,
+    };
+  });
+  if (!seasons.length) return { ...base, pricing };
   const { data: paid, error } = await supabase.from("season_sponsorships")
     .select("journey_id").in("status", PAID).in("journey_id", seasons.map((season) => season.id));
   if (error) throw error;
   const eligible = earliestEligibleSeason(
-    seasons.map((season) => ({ ...season, cities: [] })),
+    seasons.filter((season) => priceBySeason.has(season.number)).map((season) => ({ ...season, cities: [] })),
     new Set((paid ?? []).map((row) => String(row.journey_id))),
     now.getTime(),
     base.cutoffHours,
@@ -69,6 +91,9 @@ export async function loadSeasonOffer(now = new Date()): Promise<SeasonOffer> {
   const sponsor = phase.kind === "live" ? await seasonSponsorFor(supabase, phase.current, "live") : null;
   return {
     ...base,
+    priceCents: eligible ? priceBySeason.get(eligible.number) ?? base.priceCents : base.priceCents,
+    checkout: eligible && seasonCheckoutState(process.env, eligible.number).enabled ? "enabled" : "request_only",
+    pricing,
     season: eligible ? {
       id: eligible.id,
       number: eligible.number,
@@ -101,8 +126,16 @@ export type SeasonRequestView = {
   status: string;
   statusReason: string | null;
   productName: string;
+  description: string;
+  websiteUrl: string;
+  priceCents: number;
   holdExpiresAt: string | null;
   season: { number: number; title: string; startsAt: string; endsAt: string; saleClosesAt: string };
+  checkoutAvailable: boolean;
+  bookingClosed: boolean;
+  seasonAvailable: boolean;
+  scheduleChanged: boolean;
+  quoteChanged: boolean;
   /** Approved, still sellable, and real checkout is switched on. */
   payable: boolean;
 };
@@ -112,7 +145,7 @@ export async function loadSeasonRequest(publicId: string, now = new Date()): Pro
   const supabase = getServerSupabase();
   if (!supabase) return null;
   const { data, error } = await supabase.from("season_sponsorships")
-    .select("public_id,status,status_reason,product_name,hold_expires_at,journeys(season_number,title,starts_at,ends_at)")
+    .select("id,public_id,journey_id,status,status_reason,product_name,description,website_url,price_cents,hold_expires_at,quoted_starts_at,quoted_ends_at,journeys(season_number,title,starts_at,ends_at)")
     .eq("public_id", publicId)
     .maybeSingle();
   if (error) throw error;
@@ -122,11 +155,26 @@ export async function loadSeasonRequest(publicId: string, now = new Date()): Pro
   } | null;
   if (!season) return null;
   const closesAt = saleClosesAt(season.starts_at, seasonSaleCutoffHours());
+  const checkoutAvailable = seasonCheckoutState(process.env, Number(season.season_number)).enabled;
+  const bookingClosed = Date.parse(closesAt) <= now.getTime();
+  const scheduleChanged = Date.parse(String(data.quoted_starts_at)) !== Date.parse(season.starts_at)
+    || Date.parse(String(data.quoted_ends_at)) !== Date.parse(season.ends_at);
+  const quoteChanged = Number(data.price_cents) !== seasonSponsorPriceCents(Number(season.season_number));
+  const { count: paidCount, error: paidError } = await supabase.from("season_sponsorships")
+    .select("id", { count: "exact", head: true })
+    .eq("journey_id", String(data.journey_id))
+    .neq("id", String(data.id))
+    .in("status", PAID);
+  if (paidError) throw paidError;
+  const seasonAvailable = (paidCount ?? 0) === 0;
   return {
     publicId: String(data.public_id),
     status: String(data.status),
     statusReason: data.status_reason ?? null,
     productName: String(data.product_name),
+    description: String(data.description),
+    websiteUrl: String(data.website_url),
+    priceCents: Number(data.price_cents),
     holdExpiresAt: data.hold_expires_at ?? null,
     season: {
       number: Number(season.season_number),
@@ -135,9 +183,17 @@ export async function loadSeasonRequest(publicId: string, now = new Date()): Pro
       endsAt: season.ends_at,
       saleClosesAt: closesAt,
     },
-    payable: ["approved", "payment_pending"].includes(String(data.status))
-      && Date.parse(closesAt) > now.getTime()
-      && seasonCheckoutState().enabled,
+    checkoutAvailable,
+    bookingClosed,
+    seasonAvailable,
+    scheduleChanged,
+    quoteChanged,
+    payable: String(data.status) === "approved"
+      && !bookingClosed
+      && !scheduleChanged
+      && !quoteChanged
+      && seasonAvailable
+      && checkoutAvailable,
   };
 }
 
@@ -151,6 +207,8 @@ export type AdminSeasonBooking = {
   websiteUrl: string;
   contactName: string;
   contactEmail: string;
+  priceCents: number;
+  continuationUrl: string;
   privateLogoUrl: string | null;
   publicLogoUrl: string | null;
   season: { number: number; startsAt: string; endsAt: string };
@@ -173,7 +231,7 @@ export async function loadAdminSeasonBookings(): Promise<AdminSeasonBooking[]> {
   if (!supabase) return [];
   const config = serverRuntimeConfig();
   const { data, error } = await supabase.from("season_sponsorships")
-    .select("id,public_id,status,status_reason,product_name,description,website_url,contact_name,contact_email,private_logo_path,public_logo_path,provider,test_mode,provider_payment_id,hold_expires_at,submitted_at,paid_at,delivered_from,delivered_until,refunded_at,journeys(season_number,starts_at,ends_at)")
+    .select("id,public_id,status,status_reason,product_name,description,website_url,contact_name,contact_email,price_cents,private_logo_path,public_logo_path,provider,test_mode,provider_payment_id,hold_expires_at,submitted_at,paid_at,delivered_from,delivered_until,refunded_at,journeys(season_number,starts_at,ends_at)")
     .order("created_at", { ascending: false })
     .limit(200);
   if (error) throw error;
@@ -188,6 +246,12 @@ export async function loadAdminSeasonBookings(): Promise<AdminSeasonBooking[]> {
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (paymentError) throw paymentError;
+  let publicOrigin = "https://keephimwalking.com";
+  try {
+    publicOrigin = new URL(process.env.NEXT_PUBLIC_APP_URL || publicOrigin).origin;
+  } catch {
+    // The canonical public origin is safer than producing an unusable continuation link.
+  }
   const signedByPath = new Map((signed ?? []).map((entry) => [entry.path, entry.signedUrl]));
   const delivered = rows.filter((row) => ["active", "completed", "cancelled", "refunded"].includes(String(row.status)) && row.delivered_from);
   const metrics = new Map<string, { impressions: number; clicks: number }>();
@@ -213,6 +277,8 @@ export async function loadAdminSeasonBookings(): Promise<AdminSeasonBooking[]> {
       websiteUrl: String(row.website_url),
       contactName: String(row.contact_name),
       contactEmail: String(row.contact_email),
+      priceCents: Number(row.price_cents),
+      continuationUrl: `${publicOrigin}/sponsors/request/${row.public_id}`,
       privateLogoUrl: signedByPath.get(String(row.private_logo_path)) ?? null,
       publicLogoUrl: row.public_logo_path
         ? supabase.storage.from(config.sponsorPublicBucket).getPublicUrl(String(row.public_logo_path)).data.publicUrl

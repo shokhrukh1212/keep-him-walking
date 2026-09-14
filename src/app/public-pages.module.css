@@ -178,6 +178,50 @@
   gap: clamp(1.5rem, 4vw, 3rem);
 }
 
+.priceSchedule {
+  display: grid;
+  grid-template-columns: minmax(13rem, .55fr) minmax(0, 1.45fr);
+  align-items: center;
+  gap: 1.5rem 3rem;
+  margin-bottom: clamp(1.5rem, 4vw, 3rem);
+  border-top: 1px solid var(--quiet-border);
+  border-bottom: 1px solid var(--quiet-border);
+  padding: 1.35rem 0;
+}
+
+.priceSchedule h2 {
+  margin: .35rem 0 0;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: .015em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.priceSchedule ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.priceSchedule li {
+  display: grid;
+  gap: .2rem;
+  min-width: 0;
+  border-left: 1px solid var(--quiet-border);
+  padding-left: .9rem;
+  font-family: var(--font-controls);
+}
+
+.priceSchedule li > span { color: var(--muted); font-size: .66rem; }
+.priceSchedule li > strong { color: var(--paper); font-size: .9rem; font-weight: 500; }
+.priceSchedule li > small { color: var(--muted); font-size: .58rem; line-height: 1.4; }
+
 .sponsorDetails {
   display: grid;
   gap: 1.25rem;
@@ -457,6 +501,7 @@
   .sponsorLayout { grid-template-columns: 1fr; }
   .sponsorHero { align-items: start; }
   .heroCopy h1 { max-width: none; }
+  .priceSchedule { grid-template-columns: 1fr; }
   .legalArticle { grid-template-columns: 1fr; }
 }
 
@@ -498,6 +543,9 @@
   .featureList,
   .stepList { font-size: .9rem; }
 
+  .priceSchedule ol { grid-template-columns: 1fr; }
+  .priceSchedule li { grid-template-columns: 5.5rem 5rem minmax(0, 1fr); align-items: baseline; }
+
   .requestCard :global(.sponsor-form) { margin-top: 1.25rem; padding-top: 1.2rem; }
   .requestCard :global(.sponsor-form input) { font-size: 1rem; }
 
@@ -519,4 +567,6 @@
   .offerFacts > div { grid-template-columns: 1fr; gap: .18rem; }
   .heroCopy h1,
   .legalHero h1 { font-size: 3.3rem; }
+  .priceSchedule li { grid-template-columns: 1fr auto; }
+  .priceSchedule li > small { grid-column: 1 / -1; }
 }

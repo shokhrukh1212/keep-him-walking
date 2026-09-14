@@ -78,8 +78,15 @@ const offer: SeasonOffer = (() => {
       saleClosesAt: new Date(startsAt.getTime() - DAY).toISOString(),
       cities: ["Paris", "Prague", "Vienna", "Bratislava", "Ljubljana", "Zagreb", "Belgrade"],
     },
-    priceCents: 49_900, currency: "USD", priceIncludesTax: false, cutoffHours: 24,
-    checkout: "request_only", currentSponsor: { name: sponsor.name, seasonNumber: 1 },
+    priceCents: 59_900, currency: "USD", priceIncludesTax: false, cutoffHours: 24,
+    checkout: "request_only",
+    pricing: [
+      { number: 1, priceCents: 49_900, startsAt: null, endsAt: null },
+      { number: 2, priceCents: 59_900, startsAt: startsAt.toISOString(), endsAt: new Date(startsAt.getTime() + 7 * DAY).toISOString() },
+      { number: 3, priceCents: 69_900, startsAt: null, endsAt: null },
+    ],
+    ownerXUrl: "https://x.com/keephimwalking",
+    currentSponsor: { name: sponsor.name, seasonNumber: 1 },
   };
 })();
 
@@ -164,11 +171,11 @@ for (const viewport of viewports.slice(0, 2)) {
     const dialog = page.getByRole("dialog", { name: "Sponsor a season" });
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("Sponsor the next journey.");
-    await expect(dialog).toContainText("One sponsor. Seven days. $499.");
+    await expect(dialog).toContainText("One sponsor. Seven days. $599.");
     await expect(dialog).toContainText("Audience size and results are not guaranteed.");
     const facts = dialog.getByTestId("season-offer-facts");
     await expect(facts).toContainText("16:00 UTC");
-    await expect(facts).toContainText("USD 499.00, one time");
+    await expect(facts).toContainText("USD 599.00, one time");
     await expect(dialog.getByRole("link", { name: "Request this season" })).toHaveAttribute("target", "_blank");
     await page.screenshot({ path: `${evidence}/sponsor-modal-${viewport.width}x${viewport.height}.png` });
   });

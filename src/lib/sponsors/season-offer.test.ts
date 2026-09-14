@@ -5,6 +5,7 @@ import {
   formatSeasonInstant,
   formatUsdCents,
   saleClosesAt,
+  seasonOfferHeadline,
   seasonTaxNote,
   type OfferSeason,
 } from "./season-offer";
@@ -60,11 +61,14 @@ describe("offer wording", () => {
     expect(formatSeasonInstant("2026-09-23T16:00:00Z")).toBe("Wed 23 Sep 2026, 16:00 UTC");
     expect(saleClosesAt("2026-09-23T16:00:00Z", 24)).toBe("2026-09-22T16:00:00.000Z");
     expect(formatUsdCents()).toBe("USD 499.00");
+    expect(formatUsdCents(59_900)).toBe("USD 599.00");
+    expect(seasonOfferHeadline(69_900)).toBe("One sponsor. Seven days. $699.");
   });
 
   it("never claims the price includes tax unless configured so", () => {
     expect(seasonTaxNote(false)).toContain("before tax");
     expect(seasonTaxNote(false)).toContain("shown at checkout before you pay");
     expect(seasonTaxNote(true)).toBe("USD 499.00 includes any tax the payment processor collects.");
+    expect(seasonTaxNote(true, 59_900)).toBe("USD 599.00 includes any tax the payment processor collects.");
   });
 });

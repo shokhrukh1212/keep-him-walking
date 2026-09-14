@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CopyButton } from "@/components/admin/CopyButton";
 import type { AdminSeasonBooking } from "@/lib/sponsors/season-data";
+import { formatUsdCents } from "@/lib/sponsors/season-offer";
 
 type Action = "approve" | "reject" | "cancel" | "remove" | "require_refund" | "refund" | "mark_refunded";
 
@@ -63,6 +65,11 @@ export function SeasonSponsorQueue({ bookings }: { bookings: AdminSeasonBooking[
                 <p><strong>{booking.productName}</strong> · <a href={booking.websiteUrl} target="_blank" rel="noopener noreferrer">{booking.websiteUrl}</a></p>
                 <p>{booking.description}</p>
                 <p>Contact: {booking.contactName} · {booking.contactEmail}</p>
+                <p>Quoted price: {formatUsdCents(booking.priceCents)} · preserved for this request</p>
+                {["approved", "payment_pending"].includes(booking.status) ? <p className="season-continuation-link">
+                  Continuation link to send to {booking.contactEmail}: <a href={booking.continuationUrl}>{booking.continuationUrl}</a>{" "}
+                  <CopyButton value={booking.continuationUrl} />
+                </p> : null}
                 <small>
                   Submitted {when(booking.submittedAt)} · paid {when(booking.paidAt)} · delivered {when(booking.deliveredFrom)} → {when(booking.deliveredUntil)}
                   {booking.holdExpiresAt ? ` · hold until ${when(booking.holdExpiresAt)}` : ""}

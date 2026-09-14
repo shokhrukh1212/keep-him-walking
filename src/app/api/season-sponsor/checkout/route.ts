@@ -47,6 +47,10 @@ async function handlePost(request: NextRequest) {
       return respond(apiError(409, "CONFLICT", "This request has not been approved for payment."));
     case "closed":
       return respond(apiError(409, "CONFLICT", "Booking for this season has closed."));
+    case "schedule_changed":
+      return respond(apiError(409, "CONFLICT", "The season dates changed after this request was submitted. Nothing was charged; contact us before continuing."));
+    case "quote_changed":
+      return respond(apiError(409, "CONFLICT", "The checkout price no longer matches this request's saved quote. Nothing was charged; contact us before continuing."));
     case "unavailable":
       return respond(apiError(409, "CONFLICT", "Another sponsor is completing checkout for this season. Please try again later."));
     default:

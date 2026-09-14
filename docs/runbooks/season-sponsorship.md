@@ -9,11 +9,13 @@ each part on. Everything below is off or request-only until you do it.
   You configure it once; its seven days are written together and never grow an eighth.
   The season clock is wall-clock time. Walking distance still grows only while someone
   watches.
-- **One sponsor per season, USD 499.00, one time.** The sponsor sends material, you
-  review it, and only approved material can be paid for. The database admits one paid
-  sponsor per season. The placement starts and ends with the season on its own.
+- **One sponsor per season, one time.** Season 1 is USD 499.00, Season 2 USD 599.00 and
+  Season 3 USD 699.00. The sponsor sends material, you review it, and only approved
+  material can be paid for. Each request keeps its quoted price and dates. The database
+  admits one paid sponsor per season. The placement starts and ends with the season on its own.
 - **Until checkout is approved,** the Sponsor button and `/sponsors` say
-  "Request this season". A request takes no payment and reserves nothing.
+  "Request this season". A request takes no payment and reserves nothing. Approval leaves
+  it approved and awaiting checkout; the same private link continues once checkout opens.
 - **The old day offer** stays in the code and the database. `SPONSORSHIP_MODE=daily`
   brings it back. In season mode its purchase endpoints answer 404.
 
@@ -30,12 +32,15 @@ All are Vercel environment variables. A change needs a redeploy.
 | `DODO_PAYMENTS_ENVIRONMENT` | `test_mode` | `live_mode` in Production; test mode is refused there |
 | `DODO_PAYMENTS_API_KEY` | — | Server only |
 | `DODO_PAYMENTS_WEBHOOK_SECRET` | — | The endpoint's signing secret |
-| `DODO_SEASON_PRODUCT_ID` | — | The one-time USD 499.00 product |
+| `DODO_SEASON_1_PRODUCT_ID` | — | One-time USD 499.00 product (`DODO_SEASON_PRODUCT_ID` remains an alias) |
+| `DODO_SEASON_2_PRODUCT_ID` | — | One-time USD 599.00 product |
+| `DODO_SEASON_3_PRODUCT_ID` | — | One-time USD 699.00 product |
 | `SEASON_SPONSOR_PRICE_INCLUDES_TAX` | `false` | `true` only if the Dodo price already includes tax |
 | `SEASON_SPONSOR_CUTOFF_HOURS` | `24` | Material and booking close this long before a start |
 | `SPONSOR_RESERVATION_MINUTES` | `30` | How long a checkout holds the season |
 | `SEASON_SPONSOR_HOLD_GRACE_MINUTES` | `30` | Extra time before another sponsor may take a lapsed hold |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | — | The monitored address shown on `/contact` |
+| `NEXT_PUBLIC_SPONSOR_X_URL` | — | Optional x.com URL shown in the modal only while checkout is unavailable |
 
 `GET /api/health` reports `sponsorshipMode` and `seasonCheckout`
 (`request_only` or `configured_unverified`).
@@ -46,7 +51,7 @@ Do these in order. Stop at any step you are not ready for; the site stays honest
 
 1. **Production database.** `pnpm production:db:plan`, then
    `pnpm production:db:apply`, then `pnpm production:db:test` and
-   `pnpm production:db:lint`. Production is at migration 0037; this applies 0038–0041.
+   `pnpm production:db:lint`. Production is at migration 0037; this applies 0038–0042.
    Do this before deploying this code to Production.
 2. **Contact.** Set `NEXT_PUBLIC_CONTACT_EMAIL` in Vercel to an inbox you read.
 3. **Wording.** Read `/sponsors`, `/refund-policy` and `/sponsor-terms`. Change anything
@@ -59,14 +64,18 @@ Do these in order. Stop at any step you are not ready for; the site stays honest
    when the public site is live. The cron-job.org minute job needs no change: it now
    also starts and ends seasons and releases lapsed checkout holds.
 6. **Payments, only after Dodo approves this model** (see `AFTER-P22.md` D11):
-   1. In Dodo, create a one-time product at USD 499.00 with adaptive currency off.
+   1. In Dodo, create one-time products at USD 499.00, USD 599.00 and USD 699.00 with
+      adaptive currency off, then set their matching season product IDs.
    2. Add the webhook `https://keephimwalking.com/api/webhooks/dodo` for
       `payment.succeeded`, `refund.succeeded`, `dispute.opened`, `dispute.won` and
       `dispute.lost`.
    3. Put the test-mode key, secret and product id in Vercel **Preview** and run the test
       walkthrough below.
-   4. Put the live-mode values in **Production**, set `SPONSOR_PAYMENT_PROVIDER=dodo`,
+   4. Put the live-mode values in **Production**, set `DODO_PAYMENTS_ENVIRONMENT=live_mode`,
+      `DODO_PAYMENTS_API_KEY`, `DODO_PAYMENTS_WEBHOOK_SECRET`, the three
+      `DODO_SEASON_<n>_PRODUCT_ID` values, `SPONSOR_PAYMENT_PROVIDER=dodo`,
       `SPONSOR_BOOKING_ENABLED=true` and `SPONSOR_PROVIDER_APPROVED=true`, and redeploy.
+      Until every value for the season on offer exists, checkout stays request-only.
 
 ## Test payment walkthrough (Preview, Dodo test mode)
 
@@ -75,7 +84,8 @@ Do these in order. Stop at any step you are not ready for; the site stays honest
 2. Sign in at `/admin-login`, open **Review season sponsors** and approve it.
 3. Open the private link and pay with a Dodo test card.
 4. The link shows "Paid · scheduled" only after the signed webhook arrives. Returning
-   from checkout alone never changes it.
+   from checkout alone never changes it. If the configured dates changed after checkout
+   began, the payment is not scheduled and follows the automatic refund path.
 5. Pay a second time from the same link: that payment is refunded automatically and
    listed with `duplicate_payment` in the admin page.
 6. Refund the first payment in Dodo: the booking becomes "Refunded" and the season is
@@ -88,7 +98,9 @@ money and follows the same database path.
 ## Operating it
 
 - **Review.** Approving copies the logo to public storage and clears the material for
-  payment. It is a content check, not payment approval. Email the sponsor their link.
+  payment. It is a content check, not payment approval, booking or reservation. Copy the
+  continuation link shown in admin and send it to the submitted contact email; the app does
+  not claim mail delivery because no email delivery provider is configured.
 - **Late or double payments** are refunded automatically through Dodo and stay visible
   as `refund_required` until the refund event confirms them.
 - **Removal.** On a live placement, "Remove, no refund" or "Remove and refund". Refunds

@@ -6,6 +6,9 @@ import {
   seasonHoldMinutes,
   seasonPriceIncludesTax,
   seasonSaleCutoffHours,
+  seasonProductId,
+  seasonSponsorPriceCents,
+  seasonSponsorXUrl,
   sponsorshipMode,
 } from "./sponsorship";
 
@@ -41,6 +44,15 @@ describe("sponsorship mode", () => {
     expect(seasonPriceIncludesTax({})).toBe(false);
     expect(seasonPriceIncludesTax({ SEASON_SPONSOR_PRICE_INCLUDES_TAX: "true" })).toBe(true);
   });
+
+  it("keeps the configured season prices and optional X contact explicit", () => {
+    expect(seasonSponsorPriceCents(1)).toBe(49_900);
+    expect(seasonSponsorPriceCents(2)).toBe(59_900);
+    expect(seasonSponsorPriceCents(3)).toBe(69_900);
+    expect(seasonSponsorPriceCents(4)).toBeNull();
+    expect(seasonSponsorXUrl({ NEXT_PUBLIC_SPONSOR_X_URL: "https://x.com/owner" })).toBe("https://x.com/owner");
+    expect(seasonSponsorXUrl({ NEXT_PUBLIC_SPONSOR_X_URL: "https://example.com/owner" })).toBeNull();
+  });
 });
 
 describe("season checkout gate", () => {
@@ -57,6 +69,14 @@ describe("season checkout gate", () => {
     expect(seasonCheckoutState({ ...dodo, VERCEL_ENV: "production" })).toEqual({ enabled: false, reason: "test_mode_in_production" });
     expect(seasonCheckoutState({ ...dodo, VERCEL_ENV: "production", DODO_PAYMENTS_ENVIRONMENT: "live_mode" }))
       .toEqual({ enabled: true, provider: "dodo", testMode: false });
+  });
+
+  it("requires the fixed-price product configured for the selected season", () => {
+    const products = { ...dodo, DODO_SEASON_2_PRODUCT_ID: "pdt_season_2" };
+    expect(seasonProductId(1, products)).toBe("pdt_season");
+    expect(seasonProductId(2, products)).toBe("pdt_season_2");
+    expect(seasonCheckoutState(products, 2)).toEqual({ enabled: true, provider: "dodo", testMode: true });
+    expect(seasonCheckoutState(dodo, 2)).toEqual({ enabled: false, reason: "provider_unconfigured" });
   });
 
   it("allows the no-money fixture only in an explicit non-production rehearsal", () => {

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fixturePaymentsAllowed } from "@/lib/config/phase2-policy";
 import {
-  SEASON_SPONSOR_CURRENCY,
-  SEASON_SPONSOR_PRICE_CENTS,
   legacyPurchasesOpen,
   seasonSaleCutoffHours,
 } from "@/lib/config/sponsorship";
@@ -75,13 +73,16 @@ async function completeSeasonFixture(
   const now = new Date();
   if (action === "confirm") {
     const checkoutId = claims.checkoutId ?? `fixture_${claims.sponsorshipId}`;
+    const { data: booking, error } = await supabase.from("season_sponsorships")
+      .select("price_cents,currency").eq("id", claims.sponsorshipId).maybeSingle();
+    if (error || !booking) return NextResponse.json({ error: "Unknown fixture checkout." }, { status: 404 });
     await applySeasonPayment(supabase, "fixture", {
       paymentId: `${checkoutId}_paid`,
       bookingId: claims.sponsorshipId,
       checkoutId,
-      amountCents: SEASON_SPONSOR_PRICE_CENTS,
+      amountCents: Number(booking.price_cents),
       taxCents: 0,
-      currency: SEASON_SPONSOR_CURRENCY,
+      currency: String(booking.currency),
       succeeded: true,
       productMatches: true,
     }, true, now);

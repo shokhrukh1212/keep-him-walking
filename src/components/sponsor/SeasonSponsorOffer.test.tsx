@@ -13,11 +13,17 @@ const offer: SeasonOffer = {
     saleClosesAt: "2026-09-29T16:00:00.000Z",
     cities: ["Paris", "Prague"],
   },
-  priceCents: 49_900,
+  priceCents: 59_900,
   currency: "USD",
   priceIncludesTax: false,
   cutoffHours: 24,
   checkout: "request_only",
+  pricing: [
+    { number: 1, priceCents: 49_900, startsAt: null, endsAt: null },
+    { number: 2, priceCents: 59_900, startsAt: "2026-09-30T16:00:00.000Z", endsAt: "2026-10-07T16:00:00.000Z" },
+    { number: 3, priceCents: 69_900, startsAt: null, endsAt: null },
+  ],
+  ownerXUrl: "https://x.com/keephimwalking",
   currentSponsor: { name: "Acme", seasonNumber: 1 },
 };
 
@@ -30,16 +36,18 @@ describe("SeasonOfferDetails", () => {
     expect(screen.getByText("Wed 30 Sep 2026, 16:00 UTC")).toBeInTheDocument();
     expect(screen.getByText("Wed 7 Oct 2026, 16:00 UTC")).toBeInTheDocument();
     expect(screen.getByText("Tue 29 Sep 2026, 16:00 UTC")).toBeInTheDocument();
-    expect(screen.getByText("USD 499.00, one time")).toBeInTheDocument();
+    expect(screen.getByText("USD 599.00, one time")).toBeInTheDocument();
     expect(screen.getByText(/before tax/)).toBeInTheDocument();
     expect(screen.getByText(/does not reserve the season/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Request this season" })).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: /Message me on X/ })).toHaveAttribute("href", "https://x.com/keephimwalking");
   });
 
-  it("says Book only when real checkout is enabled", () => {
+  it("still requires review and hides the secondary contact when checkout is enabled", () => {
     render(<SeasonOfferDetails offer={{ ...offer, checkout: "enabled", currentSponsor: null }} />);
-    expect(screen.getByRole("link", { name: "Book this season" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Submit for review" })).toBeInTheDocument();
     expect(screen.queryByText(/does not reserve the season/)).toBeNull();
+    expect(screen.queryByRole("link", { name: /Message me on X/ })).toBeNull();
   });
 
   it("offers nothing, honestly, when no season is open", () => {

@@ -34,6 +34,16 @@ as $$
   );
 $$;
 
+create function pg_temp.season_result_count(p_result jsonb, p_field text, p_slug text)
+returns bigint
+language sql
+as $$
+  select count(*)
+  from jsonb_array_elements(p_result -> p_field) as entry
+  join public.journeys j on j.id::text = (entry ->> 'journeyId')
+  where j.slug = p_slug
+$$;
+
 select has_column('public', 'journeys', 'ends_at', 'a season stores its authoritative end');
 select has_function('public', 'configure_season', array['jsonb', 'timestamp with time zone'], 'seasons are configured atomically');
 select has_function('public', 'reconcile_season_state', array['timestamp with time zone', 'integer', 'numeric', 'real'], 'the season clock reconciles');
@@ -119,12 +129,12 @@ select throws_ok(
 
 create temporary table before_start as
 select public.reconcile_season_state('2033-06-01T15:59:59Z', 50, 1.8, 1) as result;
-select is(jsonb_array_length((select result -> 'activated' from before_start)), 0, 'nothing activates a second early');
+select is(pg_temp.season_result_count((select result from before_start), 'activated', 'test-season-one'), 0::bigint, 'nothing activates a second early');
 select is((select status from public.journeys where slug = 'test-season-one'), 'draft', 'the season is still a draft before its start');
 
 create temporary table at_start as
 select public.reconcile_season_state('2033-06-01T16:00:30Z', 50, 1.8, 1) as result;
-select is(jsonb_array_length((select result -> 'activated' from at_start)), 1, 'the season activates at its start');
+select is(pg_temp.season_result_count((select result from at_start), 'activated', 'test-season-one'), 1::bigint, 'the season activates at its start');
 select is((select status from public.journeys where slug = 'test-season-one'), 'active', 'the season is active');
 select is(
   (select cd.status from public.country_days cd join public.journeys j on j.id = cd.journey_id where j.slug = 'test-season-one' and cd.day_number = 1),
@@ -173,7 +183,7 @@ select is((select status from public.journeys where slug = 'test-season-two'), '
 
 create temporary table at_end as
 select public.reconcile_season_state('2033-06-08T16:00:01Z', 50, 1.8, 1) as result;
-select is(jsonb_array_length((select result -> 'completed' from at_end)), 1, 'the season settles at its end');
+select is(pg_temp.season_result_count((select result from at_end), 'completed', 'test-season-one'), 1::bigint, 'the season settles at its end');
 select is((select status from public.journeys where slug = 'test-season-one'), 'completed', 'the season is completed');
 select is(
   (select count(*) from public.day_outcomes o join public.country_days cd on cd.id = o.country_day_id join public.journeys j on j.id = cd.journey_id where j.slug = 'test-season-one'),
@@ -200,7 +210,7 @@ select is(
   (select count(*) from public.country_days cd join public.journeys j on j.id = cd.journey_id where j.slug = 'test-season-one'),
   7::bigint, 'settlement never creates an eighth day'
 );
-select is(jsonb_array_length((select result -> 'activated' from at_end)), 1, 'the configured next season begins in the same pass');
+select is(pg_temp.season_result_count((select result from at_end), 'activated', 'test-season-two'), 1::bigint, 'the configured next season begins in the same pass');
 select is((select status from public.journeys where slug = 'test-season-two'), 'active', 'the next season is active at its scheduled timestamp');
 select is(
   (select cd.status from public.country_days cd join public.journeys j on j.id = cd.journey_id where j.slug = 'test-season-two' and cd.day_number = 1),
@@ -209,7 +219,7 @@ select is(
 
 create temporary table missed as
 select public.reconcile_season_state('2033-06-20T00:00:00Z', 50, 1.8, 1) as result;
-select is(jsonb_array_length((select result -> 'completed' from missed)), 1, 'a scheduler that missed a whole week settles it in one pass');
+select is(pg_temp.season_result_count((select result from missed), 'completed', 'test-season-two'), 1::bigint, 'a scheduler that missed a whole week settles it in one pass');
 select is(
   (select count(*) from public.day_outcomes o join public.country_days cd on cd.id = o.country_day_id join public.journeys j on j.id = cd.journey_id where j.slug = 'test-season-two'),
   7::bigint, 'the missed week still finalizes all seven days'

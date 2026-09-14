@@ -3727,10 +3727,67 @@ a:focus-visible,
   text-decoration: none;
 }
 
+.season-contact-x {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  align-items: baseline;
+  color: var(--muted);
+  font-size: .8rem;
+}
+
+.season-contact-x a {
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .72rem;
+  text-underline-offset: .2em;
+}
+
+.season-request-summary {
+  display: grid;
+  max-width: 46rem;
+  gap: 0;
+  margin: 1.5rem 0;
+  border: 1px solid var(--quiet-border);
+  border-radius: 8px;
+  padding: .35rem .9rem;
+  background: var(--surface);
+  font-family: var(--font-controls);
+  font-size: .76rem;
+}
+
+.season-request-summary > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: .75rem;
+  padding: .65rem 0;
+  border-bottom: 1px solid var(--quiet-border);
+}
+
+.season-request-summary > div:last-child { border-bottom: 0; }
+.season-request-summary dt { color: var(--muted); }
+.season-request-summary dd { min-width: 0; margin: 0; color: var(--paper); overflow-wrap: anywhere; }
+
+@media (max-width: 420px) {
+  .season-request-summary > div { grid-template-columns: 1fr; gap: .2rem; }
+}
+
 .sponsor-form .sponsor-rights { display: flex; align-items: flex-start; gap: .55rem; }
 .sponsor-form .sponsor-rights input { flex: none; width: auto; margin-top: .2rem; }
 .season-sponsor-queue-body { display: flex; gap: .75rem; align-items: flex-start; }
 .season-sponsor-queue-body p { margin: .2rem 0; }
+.season-continuation-link { overflow-wrap: anywhere; }
+.season-continuation-link button {
+  margin-left: .25rem;
+  border: 1px solid var(--control-border);
+  border-radius: 6px;
+  padding: .3rem .5rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .66rem;
+  cursor: pointer;
+}
 
 /* The status label keeps the pill's own colour; only the arrow is gold. */
 .traveler-state .traveler-state-label,

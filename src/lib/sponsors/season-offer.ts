@@ -60,9 +60,13 @@ export function formatUsdCents(cents: number = SEASON_SPONSOR_PRICE_CENTS): stri
   return `USD ${(cents / 100).toFixed(2)}`;
 }
 
+export function seasonOfferHeadline(cents: number = SEASON_SPONSOR_PRICE_CENTS): string {
+  return `One sponsor. Seven days. $${(cents / 100).toFixed(0)}.`;
+}
+
 /** Tax is whatever the approved processor is configured to do; the price never claims more. */
-export function seasonTaxNote(priceIncludesTax: boolean): string {
+export function seasonTaxNote(priceIncludesTax: boolean, cents: number = SEASON_SPONSOR_PRICE_CENTS): string {
   return priceIncludesTax
-    ? `${formatUsdCents()} includes any tax the payment processor collects.`
-    : `${formatUsdCents()} is before tax. Any sales tax or VAT is calculated by the payment processor from your billing details and shown at checkout before you pay.`;
+    ? `${formatUsdCents(cents)} includes any tax the payment processor collects.`
+    : `${formatUsdCents(cents)} is before tax. Any sales tax or VAT is calculated by the payment processor from your billing details and shown at checkout before you pay.`;
 }

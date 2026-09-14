@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { seasonPriceIncludesTax, seasonSaleCutoffHours, sponsorshipMode } from "@/lib/config/sponsorship";
-import { formatUsdCents, seasonTaxNote } from "@/lib/sponsors/season-offer";
 
 export default function SponsorTermsPage() {
   if (sponsorshipMode() === "daily") {
@@ -12,8 +11,9 @@ export default function SponsorTermsPage() {
     <h2>What you buy</h2>
     <p>
       One disclosed sponsor placement for one configured seven-day season of Keep Him Walking, from 16:00 UTC on its start
-      date to 16:00 UTC seven days later. The price is {formatUsdCents()}, paid once, with no renewal.{" "}
-      {seasonTaxNote(seasonPriceIncludesTax())}
+      date to 16:00 UTC seven days later. The configured prices are Season 1 USD 499.00, Season 2 USD 599.00 and Season 3
+      USD 699.00, paid once, with no renewal. A submitted request keeps its quoted price. Tax treatment is shown with the
+      dated offer and again before checkout. {seasonPriceIncludesTax() ? "The configured product price includes any tax the payment processor collects." : "Any applicable tax is calculated from the billing details and shown before payment."}
     </p>
     <h2>What the placement is</h2>
     <ul>

@@ -17,9 +17,40 @@ export function legacyPurchasesOpen(environment: DeploymentEnvironment = process
   return sponsorshipMode(environment) === "daily";
 }
 
-/** One fixed launch price, in USD minor units. Never read from a request. */
+/** The agreed season prices, in USD minor units. A request snapshots one of these in Postgres. */
 export const SEASON_SPONSOR_PRICE_CENTS = 49_900;
+export const SEASON_SPONSOR_PRICES_CENTS = {
+  1: 49_900,
+  2: 59_900,
+  3: 69_900,
+} as const;
 export const SEASON_SPONSOR_CURRENCY = "USD";
+
+export function seasonSponsorPriceCents(seasonNumber: number): number | null {
+  return SEASON_SPONSOR_PRICES_CENTS[seasonNumber as keyof typeof SEASON_SPONSOR_PRICES_CENTS] ?? null;
+}
+
+/** Optional public contact route shown only while checkout is unavailable. */
+export function seasonSponsorXUrl(environment: DeploymentEnvironment = process.env): string | null {
+  const raw = environment.NEXT_PUBLIC_SPONSOR_X_URL;
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" && ["x.com", "www.x.com", "twitter.com", "www.twitter.com"].includes(url.hostname)
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Each fixed-price Dodo product must match the quoted season price. */
+export function seasonProductId(seasonNumber: number, environment: DeploymentEnvironment = process.env): string {
+  if (seasonNumber === 1) return environment.DODO_SEASON_1_PRODUCT_ID || environment.DODO_SEASON_PRODUCT_ID || "";
+  if (seasonNumber === 2) return environment.DODO_SEASON_2_PRODUCT_ID || "";
+  if (seasonNumber === 3) return environment.DODO_SEASON_3_PRODUCT_ID || "";
+  return "";
+}
 
 function wholeNumber(raw: string | undefined, fallback: number, min: number, max: number): number {
   const parsed = raw ? Number(raw) : Number.NaN;
@@ -65,7 +96,10 @@ export type SeasonCheckoutState =
  * then the offer takes a no-payment request instead. Test credentials never serve
  * Production.
  */
-export function seasonCheckoutState(environment: DeploymentEnvironment = process.env): SeasonCheckoutState {
+export function seasonCheckoutState(
+  environment: DeploymentEnvironment = process.env,
+  seasonNumber = 1,
+): SeasonCheckoutState {
   if (sponsorshipMode(environment) !== "season") return { enabled: false, reason: "legacy_mode" };
   if (environment.SPONSOR_BOOKING_ENABLED !== "true") return { enabled: false, reason: "booking_disabled" };
   if (environment.SPONSOR_PROVIDER_APPROVED !== "true") return { enabled: false, reason: "provider_unapproved" };
@@ -79,7 +113,7 @@ export function seasonCheckoutState(environment: DeploymentEnvironment = process
     const configured = [
       environment.DODO_PAYMENTS_API_KEY,
       environment.DODO_PAYMENTS_WEBHOOK_SECRET,
-      environment.DODO_SEASON_PRODUCT_ID,
+      seasonProductId(seasonNumber, environment),
     ].every(Boolean);
     if (!configured) return { enabled: false, reason: "provider_unconfigured" };
     const testMode = environment.DODO_PAYMENTS_ENVIRONMENT !== "live_mode";

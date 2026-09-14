@@ -7,7 +7,9 @@ import {
   seasonHoldGraceMinutes,
   seasonHoldMinutes,
   seasonPriceIncludesTax,
+  seasonProductId,
   seasonSaleCutoffHours,
+  seasonSponsorPriceCents,
   type SeasonPaymentProvider,
 } from "@/lib/config/sponsorship";
 import { writeOperationalLog } from "@/lib/observability/logger";
@@ -37,13 +39,9 @@ export function dodoOptions() {
   return apiKey ? { apiKey, environment: dodoEnvironment() } : null;
 }
 
-export function seasonProductId(): string {
-  return process.env.DODO_SEASON_PRODUCT_ID ?? "";
-}
-
 export type SeasonCheckoutResult =
   | { state: "redirect"; url: string }
-  | { state: "disabled" | "not_found" | "paid" | "not_approved" | "closed" | "unavailable" | "provider_error" };
+  | { state: "disabled" | "not_found" | "paid" | "not_approved" | "closed" | "quote_changed" | "schedule_changed" | "unavailable" | "provider_error" };
 
 type HoldState = "paid" | "not_approved" | "closed" | "unavailable";
 const HOLD_STATES = new Set<string>(["paid", "not_approved", "closed", "unavailable"]);
@@ -54,9 +52,27 @@ const HOLD_STATES = new Set<string>(["paid", "not_approved", "closed", "unavaila
  * hold rather than leaving the week reserved.
  */
 export async function startSeasonCheckout(publicId: string, origin: string, now = new Date()): Promise<SeasonCheckoutResult> {
-  const gate = seasonCheckoutState();
   const supabase = getServerSupabase();
-  if (!gate.enabled || !supabase) return { state: "disabled" };
+  if (!supabase) return { state: "disabled" };
+  const { data: candidate, error: candidateError } = await supabase.from("season_sponsorships")
+    .select("id,price_cents,quoted_starts_at,quoted_ends_at,journeys(season_number,starts_at,ends_at)")
+    .eq("public_id", publicId)
+    .maybeSingle();
+  if (candidateError || !candidate) return { state: candidateError ? "provider_error" : "not_found" };
+  const candidateSeason = (Array.isArray(candidate.journeys) ? candidate.journeys[0] : candidate.journeys) as {
+    season_number: number; starts_at: string; ends_at: string;
+  } | null;
+  if (!candidateSeason) return { state: "not_found" };
+  if (Date.parse(String(candidate.quoted_starts_at)) !== Date.parse(candidateSeason.starts_at)
+    || Date.parse(String(candidate.quoted_ends_at)) !== Date.parse(candidateSeason.ends_at)) {
+    return { state: "schedule_changed" };
+  }
+  const seasonNumber = Number(candidateSeason.season_number);
+  if (Number(candidate.price_cents) !== seasonSponsorPriceCents(seasonNumber)) {
+    return { state: "quote_changed" };
+  }
+  const gate = seasonCheckoutState(process.env, seasonNumber);
+  if (!gate.enabled) return { state: "disabled" };
   const cutoffHours = seasonSaleCutoffHours();
   const { data, error } = await supabase.rpc("hold_season_sponsorship", {
     p_public_id: publicId,
@@ -67,7 +83,12 @@ export async function startSeasonCheckout(publicId: string, origin: string, now 
     p_cutoff_hours: cutoffHours,
     p_now: now.toISOString(),
   });
-  if (error) return { state: error.code === "P0002" ? "not_found" : "provider_error" };
+  if (error) {
+    if (error.code === "P0002") return { state: "not_found" };
+    if (error.message.includes("season schedule changed")) return { state: "schedule_changed" };
+    if (error.message.includes("season quote changed")) return { state: "quote_changed" };
+    return { state: "provider_error" };
+  }
   const hold = data as { state: string; id: string; holdExpiresAt?: string };
   if (hold.state !== "held") {
     return { state: HOLD_STATES.has(hold.state) ? hold.state as HoldState : "unavailable" };
@@ -76,7 +97,7 @@ export async function startSeasonCheckout(publicId: string, origin: string, now 
     p_id: hold.id, p_reason: "checkout_failed", p_cutoff_hours: cutoffHours, p_now: new Date().toISOString(),
   });
   const { data: booking, error: bookingError } = await supabase.from("season_sponsorships")
-    .select("id,journey_id,contact_email,contact_name,journeys(season_number)")
+    .select("id,journey_id,contact_email,contact_name,price_cents,journeys(season_number)")
     .eq("id", hold.id)
     .single();
   if (bookingError || !booking) {
@@ -101,8 +122,10 @@ export async function startSeasonCheckout(publicId: string, origin: string, now 
     } else {
       const options = dodoOptions();
       if (!options) throw new Error("DODO_NOT_CONFIGURED");
+      const productId = seasonProductId(Number(season?.season_number ?? seasonNumber));
+      if (!productId) throw new Error("DODO_PRODUCT_NOT_CONFIGURED");
       const session = await createDodoCheckout(dodoCheckoutBody({
-        productId: seasonProductId(),
+        productId,
         customerEmail: String(booking.contact_email),
         customerName: String(booking.contact_name),
         returnUrl,
@@ -118,7 +141,7 @@ export async function startSeasonCheckout(publicId: string, origin: string, now 
     });
     if (attachError || attached !== true) throw attachError ?? new Error("HOLD_LOST");
     trackServerEvent("season_sponsor_checkout_started", String(booking.id), {
-      provider: gate.provider, test_mode: gate.testMode,
+      provider: gate.provider, test_mode: gate.testMode, price_cents: Number(booking.price_cents), season_number: seasonNumber,
     });
     return { state: "redirect", url };
   } catch {
@@ -211,7 +234,7 @@ export async function requestSeasonRefund(
 export async function reconcileSeasonHolds(supabase: Supabase, now = new Date()) {
   const graceMs = seasonHoldGraceMinutes() * 60_000;
   const { data, error } = await supabase.from("season_sponsorships")
-    .select("id,provider,provider_checkout_id,hold_expires_at")
+    .select("id,provider,provider_checkout_id,hold_expires_at,journeys(season_number)")
     .eq("status", "payment_pending")
     .lte("hold_expires_at", new Date(now.getTime() - graceMs).toISOString())
     .limit(50);
@@ -225,7 +248,14 @@ export async function reconcileSeasonHolds(supabase: Supabase, now = new Date())
         if (checkout.paymentStatus === "succeeded" && checkout.paymentId) {
           const payment = await getDodoPayment(checkout.paymentId, options);
           if (payment) {
-            await applySeasonPayment(supabase, "dodo", seasonPaymentFacts(payment, seasonProductId()), options.environment === "test_mode", now);
+            const season = (Array.isArray(hold.journeys) ? hold.journeys[0] : hold.journeys) as { season_number: number } | null;
+            await applySeasonPayment(
+              supabase,
+              "dodo",
+              seasonPaymentFacts(payment, seasonProductId(Number(season?.season_number ?? 0))),
+              options.environment === "test_mode",
+              now,
+            );
             summary.confirmed += 1;
             continue;
           }
@@ -267,10 +297,23 @@ export async function handleDodoEvent(
   if (!paymentId) return { status: "ignored", errorCode: "NO_PAYMENT_ID" };
   if (event.type === "payment.succeeded") {
     const options = dodoOptions();
-    if (!options || !seasonProductId()) throw new Error("DODO_NOT_CONFIGURED");
+    if (!options) throw new Error("DODO_NOT_CONFIGURED");
     const payment = await getDodoPayment(paymentId, options);
     if (!payment) return { status: "ignored", errorCode: "UNKNOWN_PAYMENT" };
-    const facts = seasonPaymentFacts(payment, seasonProductId());
+    const initial = seasonPaymentFacts(payment, "");
+    let productId = "";
+    if (initial.bookingId) {
+      const { data: booking, error } = await supabase.from("season_sponsorships")
+        .select("journeys(season_number)").eq("id", initial.bookingId).maybeSingle();
+      if (error) throw error;
+      const season = (Array.isArray(booking?.journeys) ? booking.journeys[0] : booking?.journeys) as { season_number: number } | null;
+      productId = seasonProductId(Number(season?.season_number ?? 0));
+    }
+    if (!productId) {
+      productId = [1, 2, 3].map((number) => seasonProductId(number))
+        .find((candidate) => candidate && seasonPaymentFacts(payment, candidate).productMatches) ?? "";
+    }
+    const facts = seasonPaymentFacts(payment, productId);
     if (!facts.succeeded) return { status: "ignored", errorCode: "PAYMENT_NOT_SUCCEEDED" };
     if (!facts.bookingId && !facts.productMatches) return { status: "ignored", errorCode: "NOT_A_SEASON_PAYMENT" };
     const result = await applySeasonPayment(supabase, "dodo", facts, options.environment === "test_mode", now);

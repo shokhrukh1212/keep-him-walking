@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(47);
 
 create function pg_temp.season_plan(p_slug text, p_number integer, p_starts timestamptz)
 returns jsonb
@@ -47,8 +47,12 @@ select public.configure_season(pg_temp.season_plan('test-sponsor-a', 911, '2034-
 select public.configure_season(pg_temp.season_plan('test-sponsor-started', 912, '2034-01-10T16:00:00Z'), '2034-01-01T00:00:00Z');
 select public.configure_season(pg_temp.season_plan('test-sponsor-d', 913, '2034-04-01T16:00:00Z'), '2034-01-01T00:00:00Z');
 
+insert into public.season_sponsor_prices (season_number, price_cents)
+values (911, 49900), (912, 49900), (913, 49900);
+
 select has_table('public', 'season_sponsorships', 'season bookings have their own table');
 select has_table('public', 'season_sponsor_payments', 'every provider payment is recorded once');
+select has_table('public', 'season_sponsor_prices', 'the first three season prices are configured server-side');
 select is((select relrowsecurity from pg_class where oid = 'public.season_sponsorships'::regclass), true, 'bookings and contact details are behind row level security');
 select is(has_table_privilege('anon', 'public.season_sponsorships', 'SELECT'), false, 'anon cannot read contact details');
 select is(has_function_privilege('anon', 'public.submit_season_sponsorship(uuid,text,text,text,text,text,text,boolean,timestamptz,integer)', 'EXECUTE'), false, 'anon cannot submit directly');
@@ -75,6 +79,8 @@ select is(pg_temp.submit('test-sponsor-a', 'Acme', '2034-02-01T10:00:00Z') ->> '
 select pg_temp.submit('test-sponsor-a', 'Beta', '2034-02-01T10:05:00Z');
 select pg_temp.submit('test-sponsor-a', 'Gamma', '2034-02-01T10:10:00Z');
 select is((pg_temp.booking('Acme')).contact_email, 'owner@acme.example.com', 'the private contact is normalized');
+select is((pg_temp.booking('Acme')).price_cents, 49900, 'the request snapshots its configured price');
+select is((pg_temp.booking('Acme')).quoted_starts_at, '2034-03-01T16:00:00Z'::timestamptz, 'the request snapshots its offered dates');
 
 select throws_ok(
   $$select public.review_season_sponsorship((pg_temp.booking('Acme')).id, 'approved', '', '2034-02-01T11:00:00Z', 24)$$,
@@ -85,6 +91,24 @@ select is(
   'approved', 'material is approved before any payment'
 );
 select public.review_season_sponsorship((pg_temp.booking('Beta')).id, 'approved', 'public/beta.webp', '2034-02-01T11:01:00Z', 24);
+
+update public.season_sponsor_prices set price_cents = 50000 where season_number = 911;
+select throws_ok(
+  $$select public.hold_season_sponsorship((pg_temp.booking('Acme')).public_id, 'fixture', true, 30, 30, 24, '2034-02-01T11:20:00Z')$$,
+  '55000', 'season quote changed', 'checkout refuses a configured price that no longer matches the saved quote'
+);
+update public.season_sponsor_prices set price_cents = 49900 where season_number = 911;
+
+update public.season_sponsorships
+set quoted_starts_at = quoted_starts_at + interval '1 day', quoted_ends_at = quoted_ends_at + interval '1 day'
+where product_name = 'Acme';
+select throws_ok(
+  $$select public.hold_season_sponsorship((pg_temp.booking('Acme')).public_id, 'fixture', true, 30, 30, 24, '2034-02-01T11:25:00Z')$$,
+  '55000', 'season schedule changed', 'checkout refuses dates that no longer match the saved request'
+);
+update public.season_sponsorships
+set quoted_starts_at = quoted_starts_at - interval '1 day', quoted_ends_at = quoted_ends_at - interval '1 day'
+where product_name = 'Acme';
 
 select is(
   public.hold_season_sponsorship((pg_temp.booking('Gamma')).public_id, 'fixture', true, 30, 30, 24, '2034-02-01T11:30:00Z') ->> 'state',

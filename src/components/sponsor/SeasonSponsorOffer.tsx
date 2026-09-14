@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SeasonOffer } from "@/lib/sponsors/season-data";
-import { SEASON_OFFER_COPY, formatSeasonInstant, formatUsdCents, seasonTaxNote } from "@/lib/sponsors/season-offer";
+import { SEASON_OFFER_COPY, formatSeasonInstant, formatUsdCents, seasonOfferHeadline, seasonTaxNote } from "@/lib/sponsors/season-offer";
 
 type Load = { state: "loading" } | { state: "ready"; offer: SeasonOffer } | { state: "failed" };
 
@@ -25,7 +25,9 @@ export function SeasonSponsorOffer() {
   return (
     <div className="sponsor-copy season-offer" data-testid="season-offer">
       <p className="season-offer-lead">{SEASON_OFFER_COPY.lead}</p>
-      <p className="season-offer-headline">{SEASON_OFFER_COPY.headline}</p>
+      <p className="season-offer-headline">
+        {load.state === "ready" ? seasonOfferHeadline(load.offer.priceCents) : SEASON_OFFER_COPY.headline}
+      </p>
       <p>{SEASON_OFFER_COPY.body}</p>
       {load.state === "loading" ? <p role="status">Checking the next available season…</p> : null}
       {load.state === "failed" ? (
@@ -50,6 +52,9 @@ export function SeasonOfferDetails({ offer }: { offer: SeasonOffer }) {
         <p className="booking-off">
           No season is open for sponsorship right now. Dates are published here as soon as the next season is scheduled.
         </p>
+        {offer.checkout === "request_only" && offer.ownerXUrl ? <p className="season-contact-x">
+          <a href={offer.ownerXUrl} target="_blank" rel="noopener noreferrer">Message me on X ↗</a>
+        </p> : null}
         <p><a href="/sponsors" target="_blank" rel="noopener">Offer details, refund policy and terms ↗</a></p>
       </>
     );
@@ -66,14 +71,21 @@ export function SeasonOfferDetails({ offer }: { offer: SeasonOffer }) {
         <div><dt>Booking closes</dt><dd>{formatSeasonInstant(season.saleClosesAt)}</dd></div>
         <div><dt>Price</dt><dd>{formatUsdCents(offer.priceCents)}, one time</dd></div>
       </dl>
-      <p>{seasonTaxNote(offer.priceIncludesTax)}</p>
+      <p>{seasonTaxNote(offer.priceIncludesTax, offer.priceCents)}</p>
       {offer.checkout === "request_only" ? (
-        <p className="booking-off">
-          <strong>Checkout is not open yet.</strong> A request is reviewed by hand. It takes no payment and does not reserve the season.
-        </p>
-      ) : null}
+        <>
+          <p className="booking-off">
+            <strong>Checkout is not open yet.</strong> Send your material for review. Approval keeps it ready for checkout later, but takes no payment and does not reserve the season.
+          </p>
+          {offer.ownerXUrl ? <p className="season-contact-x">
+            Prefer to talk first? <a href={offer.ownerXUrl} target="_blank" rel="noopener noreferrer">Message me on X ↗</a>
+          </p> : null}
+        </>
+      ) : <p className="booking-off">
+        Checkout is available after material approval. A new request is not booked until its payment is confirmed.
+      </p>}
       <a className="primary-button season-offer-cta" href="/sponsors#request" target="_blank" rel="noopener">
-        {offer.checkout === "enabled" ? "Book this season" : "Request this season"}
+        {offer.checkout === "enabled" ? "Submit for review" : "Request this season"}
       </a>
     </>
   );

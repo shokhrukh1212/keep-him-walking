@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { SEASON_REQUEST_LIMITS } from "@/lib/sponsors/season-request";
+import { formatUsdCents } from "@/lib/sponsors/season-offer";
 
 type State =
   | { kind: "idle" }
@@ -10,7 +11,15 @@ type State =
   | { kind: "error"; message: string };
 
 /** The compact submission. Nothing here reserves the season or asks for payment. */
-export function SeasonRequestForm({ seasonId, checkoutEnabled }: { seasonId: string; checkoutEnabled: boolean }) {
+export function SeasonRequestForm({
+  seasonId,
+  checkoutEnabled,
+  priceCents,
+}: {
+  seasonId: string;
+  checkoutEnabled: boolean;
+  priceCents: number;
+}) {
   const [state, setState] = useState<State>({ kind: "idle" });
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -67,7 +76,7 @@ export function SeasonRequestForm({ seasonId, checkoutEnabled }: { seasonId: str
       </label>
       <p className="policy-copy">
         {checkoutEnabled
-          ? "Material is reviewed before any payment. Approved material receives a secure payment link for USD 499.00."
+          ? `Material is reviewed before any payment. Approved material continues to secure checkout at the quoted ${formatUsdCents(priceCents)} price.`
           : "This is a request, not a booking. It takes no payment and does not reserve the season. Checkout opens only after our payment provider has approved this offer."}
       </p>
       <button className="primary-button" type="submit" disabled={state.kind === "sending"}>
