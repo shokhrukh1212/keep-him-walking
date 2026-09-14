@@ -8,6 +8,7 @@ import type {
   HeartbeatResponse,
   ReactionsView,
   ScheduledEventView,
+  SeasonSponsorView,
 } from "@/lib/contracts";
 import { withReactionBoard } from "@/lib/reactions/payload";
 import {
@@ -117,6 +118,17 @@ function currentlyActiveEvent(
 }
 
 const subscribeNever = () => () => {};
+
+// TEMPORARY screen-recording demo sponsor; remove with the commit that added it.
+const DEMO_POSTIZ_SPONSOR: SeasonSponsorView = {
+  publicId: "demo-postiz",
+  seasonNumber: 1,
+  name: "Postiz",
+  description: "Demo placement for a screen recording.",
+  logoUrl: "/demo/postiz-icon.svg",
+  href: "https://postiz.com",
+  state: "live",
+};
 
 export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "season" }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
@@ -838,6 +850,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     }).catch(() => undefined);
     trackVisitorEvent("sponsor_impression", { sponsor_id: liveSeasonSponsorId });
   }, [experienceReady, liveSeasonSponsorId]);
+  // TEMPORARY screen-recording demo: shows "Sponsored by Postiz" in the season sponsor
+  // slot. Display only — no metrics, no storage. Revert this commit after the video.
+  const displayedSeasonSponsor = liveSeasonSponsor
+    ?? (snapshot.season?.state === "completed" ? null : DEMO_POSTIZ_SPONSOR);
 
   const localTime = useMemo(
     () =>
@@ -943,7 +959,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       data-motion={reducedMotion ? "reduced" : "full"}
       data-panel={openPanel ?? ""}
       // A phone reserves a footer line for the season sponsor; the caption band moves up for it.
-      data-season-sponsor={liveSeasonSponsor ? "true" : undefined}
+      data-season-sponsor={displayedSeasonSponsor ? "true" : undefined}
       data-season={season?.state}
       style={{ "--journey-footer-inset": `${footerInsetPx}px` } as CSSProperties}
     >
@@ -1064,7 +1080,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           />
         </div>
         {/* One fixed slot for the whole season, beside the status and clear of him and the captions. */}
-        {liveSeasonSponsor ? <SeasonSponsorLine sponsor={liveSeasonSponsor} /> : null}
+        {liveSeasonSponsor
+          ? <SeasonSponsorLine sponsor={liveSeasonSponsor} />
+          : displayedSeasonSponsor ? <SeasonSponsorLine sponsor={displayedSeasonSponsor} label="Sponsored by" /> : null}
         {season?.state === "completed" ? <SeasonCompleteCard season={season} sponsor={snapshot.seasonSponsor ?? null} /> : null}
         <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
           {/* The day sponsor card belongs to daily mode; a season sponsor has its own line. */}
