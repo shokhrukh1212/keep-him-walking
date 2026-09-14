@@ -40,10 +40,23 @@ export function boundedPanoramaLayout(
   };
 }
 
+/** A raised ground still leaves at least this share of the screen above his head. */
+export const RESERVED_GROUND_HEADROOM_FRAC = 0.2;
+
+export type StageLayoutOptions = {
+  /**
+   * Screen pixels to keep clear below his feet, for the prelaunch caption band on a phone.
+   * The ground rises to leave them, but never so far that his head meets the header. The
+   * painting keeps its scale and follows the ground; the pavement fills beneath. Zero (the
+   * default) changes nothing.
+   */
+  groundReservePx?: number;
+};
+
 /** The painting scales to a stable actor size; stage fractions calibrate its perspective. */
 export function stageLayout(
   viewportW: number, viewportH: number, imageW: number, imageH: number, stage: ZoneStage,
-  targets: CharacterHeightTargets,
+  targets: CharacterHeightTargets, options: StageLayoutOptions = {},
 ): StageLayout {
   if (![viewportW, viewportH, imageW, imageH].every((n) => Number.isFinite(n) && n > 0)) {
     throw new RangeError("Stage dimensions must be finite and positive");
@@ -56,7 +69,11 @@ export function stageLayout(
   const coverScale = Math.max(viewportW / imageW, viewportH / imageH);
   const imageScale = Math.max(coverScale, Math.min(requiredImageScale, MAX_STAGE_IMAGE_SCALE));
   const widthFitScale = viewportW / imageW;
-  const groundY = viewportH * (viewportW <= 600 ? 0.80 : 0.86);
+  const naturalGroundY = viewportH * (viewportW <= 600 ? 0.80 : 0.86);
+  const reserve = options.groundReservePx;
+  const groundY = reserve !== undefined && Number.isFinite(reserve) && reserve > 0
+    ? Math.max(personHeightPx + viewportH * RESERVED_GROUND_HEADROOM_FRAC, Math.min(naturalGroundY, viewportH - reserve))
+    : naturalGroundY;
   return {
     imageScale,
     imageX: (viewportW - imageW * imageScale) / 2,

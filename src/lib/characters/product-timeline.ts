@@ -1,4 +1,5 @@
 import type { CountryPack, TravelerState } from "@/lib/content/schema";
+import type { PreviewPose } from "@/lib/preview/controller";
 import type { ActionReview } from "@/lib/traveler/action-preview";
 import { reviewPoseAt } from "@/lib/traveler/action-preview";
 import { type TravelerMotionAction, type TravelerMotionSnapshot } from "@/lib/traveler/motion-clock";
@@ -188,11 +189,22 @@ export function productCharacterSceneAt(
   wakeElapsedSeconds: number | undefined = undefined,
   locomotionState: TravelerState | undefined = undefined,
   motionPhaseSeconds = 0,
+  preview: PreviewPose | undefined = undefined,
 ): ProductCharacterScene {
   // Retained for rolling-deploy compatibility; audience size no longer alters motion.
   void _paceRate;
   const localReview = review ? reviewCue(review, now) : null;
   if (localReview) return localReview;
+  // The prelaunch preview owns his pose outright: no route, crowd, resident or passer-by competes.
+  if (preview) {
+    return {
+      traveler: preview.speaking ? loopedCue("talk", preview.speechSeconds) : loopedCue("idle", preview.idleSeconds),
+      resident: { clip: "idle", seconds: 0 },
+      showResident: false,
+      conversation: false,
+      travelerLeanRadians: 0,
+    };
+  }
   if (!motion.action && locomotionState) {
     const transition = locomotionState === "start_walk"
       ? scaledCue("walk_start", motionPhaseSeconds, .65)

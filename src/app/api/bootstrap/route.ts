@@ -34,12 +34,15 @@ async function handleGet() {
       );
     }
     // The reading the visitor just received is the one already stored. If it has
-    // aged out, refresh it after the response so nobody waits on Open-Meteo.
-    after(() => refreshWeatherIfStale(
-      snapshot.countryDay.id,
-      snapshot.countryDay.scenePackId,
-      snapshot.weather,
-    ));
+    // aged out, refresh it after the response so nobody waits on Open-Meteo. Only a
+    // live day has weather; a prelaunch scene may name no stored day at all.
+    if (snapshot.mode === "live") {
+      after(() => refreshWeatherIfStale(
+        snapshot.countryDay.id,
+        snapshot.countryDay.scenePackId,
+        snapshot.weather,
+      ));
+    }
     return NextResponse.json(snapshot, { headers: { "Cache-Control": PUBLIC_CACHE } });
   } catch (cause) {
     if (cause instanceof BootstrapRateLimitError) {

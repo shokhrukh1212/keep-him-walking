@@ -12,10 +12,12 @@ import type {
 } from "@/lib/contracts";
 import { dialogueLineSchema, travelerStateSchema } from "@/lib/content/schema";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { launchSwitchedOff } from "@/lib/launch/public-state";
 import { scaledStoryNow } from "@/lib/story-clock/schedule";
 import { RATE_LIMITS } from "@/lib/security/rate-limit";
 import { reactionsFromRow, type RawReactionsPayload } from "@/lib/reactions/payload";
-import type { SeasonPhase } from "@/lib/season/clock";
+import { SEASON_LENGTH_DAYS, type SeasonPhase } from "@/lib/season/clock";
+import { SEASON_FIRST_PACK_ID } from "@/lib/season/plan";
 import {
   currentSeasonPhase,
   reconcileSeasonsNow,
@@ -241,7 +243,8 @@ async function prelaunchBootstrapSnapshot(
     .maybeSingle();
   if (dayError) throw dayError;
   if (!day) return null;
-  return idleSnapshot({
+  const launchAt = new Date(journey.launch_at).toISOString();
+  const snapshot = idleSnapshot({
     day,
     totalDays: journey.total_days,
     travelerName: journey.traveler_name ?? null,
@@ -249,8 +252,9 @@ async function prelaunchBootstrapSnapshot(
     now,
     config,
     state: "prelaunch",
-    refreshAt: new Date(journey.launch_at).toISOString(),
+    refreshAt: launchAt,
   });
+  return { ...snapshot, prelaunch: { startsAt: launchAt, seasonNumber: 1 } };
 }
 
 type IdleDay = Omit<CountryDayRow, "journeys" | "story_now" | "story_scale">;
@@ -287,7 +291,12 @@ async function seasonIdleSnapshot(
     refreshAt: phase.kind === "prelaunch" ? season.startsAt : next?.startsAt ?? null,
   });
   if (phase.kind === "prelaunch") {
-    return { ...snapshot, season: seasonView(season, "prelaunch", null, null), seasonSponsor: null };
+    return {
+      ...snapshot,
+      season: seasonView(season, "prelaunch", null, null),
+      seasonSponsor: null,
+      prelaunch: { startsAt: season.startsAt, seasonNumber: season.number },
+    };
   }
   const [recap, sponsor] = await Promise.all([
     seasonRecap(supabase, season),
@@ -715,13 +724,53 @@ async function loadVote(
  */
 export const PUBLIC_BOOTSTRAP_KEY = "public-bootstrap";
 
+/** Presentation-only identity for the switched-off preview. It names no stored day. */
+export const PRELAUNCH_PREVIEW_DAY_ID = "00000000-0000-4000-8000-000000000002";
+
+/**
+ * Production with the launch switch off: Season 1's first city, idle, with nothing live.
+ * No database is read and no day exists, so no count, distance or start time is implied.
+ */
+export function switchedOffPrelaunchSnapshot(
+  now: Date,
+  config: ReturnType<typeof serverRuntimeConfig>,
+): BootstrapSnapshot {
+  const pack = getCountryPack(SEASON_FIRST_PACK_ID);
+  if (!pack || pack.schemaVersion !== 3) throw new Error(`No matching launch pack for ${SEASON_FIRST_PACK_ID}`);
+  const instant = now.toISOString();
+  const snapshot = idleSnapshot({
+    day: {
+      id: PRELAUNCH_PREVIEW_DAY_ID,
+      day_number: 1,
+      country_code: pack.countryCode,
+      country_name: pack.countryName,
+      city_name: pack.cityName,
+      time_zone: pack.timeZone,
+      starts_at: instant,
+      ends_at: instant,
+      story_summary: null,
+      scene_pack_id: pack.assetVersion,
+    },
+    totalDays: SEASON_LENGTH_DAYS,
+    travelerName: null,
+    rolloverUtcHour: config.rolloverUtcHour,
+    now,
+    config,
+    state: "prelaunch",
+    refreshAt: null,
+  });
+  return { ...snapshot, prelaunch: { startsAt: null, seasonNumber: 1 } };
+}
+
 export async function liveBootstrapSnapshot(
   visitorHash: string,
   now = new Date(),
 ): Promise<BootstrapSnapshot | null> {
+  const config = serverRuntimeConfig();
+  // An intentional prelaunch is answered as one, not as a missing day that looks like an outage.
+  if (launchSwitchedOff()) return switchedOffPrelaunchSnapshot(now, config);
   const supabase = getServerSupabase();
   if (!supabase) return null;
-  const config = serverRuntimeConfig();
   let seasons: { phase: SeasonPhase; seasons: SeasonRow[] } | null = null;
   if (config.phase2Enabled) {
     // Seasons first: a missed or late scheduler run is caught up before a day is read.
