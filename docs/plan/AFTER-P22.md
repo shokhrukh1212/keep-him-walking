@@ -25,6 +25,8 @@ finish rather than what it got wrong.
 | D7 | After the landmark he stays there for the rest of the day, and its painting jumps | **Resolved, then superseded — every place lasts 7 walking minutes and the list repeats** | P25, then P28 (12 Sep 2026) |
 | D8 | R2 is live on `keephimwalking.com`; Preview addresses are refused by the CDN, and desktop needs a real-browser check | No — production build `82e517a` uses the CDN (13 Sep). Preview needs the CORS choice | Owner (Cloudflare CORS rule, desktop check) |
 | D9 | Paris v3 paintings and Day 1 conversations | **Resolved — owner approved and development Day 2 switched to v3** | Owner decision (13 Sep 2026) |
+| D10 | A vote about the next season has nothing to decide yet | No — a finished season shows its totals and, if scheduled, the next start date | Owner |
+| D11 | Paid season checkout waits for Dodo to approve this offer | No — free viewing and seasons launch without it; sponsors can send requests | Owner (Dodo account) |
 
 ---
 
@@ -440,3 +442,46 @@ Paris v2 to Paris v3 through the guarded `switch_country_day_pack` RPC.
 development day; Paris v2 remains registered as a safe rollback.
 
 **What to do.** No owner action remains for D9.
+
+---
+
+## D10 — A vote about the next season has nothing to decide yet
+
+**Found 14 September 2026** while building seven-day seasons (Prompt 2).
+
+**What it is.** The brief allows a vote about the next season, but nobody has decided
+what that vote would choose (its first city, its whole route, or something else), so no
+next-season ballot is built. The daily ballots and the Day-1 name vote work as before.
+
+**What happens if nothing changes.** When a season ends, the page shows the distance
+walked, the cities, the season's sponsor and, only if you have already scheduled one,
+the next season's start date. There is no vote, and nothing suggests there is one.
+
+**What to do — pick one.**
+
+- **A — The vote picks the next season's first city.** Say so. The ballot reuses the
+  existing vote on the season's last day, and its winner becomes Day 1 of the next
+  season. Trade-off: you schedule the other six days after the vote closes, not before.
+- **B — No next-season vote.** Say so, and this entry becomes a recorded choice.
+
+---
+
+## D11 — Paid season checkout waits for Dodo to approve this offer
+
+**Found 14 September 2026** (Prompt 2).
+
+**What it is.** Dodo's merchant policy excludes online games and pre-launch offers and
+says nothing specific about selling an advertising placement on an interactive website.
+So checkout for the USD 499.00 season sponsor is built and tested without money, but
+switched off.
+
+**What happens if nothing changes.** Watching stays free and seasons run. The Sponsor
+button and `/sponsors` say "Request this season": a sponsor can send material for you to
+review, but no money is taken and no season is reserved.
+
+**What to do.** From your verified Dodo account, ask Dodo support whether they accept
+"a one-time USD 499.00 disclosed sponsor placement on keephimwalking.com for one dated
+seven-day season, reviewed before payment, with no renewal", and send them the
+`/sponsors`, `/refund-policy` and `/sponsor-terms` links. If they say yes, follow step 6
+of `docs/runbooks/season-sponsorship.md`. If they say no, leave the switches off; another
+provider would be a new adapter beside the Dodo one, not a change to the offer.

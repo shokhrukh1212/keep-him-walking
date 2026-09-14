@@ -88,6 +88,19 @@ These supersede the rows above where they conflict.
 | Walking pace | He walks at 1.5 m/s instead of 1.25 m/s, so the approved walk take (planted foot about 1.48 m/s) no longer slides over the pavement. The 8 km goal takes about 89 watched walking minutes instead of 107. Distance already accrued is kept. | Migration 0039, `src/lib/traveler/pace.ts` |
 | Passers-by | A slow stroll in one lane just behind him, never carried by the moving pavement: the woman at 1.0 m/s, the man at 1.15 m/s, about ten seconds to cross a laptop screen. Their feet follow each resident's measured walk take. The lane in front of him is removed. Two people in the lane keep a gap. | `src/lib/world/walkers.ts`, `TECHNICAL.md` §P17 |
 
+## Prompt 2 decisions — 14 September 2026
+
+These supersede the journey-length and sponsorship rows above where they conflict.
+
+| Area | Approved decision | Implementation record |
+|---|---|---|
+| Seasons | Seven calendar days, one city per day, from an explicitly configured 16:00 UTC start. Season 1 begins in Paris and follows the route rule to six more ready cities unless an itinerary is given. Cities may share a country. | Migration 0040, `pnpm season:configure`, `TECHNICAL.md` "Seven-day seasons" |
+| Season clock | Wall-clock countdown from the stored start and end; walking distance still grows only while someone watches. No Day 8, no empty season, completed state holds until a configured next season starts. | `reconcile_season_state`, `src/lib/season/clock.ts` |
+| Sponsor | One exclusive sponsor per season, USD 499.00 one time, no renewal. Material reviewed before payment; one paid booking per season enforced in Postgres; late or duplicate payments refunded. | Migration 0041, `docs/runbooks/season-sponsorship.md` |
+| Mode | `SPONSORSHIP_MODE=season` by default; `daily` restores the day offer. Switched with 0 sponsorships, 0 tickets and 0 webhook events on dev and production. | `src/lib/config/sponsorship.ts` |
+| Payment | Dodo adapter built behind the existing switches; checkout stays off until Dodo approves this model. Requests only meanwhile. | `AFTER-P22.md` D11 |
+| Next-season vote | Not built until the owner decides what it chooses. | `AFTER-P22.md` D10 |
+
 ## Historical post-P22 launch decisions — 11 September 2026
 
 This table is preserved as history. Its London route/art assumptions were superseded by

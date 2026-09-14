@@ -23,8 +23,8 @@ The three sentences the interface actually says to visitors are:
   he is walking.
 - **"He's waiting for a watcher"** — shown when nobody is present.
 
-Each day of the journey has one sponsor, disclosed on screen, whose logo can appear as a
-patch on his backpack.
+The journey runs in seven-day seasons, one city a day. Each season can have one sponsor,
+disclosed in a quiet line beside the journey — never on him.
 
 ---
 
@@ -262,6 +262,26 @@ precipitation or freshness claim in the interface.
 ---
 
 ## 7. The sponsor model
+
+**One sponsor. Seven days. $499.** Each seven-day season can have one sponsor, for a
+one-time USD 499.00 with no renewal. It is a launch price to validate, not promised revenue
+or promised value. Watching, reactions and votes stay free.
+
+- **What the sponsor gets.** A disclosed line, "Season supported by [logo] [name] ↗",
+  beside the journey on every day of the season; one row in Journey with a short factual
+  description and "Visit website"; and an acknowledgment as that season's sponsor in the
+  season recap. Links open in a new tab.
+- **What it is not.** Nothing on his clothes or backpack, nothing in conversations, no
+  banner, and no promised posts, impressions, leads or sales.
+- **How it is sold.** `/sponsors` publishes the exact offer and the one season on sale: the
+  earliest scheduled season nobody has paid for, with its exact UTC dates, cities and price.
+  A season that already started runs unsponsored. The sponsor sends material, it is reviewed
+  by hand, and only approved material can be paid for, until 24 hours before the start. The
+  database admits one paid sponsor per season; a late or second payment is refunded.
+- **Today.** Payment waits for the payment provider to approve this offer, so the button
+  says "Request this season" and a request takes no money and reserves nothing.
+
+### Daily mode (kept for rollback, `SPONSORSHIP_MODE=daily`)
 
 One sponsor per country-day. That scarcity is the offer.
 

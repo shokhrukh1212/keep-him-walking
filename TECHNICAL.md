@@ -4,8 +4,9 @@
 > how it is built, with the character system as its centre, plus the image/scene
 > pipeline and the two rendering defects found in it — §8.3, fixed in `98e1c77`, and
 > §8.4, repaired with shared stage calibration on 2026-09-08. Post-P22 launch
-> refinements through migration 0035 are recorded inline below and in
-> `docs/plan/08-LAUNCH-READINESS.md`.
+> refinements through migration 0039 are recorded inline below and in
+> `docs/plan/08-LAUNCH-READINESS.md`; Prompt 2's seven-day seasons and season sponsor
+> (migrations 0040–0041) are in §9.
 >
 > Runtime numbers come from the repository. Stage calibration values are explicitly
 > identified visual estimates; historical measurements are labelled by their original version.
@@ -23,9 +24,9 @@
 | Interface | React + plain CSS (`globals.css`), Tailwind v4 available but the journey UI is hand-written CSS |
 | Audio | Web Audio via a `useJourneyAudio` hook, per-zone `.wav` ambience |
 | Validation | Zod 4 for every content pack and every API body |
-| Payments | Existing Lemon Squeezy adapter and records retained, but public paid booking defaults **off** pending a provider that permits the advertising offer; deterministic no-money fixture remains rehearsal-only |
+| Payments | Season mode (default): one USD 499.00 sponsor per seven-day season through a small Dodo Payments adapter, request-only until the provider approves the offer. The earlier Lemon Squeezy day adapter and its records are retained for `SPONSORSHIP_MODE=daily`; the no-money fixture remains rehearsal-only |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest + Playwright production-browser flows + pgTAP (**437 assertions** on the current dev schema) |
+| Testing | Vitest + Playwright production-browser flows + pgTAP (**526 assertions** on the current dev schema) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
@@ -56,7 +57,7 @@ scripts/
   characters/             Blender/MPFB build pipeline (Python) + browser checks (mjs)
   process-phase*-art.mjs  sharp-based image derivation
   phase2/ phase3/         preflight, seeding, scheduling, rehearsal, reporting
-supabase/migrations/      39 forward migrations, 437 pgTAP assertions
+supabase/migrations/      41 forward migrations, 526 pgTAP assertions
 ```
 
 ---
@@ -2237,6 +2238,137 @@ current day exists. An authored review pack outside that old itinerary repeats f
 next dev day, allowing an expired preview to recover without a destructive reseed. It
 preserves existing days and contributions. Passing `--base-url`
 also renders and stores any missing immutable recap cards through the running app.
+
+### Seven-day seasons (Prompt 2, migration 0040)
+
+- **The record.** A season is a `journeys` row with `ends_at` set: its id, `season_number`,
+  `title`, `starts_at`, `ends_at` (exactly 168 hours later) and `status` (`draft` →
+  `active` → `completed`). Its ordered day/city mapping is seven `country_days`, written
+  together by `configure_season` with their `journey_runtime` rows, departure beats and,
+  for Season 1, the Day-1 name ballot. Open-ended journeys keep `ends_at` null and their
+  vote-driven daily rollover, unchanged.
+- **Configuring.** `pnpm season:configure --starts-at <ISO at 16:00Z> [--season n]
+  [--itinerary a-v1,…] [--apply]`, or `production:season:configure`. It is a dry run
+  without `--apply`. `parseSeasonStartsAt` requires an explicit offset, the 16:00 UTC
+  boundary and a future instant, so no start is ever taken from a rehearsal.
+  `planSeasonItinerary` starts in `paris-v3` and follows the existing route rule one day
+  at a time (`buildDestinationCandidates`: a ready neighbour, else the nearest unvisited
+  ready city) to seven distinct cities; an explicit list is taken as written. The CLI
+  refuses a pack whose place paintings are missing from the runtime tree mirrored to the
+  CDN. The RPC re-validates the plan, refuses overlap (`23P01`) and a reused season number,
+  answers `exists` to a same-data retry and refuses drift.
+- **No eighth day.** The `country_days_season_bounds` trigger refuses any day beyond
+  `total_days` or outside the season window, whoever inserts it. `create_next_country_day`
+  answers `state: "season"` for a season, and rollover's `createNextDay` skips seasons.
+- **The clock.** `reconcile_season_state(now, ttl, steps, paceCap)` is state-based. In start
+  order and under each season's row lock it activates a draft whose `starts_at` has passed,
+  sets day statuses from their timestamps, finalizes every ended day through
+  `finalize_day_outcome`, and at `ends_at` settles the season: scheduled stops after the
+  final confirmed watched second are cancelled, open ballots close with their winner (a
+  name ballot names him for that season only) and the season is completed. A duplicate call
+  changes nothing, a call days late settles the whole week in one pass, and it never creates
+  a day or a journey, so a season with no configured successor stays completed.
+- **Who calls it.** The cron-job.org minute run (every minute, with
+  `reconcile_season_sponsorships` and the hold reconciler, not only at the boundary); the
+  boundary rollover, before recap cards; `/api/bootstrap` whenever `seasonPhaseAt` finds a
+  stored status lagging its timestamps; and `findCurrentCountryDay`'s catch-up path, which
+  then reads the journey again.
+- **Distance is untouched.** Nothing here writes watched seconds or distance;
+  `finalize_day_outcome` projects confirmed leases up to each day's end. A week nobody
+  watches ends at 0 m, and pgTAP asserts it.
+- **Contract.** `BootstrapSnapshot.season` (`SeasonView`: number, title, startsAt, endsAt,
+  totalDays, state, recap, next) and `seasonSponsor`. Live days carry the overlay.
+  `prelaunch` is the season's Day-1 scene, idle. `completed` is a new `mode` and
+  `journeyState` on the last day's scene: no presence, reactions, route or postcard; `recap`
+  sums the immutable day outcomes (`citiesWalked` are days with distance above zero); `next`
+  appears only when a later season is configured.
+- **Client.** `seasonClockLine` prints "Season 1 · Day 3 of 7 · Ends in 4d 6h", "Season 1 ·
+  Starts in 2d 4h" or "Season 1 · Season complete" from the synchronized real clock. The
+  headline then names only the city, the status line says "Season complete", and
+  `SeasonCompleteCard` takes the route row's place. A completed answer is applied, not held
+  as a lost connection.
+- **Recaps.** `storePendingRecaps` renders each card against the day's own journey
+  (`loadRecapDay(n, journeyId)`), because a season that has just ended is no longer the
+  latest journey, and rollover adds recently ended seasons' pending days.
+
+### The season sponsor (Prompt 2, migration 0041)
+
+- **Mode.** `SPONSORSHIP_MODE` is `season` by default; `daily` restores the day offer.
+  In season mode `/api/sponsor/checkout`, `/api/tickets/checkout`, the day fixture confirm
+  and `/tickets` answer 404, rollover opens no dated price, and the dock shows "Sponsor a
+  season" and never the day card. The Lemon Squeezy webhook, day tables, receipts and refund
+  paths are unchanged. On 14 September 2026 dev and production held 0 sponsorships, 0
+  tickets and 0 webhook events.
+- **Bookings.** `season_sponsorships` moves submitted → approved → payment_pending →
+  scheduled → active → completed, with rejected, expired, cancelled, refund_required and
+  refunded, enforced by `enforce_season_sponsorship_transition` and table checks (approval
+  needs the public logo copy; paid states need `paid_at` and a provider payment).
+  `price_cents` is fixed at 49,900 and `currency` at USD. `season_sponsorships_one_holder_idx`
+  admits one `payment_pending | scheduled | active | completed` row per season. Contact
+  details and the private logo stay behind RLS; only the approved name, description, website
+  and public logo are published. `status_reason` is a code, never text.
+- **Ledgers.** `season_sponsor_payments (provider, payment_id)` records each payment's
+  outcome (`scheduled`, `refund_required`, `refund_requested`, `refunded`, `unmatched`) and
+  dispute state, so a duplicate or out-of-order event resolves to what is already recorded.
+  `payment_webhook_events` accepts `dodo` and `fixture` and links `season_sponsorship_id`.
+  `season_sponsor_metric_events` keeps first-party views (one per visitor per UTC day while
+  live) and clicks (one per visitor per five minutes).
+- **RPCs** (security definer, `service_role` only). `submit_season_sponsorship` (a future
+  season before the cutoff, not already paid, rights confirmed); `review_season_sponsorship`;
+  `hold_season_sponsorship` (journey row lock, bounded hold, another sponsor's lapsed hold
+  released only after its grace); `attach_season_checkout`; `release_season_hold`;
+  `confirm_season_payment` (re-checks the product, the net 49,900 after processor tax unless
+  `SEASON_SPONSOR_PRICE_INCLUDES_TAX`, the currency, test mode, the booking's state and that
+  the season has neither started nor sold; a good payment releases another unpaid hold and
+  schedules, anything else records `refund_required` with its reason); `record_season_refund`;
+  `mark_season_refund_requested`; `record_season_dispute` (a lost dispute ends the booking as
+  refunded); `admin_season_sponsorship_action` (cancel, remove, require_refund,
+  mark_refunded); `reconcile_season_sponsorships` (active from `starts_at` with
+  `delivered_from`, completed at `ends_at` with `delivered_until`, unsold requests expired at
+  the cutoff).
+- **Requests.** `/sponsors` is public, needs no sign-in and revalidates every minute. It
+  states the offer word for word, the one eligible season (`earliestEligibleSeason`: the
+  earliest configured future season, unpaid, before the 24-hour cutoff; a started season is
+  never sold), exact UTC dates, cities, price and tax handling, what the placement is and is
+  not, and the request form. `POST /api/season-sponsor/requests` checks the origin, allows 3
+  an hour per visitor and 10 an hour per network hash, caps the body at about 1 MB, validates
+  text limits and an https website, decodes the logo by content (PNG, JPEG or WebP,
+  64–4,096 px) and stores only a re-encoded WebP of at most 512 px in `khw-sponsor-private`.
+  The requester keeps an unguessable `/sponsors/request/<publicId>` status page.
+- **Payment.** Real checkout needs season mode, `SPONSOR_BOOKING_ENABLED`,
+  `SPONSOR_PROVIDER_APPROVED` and a configured provider (`seasonCheckoutState`); Dodo test
+  mode is refused on Vercel Production. `POST /api/season-sponsor/checkout` holds the season
+  and creates a Dodo checkout session for the configured one-time product, with the booking in
+  its metadata (`src/lib/payments/dodo.ts`, plain HTTPS, no SDK). `POST /api/webhooks/dodo`
+  verifies the Standard Webhooks signature over the raw body (five-minute tolerance), claims
+  each `webhook-id` once, reads the payment back from Dodo and applies it through
+  `confirm_season_payment`; `refund.succeeded` and dispute events update the ledger. A return
+  URL never changes a booking. Payments that must be refunded are refunded through the
+  adapter automatically. The minute reconciler releases a lapsed hold only after its grace and
+  after asking Dodo about its checkout: a succeeded payment is applied, one in progress keeps
+  the hold for the session's 24 hours, and an unreachable provider releases nothing. The
+  no-money fixture follows the same database path in non-production rehearsals.
+- **Placement.** `SeasonSponsorLine` ("Season supported by [logo] [name] ↗", new tab,
+  `rel="sponsored noopener noreferrer"`, the full name in its accessible label) shares the
+  footer grid's first row with the status line at every width, so it adds no footer height:
+  on a 390×844 phone the footer already meets his soles, and a row of its own lifted the
+  status over his shins. Phones shorten the disclosure to "Supported by" and truncate the
+  name and the status label with an ellipsis (`data-season-sponsor`); the caption band does
+  not move. The completed card takes the right of that row on desktop and replaces the route
+  row, without the city list, on phones. The season clock stacks under the city on phones,
+  and the reactions move down one line (`data-season`). Journey shows
+  `SeasonSponsorRow`; the completed card, `/season/<n>` and `/day/<n>` acknowledge the
+  season's sponsor. Nothing is drawn on him, in captions or as a banner. The sponsor rides in
+  the cached bootstrap only, and the offer is fetched only while the Sponsor modal is open.
+- **Admin.** `/admin/season-sponsors` (the existing 12-hour session) shows the material,
+  contact, signed private logo, ledger rows, delivered interval and view/click counts, with
+  approve (copying the logo to an immutable public path), reject, cancel, remove and refund.
+- **Verification.** Migrations 0040 and 0041 were applied to development project
+  `tkntxptfhmjnqaaveddx` on 14 September 2026. All 23 pgTAP suites pass (526 assertions,
+  including 47 in `phase25-seasons` and 42 in `phase26-season-sponsorship`) and remote lint
+  is `{"results":[]}`. Before the push the SQL ran with every suite, and `plpgsql_check` with
+  extra warnings, inside a rolled-back transaction: 0 findings. Operations and activation are
+  in `docs/runbooks/season-sponsorship.md`.
 
 ---
 
