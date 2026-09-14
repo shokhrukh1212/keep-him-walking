@@ -62,4 +62,18 @@ describe("GoalBar", () => {
     rerender(<GoalBar walking={false} activityLabel="Season complete" activityTone="complete" distanceMetres={null} dailyGoalMetres={8_000} marathonMetres={42_195} freshness="unavailable" placeCount={10} currentPlaceIndex={9} secondsToNextVisit={0} />);
     expect(screen.getByText("Journey complete.")).toBeInTheDocument();
   });
+
+  it("shows no distance at all before launch, only that the journey has not started", () => {
+    const { container } = renderBar({
+      walking: false,
+      activityLabel: "Season 1 is preparing to begin.",
+      activityTone: "prelaunch",
+      distanceMetres: null,
+      freshness: "unavailable",
+    });
+    expect(screen.getByText("Season 1 is preparing to begin.")).toBeInTheDocument();
+    expect(screen.getByText("Journey has not started.")).toBeInTheDocument();
+    expect(container.querySelector(".goal-distance")).not.toBeInTheDocument();
+    expect(screen.queryByText(/unavailable/)).not.toBeInTheDocument();
+  });
 });

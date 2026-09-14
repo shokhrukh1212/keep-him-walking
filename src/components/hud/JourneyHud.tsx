@@ -13,6 +13,8 @@ type Props = {
   seasonClock?: { where: string; when: string } | null;
   /** A finished season with nothing live: there is no audience count to show. */
   seasonComplete?: boolean;
+  /** The intentional prelaunch: a preview scene with no audience to count. */
+  preview?: boolean;
   audienceOpen: boolean;
   onAudienceOpen: () => void;
   onJourneyOpen: () => void;
@@ -28,6 +30,7 @@ export function JourneyHud({
   launchCountdown = null,
   seasonClock = null,
   seasonComplete = false,
+  preview = false,
   audienceOpen,
   onAudienceOpen,
   onJourneyOpen,
@@ -36,12 +39,15 @@ export function JourneyHud({
   const audienceLabel = activeViewers === null
     ? "Live count unavailable"
     : `${activeViewers} ${activeViewers === 1 ? "person" : "people"} watching`;
+  // The season clock carries the day number, so the headline names only the city.
+  const headline = preview
+    ? `${day.cityName} · Preview`
+    : seasonClock ? day.cityName : `${day.cityName} · Day ${day.dayNumber}`;
   return (
     <header className="journey-hud" data-hud-region="header">
       <button className="day-mark" data-hud-region="where-when" type="button" onClick={onJourneyOpen} aria-haspopup="dialog" aria-label={`Open Journey from ${day.cityName}`}>
         <span className="product-mark">KEEP HIM WALKING</span>
-        {/* The season clock carries the day number, so the headline names only the city. */}
-        <strong>{seasonClock ? day.cityName : `${day.cityName} · Day ${day.dayNumber}`}</strong>
+        <strong>{headline}</strong>
         {seasonClock ? (
           <span className="season-clock" data-testid="season-clock">
             <span>{seasonClock.where}</span>
@@ -56,10 +62,13 @@ export function JourneyHud({
       </button>
       <p className="journey-rule">He only walks while someone is watching.</p>
       <div className="journey-hud-audience" data-hud-region="who">
-        <button className="audience-control" type="button" onClick={onAudienceOpen} aria-haspopup="dialog" aria-expanded={audienceOpen}>
-          <span className={`live-dot ${status}`} aria-hidden="true" />
-          <strong>{launchCountdown ? `Starts ${launchCountdown}` : seasonComplete ? "Season complete" : audienceLabel}</strong>
-        </button>
+        {/* Nobody can be counted before launch, so the preview shows no audience control at all. */}
+        {preview ? null : (
+          <button className="audience-control" type="button" onClick={onAudienceOpen} aria-haspopup="dialog" aria-expanded={audienceOpen}>
+            <span className={`live-dot ${status}`} aria-hidden="true" />
+            <strong>{launchCountdown ? `Starts ${launchCountdown}` : seasonComplete ? "Season complete" : audienceLabel}</strong>
+          </button>
+        )}
         {soundControl}
       </div>
     </header>

@@ -157,6 +157,11 @@ export type BootstrapSnapshot = {
   /** Absent for an open-ended journey and in older payloads. */
   season?: SeasonView | null;
   seasonSponsor?: SeasonSponsorView | null;
+  /**
+   * Present only before launch: the season the scene is waiting for, and its start when
+   * one is really configured. A null start means none is set, and none is implied.
+   */
+  prelaunch?: { startsAt: string | null; seasonNumber: number } | null;
   refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "launch" | "none" };
   countryDay: CountryDayView;
   /** Season-level facts. travelerName is null until the Day-1 vote names him. */

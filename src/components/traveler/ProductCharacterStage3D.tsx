@@ -277,6 +277,8 @@ export function ProductCharacterStage3D(props: Props) {
         state.command?.wakeElapsedSeconds,
         state.command?.state,
         state.command?.motionPhaseSeconds,
+        // Prelaunch only: the local monologue controller, sampled on this frame's clock.
+        state.command?.preview?.sample(now),
       );
       const snap = firstSample || cue.conversation !== previousConversation;
       firstSample = false;
@@ -346,7 +348,10 @@ export function ProductCharacterStage3D(props: Props) {
       travelerRoot.position.x = (travelerAnchor - 0.5) * horizontal;
       residentRoot.position.x = (residentScreenAnchor - 0.5) * horizontal;
       travelerRoot.rotation.x = cue.travelerLeanRadians ?? 0;
-      travelerRoot.rotation.y = cue.conversation ? Math.PI / 2 : state.command?.facing === "left" ? -0.68 : 0.68;
+      // Facing the camera turns only his root group; the bones keep sampling their take untouched.
+      travelerRoot.rotation.y = cue.conversation
+        ? Math.PI / 2
+        : state.command?.facing === "camera" ? 0 : state.command?.facing === "left" ? -0.68 : 0.68;
       residentRoot.rotation.y = motion.action?.conversationPhase === "depart" ? Math.PI / 2 : -Math.PI / 2;
       residentRoot.visible = cue.showResident && Boolean(resident) && residentType === partnerType;
       if (cue.conversation && traveler && resident) {
@@ -370,6 +375,9 @@ export function ProductCharacterStage3D(props: Props) {
       element.dataset.residentVisible = String(residentRoot.visible);
       element.dataset.residentOffset = String(cue.residentOffset ?? 0);
       element.dataset.activityKind = motion.action?.kind ?? "";
+      element.dataset.travelerYaw = String(travelerRoot.rotation.y);
+      // Which preview take he is in ("idle" or "talk"); empty outside the prelaunch preview.
+      element.dataset.preview = state.command?.preview ? cue.traveler.clip : "";
       // Measured through the actual camera, not just echoed from the input metadata.
       camera.updateMatrixWorld();
       const foot = new THREE.Vector3(travelerRoot.position.x, 0, 0).project(camera);

@@ -1,8 +1,10 @@
 import type { DialogueMood, TravelerState } from "@/lib/content/schema";
+import type { PreviewPoseSource } from "@/lib/preview/controller";
 import type { RouteRuntime } from "@/lib/world/types";
 import type { ActionReview } from "./action-preview";
 
-export type FacingDirection = "left" | "right";
+/** "camera" turns only his root toward the viewer; bones and his anchor are untouched. */
+export type FacingDirection = "left" | "right" | "camera";
 
 export type TravelerCommand = {
   state: TravelerState;
@@ -25,6 +27,8 @@ export type TravelerCommand = {
   /** Premium placement only: the label on the bottle he drinks from. */
   sponsorBottleUrl?: string;
   actionReview?: ActionReview;
+  /** Intentional prelaunch only: the local monologue controller the frame loop samples for his pose. */
+  preview?: PreviewPoseSource;
 };
 
 export const DEFAULT_TRAVELER_COMMAND: TravelerCommand = {

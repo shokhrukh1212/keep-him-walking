@@ -4,7 +4,6 @@ import { walkingStatusLabel, type WalkingStatusInput } from "./status-label";
 const base: WalkingStatusInput = {
   journeyState: "live",
   mode: "live",
-  startsIn: null,
   wakeCountdown: null,
   walking: true,
   actionLabel: null,
@@ -49,7 +48,11 @@ describe("walking status", () => {
   });
 
   it("keeps prelaunch, preview and waking states explicit", () => {
-    expect(walkingStatusLabel({ ...base, journeyState: "prelaunch", startsIn: "in 3 days" }).text).toBe("Starts in 3 days");
+    const prelaunch = { ...base, journeyState: "prelaunch" as const, mode: "prelaunch" as const, walking: false, connection: "scheduled" as const };
+    expect(walkingStatusLabel(prelaunch)).toEqual({ text: "Season 1 is preparing to begin.", tone: "prelaunch" });
+    expect(walkingStatusLabel({ ...prelaunch, seasonNumber: 2 }).text).toBe("Season 2 is preparing to begin.");
+    // A real outage is still an outage, never dressed up as a prelaunch.
+    expect(walkingStatusLabel({ ...base, mode: "offline_preview" }).text).toBe("Preview only · waiting for the live journey");
     expect(walkingStatusLabel({ ...base, mode: "offline_preview" }).tone).toBe("preview");
     expect(walkingStatusLabel({ ...base, wakeCountdown: 2 }).text).toBe("Waking up · starts walking in 2…");
   });

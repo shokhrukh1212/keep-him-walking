@@ -1,0 +1,84 @@
+{
+  "characterReadyAt": 2456.2000000029802,
+  "spans": {
+    "captions": [
+      {
+        "sequence": 1,
+        "line": "waiting-in-paris",
+        "start": 9360.70000000298,
+        "end": 21463.79999999702
+      }
+    ],
+    "talks": [
+      {
+        "start": 9370.5,
+        "end": 21467.70000000298
+      }
+    ]
+  },
+  "events": [
+    {
+      "t": 382,
+      "caption": false,
+      "take": "",
+      "sequence": 0,
+      "cue": 0,
+      "line": "",
+      "yaw": ""
+    },
+    {
+      "t": 1064.5,
+      "caption": false,
+      "take": "idle",
+      "sequence": 0,
+      "cue": 0,
+      "line": "",
+      "yaw": "0"
+    },
+    {
+      "t": 9360.70000000298,
+      "caption": true,
+      "take": "idle",
+      "sequence": 1,
+      "cue": 0,
+      "line": "waiting-in-paris",
+      "yaw": "0"
+    },
+    {
+      "t": 9370.5,
+      "caption": true,
+      "take": "talk",
+      "sequence": 1,
+      "cue": 0,
+      "line": "waiting-in-paris",
+      "yaw": "0"
+    },
+    {
+      "t": 13990.29999999702,
+      "caption": true,
+      "take": "talk",
+      "sequence": 1,
+      "cue": 1,
+      "line": "waiting-in-paris",
+      "yaw": "0"
+    },
+    {
+      "t": 21463.79999999702,
+      "caption": false,
+      "take": "talk",
+      "sequence": 1,
+      "cue": 0,
+      "line": "",
+      "yaw": "0"
+    },
+    {
+      "t": 21467.70000000298,
+      "caption": false,
+      "take": "idle",
+      "sequence": 1,
+      "cue": 0,
+      "line": "",
+      "yaw": "0"
+    }
+  ]
+}

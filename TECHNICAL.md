@@ -202,7 +202,9 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
     intercepted the Sponsor control at 320 px; build and runtime errors still surface.
 - **Unavailable preview data.** A `NO_ACTIVE_DAY` fallback can show the bundled neutral
   review scene and place sequence, but it hides reaction counts and renders distance as
-  `unavailable`; zero is never presented as a server-confirmed live value.
+  `unavailable`; zero is never presented as a server-confirmed live value. A deliberate
+  prelaunch is no longer answered that way: the server declares it as `mode: "prelaunch"`
+  (§9, "Prelaunch preview").
 - **One world build.** `useDeviceQuality` returns null until the tier is measured, and
   `SceneStage` mounts the Pixi and Three canvases only then, so the world is built once
   rather than at a guessed tier and again a frame later.
@@ -724,9 +726,12 @@ are read through a ref so the renderer is never torn down mid-journey.
   canvas and re-reporting availability, and on unmount walks the whole scene disposing
   geometries, materials, textures and skeletons. Contact publications are cleared on
   context loss, invalid layout and unmount so Pixi cannot retain an orphan shadow.
+- In the prelaunch preview (`command.facing === "camera"`) only the traveler root's yaw
+  becomes 0, facing the viewer; his bones, anchor and the frame loop are unchanged, and the
+  pose comes from sampling `command.preview` (§9, "Prelaunch preview").
 - Writes `data-character-state`, `data-walk-time-scale`, `data-forward-lean-degrees`,
-  `data-resident-visible`, `data-character-ready` to the host element — these are what
-  the Playwright suites assert against.
+  `data-resident-visible`, `data-character-ready`, `data-traveler-yaw` and `data-preview`
+  to the host element — these are what the Playwright suites assert against.
 
 `CharacterStage3D` uses the same materials and lighting on
 `/preview/characters`. Setting includes the studio, Almaty promenade and all five
@@ -740,8 +745,10 @@ are constrained to one vertical scroll area without a horizontal scrollbar.
 ### 6.3 `product-timeline.ts` — journey → skeleton
 
 `productCharacterSceneAt(pack, motion, traveling, review, now, paceRate, waitedSeconds,
-localHour, raining, wakeElapsedSeconds)` returns
-`{ traveler, resident, showResident, conversation, travelerLeanRadians }`:
+localHour, raining, wakeElapsedSeconds, locomotionState, motionPhaseSeconds, preview)` returns
+`{ traveler, resident, showResident, conversation, travelerLeanRadians }`. A `preview` pose
+(prelaunch only) wins over everything except the local action review: idle or talk, with no
+resident (§9, "Prelaunch preview"):
 
 - `clipForState` maps all semantic states onto manifest clip names. `CharacterActor`
   resolves absent names through the declared per-clip fallback chain.
@@ -2120,8 +2127,10 @@ remain disabled; that does not activate the public season.
 Production enters the Season 1 path only when both `PHASE2_ENABLED=true` and
 `LAUNCH_ENABLED=true`. With the switch armed but before the journey's stored
 `launch_at`, `/api/bootstrap` returns the real Day 1 pack in `prelaunch` mode: the scene
-is idle, both visible status lines say “Starts …”, and presence, reactions, progress,
-postcards and visitor-private refreshes do not run. At the database boundary heartbeat
+is idle, the header counts down to the stored start, and presence, reactions, progress,
+postcards and visitor-private refreshes do not run. With the switch off it answers the same
+mode with no start time and no database read (see "Prelaunch preview" in §9), and in both
+cases the status line reads "Season 1 is preparing to begin." At the database boundary heartbeat
 v12 delegates to the launch guard and refuses an instant before
 `coalesce(launch_at, starts_at)`.
 
@@ -2430,6 +2439,72 @@ also renders and stores any missing immutable recap cards through the running ap
   extra warnings, inside a rolled-back transaction: 0 findings. Operations and activation are
   in `docs/runbooks/season-sponsorship.md`.
 
+### Prelaunch preview (14 September 2026)
+
+- **Who declares it.** `mode: "prelaunch"` is the only intentional prelaunch, and only the
+  server says so.
+  - **Launch switched off.** In Production with either launch switch off
+    (`launchSwitchedOff()`: `VERCEL_ENV=production` and `phase2DeploymentAllowed()` false),
+    `/api/bootstrap` answers 200 from `switchedOffPrelaunchSnapshot` before any database read:
+    Season 1's first city (`SEASON_FIRST_PACK_ID`, `paris-v3`), idle, with the presentation-only
+    day id `00000000-0000-4000-8000-000000000002` and `prelaunch: { startsAt: null, seasonNumber: 1 }`.
+    It used to answer 503 `NO_ACTIVE_DAY`, which the page could not tell from an outage.
+  - **Launch armed or season scheduled.** The existing idle snapshots add `prelaunch.startsAt`
+    (the stored `launch_at` or `season.startsAt`) and the season number.
+  - **Everything else is unchanged.** `NO_ACTIVE_DAY` after launch, `LIVE_UNAVAILABLE`, a failed
+    request and the server-rendered placeholder stay `offline_preview` with the existing banner.
+    `findCurrentCountryDay` still returns nothing before launch, so heartbeat, votes, reactions
+    and day photos refuse, and the page sends no heartbeat outside `live`: the preview accrues no
+    presence, distance or contribution. The route refreshes weather only for a live day.
+- **What the page shows.** The headline reads "Paris · Preview" and the status line "Season 1 is
+  preparing to begin." A configured start still shows as "Season 1 · Starts in …"; none is
+  implied when unset. There is no audience control, reaction, route row or distance, and Journey
+  says distance and watching time start counting when the season begins. A bootstrap read that
+  fails during the preview shows its failure text as a banner.
+- **The lines.** `src/content/prelaunch/monologues.ts` holds the owner's eight lines in order. A
+  line with `requires` (a city, or `sponsorOpen`) carries the neutral `fallback` said instead.
+- **The schedule** (`src/lib/preview/monologue.ts`, pure in visible preview seconds):
+  - the first line 5 s after the model is ready, then one every 180 s, start to start;
+  - cues split at sentence ends, then words, at most 72 characters, every word kept;
+  - a speech lasts whole `talk` takes, three (11.79 s) or four (15.72 s), and its cues share that
+    time by reading length with no gap;
+  - authored order, looping, never the same text twice in a row;
+  - the sponsor line only when `GET /api/season-sponsor/offer` shows this season open with no
+    sponsor, never first and at most once per page;
+  - a start held back by a modal or a failed read plays once afterwards, and the next is counted
+    from that real start; nothing queues and speeches never overlap.
+- **One owner.** `PreviewMonologueController` owns the line, cue, duration, speaking flag and
+  caption visibility.
+  - Its clock counts visible page time only, so a hidden tab pauses the schedule and a speech,
+    and both resume without catching up.
+  - It keeps at most one timer, set for the next boundary. React hears from it only when the
+    caption changes (`usePreviewMonologue`, `useSyncExternalStore`).
+  - It asks for the offer once, a full interval before the sponsor line.
+  - Leaving `prelaunch` stops it at once. Without WebGL, or with no model 20 s after the scene
+    is ready, the lines still run.
+  - It is local to the visitor and writes nothing shared.
+- **His pose.** `TravelerCommand.preview` is the controller. The character frame loop samples it
+  and passes the result as the last, explicit parameter of `productCharacterSceneAt`. That
+  branch comes after the Preview-only action review and before everything else:
+  - the accepted `idle` take loops on the visible clock, and `talk` loops exactly while the
+    caption shows (idle under reduced motion);
+  - no resident, conversation, action or passer-by can compete;
+  - `facing: "camera"` sets only the traveler root's yaw to 0; bones and the centred anchor are
+    untouched;
+  - the stage writes `data-traveler-yaw` and `data-preview` (`idle` or `talk`).
+- **Caption and framing.** `PreviewCaption` renders only in prelaunch, `aria-hidden`, with nothing
+  focusable; the page's polite live region announces each whole line once.
+  - Wider than 600 px it is fixed to his left at chest height, from the published
+    `--stage-bottom` and `--stage-person-height`, and never lower than the measured footer
+    (`--journey-footer-inset` plus 1 rem). On a short landscape screen (500 px tall or less)
+    the header's rule and the footer panel leave no room there, so it sits to his right.
+  - At 600 px and below it is the first item of the footer column, above the progress panel,
+    three lines tall and present whether he speaks or not. The footer-aware framing
+    (`bottomInsetPx`) measures the whole footer, band included, so his feet stay above it
+    without any preview-specific layout input.
+  - Before launch the progress panel shows only "Season 1 is preparing to begin." and "Journey
+    has not started."; it has no distance row.
+
 ---
 
 ## 10. Verification and evidence
@@ -2478,6 +2553,35 @@ Current P28 evidence (12–13 September 2026), in
   baseline in the same environment was 2,233 ms p95, but these samples are not a
   controlled physical-device comparison. No freeze is claimed solved, and no physical
   device was available.
+
+Prelaunch preview evidence (14 September 2026), in
+`docs/launch-finalization/evidence/prelaunch-monologue/`. Everything ran against a production
+build with a mocked bootstrap in headless Chromium (SwiftShader); this is emulation, not a
+physical device.
+
+- **Unit, lint, typecheck, build.** The full suite had 696 passing tests (139 files), then the
+  2 caption component tests were added and pass. `pnpm lint`, `pnpm typecheck` and
+  `pnpm build` are clean.
+- **Browser.** All 22 cases in `prelaunch-preview.spec.ts` pass: 18 on the first run and 4 after
+  test-only fixes (frame-bound tolerance on caption length, the line read from the page log,
+  and the wide-screen caption being out of flow).
+  - The first line appeared 6.5 s after the model reported ready at 1440×900 (6.7–6.9 s in
+    the recordings). The schedule is 5 s; the rest is main-thread lag under software
+    rendering, whose 90th-percentile frame was 500–667 ms.
+  - The next line started 180.09 s after the first, in real time. The talk take started
+    4–11 ms and stopped 3–6 ms from its caption.
+  - Ten-line sessions ran in authored order, with the sponsor line when the offer was open
+    and its fallback when it was missing, from one offer request.
+  - Hidden for ten minutes mid-line, the preview paused and resumed without catching up. A
+    start held by a modal played once; a line under way ended beneath the modal and nothing
+    remounted. Under reduced motion the captions kept time and he stayed idle. A live season
+    mid-line removed the caption at once, restored yaw 0.68 and began heartbeats. An outage
+    and a failed read kept their banners.
+  - Every cue fitted at 320, 360, 375, 390, 414 and 430 px phone widths (scale 1.5), and at
+    667×375, 768×1024 and 1440×900. Each stayed inside the viewport and clear of him, the
+    status, the dock and the header, with no clipping and at least 15 px text. Rotation between
+    390×844 and 844×390 and emulated safe areas also pass.
+  - The recordings are `artifacts/prelaunch-monologue/*/video.webm`.
 
 The current-code 1,000-viewer run remains deliberately after launch (D2), and nothing
 below is a capacity claim.

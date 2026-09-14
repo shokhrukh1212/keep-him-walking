@@ -195,6 +195,14 @@ system sans-serif. There is no glass blur, glow or decorative gradient in the ch
   names a place only once that place's painting is actually on screen. "Reconnecting…"
   means this browser has lost touch with the server; "Waiting for the internet" appears
   only when the server confirms nobody is watching.
+- **Prelaunch preview** — before Season 1 starts, the headline reads "Paris · Preview" and
+  the status line "Season 1 is preparing to begin." There is no audience count, reaction,
+  progress or distance, and a start time appears only when one is really set. He stands in
+  the middle facing the viewer in his natural idle. About five seconds after he loads he says
+  the first of eight owner-written lines, then one line every three minutes while the page is
+  visible, each caption shown exactly while he speaks. The sponsor line plays only while a
+  season sponsorship is genuinely open, and at most once per visit. It is local to each
+  visitor, never moves the shared journey, and a failed connection is still shown as one.
 - **Progress row** — one dot per place with "Stop 2 of 5" and "Next ~4 walking min".
   Tapping a dot describes that place without moving him there. Beside it,
   "4.3 / 8 km together · 54%", labelled extrapolated, last confirmed or reconnecting,

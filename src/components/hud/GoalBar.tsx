@@ -63,7 +63,8 @@ export function GoalBar({
         </p>
         <p className="journey-progress-secondary">{secondary}</p>
       </div>
-      <div className="goal-distance">
+      {/* Nothing has been walked before launch: no distance row, not even an "unavailable" one. */}
+      {activityTone === "prelaunch" ? null : <div className="goal-distance">
         <p className="goal-copy">
           <strong>{distanceLabel}</strong>
           <small className="goal-freshness" data-freshness={freshness}>{freshnessLabel}</small>
@@ -93,7 +94,7 @@ export function GoalBar({
             <p>An estimated distance is marked with ~ and is bounded to at most 60 seconds beyond the last server confirmation.</p>
           </div>
         ) : null}
-      </div>
+      </div>}
     </section>
   );
 }
