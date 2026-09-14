@@ -1,51 +1,72 @@
 "use client";
 
 import { useId, useState } from "react";
-import { distanceProgress, formatGoalKm } from "@/lib/world/progress-copy";
-import { PlaceDots, type PlaceDot } from "./PlaceDots";
+import { formatDistanceKm, formatGoalKm, nextPlaceEta, stopLabel } from "@/lib/world/progress-copy";
+import type { WalkingStatus } from "@/lib/presence/status-label";
 
 type Props = {
+  walking: boolean;
+  activityLabel: string;
+  activityTone: WalkingStatus["tone"];
   /** Null while the server has not confirmed a live distance. */
   distanceMetres: number | null;
   dailyGoalMetres: number;
   marathonMetres: number;
   freshness: "extrapolated" | "last confirmed" | "reconnecting" | "unavailable";
-  places: readonly PlaceDot[];
+  placeCount: number;
   currentPlaceIndex: number;
   secondsToNextVisit: number;
-  visitSeconds: number;
 };
 
 /**
- * Two separate facts in one row: which place he is in (from the walking clock)
- * and how far everyone has carried him (from the server's distance). Neither is
- * used to invent the other.
+ * One compact landing summary. The scene counter comes from the walking clock
+ * and the daily-goal bar comes from server-owned distance; neither invents the
+ * other.
  */
 export function GoalBar({
+  walking, activityLabel, activityTone,
   distanceMetres, dailyGoalMetres, marathonMetres, freshness,
-  places, currentPlaceIndex, secondsToNextVisit, visitSeconds,
+  placeCount, currentPlaceIndex, secondsToNextVisit,
 }: Props) {
   const [infoOpen, setInfoOpen] = useState(false);
   const infoId = useId();
-  const progress = distanceMetres === null ? null : distanceProgress(distanceMetres, dailyGoalMetres, marathonMetres);
+  const stop = stopLabel(currentPlaceIndex, placeCount);
+  const eta = nextPlaceEta(secondsToNextVisit);
+  const goalKm = formatGoalKm(dailyGoalMetres);
+  const distanceKm = distanceMetres === null ? null : formatDistanceKm(distanceMetres);
+  const fill = distanceMetres === null || dailyGoalMetres <= 0
+    ? null
+    : Math.min(1, Math.max(0, distanceMetres / dailyGoalMetres));
+  const estimated = freshness === "extrapolated";
+  const freshnessLabel = freshness === "reconnecting"
+    ? "last confirmed"
+    : freshness === "unavailable"
+      ? "unavailable"
+      : freshness === "last confirmed"
+        ? "confirmed"
+        : "estimated";
+  const punctuatedActivity = /[.!?…]$/.test(activityLabel) ? activityLabel : `${activityLabel}.`;
+  const secondary = activityTone === "prelaunch"
+    ? "Journey has not started."
+    : activityTone === "complete"
+      ? "Journey complete."
+      : `${stop.text} · Next scene in ${eta.shortText}`;
+  const distanceLabel = distanceKm === null
+    ? "Today · distance unavailable"
+    : `Today · ${estimated ? "~" : ""}${distanceKm} / ${goalKm} km`;
   return (
-    <section className="goal-bar" data-hud-region="goal" data-goal={progress?.goal ?? "unavailable"} data-marathon={Boolean(progress && progress.goal !== "daily")}>
-      <PlaceDots
-        places={places}
-        currentIndex={currentPlaceIndex}
-        secondsToNextVisit={secondsToNextVisit}
-        visitSeconds={visitSeconds}
-      />
+    <section className="goal-bar journey-progress-panel" data-hud-region="goal" data-goal="daily">
+      <div className="journey-progress-heading">
+        <p className="journey-progress-primary" data-tone={activityTone} role="status">
+          <span aria-hidden="true">{walking ? "→" : activityTone === "reconnecting" ? "↻" : "•"}</span>
+          <strong>{punctuatedActivity}</strong>
+        </p>
+        <p className="journey-progress-secondary">{secondary}</p>
+      </div>
       <div className="goal-distance">
-        <div className="goal-track" aria-hidden="true">
-          {progress ? <span style={{ width: `${progress.fill * 100}%` }} /> : null}
-        </div>
         <p className="goal-copy">
-          <strong aria-label={progress?.text ?? "Daily distance unavailable"}>
-            <span className="goal-copy-long" aria-hidden="true">{progress?.text ?? "Daily distance unavailable"}</span>
-            <span className="goal-copy-short" aria-hidden="true">{progress?.shortText ?? "Distance unavailable"}</span>
-          </strong>
-          <small className="goal-freshness" data-freshness={freshness}>{freshness}</small>
+          <strong>{distanceLabel}</strong>
+          <small className="goal-freshness" data-freshness={freshness}>{freshnessLabel}</small>
           <button
             type="button"
             className="goal-info"
@@ -57,16 +78,19 @@ export function GoalBar({
             <span aria-hidden="true">i</span>
           </button>
         </p>
+        <div className="goal-track" aria-label={distanceLabel} role="progressbar" aria-valuemin={0} aria-valuemax={dailyGoalMetres} aria-valuenow={distanceMetres === null ? undefined : Math.min(distanceMetres, dailyGoalMetres)}>
+          {fill !== null ? <span style={{ width: `${fill * 100}%` }} /> : null}
+        </div>
         {infoOpen ? (
           <div id={infoId} className="goal-info-popover" role="note">
             <p>
-              <strong>{formatGoalKm(dailyGoalMetres)} km</strong> is today&apos;s shared goal. It grows only while he walks,
-              and pauses while he stops.
+              <strong>{goalKm} km</strong> is today&apos;s shared goal. Distance grows only while he walks and pauses while he stops.
             </p>
             <p>
               After that, the next goal is a <strong>{formatGoalKm(marathonMetres)} km</strong> marathon, counted
               over the same day.
             </p>
+            <p>An estimated distance is marked with ~ and is bounded to at most 60 seconds beyond the last server confirmation.</p>
           </div>
         ) : null}
       </div>

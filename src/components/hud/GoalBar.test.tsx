@@ -4,23 +4,19 @@ import type { ComponentProps } from "react";
 import { describe, expect, it } from "vitest";
 import { GoalBar } from "./GoalBar";
 
-const places = [
-  { id: "gare", label: "Gare du Nord" },
-  { id: "canal", label: "Canal Saint-Martin", description: "Footbridges over green water." },
-  { id: "marais", label: "Marais market street" },
-];
-
 function renderBar(overrides: Partial<ComponentProps<typeof GoalBar>> = {}) {
   return render(
     <GoalBar
       distanceMetres={4_000}
+      walking
+      activityLabel="Walking to Canal Saint-Martin"
+      activityTone="walking"
       dailyGoalMetres={8_000}
       marathonMetres={42_195}
       freshness="extrapolated"
-      places={places}
+      placeCount={10}
       currentPlaceIndex={1}
       secondsToNextVisit={250}
-      visitSeconds={420}
       {...overrides}
     />,
   );
@@ -29,48 +25,19 @@ function renderBar(overrides: Partial<ComponentProps<typeof GoalBar>> = {}) {
 describe("GoalBar", () => {
   it("states the shared distance, the goal and how fresh the number is", () => {
     const { container } = renderBar();
-    expect(screen.getByLabelText("4.0 / 8 km today · 50%")).toBeInTheDocument();
-    expect(screen.getByText("extrapolated")).toBeInTheDocument();
+    expect(screen.getByText("Walking to Canal Saint-Martin.")).toBeInTheDocument();
+    expect(screen.getByText("Stop 2 of 10 · Next scene in ~5 walking min")).toBeInTheDocument();
+    expect(screen.getByText("Today · ~4.0 / 8 km")).toBeInTheDocument();
+    expect(screen.getByText("estimated")).toBeInTheDocument();
     expect(container.querySelector(".goal-track span")).toHaveStyle({ width: "50%" });
   });
 
   it("does not invent a distance before the live server confirms one", () => {
     const { container } = renderBar({ distanceMetres: null, freshness: "unavailable" });
-    expect(screen.getByLabelText("Daily distance unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Today · distance unavailable")).toBeInTheDocument();
     expect(screen.getByText("unavailable")).toBeInTheDocument();
     expect(container.querySelector(".goal-track span")).not.toBeInTheDocument();
-    expect(container.querySelector(".goal-bar")).toHaveAttribute("data-marathon", "false");
     expect(screen.queryByText(/0\.0 \/ 8 km/)).not.toBeInTheDocument();
-  });
-
-  it("generates one dot per place and marks the current stop", () => {
-    const { container } = renderBar();
-    expect(screen.getByRole("list")).toHaveAccessibleName("Stop 2 of 3. Next place in about 5 minutes of walking.");
-    expect(screen.getAllByRole("button", { name: /^Stop \d of 3/ })).toHaveLength(3);
-    expect(screen.getByRole("button", { name: "Stop 2 of 3, Canal Saint-Martin, you are here" }))
-      .toHaveAttribute("aria-current", "step");
-    expect(screen.getByRole("button", { name: "Stop 1 of 3, Gare du Nord, completed this loop" }))
-      .toHaveAttribute("data-passed", "true");
-    expect(container.querySelectorAll('.place-dot[data-passed="true"]')).toHaveLength(1);
-  });
-
-  it("describes an earlier place as completed without treating it as a destination", async () => {
-    const user = userEvent.setup();
-    renderBar();
-    await user.click(screen.getByRole("button", { name: "Stop 1 of 3, Gare du Nord, completed this loop" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Completed this loop");
-  });
-
-  it("describes a tapped place without moving the traveler there", async () => {
-    const user = userEvent.setup();
-    renderBar();
-    await user.click(screen.getByRole("button", { name: "Stop 3 of 3, Marais market street" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Marais market street");
-    expect(screen.getByRole("status")).toHaveTextContent("In ~5 walking min");
-    expect(screen.getByRole("button", { name: "Stop 2 of 3, Canal Saint-Martin, you are here" }))
-      .toHaveAttribute("aria-current", "step");
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("explains that a marathon follows today's goal", async () => {
@@ -81,9 +48,18 @@ describe("GoalBar", () => {
     expect(screen.getByRole("note")).toHaveTextContent("42.2 km marathon");
   });
 
-  it("measures against the marathon once the daily goal is behind him", () => {
+  it("keeps the landing bar tied to today's goal after the goal is reached", () => {
     const { container } = renderBar({ distanceMetres: 9_100, freshness: "last confirmed" });
-    expect(screen.getByLabelText("9.1 / 42.2 km marathon · 21%")).toBeInTheDocument();
-    expect(container.querySelector(".goal-bar")).toHaveAttribute("data-marathon", "true");
+    expect(screen.getByText("Today · 9.1 / 8 km")).toBeInTheDocument();
+    expect(screen.getByText("confirmed")).toBeInTheDocument();
+    expect(container.querySelector(".goal-track span")).toHaveStyle({ width: "100%" });
+  });
+
+  it("uses truthful summary copy for non-walking states", () => {
+    const { rerender } = renderBar({ walking: false, activityLabel: "Talking with Camille", activityTone: "stopped" });
+    expect(screen.getByText("Talking with Camille.")).toBeInTheDocument();
+    expect(screen.getByText(/Next scene in ~5 walking min/)).toBeInTheDocument();
+    rerender(<GoalBar walking={false} activityLabel="Season complete" activityTone="complete" distanceMetres={null} dailyGoalMetres={8_000} marathonMetres={42_195} freshness="unavailable" placeCount={10} currentPlaceIndex={9} secondsToNextVisit={0} />);
+    expect(screen.getByText("Journey complete.")).toBeInTheDocument();
   });
 });

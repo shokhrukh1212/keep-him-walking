@@ -60,7 +60,6 @@ import { SoundToggle } from "@/components/hud/SoundToggle";
 import { DailyVote } from "@/components/vote/DailyVote";
 import { VoteChip } from "@/components/hud/VoteChip";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
-import { WalkingRuleStatus } from "@/components/hud/WalkingRuleStatus";
 import { GoalBar } from "@/components/hud/GoalBar";
 import { JourneyPanel } from "@/components/journey/JourneyPanel";
 import { OverlayModal } from "@/components/ui/OverlayModal";
@@ -990,21 +989,18 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
 
       <div className="journey-footer-region">
         <div className="journey-progress-region">
-          <WalkingRuleStatus
+          <GoalBar
             walking={review ? review.moving : walking}
-            label={walkingStatus.text}
-            tone={walkingStatus.tone}
-          />
-          {snapshot.journeyState !== "prelaunch" && snapshot.journeyState !== "completed" ? <GoalBar
+            activityLabel={walkingStatus.text}
+            activityTone={walkingStatus.tone}
             distanceMetres={confirmedDistance}
             dailyGoalMetres={snapshot.assets.dayRouteMetres}
             marathonMetres={snapshot.assets.marathonMetres}
             freshness={distanceFreshness}
-            places={places}
+            placeCount={places.length}
             currentPlaceIndex={routePosition.zoneIndex}
             secondsToNextVisit={routePosition.secondsToNextVisit}
-            visitSeconds={routePosition.visitSeconds}
-          /> : null}
+          />
         </div>
         {/* One fixed slot for the whole season, beside the status and clear of him and the captions. */}
         {liveSeasonSponsor ? <SeasonSponsorLine sponsor={liveSeasonSponsor} /> : null}
