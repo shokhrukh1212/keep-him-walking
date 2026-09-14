@@ -18,7 +18,7 @@ describe("useJourneyAudio", () => {
   it("always starts muted, even for a visitor who turned sound on before", async () => {
     window.localStorage.setItem("khw_sound", "on");
     vi.stubGlobal("Audio", FakeAudio);
-    const { result, unmount } = renderHook(() => useJourneyAudio("/paris.mp3"));
+    const { result, unmount } = renderHook(() => useJourneyAudio());
     expect(result.current.enabled).toBe(false);
     await waitFor(() => expect(result.current.resumesOnTap).toBe(true));
 
@@ -34,7 +34,7 @@ describe("useJourneyAudio", () => {
 
   it("does nothing on a tap when sound was never turned on", async () => {
     vi.stubGlobal("Audio", FakeAudio);
-    const { result, unmount } = renderHook(() => useJourneyAudio("/paris.mp3"));
+    const { result, unmount } = renderHook(() => useJourneyAudio());
     await act(async () => { window.dispatchEvent(new Event("pointerdown")); });
     expect(result.current.enabled).toBe(false);
     expect(result.current.resumesOnTap).toBe(false);

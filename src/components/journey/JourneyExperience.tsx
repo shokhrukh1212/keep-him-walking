@@ -502,14 +502,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
       ),
     );
-  const zoneAudioId = snapshot.assets.route.zones[routePosition.zoneIndex]?.audioIds[0];
-  const ambientAudioUrl = snapshot.assets.audio.find((asset) => asset.id === zoneAudioId)?.url;
   const {
     enabled: soundEnabled,
     available: soundAvailable,
     resumesOnTap: soundResumesOnTap,
     toggle: toggleSound,
-  } = useJourneyAudio(ambientAudioUrl);
+  } = useJourneyAudio();
   const motion=puppetReady && presentationFrame?.assetVersion===snapshot.assets.assetVersion ? presentationFrame.motion : estimatedMotion;
   const activeConversation = motion.action?.conversation ?? null;
   const activeLine = activeConversation && motion.action?.dialogueLineIndex !== undefined
@@ -991,24 +989,26 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       />
 
       <div className="journey-footer-region">
-        <WalkingRuleStatus
-          walking={review ? review.moving : walking}
-          label={walkingStatus.text}
-          tone={walkingStatus.tone}
-        />
+        <div className="journey-progress-region">
+          <WalkingRuleStatus
+            walking={review ? review.moving : walking}
+            label={walkingStatus.text}
+            tone={walkingStatus.tone}
+          />
+          {snapshot.journeyState !== "prelaunch" && snapshot.journeyState !== "completed" ? <GoalBar
+            distanceMetres={confirmedDistance}
+            dailyGoalMetres={snapshot.assets.dayRouteMetres}
+            marathonMetres={snapshot.assets.marathonMetres}
+            freshness={distanceFreshness}
+            places={places}
+            currentPlaceIndex={routePosition.zoneIndex}
+            secondsToNextVisit={routePosition.secondsToNextVisit}
+            visitSeconds={routePosition.visitSeconds}
+          /> : null}
+        </div>
         {/* One fixed slot for the whole season, beside the status and clear of him and the captions. */}
         {liveSeasonSponsor ? <SeasonSponsorLine sponsor={liveSeasonSponsor} /> : null}
         {season?.state === "completed" ? <SeasonCompleteCard season={season} sponsor={snapshot.seasonSponsor ?? null} /> : null}
-        {snapshot.journeyState !== "prelaunch" && snapshot.journeyState !== "completed" ? <GoalBar
-          distanceMetres={confirmedDistance}
-          dailyGoalMetres={snapshot.assets.dayRouteMetres}
-          marathonMetres={snapshot.assets.marathonMetres}
-          freshness={distanceFreshness}
-          places={places}
-          currentPlaceIndex={routePosition.zoneIndex}
-          secondsToNextVisit={routePosition.secondsToNextVisit}
-          visitSeconds={routePosition.visitSeconds}
-        /> : null}
         <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
           {/* The day sponsor card belongs to daily mode; a season sponsor has its own line. */}
           {sponsor && sponsorshipMode === "daily" ? <aside className="sponsor-card" data-hud-region="sponsor" aria-label={sponsor.disclosure}>

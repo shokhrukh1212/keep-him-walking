@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { publicAssetUrl } from "@/lib/assets/url";
 
 const PREFERENCE_KEY = "khw_sound";
+const BACKGROUND_MUSIC_URL = "/audio/calm-background.wav";
 
 function savedPreference(): boolean {
   try {
@@ -22,20 +22,16 @@ function savePreference(on: boolean) {
 }
 
 /**
- * Sound always starts muted. A visitor who turned it on before gets it back on
- * their first tap or key press, because browsers only play audio after a gesture;
- * nobody hears anything they did not ask for.
+ * The calm background loop always starts muted. A visitor who turned it on
+ * before gets it back on their first tap or key press, because browsers only
+ * play audio after a gesture; nobody hears anything they did not ask for.
  */
-export function useJourneyAudio(ambientUrl?: string) {
+export function useJourneyAudio() {
   const [enabled, setEnabled] = useState(false);
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const [resumesOnTap, setResumesOnTap] = useState(false);
   const ambience = useRef<HTMLAudioElement | null>(null);
-  const playingUrl = useRef<string | undefined>(undefined);
-  const ambientRef = useRef(ambientUrl);
-  const available = Boolean(ambientUrl) && failedUrl !== ambientUrl;
-
-  useEffect(() => { ambientRef.current = ambientUrl; }, [ambientUrl]);
+  const available = !failed;
 
   useEffect(() => {
     const read = window.setTimeout(() => setResumesOnTap(savedPreference()), 0);
@@ -46,48 +42,26 @@ export function useJourneyAudio(ambientUrl?: string) {
     ambience.current?.pause();
   }, []);
 
-  useEffect(() => {
-    if (!ambientUrl) {
-      ambience.current?.pause();
-      playingUrl.current = undefined;
-      return;
-    }
-    if (!enabled || playingUrl.current === ambientUrl) return;
-    const previous = ambience.current;
-    const audio = new Audio(publicAssetUrl(ambientUrl));
-    audio.loop = true;
-    audio.volume = 0.16;
-    ambience.current = audio;
-    playingUrl.current = ambientUrl;
-    previous?.pause();
-    void audio.play().catch(() => setFailedUrl(ambientUrl));
-    return () => audio.pause();
-  }, [ambientUrl, enabled]);
-
   const start = useCallback(async () => {
     try {
-      const url = ambientRef.current;
-      if (!url) throw new Error("No ambient audio for this place");
-      const audio = new Audio(publicAssetUrl(url));
+      const audio = new Audio(BACKGROUND_MUSIC_URL);
       audio.loop = true;
-      audio.volume = 0.16;
+      audio.volume = 0.14;
       await audio.play();
       ambience.current?.pause();
       ambience.current = audio;
-      playingUrl.current = url;
       setEnabled(true);
-      setFailedUrl(null);
+      setFailed(false);
       setResumesOnTap(false);
       savePreference(true);
     } catch {
-      setFailedUrl(ambientRef.current ?? null);
+      setFailed(true);
       setEnabled(false);
     }
   }, []);
 
   const stop = useCallback(() => {
     ambience.current?.pause();
-    playingUrl.current = undefined;
     setEnabled(false);
     setResumesOnTap(false);
     savePreference(false);

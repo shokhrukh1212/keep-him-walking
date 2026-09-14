@@ -44,7 +44,7 @@ export function walkingStatusLabel(input: WalkingStatusInput): WalkingStatus {
     if (input.actionLabel) return { text: input.actionLabel, tone: "stopped" };
     const weather = input.weatherFragment ? ` ${input.weatherFragment}` : "";
     return {
-      text: input.renderedPlaceLabel ? `Walking${weather} · ${input.renderedPlaceLabel}` : `Walking${weather}`,
+      text: input.renderedPlaceLabel ? `Walking${weather} to ${input.renderedPlaceLabel}` : `Walking${weather}`,
       tone: "walking",
     };
   }

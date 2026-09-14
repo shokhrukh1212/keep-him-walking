@@ -22,7 +22,7 @@
 | World rendering | **Pixi.js 8** (WebGL) — panorama, ground, weather, diagnostics |
 | Character rendering | **Three.js 0.180** — skinned GLB actors, own transparent canvas |
 | Interface | React + plain CSS (`globals.css`), Tailwind v4 available but the journey UI is hand-written CSS |
-| Audio | Web Audio via a `useJourneyAudio` hook, per-zone `.wav` ambience |
+| Audio | An `HTMLAudioElement` managed by `useJourneyAudio`, playing a calm bundled `.wav` music loop |
 | Validation | Zod 4 for every content pack and every API body |
 | Payments | Season mode (default): one sponsor per seven-day season (configured USD 499/599/699 for Seasons 1/2/3) through a small Dodo Payments adapter, request-only until the provider approves the offer. Each request snapshots its quoted price and dates. The earlier Lemon Squeezy day adapter and its records are retained for `SPONSORSHIP_MODE=daily`; the no-money fixture remains rehearsal-only |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
@@ -1702,10 +1702,16 @@ as confirmed watching time; it shows a pending state before the first heartbeat 
 personal step estimate. The signed legacy steps-card endpoint remains available to old
 links and reads its number from `visitor_day_contributions` rather than the browser.
 
-`useJourneyAudio` is ambient-only. It starts muted, creates an `HTMLAudioElement` only
-after a visitor gesture, loops the current zone's authored ambience, and labels the
-control “Ambient sound”. The former synthetic Web Audio footstep oscillator is gone;
-there is no speech, TTS or lip-sync audio path.
+`useJourneyAudio` starts muted, creates an `HTMLAudioElement` only after a visitor
+gesture, and loops the bundled calm background track. The control is labelled
+“Background music”. The former generated per-place noise clips are no longer selected
+by the landing page; there is no speech, TTS or lip-sync audio path.
+
+The landing footer progress region is a two-column, two-row grid at desktop and phone
+widths: the plain-language movement label sits directly above and labels the place dots,
+while the distance track sits directly above its confirmed/extrapolated distance copy.
+The movement label has no panel background, and the first dot is visually aligned with
+the label without reducing its touch target.
 
 The root metadata is canonical to `https://keephimwalking.com` regardless of the build
 host. It uses the owner-supplied multi-size `/favicon.ico` and the exact 1200×630

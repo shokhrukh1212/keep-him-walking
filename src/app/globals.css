@@ -3484,6 +3484,58 @@ a:focus-visible,
   transform: none;
 }
 
+.journey-footer-region .journey-progress-region {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 34rem);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: .2rem 1.25rem;
+  min-width: 0;
+  transform: translateY(.35rem);
+}
+
+.journey-progress-region .traveler-state {
+  grid-column: 1;
+  grid-row: 1;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: 0 1px 8px rgb(8 15 25 / 90%);
+  backdrop-filter: none;
+}
+
+.journey-progress-region .goal-bar {
+  display: contents;
+}
+
+.journey-progress-region .place-dots {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: start;
+}
+
+.journey-progress-region .goal-distance {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  display: grid;
+  grid-template-rows: auto auto;
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+}
+
+.journey-progress-region .goal-copy {
+  justify-content: flex-end;
+}
+
+.journey-progress-region .place-dots-list {
+  margin-inline-start: -1.1rem;
+  margin-inline-end: -1.1rem;
+}
+
 .journey-footer-region .traveler-state {
   grid-column: 1;
   align-self: center;
@@ -3584,6 +3636,42 @@ a:focus-visible,
     left: max(.5rem, env(safe-area-inset-left));
     gap: .3rem;
   }
+  .journey-footer-region .journey-progress-region {
+    grid-template-columns: minmax(0, 3fr) minmax(8.5rem, 2fr);
+    gap: .15rem .5rem;
+  }
+  .journey-progress-region .place-dots {
+    display: flex;
+    width: auto;
+    gap: .15rem;
+  }
+  .journey-progress-region .place-dot {
+    position: relative;
+    width: 2.15rem;
+  }
+  .journey-progress-region .place-dot::before {
+    content: "";
+    position: absolute;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  .journey-progress-region .place-dots-summary {
+    font-size: .65rem;
+  }
+  .journey-progress-region .place-dots-eta { font-size: .56rem; }
+  .journey-progress-region .goal-copy {
+    gap: .25rem;
+    white-space: nowrap;
+  }
+  .journey-progress-region .goal-info {
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: .7rem;
+  }
+  .journey-progress-region .goal-info::before {
+    inset: -.7rem;
+  }
+  .journey-progress-region .goal-freshness { margin-left: auto; }
   .journey-footer-region .compact-dock {
     width: 100%;
     justify-content: stretch;

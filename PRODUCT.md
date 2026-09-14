@@ -190,7 +190,7 @@ system sans-serif. There is no glass blur, glow or decorative gradient in the ch
   then reads the action window from the server. If a request's answer is lost, the page
   checks whether he is about to act before saying it failed. Sending, checking, queued,
   active, waiting, resting, failure and expired-request feedback are visibly distinct.
-- **Walking rule status** — a small pill reading "→ Walking · Canal Saint-Martin", or the
+- **Walking rule status** — a plain label reading "→ Walking to Canal Saint-Martin", or the
   current stop's label ("Taking a photo", "Talking with Camille", "Tying a shoe"). It
   names a place only once that place's painting is actually on screen. "Reconnecting…"
   means this browser has lost touch with the server; "Waiting for the internet" appears
@@ -241,7 +241,7 @@ button close it.
   the day.
 - **Tomorrow** — only a committed next `country_days` row may name the next city, start
   time and walk/train/flight transfer. Registry order is never presented as a result.
-- **Sound** — per-place ambient street audio from the bottom-right toggle. It always
+- **Sound** — a calm background music loop from the header sound toggle. It always
   starts muted; if you turned it on last time, it comes back on your first tap.
 
 Weather rendering and its cache remain implemented, but weather is disabled for launch

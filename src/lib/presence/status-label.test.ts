@@ -18,7 +18,8 @@ const base: WalkingStatusInput = {
 
 describe("walking status", () => {
   it("names walking, the drawn place and any stop", () => {
-    expect(walkingStatusLabel(base)).toEqual({ text: "Walking · Marais market", tone: "walking" });
+    expect(walkingStatusLabel(base)).toEqual({ text: "Walking to Marais market", tone: "walking" });
+    expect(walkingStatusLabel({ ...base, weatherFragment: "in the rain" }).text).toBe("Walking in the rain to Marais market");
     expect(walkingStatusLabel({ ...base, renderedPlaceLabel: null }).text).toBe("Walking");
     expect(walkingStatusLabel({ ...base, actionLabel: "Tying a shoe" })).toEqual({ text: "Tying a shoe", tone: "stopped" });
   });
@@ -41,7 +42,7 @@ describe("walking status", () => {
     const fresh = { ...base, walking: false, lastConfirmedWalking: false, connection: "reconnecting" as const, joining: true };
     expect(walkingStatusLabel(fresh)).toEqual({ text: "Joining the walk…", tone: "reconnecting" });
     // Someone else is already watching: he is simply walking.
-    expect(walkingStatusLabel({ ...fresh, walking: true }).text).toBe("Walking · Marais market");
+    expect(walkingStatusLabel({ ...fresh, walking: true }).text).toBe("Walking to Marais market");
     // An empty audience is not announced before this visitor has been counted.
     expect(walkingStatusLabel({ ...fresh, waitingSinceLocalTime: "11:17" }).text).toBe("Joining the walk…");
     expect(walkingStatusLabel({ ...fresh, connection: "offline" }).text).toBe("You're offline · reconnecting when you're back");

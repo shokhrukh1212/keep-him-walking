@@ -8,12 +8,12 @@ type Props = {
 
 export function SoundToggle({ enabled, available, resumesOnTap, onToggle }: Props) {
   const label = !available
-    ? "Ambient sound unavailable"
+    ? "Background music unavailable"
     : enabled
-      ? "Ambient sound on"
+      ? "Background music on"
       : resumesOnTap
-        ? "Ambient sound off, resumes on your first tap"
-        : "Ambient sound off";
+        ? "Background music off, resumes on your first tap"
+        : "Background music off";
   return (
     <button
       type="button"
