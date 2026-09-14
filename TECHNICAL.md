@@ -1707,11 +1707,12 @@ gesture, and loops the bundled calm background track. The control is labelled
 “Background music”. The former generated per-place noise clips are no longer selected
 by the landing page; there is no speech, TTS or lip-sync audio path.
 
-The landing footer progress region is a two-column, two-row grid at desktop and phone
-widths: the plain-language movement label sits directly above and labels the place dots,
-while the distance track sits directly above its confirmed/extrapolated distance copy.
-The movement label has no panel background, and the first dot is visually aligned with
-the label without reducing its touch target.
+On desktop the landing footer is one compact band: the plain-language movement label
+and place dots occupy the left, Sponsor/Vote/Journey stay centred, and the distance
+track and confirmed/extrapolated copy occupy the right. Phones keep the progress pair
+stacked immediately above the controls. The movement label has no panel background;
+the dots have equal visual spacing and keep enlarged overlapping touch targets on narrow
+screens, and the smaller visible distance-info icon retains its enlarged hit area.
 
 The root metadata is canonical to `https://keephimwalking.com` regardless of the build
 host. It uses the owner-supplied multi-size `/favicon.ico` and the exact 1200×630
