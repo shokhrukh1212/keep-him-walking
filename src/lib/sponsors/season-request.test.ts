@@ -9,6 +9,7 @@ const valid = {
   contactName: "Casey Owner",
   contactEmail: "casey@acme.example.com",
   rightsConfirmed: "true",
+  policiesAccepted: "true",
 };
 
 describe("sponsor website", () => {
@@ -38,8 +39,12 @@ describe("season sponsor request", () => {
     expect(seasonSponsorRequestSchema.safeParse({ ...valid, description: "Line one\nline two of copy" }).success).toBe(false);
   });
 
-  it("requires rights confirmation, a real email and no extra fields", () => {
+  it("requires rights and policy confirmation, a real email and no extra fields", () => {
     expect(seasonSponsorRequestSchema.safeParse({ ...valid, rightsConfirmed: "false" }).success).toBe(false);
+    expect(seasonSponsorRequestSchema.safeParse({ ...valid, policiesAccepted: "false" }).success).toBe(false);
+    const withoutPolicies = { ...valid } as Partial<typeof valid>;
+    delete withoutPolicies.policiesAccepted;
+    expect(seasonSponsorRequestSchema.safeParse(withoutPolicies).success).toBe(false);
     expect(seasonSponsorRequestSchema.safeParse({ ...valid, contactEmail: "not-an-email" }).success).toBe(false);
     expect(seasonSponsorRequestSchema.safeParse({ ...valid, price: "1" }).success).toBe(false);
     expect(seasonSponsorRequestSchema.safeParse({ ...valid, website: "http://acme.example.com" }).success).toBe(false);

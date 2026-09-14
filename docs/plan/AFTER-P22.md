@@ -27,6 +27,7 @@ finish rather than what it got wrong.
 | D9 | Paris v3 paintings and Day 1 conversations | **Resolved — owner approved and development Day 2 switched to v3** | Owner decision (13 Sep 2026) |
 | D10 | A vote about the next season has nothing to decide yet | No — a finished season shows its totals and, if scheduled, the next start date | Owner |
 | D11 | Paid season checkout waits for Dodo to approve this offer | No — free viewing and seasons launch without it; sponsors can send requests | Owner (Dodo account) |
+| D12 | Paid terms still need a governing law and dispute forum | **Yes for checkout; no for free viewing** | Owner (legal choice) |
 
 ---
 
@@ -485,3 +486,21 @@ seven-day season, reviewed before payment, with no renewal", and send them the
 `/sponsors`, `/refund-policy` and `/sponsor-terms` links. If they say yes, follow step 6
 of `docs/runbooks/season-sponsorship.md`. If they say no, leave the switches off; another
 provider would be a new adapter beside the Dodo one, not a change to the offer.
+
+---
+
+## D12 — Paid terms still need a governing law and dispute forum
+
+**Found 14 September 2026** during the Dodo compliance update.
+
+**What it is.** The project identifies Shokhrukh Karimov as the individual operator and
+has a real X support profile, but it does not configure which country’s law governs a
+paid sponsorship or where a dispute must be handled.
+
+**What happens if nothing changes.** Free viewing and request-only sponsor review can
+continue, but the paid terms remain incomplete and checkout must stay disabled.
+
+**What to do.** Before enabling checkout, choose the governing country and the court or
+arbitration forum that actually applies to the operator, obtain local legal advice if
+needed, and replace the explicit pending-jurisdiction sentence on `/terms` and
+`/sponsor-terms` with that confirmed wording.

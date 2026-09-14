@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { SEASON_REQUEST_LIMITS } from "@/lib/sponsors/season-request";
 import { formatUsdCents } from "@/lib/sponsors/season-offer";
 
@@ -73,6 +74,13 @@ export function SeasonRequestForm({
       <label className="sponsor-rights">
         <input type="checkbox" name="rightsConfirmed" value="true" required />
         <span>I confirm I have the right to use this name, logo and website for this placement.</span>
+      </label>
+      <label className="sponsor-rights">
+        <input type="checkbox" name="policiesAccepted" value="true" required />
+        <span>
+          I agree to the <Link href="/sponsor-terms" target="_blank" rel="noopener">Sponsor Terms</Link> and the{" "}
+          <Link href="/content-moderation" target="_blank" rel="noopener">Content &amp; Listing Moderation Policy</Link>.
+        </span>
       </label>
       <p className="policy-copy">
         {checkoutEnabled

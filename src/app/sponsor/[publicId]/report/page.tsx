@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { LegalFooter } from "@/components/legal/LegalFooter";
+import { legacyPurchasesOpen } from "@/lib/config/sponsorship";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ const DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", y
  * redirect. Every number is a stored daily aggregate; nothing is estimated.
  */
 export default async function SponsorReportPage({ params }: { params: Promise<{ publicId: string }> }) {
+  if (!legacyPurchasesOpen()) notFound();
   const { publicId } = await params;
   const supabase = getServerSupabase();
   if (!supabase) notFound();
@@ -86,5 +89,6 @@ export default async function SponsorReportPage({ params }: { params: Promise<{ 
       deduplicated per visitor per five-minute window; clicks are counted at the disclosed
       redirect. No visitor is identified and no IP address is stored.
     </p>
+    <LegalFooter lead="Keep Him Walking" />
   </main>;
 }

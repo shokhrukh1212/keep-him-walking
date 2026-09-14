@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { findPublicPostcard } from "@/lib/postcards/service";
 import Link from "next/link";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 
 type Props = { params: Promise<{ token: string }> };
 
@@ -26,6 +27,7 @@ export default async function PublicPostcardPage({ params }: Props) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={postcard.image} alt={`Illustrated postcard from ${postcard.countryDay.city_name}`} />
       <a className="primary-button" href={postcard.image} download>Download postcard</a>
+      <LegalFooter lead="Keep Him Walking" />
     </main>
   );
 }

@@ -53,9 +53,13 @@ Do these in order. Stop at any step you are not ready for; the site stays honest
    `pnpm production:db:apply`, then `pnpm production:db:test` and
    `pnpm production:db:lint`. Production is at migration 0037; this applies 0038–0042.
    Do this before deploying this code to Production.
-2. **Contact.** Set `NEXT_PUBLIC_CONTACT_EMAIL` in Vercel to an inbox you read.
-3. **Wording.** Read `/sponsors`, `/refund-policy` and `/sponsor-terms`. Change anything
-   you do not accept before a sponsor or a payment reviewer reads it.
+2. **Contact.** The configured `NEXT_PUBLIC_SPONSOR_X_URL` is the current public support
+   route. Set `NEXT_PUBLIC_CONTACT_EMAIL` in Vercel only after choosing an inbox you read;
+   when present, `/contact` shows both methods.
+3. **Wording.** Read `/terms`, `/privacy`, `/refund-policy`, `/sponsor-terms`,
+   `/content-moderation`, `/contact` and `/sponsors`. Confirm the operator identity,
+   governing law/forum, contact method and every refund rule before a sponsor or payment
+   reviewer reads it.
 4. **Season 1.** `pnpm production:season:configure --starts-at 2026-09-23T16:00:00Z`
    prints the plan without writing. Check the seven cities and the date, then repeat with
    `--apply`. Pass `--itinerary a-v1,b-v1,…` (seven pack ids) to choose the cities

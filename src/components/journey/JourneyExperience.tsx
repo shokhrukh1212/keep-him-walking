@@ -81,6 +81,7 @@ import { SeasonCompleteCard } from "@/components/journey/SeasonCompleteCard";
 import { SeasonSponsorLine } from "@/components/sponsor/SeasonSponsorLine";
 import { SeasonSponsorOffer } from "@/components/sponsor/SeasonSponsorOffer";
 import { SeasonSponsorRow } from "@/components/sponsor/SeasonSponsorRow";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -1032,6 +1033,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           />
           <button className="dock-journey" type="button" aria-haspopup="dialog" onClick={() => showPanel("journey")}>Journey</button>
         </section>
+        <LegalFooter variant="landing" />
       </div>
 
       <OverlayModal

@@ -5,6 +5,7 @@ import { countryDisplayName, flagEmoji, formatWatchDuration } from "@/lib/countr
 import { loadRecapDay } from "@/lib/recap/data";
 import { stampFor } from "@/lib/outcomes/stamp";
 import { outcomeLabel } from "@/lib/recap/image";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 
 export const revalidate = 3_600;
 
@@ -70,6 +71,7 @@ export default async function DayRecapPage({ params }: Props) {
         : recap.seasonSponsor
           ? <>Season {recap.seasonSponsor.seasonNumber} sponsor: <a href={recap.seasonSponsor.href} target="_blank" rel="sponsored noopener noreferrer">{recap.seasonSponsor.name} ↗</a></>
           : "This day was unsponsored."}</p>
+      <LegalFooter lead="Keep Him Walking" />
     </main>
   );
 }

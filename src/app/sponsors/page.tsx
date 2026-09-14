@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SeasonRequestForm } from "@/components/sponsor/SeasonRequestForm";
-import { SEASON_SPONSOR_PRICE_CENTS, SEASON_SPONSOR_PRICES_CENTS, seasonHoldMinutes, sponsorshipMode } from "@/lib/config/sponsorship";
+import { LegalFooter } from "@/components/legal/LegalFooter";
+import { SEASON_SPONSOR_PRICE_CENTS, seasonHoldMinutes, sponsorshipMode } from "@/lib/config/sponsorship";
 import { loadSeasonOffer } from "@/lib/sponsors/season-data";
 import { SEASON_OFFER_COPY, formatSeasonInstant, formatUsdCents, seasonOfferHeadline, seasonTaxNote } from "@/lib/sponsors/season-offer";
 import styles from "../public-pages.module.css";
@@ -23,9 +24,6 @@ export default async function SponsorsPage() {
   const offer = await loadSeasonOffer().catch(() => null);
   const season = offer?.season ?? null;
   const checkoutEnabled = offer?.checkout === "enabled";
-  const pricing = offer?.pricing ?? Object.entries(SEASON_SPONSOR_PRICES_CENTS).map(([number, priceCents]) => ({
-    number: Number(number), priceCents, startsAt: null, endsAt: null,
-  }));
   return <main className={`${styles.publicPage} ${styles.sponsorPage}`} data-testid="sponsors-page">
     <div className={styles.pageFrame}>
       <header className={styles.siteHeader}>
@@ -66,17 +64,15 @@ export default async function SponsorsPage() {
 
       <section className={styles.priceSchedule} aria-labelledby="season-pricing">
         <div>
-          <span className={styles.eyebrow}>FOUNDING SEASON PRICES</span>
+          <span className={styles.eyebrow}>SEASON 1 PRICE</span>
           <h2 id="season-pricing">One placement for all seven days</h2>
         </div>
         <ol>
-          {pricing.map((entry) => <li key={entry.number}>
-            <span>Season {entry.number}</span>
-            <strong>{formatUsdCents(entry.priceCents)}</strong>
-            <small>{entry.startsAt && entry.endsAt
-              ? `${formatSeasonInstant(entry.startsAt)} – ${formatSeasonInstant(entry.endsAt)}`
-              : "Dates to be announced"}</small>
-          </li>)}
+          <li>
+            <span>Season 1</span>
+            <strong>{formatUsdCents(SEASON_SPONSOR_PRICE_CENTS)}</strong>
+            <small>One-time price before applicable tax</small>
+          </li>
         </ol>
       </section>
 
@@ -107,7 +103,7 @@ export default async function SponsorsPage() {
             </div>
             <ol className={styles.stepList}>
               <li>Send your product name, website, a short description, your logo and a contact email.</li>
-              <li>We review the material by hand. Approval is a content check only.</li>
+              <li>We manually review the name, logo, description and destination website. Nothing is published or sent to payment before approval.</li>
               {checkoutEnabled
                 ? <li>Approved material receives a secure payment link. The season is held for you for {seasonHoldMinutes()} minutes while you pay.</li>
                 : <li>Payment is not open yet: our payment provider is still reviewing this advertising offer. Until then a request takes no payment and reserves nothing.</li>}
@@ -126,15 +122,7 @@ export default async function SponsorsPage() {
         </aside> : null}
       </div>
 
-      <footer className={styles.pageFooter}>
-        <span>One sponsor. Seven days. One journey.</span>
-        <nav aria-label="Sponsor and legal information">
-          <Link href="/refund-policy">Refund policy</Link>
-          <Link href="/sponsor-terms">Sponsor terms</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/contact">Contact</Link>
-        </nav>
-      </footer>
+      <LegalFooter lead="One sponsor. Seven days. One journey." />
     </div>
   </main>;
 }

@@ -57,6 +57,7 @@ export const seasonSponsorRequestSchema = z.object({
   contactName: singleLine(SEASON_REQUEST_LIMITS.contactName.min, SEASON_REQUEST_LIMITS.contactName.max),
   contactEmail: z.email().max(SEASON_REQUEST_LIMITS.email.max),
   rightsConfirmed: z.literal("true"),
+  policiesAccepted: z.literal("true"),
 }).strict();
 
 export type SeasonSponsorRequest = z.infer<typeof seasonSponsorRequestSchema>;
@@ -64,7 +65,7 @@ export type SeasonSponsorRequest = z.infer<typeof seasonSponsorRequestSchema>;
 /** The fields of a submitted form, without the logo file. */
 export function seasonRequestFields(form: FormData): Record<string, string> {
   const fields: Record<string, string> = {};
-  for (const key of ["seasonId", "productName", "website", "description", "contactName", "contactEmail", "rightsConfirmed"]) {
+  for (const key of ["seasonId", "productName", "website", "description", "contactName", "contactEmail", "rightsConfirmed", "policiesAccepted"]) {
     const value = form.get(key);
     if (typeof value === "string") fields[key] = value;
   }

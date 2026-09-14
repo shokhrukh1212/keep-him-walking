@@ -2347,7 +2347,27 @@ also renders and stores any missing immutable recap cards through the running ap
   The public offer and Privacy routes use the same restrained ink, cream and gold document
   shell as the journey chrome: a bounded desktop grid, solid surfaced sections and a
   single-column mobile layout. The sponsor form keeps native controls, visible focus and
-  16 px mobile inputs without changing submission or validation behavior.
+  16 px mobile inputs. It separately requires the existing rights confirmation and agreement
+  to the Sponsor Terms and Content and Listing Moderation Policy; the server refuses either
+  unchecked value before storing a request.
+- **Public compliance routes (14 September 2026).** `/terms`, `/privacy`,
+  `/refund-policy`, `/sponsor-terms`, `/content-moderation` and `/contact` are ordinary
+  anonymous pages, not modal states. One shared `LegalFooter` links directly to all six from
+  the landing scene, `/sponsors`, policy pages and public recap/status surfaces. The document
+  shell uses the same local Anton and IBM Plex Mono fonts and the ink/cream/red/gold tokens;
+  its long-form cards collapse to one readable column at phone widths. Public season copy
+  names only the current Season 1 USD 499.00 before-tax offer; the retained Season 2/3 price
+  configuration and all daily Standard/Premium placement logic remain non-public rollback
+  paths in season mode.
+- **Compliance data audit.** The Privacy Policy now names the exact sponsor fields, private
+  and public Supabase buckets, the one-year HttpOnly visitor cookie, 400-day contribution
+  expiry, 365-day postcard expiry, country code, hashed abuse keys, sound local storage,
+  Vemetric session context/events, optional Sentry and Better Stack telemetry, Vercel request
+  processing, public Cloudflare R2 asset delivery and the future Dodo data handoff. No fixed
+  retention has been configured for sponsor/payment/correction/operational/vendor records, so
+  the policy says that rather than inventing one. Vemetric remains cookieless and now masks
+  capability-bearing sponsor-request, legacy-report and postcard path segments before sending
+  a page URL.
 - **Payment.** Real checkout needs season mode, `SPONSOR_BOOKING_ENABLED`,
   `SPONSOR_PROVIDER_APPROVED` and a configured provider (`seasonCheckoutState`); Dodo test
   mode is refused on Vercel Production. `POST /api/season-sponsor/checkout` holds the season

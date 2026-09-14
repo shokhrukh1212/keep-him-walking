@@ -3500,6 +3500,53 @@ a:focus-visible,
   justify-self: center;
 }
 
+.global-legal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem 1.5rem;
+  color: var(--muted);
+  font-family: var(--font-controls);
+  font-size: .66rem;
+  line-height: 1.45;
+}
+
+.global-legal-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .45rem 1rem;
+}
+
+.global-legal-footer a {
+  color: var(--paper);
+  text-underline-offset: .2em;
+}
+
+.global-legal-footer-page {
+  margin-top: clamp(2.5rem, 6vw, 4.5rem);
+  border-top: 1px solid var(--quiet-border);
+  padding-top: 1.2rem;
+}
+
+.global-legal-footer-landing {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  min-height: 1.1rem;
+  border-top: 1px solid rgb(243 231 199 / 20%);
+  padding-top: .25rem;
+  text-shadow: 0 1px 8px rgb(8 15 25 / 90%);
+}
+
+.global-legal-footer-landing nav {
+  width: 100%;
+  justify-content: center;
+}
+
+.global-legal-footer-landing a {
+  color: rgb(243 231 199 / 82%);
+}
+
 .journey-route-details {
   border: 1px solid var(--quiet-border);
   border-radius: 7px;
@@ -3542,6 +3589,16 @@ a:focus-visible,
     justify-content: stretch;
   }
   .journey-footer-region .compact-dock > * { flex: 1 1 0; min-width: 0; }
+  .global-legal-footer-page {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .global-legal-footer-page nav { justify-content: flex-start; }
+  .global-legal-footer-landing {
+    font-size: .55rem;
+    line-height: 1.25;
+  }
+  .global-legal-footer-landing nav { gap: .2rem .62rem; }
   .traveler-wrap { bottom: clamp(8.5rem, 17vh, 10.5rem); }
   .dialogue-bubble,
   .dialogue-traveler,

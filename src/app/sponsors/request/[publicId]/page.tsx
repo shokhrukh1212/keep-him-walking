@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SeasonCheckoutButton } from "@/components/sponsor/SeasonCheckoutButton";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 import { seasonPriceIncludesTax, sponsorshipMode } from "@/lib/config/sponsorship";
 import { loadSeasonRequest } from "@/lib/sponsors/season-data";
 import { formatSeasonInstant, formatUsdCents, seasonTaxNote } from "@/lib/sponsors/season-offer";
@@ -92,5 +93,6 @@ export default async function SeasonRequestPage({ params }: Props) {
       The purchase is a dated placement on this website, not guaranteed traffic.{" "}
       <Link href="/refund-policy">Refund policy</Link> · <Link href="/sponsor-terms">Sponsor terms</Link> · <Link href="/contact">Contact</Link>
     </p>
+    <LegalFooter lead="Keep Him Walking" />
   </main>;
 }

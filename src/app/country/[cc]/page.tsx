@@ -7,6 +7,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { latestJourney } from "@/lib/season/data";
 import { CountryShareButton } from "@/components/country/CountryShareButton";
 import { CorrectionForm } from "@/components/corrections/CorrectionForm";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 import { registeredCountryPacks } from "@/content/countries/registry";
 import { correctionContributorCount } from "@/lib/corrections/data";
 
@@ -182,6 +183,7 @@ export default async function CountryPage({ params }: Props) {
           </section>
         </>
       )}
+      <LegalFooter lead="Keep Him Walking" />
     </main>
   );
 }

@@ -1,42 +1,62 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { sponsorshipMode } from "@/lib/config/sponsorship";
+import { LegalPage } from "@/components/legal/LegalPage";
+
+export const metadata: Metadata = {
+  title: "Refund and Cancellation Policy — Keep Him Walking",
+  description: "Cancellation, postponement, removal and refund terms for the Season 1 sponsorship.",
+};
 
 export default function RefundPolicyPage() {
-  if (sponsorshipMode() === "daily") {
-    return <main className="content-page"><a className="back-link" href="/sponsor">← Sponsorship</a><h1>Refund & creative policy</h1><p>Rejected creative may be revised before its deadline or refunded. A provider refund immediately removes any live placement. Emergency removal is available for policy, safety, legal or technical reasons.</p><p>Approved public creative is copied from private review storage to an immutable public path. Replacing it requires a new review.</p></main>;
-  }
-  return <main className="content-page">
-    <Link className="back-link" href="/sponsors">← Sponsor a season</Link>
-    <h1>Refund policy</h1>
-    <p>
-      This policy covers the season sponsorship: one disclosed placement for one seven-day season, paid once, with no
-      renewal. The configured prices are Season 1 USD 499.00, Season 2 USD 599.00 and Season 3 USD 699.00. Your request
-      keeps the price quoted when you submit it. The purchase is a dated placement on this website, not a guaranteed
-      audience, traffic or result.
-    </p>
-    <h2>Before you pay</h2>
-    <p>Your material is reviewed before any payment is requested. If it is not approved, nothing is charged.</p>
-    <h2>If we cancel</h2>
-    <p>If we cancel your season, or your placement, before its delivery begins, you receive a full refund.</p>
-    <h2>If the placement is not delivered</h2>
-    <p>
-      If a material part of your placement is not delivered during the season (for example, the site is unavailable for a
-      whole day, or your approved placement is not shown), contact us. We refund the undelivered days in proportion to the
-      seven days paid for or, if you prefer, give you the same placement in a later season.
-    </p>
-    <h2>Removal</h2>
-    <p>
-      We may remove a placement whose material or website breaks the sponsor terms. We will tell you why, and any refund for
-      the remaining days follows this policy and the law that applies to you.
-    </p>
-    <h2>Payments that cannot be used</h2>
-    <p>
-      A payment that arrives after the season has been sold to someone else, after booking has closed or the season has
-      started, a second payment, or a payment for the wrong amount is refunded in full. Refunds go back through the payment
-      processor that took the payment; how long they take to arrive depends on that processor and your bank.
-    </p>
-    <h2>Your rights</h2>
-    <p>Nothing in this policy limits a right you have under the law that applies to you.</p>
-    <p>Refund requests and questions: <Link href="/contact">contact us</Link>.</p>
-  </main>;
+  return (
+    <LegalPage
+      title="Refund and Cancellation Policy"
+      eyebrow="SEASON SPONSORSHIP"
+      testId="refund-policy-page"
+      summary="This policy covers the single Season 1 sponsorship: one exclusive placement for seven days at USD 499.00 before applicable tax, paid once with no renewal."
+    >
+      <section>
+        <span className="legal-section-number">01</span>
+        <h2>Before checkout is enabled</h2>
+        <p>Payment does not begin until checkout is enabled. A request or approval takes no money, accepts no purchase and reserves no season. You may withdraw a request through <Link href="/contact">Contact &amp; support</Link>; there is nothing to refund.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">02</span>
+        <h2>Review and rejected material</h2>
+        <p>Material is manually reviewed before checkout. Rejected material may be corrected and resubmitted before the booking deadline. If a payment is ever confirmed for material or dates that cannot be accepted or delivered, that payment is refunded in full.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">03</span>
+        <h2>Sponsor cancellation</h2>
+        <p>After payment, ask to cancel as soon as possible. A cancellation received before the published booking cutoff receives a full refund. At or after that cutoff, or after the season starts, the placement is already committed and sponsor-requested cancellation is not refundable except where required by law. We will still remove the placement on request.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">04</span>
+        <h2>Platform cancellation or postponement</h2>
+        <p>If Keep Him Walking cancels the season or placement before delivery begins, the sponsor receives a full refund. If the season is postponed, the sponsor may accept the replacement dates or cancel for a full refund. A material date change is never treated as automatic acceptance.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">05</span>
+        <h2>Interrupted delivery</h2>
+        <p>If a material part of the approved placement is not delivered, the sponsor may choose either a proportional refund for the undelivered part of the seven-day season or the same promised placement in a mutually agreed later season. Short outages, ordinary maintenance and audience fluctuations do not by themselves create a refund.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">06</span>
+        <h2>Removal for a policy breach</h2>
+        <p>Material may be changed or removed if the sponsor changes it without renewed review, the content or destination becomes unsafe or unlawful, or it violates the <Link href="/content-moderation">Content and Listing Moderation Policy</Link> or a payment-provider requirement. No refund is due for a removal caused by the sponsor’s breach, except where required by law. If removal is required for a platform reason not caused by the sponsor, the undelivered part is refunded proportionally.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">07</span>
+        <h2>Duplicate, late or unusable payments</h2>
+        <p>A duplicate payment, wrong-amount payment, or payment confirmed after the season has been sold, booking has closed or the season has started is refunded in full. Refunds go back through the processor to the original payment method. Processing time depends on the processor and the sponsor’s financial institution.</p>
+        <p>Nothing here limits a non-waivable consumer or payment right. To request a cancellation or refund, use <Link href="/contact">Contact &amp; support</Link> and include the private sponsorship reference.</p>
+      </section>
+    </LegalPage>
+  );
 }

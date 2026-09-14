@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JourneyMap } from "@/components/map/JourneyMap";
 import { SeasonShareButton } from "@/components/season/SeasonShareButton";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 import { flagEmoji } from "@/lib/countries/flags";
 import { loadJourneyMap } from "@/lib/map/data";
 import { stampLabel } from "@/lib/outcomes/stamp";
@@ -89,6 +90,7 @@ export default async function SeasonPage({ params }: Props) {
         />
       </p>
       <p><Link href="/archive">← Back to the passport</Link></p>
+      <LegalFooter lead="Keep Him Walking" />
     </main>
   );
 }

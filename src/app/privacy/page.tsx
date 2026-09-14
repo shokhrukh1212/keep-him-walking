@@ -1,44 +1,62 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import styles from "../public-pages.module.css";
+import { LegalPage } from "@/components/legal/LegalPage";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy — Keep Him Walking",
+  description: "How Keep Him Walking handles visitor, sponsor, analytics and infrastructure data.",
+};
 
 export default function PrivacyPage() {
-  return <main className={`${styles.publicPage} ${styles.privacyPage}`} data-testid="privacy-page">
-    <div className={`${styles.pageFrame} ${styles.legalFrame}`}>
-      <header className={styles.siteHeader}>
-        <Link className={styles.backLink} href="/">← Return to the walk</Link>
-        <span className={styles.wordmark}>KEEP HIM WALKING</span>
-      </header>
-
-      <section className={styles.legalHero} aria-labelledby="privacy-title">
-        <span className={styles.eyebrow}>YOUR DATA</span>
-        <h1 id="privacy-title">Privacy</h1>
-        <p>Keep Him Walking uses a first-party, HttpOnly anonymous visitor cookie to prevent duplicate presence, votes, postcard claims and sponsor metrics. The cookie is not an account and is never placed in a public postcard URL.</p>
+  return (
+    <LegalPage
+      title="Privacy Policy"
+      eyebrow="YOUR DATA"
+      testId="privacy-page"
+      summary="This policy describes the data used to run the anonymous viewing experience, moderate sponsor requests, measure reliability and process a future sponsorship payment."
+    >
+      <section>
+        <span className="legal-section-number">01</span>
+        <h2>Who is responsible</h2>
+        <p>Keep Him Walking is operated by Shokhrukh Karimov. Privacy questions, access requests and deletion requests can be sent through the real support method on the <Link href="/contact">Contact &amp; support page</Link>.</p>
       </section>
 
-      <article className={styles.legalArticle} aria-labelledby="privacy-title">
-        <section>
-          <span className={styles.sectionNumber}>01</span>
-          <h2>Anonymous by design</h2>
-          <p>To stop automated spam, each Wave, Water or Photo request, and each sponsorship request, also counts against a short limit keyed by a one-way hash of the network address it came from. The address itself is never stored.</p>
-          <p>Day-scoped contribution hashes are retained for up to 400 days. Public postcard assets use unpredictable tokens and expire after 365 days. Existing payment records are preserved.</p>
-        </section>
-        <section>
-          <span className={styles.sectionNumber}>02</span>
-          <h2>Sponsorship requests</h2>
-          <p>A season sponsorship request stores the product name, website, short description and logo you submit, and your contact name and email, privately. Only material we approve is published; your contact details never are. Card and billing details are handled by the payment processor and never reach this site.</p>
-        </section>
-        <section>
-          <span className={styles.sectionNumber}>03</span>
-          <h2>Corrections and analytics</h2>
-          <p>Apart from sponsor material, the corrections form is the only place visitor-written text is stored. A correction, its broad category, the city-pack reference, a two-letter country code and the anonymous visitor hash stay in a private moderation queue. The text is never published; only a confirmed count of distinct accepted contributors can appear publicly.</p>
-          <p>Vemetric receives non-blocking product events. Live walking, counts, voting, payments and sponsorship decisions never depend on analytics delivery.</p>
-        </section>
-      </article>
+      <section>
+        <span className="legal-section-number">02</span>
+        <h2>Anonymous viewing and interactions</h2>
+        <p>No visitor account, name or email is required to watch. The site sets one first-party <code>khw_visitor</code> cookie containing a random identifier. It is HttpOnly, SameSite=Lax, secure in production and lasts up to one year. The server converts it to a keyed one-way hash before storing presence, contribution, vote, reaction, postcard or sponsor-metric records in Supabase.</p>
+        <p>A random tab-session identifier is used while the page is open to avoid counting duplicate tabs. The hosting edge supplies a two-letter country code for the audience display. Raw IP addresses are not written to the application database; short abuse limits use a keyed one-way hash of the edge-reported network address.</p>
+        <p>The sound choice is kept in browser local storage. Vemetric uses a random session-storage context while the tab session lasts. These browser values are not accounts.</p>
+      </section>
 
-      <footer className={styles.legalContact}>
-        <span className={styles.eyebrow}>QUESTIONS OR REMOVAL REQUESTS</span>
-        <p>For access or removal questions, use the <Link href="/contact">contact page</Link>.</p>
-      </footer>
-    </div>
-  </main>;
+      <section>
+        <span className="legal-section-number">03</span>
+        <h2>Sponsor and correction submissions</h2>
+        <p>A season sponsorship request stores the submitted product or company name, HTTPS website, short description, contact name, contact email and a re-encoded WebP copy of the logo. Unapproved material stays in a private Supabase Storage bucket. Only an approved name, description, website and public logo copy can be published; contact details are not published.</p>
+        <p>The private corrections queue is the only visitor free-text feature outside sponsor requests. It stores the correction, category, referenced city pack and optional place, country code and anonymous visitor hash. Correction text is never automatically published.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">04</span>
+        <h2>Payments</h2>
+        <p>Checkout is currently disabled. If it is enabled after provider approval, approved sponsors are sent to Dodo Payments for a one-time payment. The site sends the approved contact name and email, season and booking identifiers, and the configured product. Dodo handles card, billing and tax details; full card details do not reach Keep Him Walking. Payment, refund, webhook and dispute identifiers and status are kept in Supabase so the booking can be fulfilled, reconciled and supported.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">05</span>
+        <h2>Analytics, logs and infrastructure</h2>
+        <p>Vemetric is enabled only when its public token is configured. It receives page URLs, referrers, a session context, event names and limited event details such as city, route zone, rendering quality and sponsor identifiers. It is initialized with analytics cookies disabled. Private sponsor-request, legacy report and postcard tokens are masked from analytics page URLs.</p>
+        <p>Sentry is enabled only when its DSN is configured and receives errors and sampled performance traces with default personally identifying data disabled. Better Stack is enabled only when its source token is configured and receives structured operational logs. Application logging redacts cookies, authorization values, tokens, visitor identifiers, email fields, payloads and signatures. Vercel hosts the application and necessarily processes web requests and operational logs.</p>
+        <p>Supabase hosts the database, Realtime channel and private/public object storage. Cloudflare R2 serves public city, character and audio assets from <code>assets.keephimwalking.com</code>; it does not receive sponsor form submissions from this app.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">06</span>
+        <h2>Retention, sharing and choices</h2>
+        <p>The visitor cookie lasts up to one year. Day-scoped contribution hashes expire after up to 400 days. Postcard records and public postcard access expire after 365 days, although an expired asset may remain in storage until operational cleanup. Short presence, reaction and abuse-limit records are pruned on much shorter operational schedules.</p>
+        <p>No fixed deletion period is configured for sponsor requests, approved sponsor material, payment records, aggregate sponsor metrics, corrections, operational incidents or vendor logs. They are kept as needed to review submissions, deliver and document the placement, handle refunds or disputes, maintain security and meet legal obligations. Contact support to request access, correction or deletion; some transaction or security records may have to be retained.</p>
+        <p>Data is shared only with the infrastructure and service providers described above when their configuration is enabled, and when required by law. Keep Him Walking does not sell visitor personal information. You may block browser storage, but the site may then be unable to keep an accurate one-person vote, reaction, contribution or postcard record.</p>
+      </section>
+    </LegalPage>
+  );
 }

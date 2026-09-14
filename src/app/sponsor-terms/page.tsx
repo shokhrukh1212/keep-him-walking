@@ -1,53 +1,72 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { seasonPriceIncludesTax, seasonSaleCutoffHours, sponsorshipMode } from "@/lib/config/sponsorship";
+import { LegalPage } from "@/components/legal/LegalPage";
+import { seasonPriceIncludesTax, seasonSaleCutoffHours } from "@/lib/config/sponsorship";
+
+export const metadata: Metadata = {
+  title: "Sponsor Terms — Keep Him Walking",
+  description: "The exact Season 1 sponsorship offer, review, delivery and payment terms.",
+};
 
 export default function SponsorTermsPage() {
-  if (sponsorshipMode() === "daily") {
-    return <main className="content-page"><a className="back-link" href="/sponsor">← Sponsorship</a><h1>Sponsor terms</h1><p>A purchase reserves one identified country-day subject to payment verification and creative review. Payment alone does not make a placement live. Claims, prohibited content, destination URLs and visual creative may be rejected.</p><p>Reporting uses the first-party aggregate definitions documented for impressions, engaged views, watch time, clicks, postcard actions and sessions. Metrics are estimates designed to resist retries and duplicate tabs.</p></main>;
-  }
-  return <main className="content-page">
-    <Link className="back-link" href="/sponsors">← Sponsor a season</Link>
-    <h1>Sponsor terms</h1>
-    <h2>What you buy</h2>
-    <p>
-      One disclosed sponsor placement for one configured seven-day season of Keep Him Walking, from 16:00 UTC on its start
-      date to 16:00 UTC seven days later. The configured prices are Season 1 USD 499.00, Season 2 USD 599.00 and Season 3
-      USD 699.00, paid once, with no renewal. A submitted request keeps its quoted price. Tax treatment is shown with the
-      dated offer and again before checkout. {seasonPriceIncludesTax() ? "The configured product price includes any tax the payment processor collects." : "Any applicable tax is calculated from the billing details and shown before payment."}
-    </p>
-    <h2>What the placement is</h2>
-    <ul>
-      <li>A “Season supported by” line with your logo, name and website link beside the journey on every day of the season.</li>
-      <li>One row in Journey with your logo, name, a short factual description and a link to your website.</li>
-      <li>An acknowledgment as that season’s sponsor in the season recap, which stays published.</li>
-    </ul>
-    <h2>What it is not</h2>
-    <p>
-      It is advertising placement on this website only. It is not a donation, paid access to the site, travel, or a resale
-      of your product. Nothing is placed in the traveler’s conversations, on his clothes or backpack, or as a large banner.
-      No social media posts, impressions, clicks, leads or sales are promised. Audience size and results are not guaranteed.
-      Watching, reactions and votes stay free for everyone.
-    </p>
-    <h2>Review</h2>
-    <p>
-      You must have the right to use the name, logo and website you submit. Material is reviewed by hand before any payment
-      is requested. We may decline material that is misleading, unlawful, harmful or unsuitable for a general audience, or a
-      website that cannot be understood without signing in or paying. Approval is a content check only. Material and booking
-      close {seasonSaleCutoffHours()} hours before the season starts.
-    </p>
-    <h2>One sponsor per season</h2>
-    <p>
-      A season is sold only when the payment processor confirms payment. If another sponsor pays first, or a payment arrives
-      after booking has closed or the season has started, that payment is refunded in full.
-    </p>
-    <h2>Delivery and reporting</h2>
-    <p>
-      The placement starts and ends automatically with the season. We record the interval it was shown and first-party
-      counts of views and link clicks, without identifying visitors. These counts are not a guarantee of anything.
-    </p>
-    <h2>Removal and refunds</h2>
-    <p>A placement can be removed if its material or website breaks these terms. Refunds follow the <Link href="/refund-policy">refund policy</Link>.</p>
-    <h2>Your details</h2>
-    <p>Contact details you give us are used only for this sponsorship and are never published. See <Link href="/privacy">privacy</Link>.</p>
-  </main>;
+  return (
+    <LegalPage
+      title="Sponsor Terms"
+      eyebrow="ONE SPONSOR · SEVEN DAYS"
+      testId="sponsor-terms-page"
+      summary="These terms govern the exclusive Season 1 sponsor placement offered by Shokhrukh Karimov through Keep Him Walking."
+    >
+      <section>
+        <span className="legal-section-number">01</span>
+        <h2>The offer</h2>
+        <p>Season 1 has one exclusive sponsor for one seven-day season. The one-time price is USD 499.00 before applicable tax, with no subscription or renewal. {seasonPriceIncludesTax() ? "The configured checkout price includes any tax collected by the payment processor." : "Any applicable sales tax or VAT is calculated from billing details and shown before payment."}</p>
+        <p>The exact start, end, cities and booking cutoff are shown on the <Link href="/sponsors">Sponsor a Season page</Link> when Season 1 is scheduled. The placement runs from the stored season start until its end seven days later.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">02</span>
+        <h2>The promised placements</h2>
+        <ul>
+          <li>A disclosed “Season supported by” line with the approved logo, name and website link beside the journey on each of the seven season days.</li>
+          <li>One row in Journey with the approved logo, name, short factual description and “Visit website” link.</li>
+          <li>An acknowledgment as Season 1 sponsor in the season recap that remains published.</li>
+        </ul>
+        <p>Those are the complete promised placements. The offer does not include a backpack, clothing, bottle or café placement, a banner, conversations, social media posts, exclusivity outside Season 1, or creative services.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">03</span>
+        <h2>No promised audience or outcome</h2>
+        <p>The sponsorship is advertising space on this website. No traffic, uptime level, impressions, clicks, watch time, leads, conversions or sales are guaranteed. Any first-party view and click counts are informational, privacy-protected measurements rather than billing commitments. Watching, reactions and votes remain free.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">04</span>
+        <h2>Submission and manual review</h2>
+        <p>A request is an application only. It is not acceptance, a reservation or a purchase. The sponsor must own or have permission to use every submitted name, logo, description and destination URL. Every submission is manually reviewed under the <Link href="/content-moderation">Content and Listing Moderation Policy</Link> before approval, payment or publication. Material changes require renewed review.</p>
+        <p>Material and booking close {seasonSaleCutoffHours()} hours before the season starts. Approval is only a content decision; it does not reserve the season.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">05</span>
+        <h2>Payment and exclusivity</h2>
+        <p>Payment does not begin until checkout is enabled after payment-provider approval. Until then, requests take no payment and reserve nothing. Once enabled, only an approved request can proceed to checkout. The season is sold only after the payment processor confirms the correct one-time payment. A return page or submitted payment attempt is not confirmation.</p>
+        <p>The database permits one paid sponsor. Late, duplicate, wrong-amount or otherwise unusable payments follow the <Link href="/refund-policy">Refund and Cancellation Policy</Link>.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">06</span>
+        <h2>Delivery, changes and removal</h2>
+        <p>Keep Him Walking may make layout or technical changes that do not materially reduce the three promised placements. Sponsor material may be rejected, edited with the sponsor’s agreement, or removed if it becomes unlawful, unsafe, misleading, infringing or incompatible with the moderation policy or applicable payment-provider requirements. Dodo Payments does not endorse or approve an individual sponsor merely because its payment service may be used.</p>
+        <p>Cancellation, postponement, interrupted delivery, removal and refunds are governed by the <Link href="/refund-policy">Refund and Cancellation Policy</Link>.</p>
+      </section>
+
+      <section>
+        <span className="legal-section-number">07</span>
+        <h2>Privacy, responsibility and contact</h2>
+        <p>Sponsor contact details are used privately for review, payment and support. Approved listing material is public. See the <Link href="/privacy">Privacy Policy</Link>.</p>
+        <p>The sponsor is responsible for its material, destination and legal compliance and will cooperate with correction, takedown, refund or payment-provider inquiries. Keep Him Walking is operated by Shokhrukh Karimov. A governing-law jurisdiction and forum have not yet been configured; checkout remains disabled and those details require owner confirmation before payment begins. Questions can be sent through <Link href="/contact">Contact &amp; support</Link>.</p>
+      </section>
+    </LegalPage>
+  );
 }

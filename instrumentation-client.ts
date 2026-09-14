@@ -13,7 +13,12 @@ const token = process.env.NEXT_PUBLIC_VEMETRIC_TOKEN;
 
 if (token) {
   try {
-    vemetric.init({ token });
+    vemetric.init({
+      token,
+      allowCookies: false,
+      // These unguessable route segments are access capabilities, not analytics labels.
+      maskPaths: ["/sponsors/request/*", "/sponsor/*/report", "/p/*"],
+    });
   } catch {
     // Analytics is optional and must never prevent the journey from loading.
   }
