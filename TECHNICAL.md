@@ -1409,7 +1409,7 @@ Postgres: the manifest is versioned code.
 
 ## 9. Data model and API surface
 
-### Tables (39 forward migrations)
+### Tables (43 forward migrations)
 
 **Phase 1 — core:** `journeys`, `country_days` (with a GiST exclusion constraint so two
 days can never overlap), `story_events`, `votes`, `vote_options`, `ballots` (unique per
@@ -1440,6 +1440,14 @@ in Postgres; bootstrap v14 carries the stored rollover hour and the action-aware
 `switch_country_day_pack`
 is an expected-current guarded pointer rollback. Migration 0029 removes the
 loop-variable shadowing caught after 0028 was applied.
+
+**Migration 0043, supporter acknowledgments:** `supporter_contributions` is a private,
+RLS-protected ledger for manual and Buy Me a Coffee records across every season. Provider
+transaction IDs deduplicate imports. Publishing is impossible unless the contribution is
+verified and separate permission to acknowledge on Keep Him Walking is recorded; anonymous
+rows never expose a supplied name. Coffee count stays nullable and is never derived from an
+amount. Only verified X/startup links enter the public projection. Editing a published row
+returns it to draft, while unpublish and remove support corrections and withdrawal.
 
 **Post-P22 migrations 0031-0034:** 0031 lets exactly one confirmed watcher satisfy a
 reaction while an empty room still cannot. 0032 adds `train` to the authoritative
@@ -1630,7 +1638,7 @@ the hundred-watcher moment),
 All of them are `security definer`, revoked from `anon` and `authenticated`, and granted
 only to `service_role`. The browser never talks to these directly.
 
-### Route handlers (36)
+### Route handlers
 
 ```
 GET  /api/bootstrap                 the world only: day, event, vote, presence, steps,
@@ -1674,6 +1682,10 @@ GET  /api/og/recap/[n]              finalized day outcome card (PNG; populated b
 GET  /api/map                       cached season route and current ballot geometry
 GET  /api/audience                  DataFast online, last-24-hour and all-time visitors;
                                     public, s-maxage=15. 503 without DATAFAST_API_KEY.
+GET  /api/supporters                safe chronological published projection, cursor-paged
+POST /api/admin/supporters          private manual entry and edits
+PATCH /api/admin/supporters/[id]    private publish, unpublish and remove actions
+POST /api/admin/supporters/import   private mapped CSV import with transaction deduplication
 ```
 
 Public pages added in Season 1: `/tickets` exposes the owner-enabled, week-two Ticket
@@ -2459,6 +2471,33 @@ also renders and stores any missing immutable recap cards through the running ap
 - **Admin.** `/admin/season-sponsors` (the existing 12-hour session) shows the material,
   contact, signed private logo, ledger rows, delivered interval and view/click counts, with
   approve (copying the logo to an immutable public path), reject, cancel, remove and refund.
+
+### Buy Me a Coffee and the supporters feed (15 September 2026)
+
+- `BUY_ME_A_COFFEE_URL` is a server-read runtime setting passed through an exact HTTPS
+  `buymeacoffee.com/<profile>` validator. The footer uses a plain new-tab link with
+  `noopener noreferrer`; no provider widget or payment code enters this application. An absent
+  value leaves an honest disabled label.
+- Supporters opens the existing URL-addressed `OverlayModal`, so its focus trap, focus return,
+  Escape/Back handling, safe-area body and mounted scene behavior are unchanged. The feed asks
+  `/api/supporters` for the newest 20 published rows, displays each page oldest-first, prepends
+  earlier pages without moving the reader's visible position, and moves to the newest page only
+  when **Latest** is explicitly pressed. No spending rank exists.
+- `/admin/supporters` reuses the signed 12-hour admin session. A CSV is parsed for an on-screen
+  header/sample inspection before upload; the operator explicitly maps its real columns rather
+  than code guessing a Buy Me a Coffee format. Imported rows remain private drafts and unique
+  provider transaction IDs are idempotent. Manual entry keeps launch independent of exports.
+  The operational steps are in `docs/runbooks/supporters.md`.
+- The footer's existing `ResizeObserver` measures the added secondary row and passes the full
+  bottom inset to both scene renderers. Mobile primary actions use implicit equal grid columns,
+  so Sponsor/Journey are halves when Vote is absent and all three are thirds when it is present.
+- **Migration 0043 verification (15 September 2026).**
+  `202609150043_supporter_acknowledgments.sql` was applied to development project
+  `tkntxptfhmjnqaaveddx`. Its `phase27-supporters` pgTAP suite passed all 36 assertions and
+  remote database lint returned `{"results":[]}`. The complete remote pgTAP run remains red on
+  the unrelated existing `phase4-distance` assertion `bootstrap returns the confirmed distance`
+  (actual `NULL`, expected `60`); the supporter migration neither reads nor changes distance
+  authority.
 - **Verification.** Migrations 0040 and 0041 were applied to development project
   `tkntxptfhmjnqaaveddx` on 14 September 2026. All 23 pgTAP suites pass (526 assertions,
   including 47 in `phase25-seasons` and 42 in `phase26-season-sponsorship`) and remote lint
@@ -2674,6 +2713,7 @@ ROLLOVER_UTC_HOUR=16                     # when the day ends and the ballot clos
 SUPABASE_DAY_PHOTOS_BUCKET=khw-day-photos # public bucket for crowd photographs
 SUPABASE_RECAPS_BUCKET=khw-recaps          # public immutable day-recap PNGs
 ADMIN_ACCESS_SECRET=...                    # 48+ chars; exchanged for a 12-hour session
+BUY_ME_A_COFFEE_URL=...                    # exact public buymeacoffee.com profile
 WEATHER_ENABLED=false                      # provider and presentation disabled for launch
 TARGET_CHARACTER_HEIGHT_FRAC=0.30          # desktop viewport target
 TARGET_CHARACTER_HEIGHT_FRAC_MOBILE=0.28   # mobile viewport target

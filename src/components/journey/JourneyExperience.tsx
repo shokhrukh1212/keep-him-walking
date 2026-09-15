@@ -84,6 +84,8 @@ import { SeasonSponsorRow } from "@/components/sponsor/SeasonSponsorRow";
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { PreviewCaption } from "@/components/preview/PreviewCaption";
 import { usePreviewMonologue } from "@/hooks/usePreviewMonologue";
+import { SupportFooterRow } from "@/components/supporters/SupportFooterRow";
+import { SupportersFeed } from "@/components/supporters/SupportersFeed";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -94,6 +96,8 @@ type Props = {
   sponsorPriceCents?: number | null;
   /** Season mode sells one sponsor for a seven-day season; daily mode keeps the day offer. */
   sponsorshipMode?: "season" | "daily";
+  /** Server-validated owner profile; null keeps the label visible without inventing a destination. */
+  coffeeUrl?: string | null;
 };
 
 type WakeMoment = {
@@ -121,7 +125,7 @@ function currentlyActiveEvent(
 
 const subscribeNever = () => () => {};
 
-export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "season" }: Props) {
+export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "season", coffeeUrl = null }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeatState, setHeartbeat] = useState<{
     countryDayId: string;
@@ -1138,6 +1142,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           />
           <button className="dock-journey" type="button" aria-haspopup="dialog" onClick={() => showPanel("journey")}>Journey</button>
         </section>
+        <SupportFooterRow coffeeUrl={coffeeUrl} onSupportersOpen={() => showPanel("supporters")} />
         <LegalFooter variant="landing" />
       </div>
 
@@ -1228,6 +1233,16 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         testId="vote-modal"
       >
         <DailyVote vote={snapshot.vote} onAccepted={acceptVote} />
+      </OverlayModal>
+
+      <OverlayModal
+        open={openPanel === "supporters"}
+        title="Supporters"
+        eyebrow="Keeping the journey going"
+        onClose={closePanel}
+        testId="supporters-modal"
+      >
+        <SupportersFeed />
       </OverlayModal>
 
       <OverlayModal

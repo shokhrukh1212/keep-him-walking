@@ -5,7 +5,7 @@
  * so the browser's own Back button always closes the modal first.
  */
 
-export const PANEL_NAMES = ["journey", "sponsor", "vote", "audience"] as const;
+export const PANEL_NAMES = ["journey", "sponsor", "vote", "audience", "supporters"] as const;
 export type PanelName = (typeof PANEL_NAMES)[number];
 export type PanelSection = "passport" | null;
 

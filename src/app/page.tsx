@@ -2,6 +2,7 @@ import { JourneyExperience } from "@/components/journey/JourneyExperience";
 import { offlineBootstrapSnapshot } from "@/lib/bootstrap/offline";
 import { sponsorshipMode } from "@/lib/config/sponsorship";
 import { demoSponsorAllowed, demoSponsorLogoAllowed } from "@/lib/traveler/demo-sponsor";
+import { configuredCoffeeUrl } from "@/lib/supporters/config";
 
 // The landing page stays cacheable: no cookies, no search params, one indexed
 // read for the advertised price. Anything visitor-specific arrives via /api/bootstrap.
@@ -15,5 +16,6 @@ export default async function HomePage() {
     // Sponsor inventory is deliberately outside the launch-critical path.
     sponsorPriceCents={null}
     sponsorshipMode={sponsorshipMode()}
+    coffeeUrl={configuredCoffeeUrl(process.env.BUY_ME_A_COFFEE_URL)}
   />;
 }
