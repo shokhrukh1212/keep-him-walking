@@ -40,7 +40,7 @@ export default function PrivacyPage() {
         <span className="legal-section-number">04</span>
         <h2>Payments</h2>
         <p>Checkout is currently disabled. If it is enabled after provider approval, approved sponsors are sent to Dodo Payments for a one-time payment. The site sends the approved contact name and email, season and booking identifiers, and the configured product. Dodo handles card, billing and tax details; full card details do not reach Keep Him Walking. Payment, refund, webhook and dispute identifiers and status are kept in Supabase so the booking can be fulfilled, reconciled and supported.</p>
-        <p>The optional Buy Me a Coffee link opens the operator&apos;s profile on Buy Me a Coffee; its site handles that contribution. Keep Him Walking does not receive, store or publish supporter records, emails, payment identifiers or messages.</p>
+        <p>The optional Buy Me a Coffee link opens the operator&apos;s profile on Buy Me a Coffee; its site handles that contribution. The owner may add a supporter&apos;s public display name, contribution date and exact coffee count to the Supporters list only with permission. Keep Him Walking does not receive or publish emails, payment identifiers or messages.</p>
       </section>
 
       <section>
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
         <span className="legal-section-number">06</span>
         <h2>Retention, sharing and choices</h2>
         <p>The visitor cookie lasts up to one year. Day-scoped contribution hashes expire after up to 400 days. Postcard records and public postcard access expire after 365 days, although an expired asset may remain in storage until operational cleanup. Short presence, reaction and abuse-limit records are pruned on much shorter operational schedules.</p>
-        <p>No fixed deletion period is configured for sponsor requests, approved sponsor material, payment records, aggregate sponsor metrics, corrections, operational incidents or vendor logs. They are kept as needed to review submissions, deliver and document the placement, handle refunds or disputes, maintain security and meet legal obligations. Contact support to request access, correction or deletion; some transaction or security records may have to be retained.</p>
+        <p>No fixed deletion period is configured for sponsor requests, approved sponsor material, public supporter acknowledgments, payment records, aggregate sponsor metrics, corrections, operational incidents or vendor logs. They are kept as needed to review submissions, deliver and document the placement, handle refunds or disputes, maintain security and meet legal obligations. A public supporter acknowledgment can be corrected or removed from the published list. Contact support to request access, correction or deletion; some transaction or security records may have to be retained.</p>
         <p>Data is shared only with the infrastructure and service providers described above when their configuration is enabled, and when required by law. Keep Him Walking does not sell visitor personal information. You may block browser storage, but the site may then be unable to keep an accurate one-person vote, reaction, contribution or postcard record.</p>
       </section>
     </LegalPage>

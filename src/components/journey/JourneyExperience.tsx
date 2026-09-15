@@ -85,6 +85,7 @@ import { LegalFooter } from "@/components/legal/LegalFooter";
 import { PreviewCaption } from "@/components/preview/PreviewCaption";
 import { usePreviewMonologue } from "@/hooks/usePreviewMonologue";
 import { SupportFooterRow } from "@/components/supporters/SupportFooterRow";
+import { SupportersFeed } from "@/components/supporters/SupportersFeed";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -1141,7 +1142,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           />
           <button className="dock-journey" type="button" aria-haspopup="dialog" onClick={() => showPanel("journey")}>Journey</button>
         </section>
-        <SupportFooterRow coffeeUrl={coffeeUrl} />
+        <SupportFooterRow coffeeUrl={coffeeUrl} onSupportersOpen={() => showPanel("supporters")} />
         <LegalFooter variant="landing" />
       </div>
 
@@ -1232,6 +1233,16 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         testId="vote-modal"
       >
         <DailyVote vote={snapshot.vote} onAccepted={acceptVote} />
+      </OverlayModal>
+
+      <OverlayModal
+        open={openPanel === "supporters"}
+        title="Supporters"
+        eyebrow="Keeping the journey going"
+        onClose={closePanel}
+        testId="supporters-modal"
+      >
+        <SupportersFeed />
       </OverlayModal>
 
       <OverlayModal

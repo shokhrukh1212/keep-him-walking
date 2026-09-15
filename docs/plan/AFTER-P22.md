@@ -510,11 +510,12 @@ needed, and replace the explicit pending-jurisdiction sentence on `/terms` and
 
 ## D13 — The Buy Me a Coffee supporter list needs a working read-only token
 
-**What it is.** The coffee link opens the real Buy Me a Coffee profile, but the site does
-not show a supporter list because the creator API token is not working yet.
+**What it is.** The coffee link opens the real Buy Me a Coffee profile and the site shows
+only the owner-maintained public list in `src/content/supporters.ts`; the creator API token
+is not working yet.
 
-**What happens if nothing changes.** People can still buy a coffee on Buy Me a Coffee,
-but Keep Him Walking shows no supporter names or contribution history.
+**What happens if nothing changes.** People can still buy a coffee on Buy Me a Coffee, but
+new acknowledgments must be added by hand and the site cannot automatically reconcile them.
 
 **What to do.** When the token issue is resolved, provide a read-only Buy Me a Coffee
 creator API token and decide whether the site should show the platform's supporter list

@@ -4271,13 +4271,16 @@ a:focus-visible,
 /* The coffee action stays in the measured footer, so no fixed-height guess can
    cover the traveler or a caption. */
 .support-footer-row {
-  display: flex;
-  width: min(12.5rem, 100%);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+  width: min(25rem, 100%);
   font-family: var(--font-controls);
   font-size: .72rem;
 }
 
 .support-footer-row a,
+.support-footer-row button,
 .support-footer-row span {
   display: inline-flex;
   min-width: 0;
@@ -4294,8 +4297,52 @@ a:focus-visible,
   text-decoration: none;
 }
 
-.support-footer-row a:hover { border-color: var(--gold); background: var(--surface); }
+.support-footer-row button { cursor: pointer; }
+.support-footer-row a:hover,
+.support-footer-row button:hover { border-color: var(--gold); background: var(--surface); }
 .support-footer-row span[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; opacity: .72; }
+
+.supporters-feed { display: grid; gap: .8rem; min-height: 0; }
+.supporters-feed-intro { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.supporters-feed-intro p,
+.supporters-privacy { margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.5; }
+.supporters-feed-intro button,
+.supporters-earlier {
+  min-height: 44px;
+  border: 1px solid var(--control-border);
+  border-radius: 7px;
+  padding: .55rem .75rem;
+  background: var(--surface);
+  color: var(--paper);
+  font-family: var(--font-controls);
+  cursor: pointer;
+}
+.supporters-scroll {
+  min-height: 12rem;
+  max-height: min(54dvh, 32rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border-block: 1px solid var(--quiet-border);
+  padding: .75rem .2rem;
+}
+.supporters-earlier { display: block; margin: 0 auto .75rem; }
+.supporters-empty { margin: 3rem auto; max-width: 30rem; color: var(--muted); text-align: center; }
+.supporters-list { display: grid; gap: .7rem; margin: 0; padding: 0; list-style: none; }
+.supporters-list li { min-width: 0; }
+.supporter-message {
+  display: grid;
+  gap: .3rem;
+  width: min(33rem, 92%);
+  border: 1px solid var(--quiet-border);
+  border-radius: 8px 8px 8px 2px;
+  padding: .75rem .85rem;
+  background: var(--surface);
+}
+.supporter-message p { margin: 0; overflow-wrap: anywhere; font-family: var(--font-copy); line-height: 1.45; }
+.supporter-message time { color: var(--muted); font-family: var(--font-controls); font-size: .64rem; }
+.supporter-message nav { display: flex; flex-wrap: wrap; gap: .7rem; }
+.supporter-message a { color: var(--gold); font-family: var(--font-controls); font-size: .7rem; }
 
 @media (max-width: 600px) {
   .journey-footer-region .compact-dock {
@@ -4308,10 +4355,14 @@ a:focus-visible,
     width: 100%;
     max-width: none;
   }
-  .support-footer-row { width: 100%; }
+  .support-footer-row { width: 100%; gap: .6rem; }
+  .supporters-scroll { min-height: 10rem; max-height: min(57dvh, 30rem); }
+  .supporter-message { width: 96%; }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
+  .supporters-scroll { max-height: 48dvh; }
   .support-footer-row a,
+  .support-footer-row button,
   .support-footer-row span { padding-block: .4rem; }
 }

@@ -1442,8 +1442,9 @@ is an expected-current guarded pointer rollback. Migration 0029 removes the
 loop-variable shadowing caught after 0028 was applied.
 
 **Migration 0043, retired supporter acknowledgments:** this private, RLS-protected ledger was
-applied before the owner chose to defer the supporter list. It is no longer read or written by
-the application; no admin route, CSV import, manual supporter entry or platform sync remains.
+applied before the owner chose to replace it with a checked-in public acknowledgement list. It
+is no longer read or written by the application; no admin route, CSV import or platform sync
+remains.
 
 **Post-P22 migrations 0031-0034:** 0031 lets exactly one confirmed watcher satisfy a
 reaction while an empty room still cannot. 0032 adds `train` to the authoritative
@@ -2470,8 +2471,11 @@ also renders and stores any missing immutable recap cards through the running ap
   passed through an exact HTTPS `buymeacoffee.com/<profile>` validator. The footer uses a plain
   new-tab link with `noopener noreferrer`; no provider widget or payment code enters this
   application. An absent value leaves an honest disabled label.
-- The public supporters list is deliberately absent until the owner can configure and verify a
-  Buy Me a Coffee read-only token. Its deferred decision is D13 in `docs/plan/AFTER-P22.md`.
+- `src/content/supporters.ts` is the temporary owner-maintained public acknowledgement list.
+  It contains no private data, stays chronological, and accepts a coffee count only when known.
+  The modal pages it locally without any browser/server API call. Direct platform sync remains
+  deferred as D13 in `docs/plan/AFTER-P22.md`; the safe hand-entry steps are in
+  `docs/runbooks/supporters.md`.
 - The footer's existing `ResizeObserver` measures the added secondary row and passes the full
   bottom inset to both scene renderers. Mobile primary actions use implicit equal grid columns,
   so Sponsor/Journey are halves when Vote is absent and all three are thirds when it is present.
