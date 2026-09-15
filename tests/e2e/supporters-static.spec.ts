@@ -14,7 +14,7 @@ test("the owner-maintained supporter modal is honest and leaves the traveler mou
   await page.goto("/");
   await settled(page);
   await expect(page.getByRole("link", { name: /buy him a coffee/i }))
-    .toHaveAttribute("href", "https://buymeacoffee.com/shokhrukhkarimov");
+    .toHaveAttribute("href", "https://buymeacoffee.com/keephimwalking");
   const traveler = page.getByTestId("product-character-stage");
   const mounts = await traveler.getAttribute("data-mount-count");
   await page.getByRole("button", { name: "Supporters" }).click();

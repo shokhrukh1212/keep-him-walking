@@ -2467,7 +2467,7 @@ also renders and stores any missing immutable recap cards through the running ap
 
 ### Buy Me a Coffee and the supporters feed (15 September 2026)
 
-- `BUY_ME_A_COFFEE_URL=https://buymeacoffee.com/shokhrukhkarimov` is a server-read runtime setting
+- `BUY_ME_A_COFFEE_URL=https://buymeacoffee.com/keephimwalking` is a server-read runtime setting
   passed through an exact HTTPS `buymeacoffee.com/<profile>` validator. The footer uses a plain
   new-tab link with `noopener noreferrer`; no provider widget or payment code enters this
   application. An absent value leaves an honest disabled label.
