@@ -219,10 +219,10 @@ button close it.
 - **Daily vote** — one question per country-day, one ballot per visitor, enforced
   server-side. Changing your mind is refused rather than silently counted twice. Results
   publish after the vote closes and are meant to influence the next part of the story.
-- **Supporters** — verified contributions that the supporter permitted the project to
-  acknowledge, oldest first and never ranked. Exact imported coffee counts are shown when
-  supplied; otherwise the feed simply says the person supported the journey. Private
-  contact, payment identifiers and messages never appear.
+- **Supporters** — the direct Buy Me a Coffee supporter list, oldest first and never ranked.
+  Exact platform coffee counts are shown when supplied; otherwise the feed simply says the
+  person supported the journey. Private contact, payment identifiers and messages never enter
+  Keep Him Walking.
 - **Journey** — grouped from "where is he" to "what's next":
   - today's walk: the places, this stop and the next
   - together: shared distance and the two goals

@@ -6,23 +6,19 @@ import { installJourneyApi, settled, type JourneyState } from "./helpers/journey
 const evidenceRoot = "docs/launch-finalization/evidence/supporters";
 
 type PublicSupporter = {
-  id: number;
+  id: string;
   occurredAt: string;
   displayName: string;
   coffeeCount: number | null;
-  xUrl: string | null;
-  startupUrl: string | null;
 };
 
 const supporters: PublicSupporter[] = Array.from({ length: 45 }, (_, index) => ({
-  id: index + 1,
+  id: String(index + 1),
   occurredAt: new Date(Date.UTC(2026, 0, index + 1, 12)).toISOString(),
   displayName: index === 44
     ? "A supporter with an intentionally very long acknowledgment name that must wrap rather than widen the page"
     : `Supporter ${String(index + 1).padStart(2, "0")}`,
   coffeeCount: index % 3 === 0 ? null : index % 4 + 1,
-  xUrl: index === 41 ? "https://x.com/verified_supporter" : null,
-  startupUrl: index === 42 ? "https://example.test/verified-startup" : null,
 }));
 
 const vote: VoteView = {
@@ -91,6 +87,7 @@ test.describe("supporter footer and modal", () => {
       test.setTimeout(150_000);
       await mkdir(evidenceRoot, { recursive: true });
       await open(page, { rawSeconds: 90, sessions: new Set() }, viewport);
+      await expect(page.getByRole("link", { name: /buy him a coffee/i })).toHaveAttribute("href", "https://buymeacoffee.com/shohruxkar1");
       const layout = await footerLayout(page);
       expect(layout.dock).toHaveLength(2);
       if (viewport.width <= 600) {

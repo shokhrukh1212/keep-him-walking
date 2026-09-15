@@ -1441,13 +1441,9 @@ in Postgres; bootstrap v14 carries the stored rollover hour and the action-aware
 is an expected-current guarded pointer rollback. Migration 0029 removes the
 loop-variable shadowing caught after 0028 was applied.
 
-**Migration 0043, supporter acknowledgments:** `supporter_contributions` is a private,
-RLS-protected ledger for manual and Buy Me a Coffee records across every season. Provider
-transaction IDs deduplicate imports. Publishing is impossible unless the contribution is
-verified and separate permission to acknowledge on Keep Him Walking is recorded; anonymous
-rows never expose a supplied name. Coffee count stays nullable and is never derived from an
-amount. Only verified X/startup links enter the public projection. Editing a published row
-returns it to draft, while unpublish and remove support corrections and withdrawal.
+**Migration 0043, retired supporter acknowledgments:** this private, RLS-protected ledger was
+applied before the owner chose direct Buy Me a Coffee synchronization. It is no longer read or
+written by the application; no admin route, CSV import or manual supporter entry remains.
 
 **Post-P22 migrations 0031-0034:** 0031 lets exactly one confirmed watcher satisfy a
 reaction while an empty room still cannot. 0032 adds `train` to the authoritative
@@ -1682,10 +1678,7 @@ GET  /api/og/recap/[n]              finalized day outcome card (PNG; populated b
 GET  /api/map                       cached season route and current ballot geometry
 GET  /api/audience                  DataFast online, last-24-hour and all-time visitors;
                                     public, s-maxage=15. 503 without DATAFAST_API_KEY.
-GET  /api/supporters                safe chronological published projection, cursor-paged
-POST /api/admin/supporters          private manual entry and edits
-PATCH /api/admin/supporters/[id]    private publish, unpublish and remove actions
-POST /api/admin/supporters/import   private mapped CSV import with transaction deduplication
+GET  /api/supporters                direct Buy Me a Coffee projection, cursor-paged
 ```
 
 Public pages added in Season 1: `/tickets` exposes the owner-enabled, week-two Ticket
@@ -2474,20 +2467,20 @@ also renders and stores any missing immutable recap cards through the running ap
 
 ### Buy Me a Coffee and the supporters feed (15 September 2026)
 
-- `BUY_ME_A_COFFEE_URL` is a server-read runtime setting passed through an exact HTTPS
-  `buymeacoffee.com/<profile>` validator. The footer uses a plain new-tab link with
-  `noopener noreferrer`; no provider widget or payment code enters this application. An absent
-  value leaves an honest disabled label.
+- `BUY_ME_A_COFFEE_URL=https://buymeacoffee.com/shohruxkar1` is a server-read runtime setting
+  passed through an exact HTTPS `buymeacoffee.com/<profile>` validator. The footer uses a plain
+  new-tab link with `noopener noreferrer`; no provider widget or payment code enters this
+  application. An absent value leaves an honest disabled label.
 - Supporters opens the existing URL-addressed `OverlayModal`, so its focus trap, focus return,
   Escape/Back handling, safe-area body and mounted scene behavior are unchanged. The feed asks
   `/api/supporters` for the newest 20 published rows, displays each page oldest-first, prepends
   earlier pages without moving the reader's visible position, and moves to the newest page only
   when **Latest** is explicitly pressed. No spending rank exists.
-- `/admin/supporters` reuses the signed 12-hour admin session. A CSV is parsed for an on-screen
-  header/sample inspection before upload; the operator explicitly maps its real columns rather
-  than code guessing a Buy Me a Coffee format. Imported rows remain private drafts and unique
-  provider transaction IDs are idempotent. Manual entry keeps launch independent of exports.
-  The operational steps are in `docs/runbooks/supporters.md`.
+- `/api/supporters` reads every page of the Buy Me a Coffee creator API using the server-only
+  `BUY_ME_A_COFFEE_ACCESS_TOKEN`; no support transaction is stored in Postgres or accepted from
+  an admin form. It projects only ID, date, provider name/anonymous status and the direct coffee
+  count, ignores emails, notes and payment details, and uses `no-store` so raw provider payloads
+  never enter Next's data cache.
 - The footer's existing `ResizeObserver` measures the added secondary row and passes the full
   bottom inset to both scene renderers. Mobile primary actions use implicit equal grid columns,
   so Sponsor/Journey are halves when Vote is absent and all three are thirds when it is present.

@@ -14,19 +14,18 @@ describe("SupportersFeed", () => {
 
   it("renders actual counts and falls back when a count is unavailable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ items: [
-      { id: 1, occurredAt: "2034-01-01T00:00:00Z", displayName: "Alex", coffeeCount: 3, xUrl: "https://x.com/alex", startupUrl: null },
-      { id: 2, occurredAt: "2034-01-02T00:00:00Z", displayName: "Sam", coffeeCount: null, xUrl: null, startupUrl: null },
+      { id: "1", occurredAt: "2034-01-01T00:00:00Z", displayName: "Alex", coffeeCount: 3 },
+      { id: "2", occurredAt: "2034-01-02T00:00:00Z", displayName: "Sam", coffeeCount: null },
     ], hasEarlier: false }))));
     render(<SupportersFeed />);
     expect(await screen.findByText("Alex bought 3 coffees")).toBeInTheDocument();
     expect(screen.getByText("Sam supported the journey")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /X verified link/ })).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("loads older entries only when requested", async () => {
     const fetch = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: 2, occurredAt: "2034-01-02T00:00:00Z", displayName: "New", coffeeCount: null, xUrl: null, startupUrl: null }], hasEarlier: true })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: 1, occurredAt: "2034-01-01T00:00:00Z", displayName: "Old", coffeeCount: 1, xUrl: null, startupUrl: null }], hasEarlier: false })));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: "2", occurredAt: "2034-01-02T00:00:00Z", displayName: "New", coffeeCount: null }], hasEarlier: true })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: "1", occurredAt: "2034-01-01T00:00:00Z", displayName: "Old", coffeeCount: 1 }], hasEarlier: false })));
     vi.stubGlobal("fetch", fetch);
     render(<SupportersFeed />);
     await userEvent.click(await screen.findByRole("button", { name: "Earlier supporters" }));

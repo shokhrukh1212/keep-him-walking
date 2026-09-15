@@ -13,3 +13,9 @@ export function configuredCoffeeUrl(value: string | undefined): string | null {
     return null;
   }
 }
+
+/** Kept server-only by its caller; whitespace-only values must not pretend sync is configured. */
+export function configuredCoffeeAccessToken(value: string | undefined): string | null {
+  const token = value?.trim();
+  return token || null;
+}

@@ -15,7 +15,6 @@ export default async function AdminPage() {
       <p>Your 12-hour admin session is active.</p>
       <p><Link href="/admin/corrections">Review private corrections</Link></p>
       <p><Link href="/admin/season-sponsors">Review season sponsors</Link></p>
-      <p><Link href="/admin/supporters">Import and publish supporter acknowledgments</Link></p>
       <nav className="admin-day-links" aria-label="Post kits">
         {Array.from({ length: 30 }, (_, index) => <Link key={index + 1} href={`/admin/postkit/${index + 1}`}>Day {index + 1}</Link>)}
       </nav>

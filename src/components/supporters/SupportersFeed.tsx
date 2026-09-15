@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { PublicSupporter, PublicSupporterPage } from "@/lib/supporters/data";
+import type { PublicSupporter, PublicSupporterPage } from "@/lib/supporters/buy-me-a-coffee";
 
 function contributionText(item: PublicSupporter) {
   if (item.coffeeCount === null) return `${item.displayName} supported the journey`;
@@ -10,7 +10,7 @@ function contributionText(item: PublicSupporter) {
 
 async function getPage(before?: PublicSupporter): Promise<PublicSupporterPage> {
   const query = before
-    ? `?beforeAt=${encodeURIComponent(before.occurredAt)}&beforeId=${before.id}`
+    ? `?beforeAt=${encodeURIComponent(before.occurredAt)}&beforeId=${encodeURIComponent(before.id)}`
     : "";
   const response = await fetch(`/api/supporters${query}`, { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error("Supporters are temporarily unavailable.");
@@ -77,7 +77,7 @@ export function SupportersFeed() {
 
   return <section className="supporters-feed" aria-busy={state === "loading"}>
     <div className="supporters-feed-intro">
-      <p>Verified contributions that supporters permitted us to acknowledge here. Oldest first; nobody is ranked.</p>
+      <p>Synced directly from Buy Me a Coffee. Oldest first; nobody is ranked.</p>
       <button type="button" onClick={() => void latest()}>Latest</button>
     </div>
     <div className="supporters-scroll" ref={list} tabIndex={0} aria-label="Supporter acknowledgments">
@@ -92,10 +92,6 @@ export function SupportersFeed() {
           <div className="supporter-message">
             <p>{contributionText(item)}</p>
             <time dateTime={item.occurredAt}>{new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(item.occurredAt))}</time>
-            {item.xUrl || item.startupUrl ? <nav aria-label={`Verified links for ${item.displayName}`}>
-              {item.xUrl ? <a href={item.xUrl} target="_blank" rel="noopener noreferrer">X <span className="sr-only">verified link</span> ↗</a> : null}
-              {item.startupUrl ? <a href={item.startupUrl} target="_blank" rel="noopener noreferrer">Startup <span className="sr-only">verified link</span> ↗</a> : null}
-            </nav> : null}
           </div>
         </li>)}
       </ol> : null}
