@@ -7,6 +7,8 @@ const command = action === "seed"
   ? ["node", "--import", "tsx", "scripts/seed-season1.ts", ...process.argv.slice(3)]
   : action === "season"
     ? ["node", "--import", "tsx", "scripts/season/configure.ts", ...process.argv.slice(3)]
+    : action === "reschedule"
+      ? ["node", "--import", "tsx", "scripts/season/reschedule.ts", ...process.argv.slice(3)]
     : action === "test"
       ? ["node", "--import", "tsx", "scripts/test-database.ts"]
       : action === "lint"

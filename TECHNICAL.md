@@ -2325,6 +2325,17 @@ also renders and stores any missing immutable recap cards through the running ap
   refuses a pack whose place paintings are missing from the runtime tree mirrored to the
   CDN. The RPC re-validates the plan, refuses overlap (`23P01`) and a reused season number,
   answers `exists` to a same-data retry and refuses drift.
+- **Moving a start (migration 0044).** `pnpm season:reschedule --season n --starts-at <ISO at
+  16:00Z> [--apply]`, or `production:season:reschedule`, dry-runs without `--apply`.
+  `reschedule_season(n, startsAt, now)` locks the journey and shifts every stored instant of
+  a `draft` season by one interval: the journey's `starts_at`, `launch_at` and `ends_at`,
+  its days (in the order that keeps each inside the moved window for the bounds trigger),
+  their `journey_runtime.last_accounted_at`, story events and ballots. It refuses a started
+  or non-draft season (`55000`), a non-16:00 or past start (`22023`), overlap (`23P01`) and
+  any `payment_pending`, `scheduled`, `active`, `completed` or `refund_required` sponsorship
+  (`55000`). Submitted or approved requests keep their quoted dates, so the 0042 guard
+  refuses their checkout with "season schedule changed"; the result counts them as
+  `requestsQuotedOldDates`. pgTAP `phase27-season-reschedule` covers it.
 - **No eighth day.** The `country_days_season_bounds` trigger refuses any day beyond
   `total_days` or outside the season window, whoever inserts it. `create_next_country_day`
   answers `state: "season"` for a season, and rollover's `createNextDay` skips seasons.

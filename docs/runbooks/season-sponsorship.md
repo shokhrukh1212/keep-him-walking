@@ -51,8 +51,10 @@ Do these in order. Stop at any step you are not ready for; the site stays honest
 
 1. **Production database.** `pnpm production:db:plan`, then
    `pnpm production:db:apply`, then `pnpm production:db:test` and
-   `pnpm production:db:lint`. Production is at migration 0037; this applies 0038–0042.
-   Do this before deploying this code to Production.
+   `pnpm production:db:lint`. Done on 15 September 2026: 0038–0042 were missing after this
+   code had already been deployed, which made the Sponsor window say "The season dates
+   could not be loaded here". Production is now at 0044. Apply any newer migration before
+   deploying the code that needs it.
 2. **Contact.** The configured `NEXT_PUBLIC_SPONSOR_X_URL` is the current public support
    route. Set `NEXT_PUBLIC_CONTACT_EMAIL` in Vercel only after choosing an inbox you read;
    when present, `/contact` shows both methods.
@@ -60,13 +62,30 @@ Do these in order. Stop at any step you are not ready for; the site stays honest
    `/content-moderation`, `/contact` and `/sponsors`. Confirm the operator identity,
    governing law/forum, contact method and every refund rule before a sponsor or payment
    reviewer reads it.
-4. **Season 1.** `pnpm production:season:configure --starts-at 2026-09-23T16:00:00Z`
-   prints the plan without writing. Check the seven cities and the date, then repeat with
-   `--apply`. Pass `--itinerary a-v1,b-v1,…` (seven pack ids) to choose the cities
-   yourself.
+4. **Season 1.** Configured on Production on 15 September 2026 and moved to
+   **18 September 2026 16:00 UTC – 25 September 2026 16:00 UTC** (Paris, Prague,
+   Bratislava, Vienna, Ljubljana, Zagreb, Belgrade). To configure a new season,
+   `pnpm production:season:configure --starts-at <YYYY-MM-DDT16:00:00Z>` prints the plan
+   without writing; repeat with `--apply`. Pass `--itinerary a-v1,b-v1,…` (seven pack ids)
+   to choose the cities yourself.
+
+   **Change the launch date** (only before the season starts, and only while no sponsor
+   has started paying):
+
+   ```bash
+   pnpm production:season:reschedule --season 1 --starts-at 2026-09-20T16:00:00Z
+   pnpm production:season:reschedule --season 1 --starts-at 2026-09-20T16:00:00Z --apply
+   ```
+
+   The first line shows the old and new dates and any sponsor requests; the second moves
+   the whole week. The time must be 16:00 UTC. Sponsor bookings close 24 hours before the
+   start. A request sent before the move can no longer pay, so ask that sponsor to send a
+   new request. No redeploy is needed.
 5. **Launch.** Your existing `PHASE2_ENABLED` / `LAUNCH_ENABLED` switches still decide
-   when the public site is live. The cron-job.org minute job needs no change: it now
-   also starts and ends seasons and releases lapsed checkout holds.
+   when the public site is live: set both to `true` in Vercel Production and redeploy
+   before the season's start, or the week runs with nobody able to watch and ends at 0 m.
+   The cron-job.org minute job needs no change: it now also starts and ends seasons and
+   releases lapsed checkout holds.
 6. **Payments, only after Dodo approves this model** (see `AFTER-P22.md` D11):
    1. In Dodo, create one-time products at USD 499.00, USD 599.00 and USD 699.00 with
       adaptive currency off, then set their matching season product IDs.
