@@ -208,9 +208,8 @@ system sans-serif. There is no glass blur, glow or decorative gradient in the ch
   "4.3 / 8 km together · 54%", labelled extrapolated, last confirmed or reconnecting,
   with an ⓘ explaining that a 42.2 km marathon is the next goal after the 8 km day.
 - **Footer** — the disclosed Sponsor/invitation, a short Vote chip with its countdown,
-  and Journey. A secondary row links to the configured Buy Me a Coffee profile and opens
-  the chronological Supporters acknowledgment feed. Sound is its own toggle in the
-  bottom-right corner.
+  and Journey. A secondary row links to the configured Buy Me a Coffee profile. Sound is
+  its own toggle in the bottom-right corner.
 
 **On demand** — each opens as a modal over the scene. He keeps walking underneath,
 nothing behind it moves or reloads, and the close button, Escape or the browser's Back
@@ -219,10 +218,6 @@ button close it.
 - **Daily vote** — one question per country-day, one ballot per visitor, enforced
   server-side. Changing your mind is refused rather than silently counted twice. Results
   publish after the vote closes and are meant to influence the next part of the story.
-- **Supporters** — the direct Buy Me a Coffee supporter list, oldest first and never ranked.
-  Exact platform coffee counts are shown when supplied; otherwise the feed simply says the
-  person supported the journey. Private contact, payment identifiers and messages never enter
-  Keep Him Walking.
 - **Journey** — grouped from "where is he" to "what's next":
   - today's walk: the places, this stop and the next
   - together: shared distance and the two goals

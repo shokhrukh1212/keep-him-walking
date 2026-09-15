@@ -1442,8 +1442,8 @@ is an expected-current guarded pointer rollback. Migration 0029 removes the
 loop-variable shadowing caught after 0028 was applied.
 
 **Migration 0043, retired supporter acknowledgments:** this private, RLS-protected ledger was
-applied before the owner chose direct Buy Me a Coffee synchronization. It is no longer read or
-written by the application; no admin route, CSV import or manual supporter entry remains.
+applied before the owner chose to defer the supporter list. It is no longer read or written by
+the application; no admin route, CSV import, manual supporter entry or platform sync remains.
 
 **Post-P22 migrations 0031-0034:** 0031 lets exactly one confirmed watcher satisfy a
 reaction while an empty room still cannot. 0032 adds `train` to the authoritative
@@ -1678,7 +1678,6 @@ GET  /api/og/recap/[n]              finalized day outcome card (PNG; populated b
 GET  /api/map                       cached season route and current ballot geometry
 GET  /api/audience                  DataFast online, last-24-hour and all-time visitors;
                                     public, s-maxage=15. 503 without DATAFAST_API_KEY.
-GET  /api/supporters                direct Buy Me a Coffee projection, cursor-paged
 ```
 
 Public pages added in Season 1: `/tickets` exposes the owner-enabled, week-two Ticket
@@ -2467,20 +2466,12 @@ also renders and stores any missing immutable recap cards through the running ap
 
 ### Buy Me a Coffee and the supporters feed (15 September 2026)
 
-- `BUY_ME_A_COFFEE_URL=https://buymeacoffee.com/shohruxkar1` is a server-read runtime setting
+- `BUY_ME_A_COFFEE_URL=https://buymeacoffee.com/shokhrukhkarimov` is a server-read runtime setting
   passed through an exact HTTPS `buymeacoffee.com/<profile>` validator. The footer uses a plain
   new-tab link with `noopener noreferrer`; no provider widget or payment code enters this
   application. An absent value leaves an honest disabled label.
-- Supporters opens the existing URL-addressed `OverlayModal`, so its focus trap, focus return,
-  Escape/Back handling, safe-area body and mounted scene behavior are unchanged. The feed asks
-  `/api/supporters` for the newest 20 published rows, displays each page oldest-first, prepends
-  earlier pages without moving the reader's visible position, and moves to the newest page only
-  when **Latest** is explicitly pressed. No spending rank exists.
-- `/api/supporters` reads every page of the Buy Me a Coffee creator API using the server-only
-  `BUY_ME_A_COFFEE_ACCESS_TOKEN`; no support transaction is stored in Postgres or accepted from
-  an admin form. It projects only ID, date, provider name/anonymous status and the direct coffee
-  count, ignores emails, notes and payment details, and uses `no-store` so raw provider payloads
-  never enter Next's data cache.
+- The public supporters list is deliberately absent until the owner can configure and verify a
+  Buy Me a Coffee read-only token. Its deferred decision is D13 in `docs/plan/AFTER-P22.md`.
 - The footer's existing `ResizeObserver` measures the added secondary row and passes the full
   bottom inset to both scene renderers. Mobile primary actions use implicit equal grid columns,
   so Sponsor/Journey are halves when Vote is absent and all three are thirds when it is present.

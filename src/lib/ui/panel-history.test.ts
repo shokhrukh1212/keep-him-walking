@@ -6,7 +6,6 @@ const home = "https://keephimwalking.com/?demo=1";
 describe("panel history", () => {
   it("reads the modal from the URL and keeps old passport links working", () => {
     expect(panelFromSearch("?panel=journey")).toEqual({ panel: "journey", section: null });
-    expect(panelFromSearch("?panel=supporters")).toEqual({ panel: "supporters", section: null });
     expect(panelFromSearch("?panel=passport")).toEqual({ panel: "journey", section: "passport" });
     expect(panelFromSearch("?panel=unknown")).toEqual({ panel: null, section: null });
     expect(panelFromSearch("")).toEqual({ panel: null, section: null });

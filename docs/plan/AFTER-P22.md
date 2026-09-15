@@ -28,6 +28,7 @@ finish rather than what it got wrong.
 | D10 | A vote about the next season has nothing to decide yet | No — a finished season shows its totals and, if scheduled, the next start date | Owner |
 | D11 | Paid season checkout waits for Dodo to approve this offer | No — free viewing and seasons launch without it; sponsors can send requests | Owner (Dodo account) |
 | D12 | Paid terms still need a governing law and dispute forum | **Yes for checkout; no for free viewing** | Owner (legal choice) |
+| D13 | The Buy Me a Coffee supporter list needs a working read-only token | No — the coffee link works without it | Owner (Buy Me a Coffee developer access) |
 
 ---
 
@@ -504,3 +505,18 @@ continue, but the paid terms remain incomplete and checkout must stay disabled.
 arbitration forum that actually applies to the operator, obtain local legal advice if
 needed, and replace the explicit pending-jurisdiction sentence on `/terms` and
 `/sponsor-terms` with that confirmed wording.
+
+---
+
+## D13 — The Buy Me a Coffee supporter list needs a working read-only token
+
+**What it is.** The coffee link opens the real Buy Me a Coffee profile, but the site does
+not show a supporter list because the creator API token is not working yet.
+
+**What happens if nothing changes.** People can still buy a coffee on Buy Me a Coffee,
+but Keep Him Walking shows no supporter names or contribution history.
+
+**What to do.** When the token issue is resolved, provide a read-only Buy Me a Coffee
+creator API token and decide whether the site should show the platform's supporter list
+without storing it locally. That work must restore privacy checks and a tested direct-sync
+route before the list is shown.
