@@ -3,7 +3,9 @@ import "server-only";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { findCurrentCountryDay } from "@/lib/bootstrap/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { seasonPhaseAt } from "./clock";
 import { latestJourney } from "./data";
+import { latestSeasonVoteId, loadSeasons, seasonShownAt } from "./state";
 
 export type VisitorPrivateState = {
   passport: VisitorPassport;
@@ -85,8 +87,20 @@ export async function loadVisitorPrivateState(visitorHash: string, now = new Dat
   };
   const supabase = getServerSupabase();
   if (!supabase) return empty;
+  // A season's ballot (the name vote before launch, the poll across several days) is the
+  // same vote the shared page shows; otherwise the current day's latest ballot.
+  const season = await loadSeasons(supabase)
+    .then((seasons) => seasonShownAt(seasonPhaseAt(seasons, now.getTime())))
+    .catch(() => null);
+  const seasonVoteId = season ? await latestSeasonVoteId(supabase, season.id, now).catch(() => null) : null;
+  const selectionFor = async (voteId: string | null) => {
+    if (!voteId) return null;
+    const { data: ballot } = await supabase.from("ballots").select("option_id")
+      .eq("vote_id", voteId).eq("voter_hash", visitorHash).maybeSingle();
+    return ballot?.option_id ?? null;
+  };
   const countryDay = await findCurrentCountryDay(now).catch(() => null);
-  if (!countryDay) return empty;
+  if (!countryDay) return { ...empty, selectedOptionId: await selectionFor(seasonVoteId) };
 
   const [{ data: postcard }, { data: vote }] = await Promise.all([
     supabase.from("postcards").select("public_token").eq("country_day_id", countryDay.id)
@@ -95,9 +109,7 @@ export async function loadVisitorPrivateState(visitorHash: string, now = new Dat
       .order("opens_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const contributedSeconds = passport.today?.contributedSeconds ?? 0;
-  const { data: ballot } = vote
-    ? await supabase.from("ballots").select("option_id").eq("vote_id", vote.id).eq("voter_hash", visitorHash).maybeSingle()
-    : { data: null };
+  const selectedOptionId = await selectionFor(seasonVoteId ?? (vote ? String(vote.id) : null));
 
   return {
     passport,
@@ -109,6 +121,6 @@ export async function loadVisitorPrivateState(visitorHash: string, now = new Dat
         ? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/p/${postcard.public_token}`
         : null,
     },
-    selectedOptionId: ballot?.option_id ?? null,
+    selectedOptionId,
   };
 }

@@ -39,6 +39,8 @@ type Props = {
   postcard?: ReactNode;
   /** A finished season's small recap, shown first. */
   seasonRecap?: ReactNode;
+  /** Season 1's story, progress, vote and support links, shown before today's walk. */
+  story?: ReactNode;
   /** The season sponsor's one row. */
   seasonSponsor?: ReactNode;
   sponsorLabel?: string;
@@ -53,7 +55,7 @@ export function JourneyPanel({
   section, places, currentPlaceIndex, secondsToNextVisit, visitSeconds,
   distanceMetres, dailyGoalMetres, marathonMetres, freshness, onlineVisitors,
   prelaunch, seasonNumber = 1, contribution, streak, collectedToday, secondsToCollect,
-  encounters, photos, tomorrow, ticket, wakeCard, postcard, seasonRecap, seasonSponsor,
+  encounters, photos, tomorrow, ticket, wakeCard, postcard, seasonRecap, story, seasonSponsor,
   sponsorLabel = "Sponsor a day", onShare, onSponsor,
 }: Props) {
   const ids = useId();
@@ -76,6 +78,7 @@ export function JourneyPanel({
   return (
     <div className="journey-panel">
       {seasonRecap}
+      {story}
       {ticket ? (
         <p className="ticket-notice" data-testid="ticket-notice">
           Ticket: someone is sending him to {flagEmoji(ticket.countryCode)} {ticket.countryName} on Day {ticket.dayNumber}

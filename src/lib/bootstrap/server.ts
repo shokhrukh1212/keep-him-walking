@@ -16,10 +16,12 @@ import { launchSwitchedOff } from "@/lib/launch/public-state";
 import { scaledStoryNow } from "@/lib/story-clock/schedule";
 import { RATE_LIMITS } from "@/lib/security/rate-limit";
 import { reactionsFromRow, type RawReactionsPayload } from "@/lib/reactions/payload";
-import { SEASON_LENGTH_DAYS, type SeasonPhase } from "@/lib/season/clock";
+import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
+import { type SeasonPhase } from "@/lib/season/clock";
 import { SEASON_FIRST_PACK_ID } from "@/lib/season/plan";
 import {
   currentSeasonPhase,
+  latestSeasonVoteId,
   reconcileSeasonsNow,
   seasonRecap,
   seasonSponsorFor,
@@ -132,13 +134,13 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
   if (!supabase) return null;
   const config = serverRuntimeConfig();
   if (process.env.VERCEL_ENV === "production" && !config.phase2Enabled) return null;
-  type JourneyContext = { journeyId: string | null; storyScale: number; effectiveNow: Date; prelaunch: boolean };
+  type JourneyContext = { journeyId: string | null; storyScale: number; effectiveNow: Date; prelaunch: boolean; rolloverUtcHour: number };
   const resolveJourney = async (): Promise<JourneyContext> => {
-    const open: JourneyContext = { journeyId: null, storyScale: 1, effectiveNow: now, prelaunch: false };
+    const open: JourneyContext = { journeyId: null, storyScale: 1, effectiveNow: now, prelaunch: false, rolloverUtcHour: config.rolloverUtcHour };
     if (!config.phase2Enabled) return open;
     const { data: journey, error: journeyError } = await supabase
       .from("journeys")
-      .select("id,real_time_anchor_at,story_time_anchor_at,story_time_scale,launch_at")
+      .select("id,real_time_anchor_at,story_time_anchor_at,story_time_scale,launch_at,rollover_utc_hour")
       .eq("phase2_enabled", true)
       .in("status", ["preview", "active"])
       .order("starts_at", { ascending: false })
@@ -146,8 +148,10 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
       .maybeSingle();
     if (journeyError) throw journeyError;
     if (!journey) return open;
-    if (journey.launch_at && new Date(journey.launch_at).getTime() > now.getTime()) return { ...open, prelaunch: true };
+    const rolloverHour = Number(journey.rollover_utc_hour ?? config.rolloverUtcHour);
+    if (journey.launch_at && new Date(journey.launch_at).getTime() > now.getTime()) return { ...open, prelaunch: true, rolloverUtcHour: rolloverHour };
     return {
+      rolloverUtcHour: rolloverHour,
       journeyId: journey.id,
       storyScale: Number(journey.story_time_scale),
       effectiveNow: scaledStoryNow(
@@ -190,7 +194,7 @@ export async function findCurrentCountryDay(now: Date): Promise<CountryDayRow | 
       import("@/lib/story-clock/rollover"),
       import("@/lib/story-clock/boundary"),
     ]);
-    await reconcilePhase2(now, logicalDayBoundaryAtOrBefore(now));
+    await reconcilePhase2(now, logicalDayBoundaryAtOrBefore(now, context.rolloverUtcHour));
     await reconcileSeasonsNow(supabase, now);
     context = await resolveJourney();
     if (context.prelaunch) return null;
@@ -290,9 +294,12 @@ async function seasonIdleSnapshot(
     state: phase.kind,
     refreshAt: phase.kind === "prelaunch" ? season.startsAt : next?.startsAt ?? null,
   });
+  // Before a season starts its name vote is open; after it ends its poll keeps its result.
+  const vote = await loadSeasonVote(supabase, season.id, now);
   if (phase.kind === "prelaunch") {
     return {
       ...snapshot,
+      vote,
       season: seasonView(season, "prelaunch", null, null),
       seasonSponsor: null,
       prelaunch: { startsAt: season.startsAt, seasonNumber: season.number },
@@ -302,7 +309,7 @@ async function seasonIdleSnapshot(
     seasonRecap(supabase, season),
     seasonSponsorFor(supabase, season, "completed"),
   ]);
-  return { ...snapshot, season: seasonView(season, "completed", recap, next), seasonSponsor: sponsor };
+  return { ...snapshot, vote, season: seasonView(season, "completed", recap, next), seasonSponsor: sponsor };
 }
 
 /** A live day of a season carries the shared season clock and the season's live sponsor. */
@@ -317,6 +324,8 @@ async function withLiveSeason(
   const next = context?.phase.kind === "live" ? context.phase.next : null;
   return {
     ...snapshot,
+    // A season's ballot can open before launch or last several days, so it is read by season.
+    vote: await loadSeasonVote(supabase, season.id, new Date(snapshot.realServerNow ?? snapshot.serverNow)) ?? snapshot.vote,
     season: seasonView(season, "live", null, next),
     seasonSponsor: await seasonSponsorFor(supabase, season, "live"),
   };
@@ -477,7 +486,7 @@ function bootstrapFromBundle(
     return {
       id: bundle.vote.id,
       question: bundle.vote.question,
-      kind: bundle.vote_meta?.kind === "name" ? "name" as const : "destination" as const,
+      kind: voteKind(bundle.vote_meta?.kind),
       opensAt: bundle.vote.opens_at,
       closesAt: bundle.vote.closes_at,
       status: closed ? "closed" as const : "open" as const,
@@ -659,24 +668,26 @@ async function loadEvents(
   };
 }
 
-async function loadVote(
-  countryDayId: string,
+type VoteRow = {
+  id: string;
+  question: string;
+  kind: string | null;
+  opens_at: string;
+  closes_at: string;
+  result_option_id: string | null;
+  vote_options: Array<{ id: string; label: string; display_order: number; pack_id: string | null }>;
+};
+
+function voteKind(kind: unknown): VoteView["kind"] {
+  return kind === "name" || kind === "anniversary" ? kind : "destination";
+}
+
+async function voteViewFromRow(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  vote: VoteRow,
   visitorHash: string,
   now: Date,
-): Promise<VoteView | null> {
-  const supabase = getServerSupabase();
-  if (!supabase) return null;
-  const { data: vote, error } = await supabase
-    .from("votes")
-    .select("id,question,kind,opens_at,closes_at,status,result_option_id,vote_options!vote_options_vote_id_fkey(id,label,display_order,pack_id)")
-    .eq("country_day_id", countryDayId)
-    .lte("opens_at", now.toISOString())
-    .order("opens_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  if (!vote) return null;
-
+): Promise<VoteView> {
   const { data: ballots, error: ballotsError } = await supabase
     .from("ballots")
     .select("option_id,voter_hash")
@@ -686,11 +697,7 @@ async function loadVote(
   const ballotRows = (ballots ?? []) as Array<{ option_id: string; voter_hash: string }>;
   const selected = ballotRows.find((ballot) => ballot.voter_hash === visitorHash);
   const closed = now.getTime() >= new Date(vote.closes_at).getTime();
-  const options = (
-    vote.vote_options as Array<{
-      id: string; label: string; display_order: number; pack_id: string | null;
-    }>
-  )
+  const options = [...vote.vote_options]
     .sort((a, b) => a.display_order - b.display_order)
     .map((option) => ({
       id: option.id,
@@ -703,7 +710,7 @@ async function loadVote(
   return {
     id: vote.id,
     question: vote.question,
-    kind: vote.kind === "name" ? "name" : "destination",
+    kind: voteKind(vote.kind),
     opensAt: vote.opens_at,
     closesAt: vote.closes_at,
     status: closed ? "closed" : "open",
@@ -712,6 +719,40 @@ async function loadVote(
     resultOptionId: vote.result_option_id ?? null,
     options,
   };
+}
+
+const VOTE_COLUMNS = "id,question,kind,opens_at,closes_at,status,result_option_id,vote_options!vote_options_vote_id_fkey(id,label,display_order,pack_id)";
+
+async function loadVote(
+  countryDayId: string,
+  visitorHash: string,
+  now: Date,
+): Promise<VoteView | null> {
+  const supabase = getServerSupabase();
+  if (!supabase) return null;
+  const { data: vote, error } = await supabase
+    .from("votes")
+    .select(VOTE_COLUMNS)
+    .eq("country_day_id", countryDayId)
+    .lte("opens_at", now.toISOString())
+    .order("opens_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return vote ? voteViewFromRow(supabase, vote as VoteRow, visitorHash, now) : null;
+}
+
+/** A season's current ballot in the public view (no visitor's selection). */
+async function loadSeasonVote(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  journeyId: string,
+  now: Date,
+): Promise<VoteView | null> {
+  const voteId = await latestSeasonVoteId(supabase, journeyId, now);
+  if (!voteId) return null;
+  const { data: vote, error } = await supabase.from("votes").select(VOTE_COLUMNS).eq("id", voteId).maybeSingle();
+  if (error) throw error;
+  return vote ? voteViewFromRow(supabase, vote as VoteRow, PUBLIC_BOOTSTRAP_KEY, now) : null;
 }
 
 /**
@@ -751,7 +792,7 @@ export function switchedOffPrelaunchSnapshot(
       story_summary: null,
       scene_pack_id: pack.assetVersion,
     },
-    totalDays: SEASON_LENGTH_DAYS,
+    totalDays: ANNIVERSARY_JOURNEY.totalDays,
     travelerName: null,
     rolloverUtcHour: config.rolloverUtcHour,
     now,

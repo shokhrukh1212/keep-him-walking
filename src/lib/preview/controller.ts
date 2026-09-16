@@ -64,6 +64,8 @@ export class PreviewMonologueController implements PreviewPoseSource {
   private seasonNumber: number;
   private readonly loadSponsorOpen?: (seasonNumber: number) => Promise<boolean>;
   private readonly now: () => number;
+  /** Server-synchronized wall-clock milliseconds, so a dated line drops out after its moment. */
+  private wallClockMs: number | null = null;
   private readonly visibility: () => VisibilityTarget | null;
   private readonly setTimer: (callback: () => void, delayMs: number) => unknown;
   private readonly clearTimer: (handle: unknown) => void;
@@ -95,6 +97,11 @@ export class PreviewMonologueController implements PreviewPoseSource {
   configure(settings: { cityName: string; seasonNumber: number }) {
     this.cityName = settings.cityName;
     this.seasonNumber = settings.seasonNumber;
+  }
+
+  /** The page's synchronized wall clock; read only when the next line is chosen. */
+  setWallClock(nowMs: number) {
+    this.wallClockMs = Number.isFinite(nowMs) ? nowMs : null;
   }
 
   start() {
@@ -195,6 +202,7 @@ export class PreviewMonologueController implements PreviewPoseSource {
       lines: this.lines,
       cityName: this.cityName,
       sponsorOpen: this.sponsorOpen,
+      nowMs: this.wallClockMs,
     });
     this.askAboutSponsorship();
     this.publish(at);

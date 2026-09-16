@@ -67,6 +67,30 @@ export async function currentSeasonPhase(supabase: Supabase, now: Date): Promise
   return { phase, seasons };
 }
 
+/** The season whose scene the page shows: the live one, the next before it starts, or the last. */
+export function seasonShownAt(phase: SeasonPhase): SeasonRecord | null {
+  if (phase.kind === "live") return phase.current;
+  if (phase.kind === "prelaunch") return phase.next;
+  if (phase.kind === "completed") return phase.last;
+  return null;
+}
+
+/**
+ * The id of the vote a season shows now: its most recently opened ballot on any of its days,
+ * so a vote that opens before launch or spans several days is the same vote everywhere.
+ */
+export async function latestSeasonVoteId(supabase: Supabase, journeyId: string, now: Date): Promise<string | null> {
+  const { data, error } = await supabase.from("votes")
+    .select("id,country_days!inner(journey_id)")
+    .eq("country_days.journey_id", journeyId)
+    .lte("opens_at", now.toISOString())
+    .order("opens_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? String(data.id) : null;
+}
+
 /** Totals from the immutable day outcomes only: nothing is projected or estimated. */
 export async function seasonRecap(supabase: Supabase, season: Pick<SeasonRecord, "id" | "totalDays">): Promise<SeasonRecapView> {
   const { data: days, error } = await supabase.from("country_days")

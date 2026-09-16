@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { PRELAUNCH_MONOLOGUES } from "@/content/prelaunch/monologues";
+import { SCHEDULER_FIXTURE_LINES as PRELAUNCH_MONOLOGUES } from "./fixture-lines";
 import { PreviewMonologueController, type PreviewControllerOptions } from "./controller";
 import { PREVIEW_INTERVAL_SECONDS, monologueTimeline } from "./monologue";
 
@@ -180,5 +180,28 @@ describe("preview monologue controller", () => {
     expect(controller.getSnapshot()).toMatchObject({ sequence: 7, lineId: expected });
     expect(loadSponsorOpen).toHaveBeenCalledTimes(1);
     expect(loadSponsorOpen).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("the controller's wall clock", () => {
+  it("drops a dated Anniversary Journey line once the synchronized clock passes its moment", async () => {
+    const { PRELAUNCH_MONOLOGUES: lines } = await import("@/content/prelaunch/monologues");
+    const { PreviewMonologueController } = await import("./controller");
+    let now = 0;
+    let wake: (() => void) | null = null;
+    const controller = new PreviewMonologueController({
+      lines,
+      now: () => now,
+      visibility: () => null,
+      setTimer: (callback) => { wake = callback; return 1; },
+      clearTimer: () => { wake = null; },
+    });
+    controller.setWallClock(Date.parse("2026-09-16T19:00:00Z"));
+    controller.start();
+    controller.setModelReady();
+    now = 5_000;
+    (wake as (() => void) | null)?.();
+    expect(controller.getSnapshot().lineText).toBe("My maker’s first wedding anniversary is October 1.");
+    controller.stop();
   });
 });

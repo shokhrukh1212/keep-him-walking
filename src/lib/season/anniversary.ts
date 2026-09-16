@@ -75,6 +75,11 @@ export const ANNIVERSARY_LABELS = {
 /** The maker's story, word for word. */
 export const ANNIVERSARY_STORY = "My first wedding anniversary is October 1. I’m building a fourteen-day virtual journey while working toward covering my expenses and a gift for my wife. Follow the journey, help choose the celebration setting in Tashkent, and return for the anniversary update.";
 
+export const ANNIVERSARY_VOTE_COPY = {
+  explanation: "You choose the setting; I confirm the exact venue later.",
+  fairness: "Voting is free, one vote per visitor. Payments and sponsorship never affect the result.",
+} as const;
+
 export type AnniversaryPhase = "preview" | "travel" | "anniversary";
 
 export function anniversaryPhaseAt(nowMs: number): AnniversaryPhase {

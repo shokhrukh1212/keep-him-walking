@@ -86,6 +86,9 @@ import { PreviewCaption } from "@/components/preview/PreviewCaption";
 import { usePreviewMonologue } from "@/hooks/usePreviewMonologue";
 import { SupportFooterRow } from "@/components/supporters/SupportFooterRow";
 import { SupportersFeed } from "@/components/supporters/SupportersFeed";
+import { SponsorInquiry } from "@/components/sponsor/SponsorInquiry";
+import { AnniversaryStory } from "@/components/journey/AnniversaryStory";
+import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -95,7 +98,9 @@ type Props = {
   /** The cheapest day still genuinely open, or null when nothing is for sale. */
   sponsorPriceCents?: number | null;
   /** Season mode sells one sponsor for a seven-day season; daily mode keeps the day offer. */
-  sponsorshipMode?: "season" | "daily";
+  sponsorshipMode?: "inquiry" | "season" | "daily";
+  /** The owner's public X profile, the sponsorship contact in inquiry mode. */
+  sponsorXUrl?: string | null;
   /** Server-validated owner profile; null keeps the label visible without inventing a destination. */
   coffeeUrl?: string | null;
 };
@@ -125,7 +130,7 @@ function currentlyActiveEvent(
 
 const subscribeNever = () => () => {};
 
-export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "season", coffeeUrl = null }: Props) {
+export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "inquiry", sponsorXUrl = null, coffeeUrl = null }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeatState, setHeartbeat] = useState<{
     countryDayId: string;
@@ -325,7 +330,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       // season that has really finished, which must be shown rather than held as reconnecting.
       setSnapshot(current=> next.mode !== "live" && next.mode !== "completed" && current.mode === "live"
         ? {...current,presence:{...current.presence,status:"reconnecting"},steps:{...current.steps,stale:true}}
-        : {...next,assets:current.assets.assetVersion === next.assets.assetVersion ? current.assets : next.assets});
+        : {...next,
+          assets:current.assets.assetVersion === next.assets.assetVersion ? current.assets : next.assets,
+          // The shared read cannot know this visitor's ballot; keep it until /api/me answers.
+          vote: next.vote && current.vote?.id === next.vote.id && current.vote.selectedOptionId
+            ? {...next.vote,selectedOptionId:current.vote.selectedOptionId}
+            : next.vote});
       // A read taken before the newest heartbeat counted fewer people than that heartbeat did.
       if (next.mode === "live" && presenceReadIsCurrent(next.route.authoritativeAt, newestHeartbeat.current)) {
         setWalkingLease(confirmedWalkingLease(
@@ -336,7 +346,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       }
       setClock(synchronizeClock(next.serverNow, Date.now(), next.storyScale ?? 1));
       setRealClock(synchronizeClock(next.realServerNow ?? next.serverNow));
-      if (next.journeyState !== "prelaunch") void refreshMe();
+      if (next.journeyState !== "prelaunch" || next.vote) void refreshMe();
       return Math.max(1_000, Math.min(5 * 60_000, next.refresh.afterMs));
     } catch {
       // Keep the server's own reason; a request that got no answer at all is named too.
@@ -796,6 +806,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     // A modal, or a journey read that just failed, holds back the next line; one under way finishes.
     deferred: openPanel !== null || bootstrapIssue !== null,
     reducedMotion,
+    wallClockMs: realNowMs,
   });
 
   const command: TravelerCommand = {
@@ -951,8 +962,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       : distanceMetres > routeRuntime.globalDistanceMetres + 0.001
         ? "extrapolated" as const
         : "last confirmed" as const;
-  // Season mode sells a whole season; the day offer and its moving price stay in daily mode.
-  const sponsorLabel = sponsorshipMode === "season"
+  // The day offer and its moving price stay in daily mode; the dock otherwise keeps one label.
+  const sponsorLabel = sponsorshipMode !== "daily"
     ? "Sponsor a season"
     : sponsorPriceCents === null ? "Sponsor a day" : `Sponsor a day · ${formatPriceUsd(sponsorPriceCents)}`;
   const season = snapshot.season ?? null;
@@ -1137,7 +1148,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           </label> : null}
           <VoteChip
             vote={snapshot.vote}
-            rolloverUtcHour={snapshot.journey.rolloverUtcHour}
             onOpen={() => showPanel("vote")}
           />
           <button className="dock-journey" type="button" aria-haspopup="dialog" onClick={() => showPanel("journey")}>Journey</button>
@@ -1149,7 +1159,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       <OverlayModal
         open={openPanel === "journey"}
         title="Journey"
-        eyebrow={`${snapshot.countryDay.cityName} · Day ${snapshot.countryDay.dayNumber}`}
+        eyebrow={snapshot.journeyState === "prelaunch"
+          ? `${snapshot.countryDay.cityName} · Preview`
+          : snapshot.journeyState === "completed"
+            ? "The Anniversary Journey · complete"
+            : `${snapshot.countryDay.cityName} · Day ${snapshot.countryDay.dayNumber}`}
         onClose={closePanel}
         size="wide"
         testId="journey-modal"
@@ -1200,8 +1214,21 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           seasonRecap={season?.state === "completed"
             ? <SeasonCompleteCard season={season} sponsor={snapshot.seasonSponsor ?? null} />
             : null}
+          story={prelaunchSeasonNumber === ANNIVERSARY_JOURNEY.seasonNumber ? (
+            <AnniversaryStory
+              progress={seasonClock
+                ? season?.state === "live" ? seasonClock.where.replace(/^Season \d+ · /, "") : seasonClock.when
+                : null}
+              completed={snapshot.journeyState === "completed"}
+              vote={snapshot.vote}
+              nowMs={realNowMs}
+              coffeeUrl={coffeeUrl}
+              onVote={() => showPanel("vote")}
+              onSponsor={() => showPanel("sponsor")}
+            />
+          ) : null}
           seasonSponsor={snapshot.seasonSponsor ? <SeasonSponsorRow sponsor={snapshot.seasonSponsor} /> : null}
-          sponsorLabel={sponsorshipMode === "season" ? "Sponsor a season" : "Sponsor a day"}
+          sponsorLabel={sponsorshipMode === "daily" ? "Sponsor a day" : "Sponsor a season"}
           onShare={() => void share()}
           onSponsor={() => showPanel("sponsor")}
         />
@@ -1209,13 +1236,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
 
       <OverlayModal
         open={openPanel === "sponsor"}
-        title={sponsorshipMode === "season" ? "Sponsor a season" : "Sponsor a day"}
+        title={sponsorshipMode === "daily" ? "Sponsor a day" : "Sponsor a season"}
         eyebrow="Support the journey"
         onClose={closePanel}
         testId="sponsor-modal"
       >
-        {/* Season mode reads its one offer only while this modal is open. */}
-        {sponsorshipMode === "season" ? (openPanel === "sponsor" ? <SeasonSponsorOffer /> : null) : (
+        {/* Inquiry mode reads and submits nothing; season mode reads its one offer only while this modal is open. */}
+        {sponsorshipMode === "inquiry" ? <SponsorInquiry xUrl={sponsorXUrl} />
+          : sponsorshipMode === "season" ? (openPanel === "sponsor" ? <SeasonSponsorOffer /> : null) : (
           <div className="sponsor-copy">
             <p>One sponsor can be clearly disclosed on a day of the shared journey.</p>
             <p>Standard includes the disclosed sponsor card and approved traveler patch. Premium is shown only when both the bottle label and café placement can be fulfilled.</p>
@@ -1227,8 +1255,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
 
       <OverlayModal
         open={openPanel === "vote"}
-        title={snapshot.vote?.kind === "name" ? "Name him" : "Tomorrow’s vote"}
-        eyebrow="Daily vote"
+        title={snapshot.vote?.kind === "name" ? "Name him" : snapshot.vote?.kind === "anniversary" ? "Anniversary setting" : "Tomorrow’s vote"}
+        eyebrow={snapshot.vote?.kind === "anniversary" ? "Free vote" : "Daily vote"}
         onClose={closePanel}
         testId="vote-modal"
       >

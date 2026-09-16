@@ -37,8 +37,11 @@ export type ScheduledEventView = {
 export type VoteView = {
   id: string;
   question: string;
-  /** 'name' is the Day-1 ballot that names him; every other day is a destination. */
-  kind: "destination" | "name";
+  /**
+   * 'name' names him (before a season starts); 'anniversary' is Season 1's free vote on the
+   * anniversary setting in Tashkent; every other ballot is a destination.
+   */
+  kind: "destination" | "name" | "anniversary";
   opensAt: string;
   closesAt: string;
   status: "open" | "closed";

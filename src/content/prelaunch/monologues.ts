@@ -1,61 +1,55 @@
+import { ANNIVERSARY_LABELS } from "@/lib/season/anniversary";
+
 /**
- * What he says to visitors while Season 1 is being prepared. Owner-authored copy,
- * edited here; he says the lines in this order and then starts again.
+ * What he says to visitors while "The Anniversary Journey" waits to start. Owner-authored
+ * copy, edited here; he says the lines in this order and then starts again.
  *
- * A line that is only true in some situations names its condition and the neutral
- * line he says instead. Nothing here may claim live weather, visitor numbers,
- * completed travel or a confirmed sponsor.
+ * A line that is only true in some situations names its condition, and the neutral line
+ * he says instead when there is one. A dated line without a fallback simply drops out once
+ * its moment has passed. Nothing here may claim live weather, visitor numbers, completed
+ * travel or a confirmed sponsor.
  */
 export type PrelaunchMonologueLine = {
   id: string;
   text: string;
-  /** Said only when every condition holds; otherwise `fallback` is said in its place. */
+  /** Said only when every condition holds; otherwise `fallback` (if any) is said in its place. */
   requires?: {
     /** The prelaunch scene is this city. */
     city?: string;
     /** A season sponsorship is genuinely open for requests right now. */
     sponsorOpen?: true;
+    /** Only before this scheduled instant, read on the server-synchronized clock. */
+    before?: "travelStart" | "pollOpens";
   };
   fallback?: string;
 };
 
 export const PRELAUNCH_MONOLOGUES: readonly PrelaunchMonologueLine[] = [
   {
-    id: "waiting-in-paris",
-    text: "Right now, I’m waiting in Paris. Once Season 1 starts, I’ll only walk while someone is watching.",
-    requires: { city: "Paris" },
-    fallback: "Right now, I’m waiting here. Once Season 1 starts, I’ll only walk while someone is watching.",
+    id: "journey-starts",
+    text: `My fourteen-day journey starts ${ANNIVERSARY_LABELS.travelStarts}.`,
+    requires: { before: "travelStart" },
   },
   {
-    id: "packed-for-seven",
-    text: "I’ve packed for seven cities. Somehow, I still think I forgot something.",
+    id: "first-anniversary",
+    text: `My maker’s first wedding anniversary is ${ANNIVERSARY_LABELS.anniversary}.`,
   },
   {
-    id: "paris-first",
-    text: "Paris first. I’m trying to look like I know where I’m going.",
-    requires: { city: "Paris" },
-    fallback: "First city first. I’m trying to look like I know where I’m going.",
+    id: "virtual-journey",
+    text: "I’m taking the virtual journey. He’s planning the surprise in Tashkent.",
   },
   {
-    id: "during-the-season",
-    text: "During the season, you can wave, offer water, or ask for a photo. For now, I’m practicing my patient face.",
+    id: "watching-keeps-me-walking",
+    text: "Once we start, watching is what keeps me walking.",
+    requires: { before: "travelStart" },
   },
   {
-    id: "first-hello",
-    text: "Someone has to be the first to say hello. Today, that’s me.",
+    id: "choose-the-setting",
+    text: `You’ll help choose the anniversary setting. Voting opens ${ANNIVERSARY_LABELS.pollOpens}.`,
+    requires: { before: "pollOpens" },
   },
   {
-    id: "one-bag",
-    text: "Seven cities, one bag. I may have overpacked.",
-  },
-  {
-    id: "looking-for-a-sponsor",
-    text: "The first season is looking for a sponsor. If you’re building something, the Sponsor button has the details.",
-    requires: { sponsorOpen: true },
-    fallback: "Every long walk starts with standing still for a while. I’m getting good at that part.",
-  },
-  {
-    id: "thanks-for-stopping-by",
-    text: "Thanks for stopping by. A little company makes the waiting better.",
+    id: "watching-is-free",
+    text: "Watching is free. Thanks for keeping me company.",
   },
 ];

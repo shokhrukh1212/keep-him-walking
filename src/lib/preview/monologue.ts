@@ -1,6 +1,7 @@
 import type { PrelaunchMonologueLine } from "@/content/prelaunch/monologues";
 import { CLIP_DURATIONS } from "@/lib/characters/manifest";
 import { captionCues } from "@/lib/world/captions";
+import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 
 /**
  * The prelaunch monologue schedule, as pure functions of visible preview seconds.
@@ -90,6 +91,8 @@ export function monologueTimeline(text: string): MonologueTimeline {
 
 export type MonologueContext = {
   cityName: string;
+  /** Server-synchronized wall-clock milliseconds; null while unknown (dated lines then hold). */
+  nowMs: number | null;
   /** Null while unknown. Unknown or failed is never treated as open. */
   sponsorOpen: boolean | null;
   sponsorSpoken: boolean;
@@ -98,12 +101,20 @@ export type MonologueContext = {
 
 export type MonologueChoice = { slot: number; id: string; text: string; sponsor: boolean };
 
+const SCHEDULED_INSTANTS = {
+  travelStart: Date.parse(ANNIVERSARY_JOURNEY.travelStartsAt),
+  pollOpens: Date.parse(ANNIVERSARY_JOURNEY.poll.opensAt),
+} as const;
+
 function resolveLine(line: PrelaunchMonologueLine, slot: number, context: MonologueContext) {
+  const before = line.requires?.before;
+  // A dated line is never said after its moment: once past, its fallback or nothing.
+  const timeHolds = before === undefined || context.nowMs === null || context.nowMs < SCHEDULED_INSTANTS[before];
   const cityHolds = line.requires?.city === undefined || line.requires.city === context.cityName;
   // The offer is made only while genuinely open, never as the first thing he says, and once.
   const sponsorHolds = line.requires?.sponsorOpen === undefined
     || (context.sponsorOpen === true && !context.sponsorSpoken && slot > 0);
-  return cityHolds && sponsorHolds
+  return timeHolds && cityHolds && sponsorHolds
     ? { id: line.id, text: line.text, sponsor: line.requires?.sponsorOpen === true }
     : { id: `${line.id}.fallback`, text: line.fallback ?? "", sponsor: false };
 }
@@ -166,6 +177,8 @@ export type MonologueStep = {
   lines: readonly PrelaunchMonologueLine[];
   cityName: string;
   sponsorOpen: boolean | null;
+  /** Server-synchronized wall-clock milliseconds, for dated lines. */
+  nowMs?: number | null;
 };
 
 /**
@@ -181,6 +194,7 @@ export function advanceMonologues(state: MonologueSchedule, step: MonologueStep)
   if (next.speaking || next.nextStartAt === null || step.at < next.nextStartAt || step.deferred) return next;
   const choice = chooseMonologue(step.lines, next.nextSlot, {
     cityName: step.cityName,
+    nowMs: step.nowMs ?? null,
     sponsorOpen: step.sponsorOpen,
     sponsorSpoken: next.sponsorSpoken,
     previousText: next.lastText,

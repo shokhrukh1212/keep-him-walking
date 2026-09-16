@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ballotPercentages } from "@/components/hud/VoteChip";
 import { flagEmoji } from "@/lib/countries/flags";
 import type { VoteView } from "@/lib/contracts";
+import { ANNIVERSARY_VOTE_COPY } from "@/lib/season/anniversary";
 
 type Props = {
   vote: VoteView | null;
@@ -44,8 +45,13 @@ export function DailyVote({ vote, onAccepted }: Props) {
     return <p className="vote-empty">The live server is not connected, so no vote or result is being invented.</p>;
   }
   return (
-    <div className="vote-ballot">
+    <div className="vote-ballot" data-vote-kind={vote.kind}>
       <p className="vote-question">{vote.question}</p>
+      {vote.kind === "anniversary" ? (
+        <p className="vote-note" data-testid="anniversary-vote-note">
+          {ANNIVERSARY_VOTE_COPY.explanation} {ANNIVERSARY_VOTE_COPY.fairness}
+        </p>
+      ) : null}
       <div className="vote-options">
         {vote.options.map((option) => (
           <button
@@ -70,7 +76,7 @@ export function DailyVote({ vote, onAccepted }: Props) {
       </div>
       {winner ? (
         <p className="vote-result">
-          {vote.kind === "name" ? "His name: " : "Tomorrow: "}
+          {vote.kind === "name" ? "His name: " : vote.kind === "anniversary" ? "Setting: " : "Tomorrow: "}
           {winner.countryCode ? <span aria-hidden="true">{flagEmoji(winner.countryCode)} </span> : null}
           <strong>{winner.label}</strong> ({percentages.get(winner.id) ?? 0}%)
         </p>

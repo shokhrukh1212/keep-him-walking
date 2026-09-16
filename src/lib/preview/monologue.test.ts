@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { PRELAUNCH_MONOLOGUES, type PrelaunchMonologueLine } from "@/content/prelaunch/monologues";
+import type { PrelaunchMonologueLine } from "@/content/prelaunch/monologues";
+import { PRELAUNCH_MONOLOGUES as ANNIVERSARY_LINES } from "@/content/prelaunch/monologues";
+import { SCHEDULER_FIXTURE_LINES as PRELAUNCH_MONOLOGUES } from "./fixture-lines";
 import {
+  chooseMonologue,
   INITIAL_MONOLOGUE_SCHEDULE,
   MONOLOGUE_CUE_CHARACTERS,
   PREVIEW_INTERVAL_SECONDS,
@@ -170,5 +173,27 @@ describe("monologue caption and wake-ups", () => {
     const finished = run({ until: 20 }).state;
     expect(nextMonologueBoundary(finished, 20)).toBe(185);
     expect(nextMonologueBoundary(finished, 190)).toBeNull();
+  });
+});
+
+describe("dated Anniversary Journey lines", () => {
+  const context = { cityName: "Paris", sponsorOpen: null, sponsorSpoken: false, previousText: null };
+  const beforeLaunch = Date.parse("2026-09-16T18:59:59Z");
+  const afterLaunch = Date.parse("2026-09-16T19:00:00Z");
+  const afterPollOpens = Date.parse("2026-09-23T19:00:00Z");
+
+  it("says the start date only before launch, and skips it afterwards", () => {
+    expect(chooseMonologue(ANNIVERSARY_LINES, 0, { ...context, nowMs: beforeLaunch })?.text).toBe("My fourteen-day journey starts September 17.");
+    expect(chooseMonologue(ANNIVERSARY_LINES, 0, { ...context, nowMs: afterLaunch })?.text).toBe("My maker’s first wedding anniversary is October 1.");
+    expect(chooseMonologue(ANNIVERSARY_LINES, 3, { ...context, nowMs: afterLaunch })?.text).toBe("You’ll help choose the anniversary setting. Voting opens September 24.");
+  });
+
+  it("drops the voting line once voting has opened, and keeps the undated ones", () => {
+    const said = new Set([0, 1, 2, 3, 4, 5].map((slot) => chooseMonologue(ANNIVERSARY_LINES, slot, { ...context, nowMs: afterPollOpens })?.text));
+    expect([...said].sort()).toEqual([
+      "I’m taking the virtual journey. He’s planning the surprise in Tashkent.",
+      "My maker’s first wedding anniversary is October 1.",
+      "Watching is free. Thanks for keeping me company.",
+    ]);
   });
 });

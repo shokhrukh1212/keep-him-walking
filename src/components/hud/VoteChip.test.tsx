@@ -54,7 +54,7 @@ describe("VoteChip", () => {
   it("shows one short label and the time left, never the whole ballot", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-25T12:00:00Z"));
-    render(<VoteChip vote={vote()} rolloverUtcHour={16} onOpen={vi.fn()} />);
+    render(<VoteChip vote={vote()} onOpen={vi.fn()} />);
     // Four hours to the 16:00 UTC rollover.
     const chip = screen.getByRole("button", { name: "Destination vote. Closes in 4h 0m." });
     expect(chip).toHaveTextContent("Vote");
@@ -66,13 +66,13 @@ describe("VoteChip", () => {
 
   it("renders nothing once the ballot has closed", () => {
     const { container } = render(
-      <VoteChip vote={vote({ status: "closed" })} rolloverUtcHour={16} onOpen={vi.fn()} />,
+      <VoteChip vote={vote({ status: "closed" })} onOpen={vi.fn()} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("renders nothing when there is no ballot", () => {
-    const { container } = render(<VoteChip vote={null} rolloverUtcHour={16} onOpen={vi.fn()} />);
+    const { container } = render(<VoteChip vote={null} onOpen={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
   });
 });

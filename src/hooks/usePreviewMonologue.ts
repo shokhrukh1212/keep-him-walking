@@ -15,6 +15,8 @@ type Options = {
   /** A modal is open or the journey could not be read: no new monologue starts. */
   deferred: boolean;
   reducedMotion: boolean;
+  /** Server-synchronized wall-clock milliseconds. */
+  wallClockMs: number;
 };
 
 /**
@@ -22,11 +24,14 @@ type Options = {
  * resizing or re-rendering never restarts the schedule; React hears from it only when the
  * caption actually changes.
  */
-export function usePreviewMonologue({ active, cityName, seasonNumber, modelReady, deferred, reducedMotion }: Options) {
+export function usePreviewMonologue({ active, cityName, seasonNumber, modelReady, deferred, reducedMotion, wallClockMs }: Options) {
   const [controller] = useState(() => new PreviewMonologueController({
     lines: PRELAUNCH_MONOLOGUES,
     loadSponsorOpen: (season) => seasonSponsorshipOpen(season),
   }));
+  useEffect(() => {
+    controller.setWallClock(wallClockMs);
+  }, [controller, wallClockMs]);
   useEffect(() => {
     controller.configure({ cityName, seasonNumber });
   }, [controller, cityName, seasonNumber]);
