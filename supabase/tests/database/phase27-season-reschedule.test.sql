@@ -66,8 +66,8 @@ select is(has_function_privilege('anon', 'public.reschedule_season(integer,times
 select is(has_function_privilege('service_role', 'public.reschedule_season(integer,timestamptz,timestamptz)', 'EXECUTE'), true, 'the service role moves a season');
 
 select throws_ok(
-  $$select public.reschedule_season(971, '2035-03-02T15:00:00Z', '2035-02-01T12:00:00Z')$$,
-  '22023', 'invalid season start', 'a moved season still starts at the 16:00 UTC boundary'
+  $$select public.reschedule_season(971, '2035-03-02T15:30:00Z', '2035-02-01T12:00:00Z')$$,
+  '22023', 'invalid season start', 'a moved season still starts on a whole UTC hour'
 );
 select throws_ok(
   $$select public.reschedule_season(979, '2035-03-02T16:00:00Z', '2035-02-01T12:00:00Z')$$,

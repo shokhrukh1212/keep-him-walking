@@ -1,13 +1,15 @@
 /**
- * Plans one seven-day season. Nothing is written without --apply.
+ * Plans one season. Nothing is written without --apply. Season 1 is replanned with
+ * `pnpm season:replan` instead; this configures later seasons.
  *
  *   pnpm season:configure --starts-at 2026-09-23T16:00:00Z
  *   pnpm season:configure --starts-at 2026-09-23T16:00:00Z --season 1 --apply
  *   pnpm season:configure --starts-at 2026-09-30T16:00:00Z --season 2 \
  *     --itinerary paris-v3,prague-v1,vienna-v1,bratislava-v1,ljubljana-v1,zagreb-v1,belgrade-v1
  *
- * The start is always an explicit future 16:00 UTC boundary. Season 1 carries the
- * approved Day-1 name ballot unless --no-name-ballot or --traveler-name is given.
+ * The start is always an explicit future whole UTC hour. --days-per-city n walks each of
+ * the seven cities for n days. Season 1 carries the approved Day-1 name ballot unless
+ * --no-name-ballot or --traveler-name is given.
  */
 import { access } from "node:fs/promises";
 import path from "node:path";
@@ -21,7 +23,7 @@ function argument(name: string): string | undefined {
 }
 
 const rawStartsAt = argument("--starts-at");
-if (!rawStartsAt) throw new Error("Missing required argument: --starts-at <ISO timestamp at 16:00 UTC>");
+if (!rawStartsAt) throw new Error("Missing required argument: --starts-at <ISO timestamp on a whole UTC hour>");
 const startsAt = parseSeasonStartsAt(rawStartsAt, Date.now());
 const seasonNumber = Number(argument("--season") ?? "1");
 const explicit = argument("--itinerary")?.split(",").map((id) => id.trim()).filter(Boolean);
@@ -48,6 +50,7 @@ const plan = buildSeasonPlan({
   startsAt,
   seasonNumber,
   itinerary,
+  daysPerCity: Number(argument("--days-per-city") ?? "1"),
   title: argument("--title"),
   travelerName,
   nameBallot: seasonNumber === 1 && !travelerName && !process.argv.includes("--no-name-ballot"),
@@ -60,7 +63,7 @@ process.stdout.write(`${JSON.stringify({
   season: plan.season,
   days: plan.days.map((day) => `Day ${day.dayNumber}: ${day.cityName}, ${day.countryName} (${day.scenePackId}, ${day.arrivalMode}, ${pack(day.scenePackId)} places)`),
   countries: new Set(plan.days.map((day) => day.countryCode)).size,
-  nameBallot: Boolean(plan.vote),
+  votes: plan.votes.map((vote) => `${vote.kind}: ${vote.opensAt} → ${vote.closesAt}`),
 }, null, 2)}\n`);
 
 function pack(id: string) {
@@ -74,6 +77,6 @@ if (!apply) {
 const key = process.env.SUPABASE_SECRET_KEY;
 if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY are required");
 const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-const { data, error } = await supabase.rpc("configure_season", { p_plan: plan, p_now: new Date().toISOString() });
+const { data, error } = await supabase.rpc("configure_season_v2", { p_plan: plan, p_now: new Date().toISOString() });
 if (error) throw error;
 process.stdout.write(`${JSON.stringify(data)}\n`);
