@@ -187,13 +187,13 @@ test.describe("prelaunch preview · desktop", () => {
     // Software rendering is slow enough that a line can end before a live check reads it, so the
     // line and its cue order come from the page's own log.
     const spoken = (await previewLog(page)).events.filter((event) => event.caption && event.sequence === 1);
-    expect([...new Set(spoken.map((event) => event.line))]).toEqual(["waiting-in-paris"]);
-    expect([...new Set(spoken.map((event) => event.cue))]).toEqual([0, 1]);
+    expect([...new Set(spoken.map((event) => event.line))]).toEqual(["journey-starts"]);
+    expect([...new Set(spoken.map((event) => event.cue))]).toEqual([0]);
     await expect(stage(page)).toHaveAttribute("data-preview", "idle");
 
     // The state on screen, and nothing the server has not said.
     await expect(page.locator(".day-mark strong")).toHaveText("Paris · Preview");
-    await expect(page.locator(".journey-progress-primary")).toContainText("Season 1 is preparing to begin.");
+    await expect(page.locator(".journey-progress-primary")).toContainText("The Anniversary Journey starts September 17.");
     await expect(page.getByText(/No journey day|Live count unavailable|Retrying|Preview only|unavailable/)).toHaveCount(0);
     await expect(page.locator(".goal-distance, .reaction-buttons, .connection-banner")).toHaveCount(0);
     // The header counts people with the site open (DataFast) before launch too.
@@ -231,8 +231,8 @@ test.describe("prelaunch preview · desktop", () => {
     measurements.realTimeInterval = { intervalSeconds, lines: captions.map((span) => span.line), sync: syncReport(log) };
   });
 
-  for (const offer of ["open", "missing"] as const) {
-    test(`a long session with the sponsor offer ${offer}: one line per interval, in order, never overlapping`, async ({ page }) => {
+  for (const offer of ["open"] as const) {
+    test("a long session before launch: one line per interval, in order, never overlapping", async ({ page }) => {
       test.setTimeout(300_000);
       await page.clock.install();
       const api = prelaunchApi({ offer });
@@ -248,15 +248,15 @@ test.describe("prelaunch preview · desktop", () => {
       const { captions } = speechSpans((await previewLog(page)).events);
       expect(captions.map((span) => span.sequence)).toEqual(Array.from({ length: captions.length }, (_, index) => index + 1));
       expect(captions.slice(0, 10).map((span) => span.line)).toEqual([
-        "waiting-in-paris", "packed-for-seven", "paris-first", "during-the-season", "first-hello", "one-bag",
-        offer === "open" ? "looking-for-a-sponsor" : "looking-for-a-sponsor.fallback",
-        "thanks-for-stopping-by", "waiting-in-paris", "packed-for-seven",
+        "journey-starts", "first-anniversary", "virtual-journey", "watching-keeps-me-walking", "choose-the-setting",
+        "watching-is-free", "journey-starts", "first-anniversary", "virtual-journey", "watching-keeps-me-walking",
       ]);
       captions.slice(1).forEach((span, index) => {
         expect(captions[index]!.end, `line ${index + 1} ended`).not.toBeNull();
         expect(span.start).toBeGreaterThan(captions[index]!.end!);
       });
-      expect(api.requests["/api/season-sponsor/offer"]).toBe(1);
+      // No line depends on sponsorship any more, so the offer is never asked for.
+      expect(api.requests["/api/season-sponsor/offer"] ?? 0).toBe(0);
       measurements[`longSession-${offer}`] = { lines: captions.map((span) => span.line), offerRequests: api.requests["/api/season-sponsor/offer"] };
     });
   }
@@ -291,7 +291,7 @@ test.describe("prelaunch preview · desktop", () => {
     await installPreviewRecorder(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/");
-    await expect(page.locator(".journey-progress-primary")).toContainText("Season 1 is preparing to begin.", { timeout: 30_000 });
+    await expect(page.locator(".journey-progress-primary")).toContainText("The Anniversary Journey starts September 17.", { timeout: 30_000 });
     expect(await caption(page).getAttribute("data-sequence")).toBe("0");
     const journeyButton = page.getByRole("button", { name: "Journey", exact: true });
     await journeyButton.click({ force: true });

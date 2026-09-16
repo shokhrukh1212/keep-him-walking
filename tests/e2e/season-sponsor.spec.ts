@@ -161,7 +161,7 @@ for (const viewport of viewports) {
 }
 
 for (const viewport of viewports.slice(0, 2)) {
-  test(`the Sponsor modal states the season offer exactly at ${viewport.width}×${viewport.height}`, async ({ page }, testInfo) => {
+  test(`the Sponsor modal is an X-only inquiry at ${viewport.width}×${viewport.height}`, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium", "Each viewport is set explicitly");
     test.setTimeout(180_000);
     await page.setViewportSize(viewport);
@@ -170,13 +170,13 @@ for (const viewport of viewports.slice(0, 2)) {
     await page.getByRole("button", { name: "Sponsor a season" }).click({ force: true });
     const dialog = page.getByRole("dialog", { name: "Sponsor a season" });
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText("Sponsor the next journey.");
-    await expect(dialog).toContainText("One sponsor. Seven days. $599.");
-    await expect(dialog).toContainText("Audience size and results are not guaranteed.");
-    const facts = dialog.getByTestId("season-offer-facts");
-    await expect(facts).toContainText("16:00 UTC");
-    await expect(facts).toContainText("USD 599.00, one time");
-    await expect(dialog.getByRole("link", { name: "Request this season" })).toHaveAttribute("target", "_blank");
+    await expect(dialog).toContainText("Feature your product on the journey");
+    await expect(dialog).toContainText("Proposed starting price: $50");
+    await expect(dialog).toContainText("One featured sponsor at a time.");
+    await expect(dialog).toContainText("No payment or reservation is made here.");
+    await expect(dialog.getByRole("button", { name: "Checkout unavailable" })).toBeDisabled();
+    await expect(dialog).not.toContainText("$499");
+    await expect(dialog.locator("form, input")).toHaveCount(0);
     await page.screenshot({ path: `${evidence}/sponsor-modal-${viewport.width}x${viewport.height}.png` });
   });
 }
@@ -245,7 +245,7 @@ for (const viewport of viewports.slice(0, 2)) {
     test.setTimeout(180_000);
     await page.setViewportSize(viewport);
     await open(page, completedSeason, { rawSeconds: 90 });
-    await expect(page.getByRole("status", { name: "Walking rule: Season complete" })).toBeVisible();
+    await expect(page.getByRole("status", { name: "Walking rule: Journey complete" })).toBeVisible();
     const card = page.locator(".season-complete");
     await expect(card).toContainText("Season 1 complete");
     await expect(card).toContainText("61.4 km");

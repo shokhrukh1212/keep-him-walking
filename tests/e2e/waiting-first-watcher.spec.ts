@@ -127,7 +127,7 @@ test("an arrival after the last lease expires sees the first-watcher beat and wa
   await pageB.getByRole("button", { name: "Journey", exact: true }).click({ force: true });
   await expect(pageB.getByRole("heading", { name: "You woke him up" })).toBeVisible();
   await expect(pageB.getByLabel("You woke him up")).toContainText("Paris");
-  await expect(pageB.getByLabel("You woke him up").getByRole("button", { name: "Share" }))
+  await expect(pageB.getByLabel("You woke him up").getByRole("link", { name: "Share on X" }))
     .toBeVisible();
 
   await contextB.close();

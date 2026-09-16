@@ -68,7 +68,7 @@ test("the vote chip shows candidate flags, the live split and a countdown to rol
 
   // The countdown names a real remaining time, never a placeholder.
   const countdown = chip.locator(".vote-chip-countdown");
-  await expect(countdown).toHaveText(/^(\d+h \d+m|\d+m \d{2}s|\d+s)$/);
+  await expect(countdown).toHaveText(/^(\d+d \d+h|\d+h \d+m|\d+m \d{2}s|\d+s)$/);
 
   const first = await countdown.textContent();
   await expect(async () => {

@@ -135,7 +135,7 @@ for (const viewport of viewports) {
     await expect(ballot).toBeHidden();
 
     await page.getByRole("button", { name: "1 person watching" }).click({ force: true });
-    await expect(page.getByRole("dialog", { name: "Who is carrying him" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "People on the journey" })).toBeVisible();
     await page.keyboard.press("Escape");
 
     await expectSceneUnchanged(page, before);
