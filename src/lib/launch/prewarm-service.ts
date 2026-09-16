@@ -5,6 +5,8 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { refreshWeatherIfStale } from "@/lib/weather/refresh";
 import { ballotPrewarmPackIds, packPrewarmPaths, prewarmUrl } from "./prewarm";
 
+const PREWARM_LEAD_MS = 5 * 60_000;
+
 async function warm(url: string): Promise<boolean> {
   try {
     const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8_000) });
@@ -16,22 +18,31 @@ async function warm(url: string): Promise<boolean> {
   }
 }
 
+/**
+ * Warms the paintings for the day that will be on screen in five minutes: the next season
+ * day just before a boundary (Paris before launch), or, for an open-ended journey's current
+ * day, its ballot's destinations. Nothing to warm (no journey near) is not a failure.
+ */
 export async function prewarmJourney(appOrigin: string, now = new Date()) {
   const supabase = getServerSupabase();
   if (!supabase) throw new Error("SUPABASE_NOT_CONFIGURED");
-  const { data: journey, error: journeyError } = await supabase.from("journeys")
-    .select("id").eq("phase2_enabled", true).in("status", ["preview", "active"])
-    .order("starts_at", { ascending: false }).limit(1).maybeSingle();
-  if (journeyError || !journey) throw journeyError ?? new Error("NO_JOURNEY");
+  const soon = new Date(now.getTime() + PREWARM_LEAD_MS).toISOString();
   const { data: days, error: dayError } = await supabase.from("country_days")
-    .select("id,starts_at,ends_at,scene_pack_id")
-    .eq("journey_id", journey.id).gt("ends_at", now.toISOString())
-    .order("starts_at", { ascending: true }).limit(1);
+    .select("id,starts_at,ends_at,scene_pack_id,journeys!inner(phase2_enabled,status,ends_at)")
+    .eq("journeys.phase2_enabled", true)
+    .in("journeys.status", ["draft", "preview", "active"])
+    .lte("starts_at", soon)
+    .gt("ends_at", soon)
+    .order("starts_at", { ascending: false })
+    .limit(1);
+  if (dayError) throw dayError;
   const day = days?.[0];
-  if (dayError || !day) throw dayError ?? new Error("NO_DAY");
+  if (!day) return { ok: true, skipped: "no_day_ahead" as const, packs: [], assets: { requested: 0, ready: 0 }, og: { requested: 0, ready: 0 } };
+  const journey = Array.isArray(day.journeys) ? day.journeys[0] : day.journeys;
 
   let packIds: string[];
-  if (new Date(day.starts_at).getTime() > now.getTime()) {
+  if (new Date(day.starts_at).getTime() > now.getTime() || journey?.ends_at) {
+    // The day about to begin, or a season day whose next city is already scheduled.
     packIds = [day.scene_pack_id];
   } else {
     const { data: vote } = await supabase.from("votes")

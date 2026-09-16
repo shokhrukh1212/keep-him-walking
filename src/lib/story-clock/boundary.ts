@@ -1,6 +1,9 @@
 import { DEFAULT_ROLLOVER_UTC_HOUR } from "./rollover-hour";
 
-/** The immutable 16:00 UTC boundary at or before this wall-clock instant. */
+const DAY_MS = 86_400_000;
+const PREWARM_LEAD_MS = 5 * 60_000;
+
+/** The immutable day boundary (the rollover hour, UTC) at or before this wall-clock instant. */
 export function logicalDayBoundaryAtOrBefore(
   now: Date,
   rolloverUtcHour = DEFAULT_ROLLOVER_UTC_HOUR,
@@ -11,10 +14,16 @@ export function logicalDayBoundaryAtOrBefore(
   return boundary;
 }
 
-export function minuteReconciliationPlan(now: Date) {
-  const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+/**
+ * What the minute run owes at this instant for a day that turns over at `rolloverUtcHour`:
+ * the boundary it reconciles (a late or repeated run keeps the same one), and whether the
+ * five-minute prewarm before the next boundary is due.
+ */
+export function minuteReconciliationPlan(now: Date, rolloverUtcHour = DEFAULT_ROLLOVER_UTC_HOUR) {
+  const boundary = logicalDayBoundaryAtOrBefore(now, rolloverUtcHour);
+  const untilNext = boundary.getTime() + DAY_MS - now.getTime();
   return {
-    boundary: logicalDayBoundaryAtOrBefore(now),
-    prewarmDue: minutes >= 15 * 60 + 55 && minutes < 16 * 60,
+    boundary,
+    prewarmDue: untilNext > 0 && untilNext <= PREWARM_LEAD_MS,
   };
 }

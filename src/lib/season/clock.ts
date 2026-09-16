@@ -28,7 +28,7 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-function window(season: SeasonRecord) {
+function window(season: Pick<SeasonRecord, "startsAt" | "endsAt">) {
   return { start: Date.parse(season.startsAt), end: Date.parse(season.endsAt) };
 }
 
@@ -54,6 +54,25 @@ export function seasonPhaseAt(seasons: readonly SeasonRecord[], nowMs: number): 
   if (last) return { kind: "completed", last, next, needsReconcile };
   if (next) return { kind: "prelaunch", next, needsReconcile };
   return { kind: "none", needsReconcile };
+}
+
+/**
+ * The UTC hour on which the scheduler reconciles day boundaries: that of a season that is
+ * live, starts within a day, or ended within a day (so its final boundary is settled on
+ * time). Null when no season is near, and the caller keeps its configured hour.
+ */
+export function seasonBoundaryHourAt(
+  seasons: ReadonlyArray<Pick<SeasonRecord, "startsAt" | "endsAt" | "status"> & { rolloverUtcHour: number }>,
+  nowMs: number,
+): number | null {
+  const near = seasons
+    .filter((season) => season.status !== "paused")
+    .filter((season) => {
+      const { start, end } = window(season);
+      return Number.isFinite(start) && Number.isFinite(end) && start - DAY_MS <= nowMs && nowMs < end + DAY_MS;
+    })
+    .sort((left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt))[0];
+  return near && Number.isInteger(near.rolloverUtcHour) ? near.rolloverUtcHour : null;
 }
 
 /** "4d 6h", "6h 12m", "12m" or "under 1m". Never negative. */
@@ -83,7 +102,7 @@ export type SeasonClockInput = {
  */
 export function seasonClockParts(input: SeasonClockInput): { where: string; when: string } {
   const label = `Season ${input.number}`;
-  if (input.state === "completed") return { where: label, when: "Season complete" };
+  if (input.state === "completed") return { where: label, when: "Journey complete" };
   if (input.state === "prelaunch") {
     const remaining = Date.parse(input.startsAt) - input.nowMs;
     return { where: label, when: remaining > 0 ? `Starts in ${formatSeasonCountdown(remaining)}` : "Starting now" };

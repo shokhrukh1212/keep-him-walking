@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSeasonCountdown, seasonClockLine, seasonClockParts, seasonPhaseAt, type SeasonRecord } from "./clock";
+import { formatSeasonCountdown, seasonBoundaryHourAt, seasonClockLine, seasonClockParts, seasonPhaseAt, type SeasonRecord } from "./clock";
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -78,7 +78,7 @@ describe("season clock line", () => {
   it("splits into the season and its countdown for a narrow header", () => {
     const nowMs = start + 2 * DAY + 18 * HOUR;
     expect(seasonClockParts({ ...base, state: "live", dayNumber: 3, nowMs })).toEqual({ where: "Season 1 · Day 3 of 7", when: "Ends in 4d 6h" });
-    expect(seasonClockParts({ ...base, state: "completed", nowMs })).toEqual({ where: "Season 1", when: "Season complete" });
+    expect(seasonClockParts({ ...base, state: "completed", nowMs })).toEqual({ where: "Season 1", when: "Journey complete" });
   });
 
   it("never names a day past the last one", () => {
@@ -86,7 +86,7 @@ describe("season clock line", () => {
   });
 
   it("says the season is complete after the end, with no resetting urgency", () => {
-    expect(seasonClockLine({ ...base, state: "completed", nowMs: start + 30 * DAY })).toBe("Season 1 · Season complete");
+    expect(seasonClockLine({ ...base, state: "completed", nowMs: start + 30 * DAY })).toBe("Season 1 · Journey complete");
   });
 
   it("formats every countdown scale", () => {
@@ -96,5 +96,28 @@ describe("season clock line", () => {
     expect(formatSeasonCountdown(59_000)).toBe("under 1m");
     expect(formatSeasonCountdown(-5)).toBe("under 1m");
     expect(formatSeasonCountdown(Number.NaN)).toBe("under 1m");
+  });
+});
+
+describe("seasonBoundaryHourAt", () => {
+  const anniversary = { status: "draft" as const, startsAt: "2026-09-16T19:00:00.000Z", endsAt: "2026-09-30T19:00:00.000Z", rolloverUtcHour: 19 };
+
+  it("uses a season's own turnover hour from a day before it starts until a day after it ends", () => {
+    expect(seasonBoundaryHourAt([anniversary], Date.parse("2026-09-15T18:59:59Z"))).toBeNull();
+    expect(seasonBoundaryHourAt([anniversary], Date.parse("2026-09-15T19:00:00Z"))).toBe(19);
+    expect(seasonBoundaryHourAt([{ ...anniversary, status: "active" }], Date.parse("2026-09-30T18:59:59Z"))).toBe(19);
+    expect(seasonBoundaryHourAt([{ ...anniversary, status: "completed" }], Date.parse("2026-10-01T18:59:59Z"))).toBe(19);
+    expect(seasonBoundaryHourAt([{ ...anniversary, status: "completed" }], Date.parse("2026-10-01T19:00:00Z"))).toBeNull();
+  });
+});
+
+describe("a fourteen-day season clock", () => {
+  const base = { number: 1, totalDays: 14, startsAt: "2026-09-16T19:00:00.000Z", endsAt: "2026-09-30T19:00:00.000Z" };
+
+  it("counts down, then names Day N of 14, then completes", () => {
+    expect(seasonClockParts({ ...base, state: "prelaunch", dayNumber: null, nowMs: Date.parse("2026-09-16T09:48:00Z") }).when).toBe("Starts in 9h 12m");
+    expect(seasonClockParts({ ...base, state: "live", dayNumber: 1, nowMs: Date.parse("2026-09-16T19:00:00Z") }).where).toBe("Season 1 · Day 1 of 14");
+    expect(seasonClockParts({ ...base, state: "live", dayNumber: 14, nowMs: Date.parse("2026-09-30T18:59:00Z") })).toEqual({ where: "Season 1 · Day 14 of 14", when: "Ends in 1m" });
+    expect(seasonClockParts({ ...base, state: "completed", dayNumber: null, nowMs: Date.parse("2026-09-30T19:00:00Z") }).when).toBe("Journey complete");
   });
 });
