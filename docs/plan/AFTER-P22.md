@@ -26,7 +26,7 @@ finish rather than what it got wrong.
 | D8 | R2 is live on `keephimwalking.com`; Preview addresses are refused by the CDN, and desktop needs a real-browser check | No — production build `82e517a` uses the CDN (13 Sep). Preview needs the CORS choice | Owner (Cloudflare CORS rule, desktop check) |
 | D9 | Paris v3 paintings and Day 1 conversations | **Resolved — owner approved and development Day 2 switched to v3** | Owner decision (13 Sep 2026) |
 | D10 | A vote about the next season has nothing to decide yet | No — a finished season shows its totals and, if scheduled, the next start date | Owner |
-| D11 | Paid season checkout waits for Dodo to approve this offer | No — free viewing and seasons launch without it; sponsors can send requests | Owner (Dodo account) |
+| D11 | Paid sponsorship waits for Dodo to approve the changed proposal ($50, replace-by-doubling with full refund) | No — the Anniversary Journey launched free; sponsors can only message on X | Owner (send `docs/launch-finalization/dodo-sponsorship-notice.md`) |
 | D12 | Paid terms still need a governing law and dispute forum | **Yes for checkout; no for free viewing** | Owner (legal choice) |
 | D13 | The Buy Me a Coffee supporter list needs a working read-only token | No — the coffee link works without it | Owner (Buy Me a Coffee developer access) |
 

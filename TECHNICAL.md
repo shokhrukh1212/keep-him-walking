@@ -2307,6 +2307,63 @@ next dev day, allowing an expired preview to recover without a destructive resee
 preserves existing days and contributions. Passing `--base-url`
 also renders and stores any missing immutable recap cards through the running app.
 
+### The Anniversary Journey (16 September 2026, migration 0045)
+
+- **Calendar.** `src/lib/season/anniversary.ts` holds Season 1's dates on Asia/Tashkent days
+  (UTC+5, no DST): preview 16 Sep, travel 17 Sep 00:00 → 1 Oct 00:00 Tashkent
+  (`2026-09-16T19:00Z` → `2026-09-30T19:00Z`), 14 days, two per city in the stored order Paris,
+  Prague, Bratislava, Vienna, Ljubljana, Zagreb, Belgrade. The name vote runs from the preview
+  day until launch. The anniversary poll (park / café / scenic spot in Tashkent) opens 24 Sep
+  00:00 and closes 28 Sep 20:00 Tashkent. Copy dates come from this module and the database
+  holds the authoritative instants; `plan.test.ts` and `/api/health` `checks.schedule.matches`
+  compare the two.
+- **Migration 0045.**
+  - `configure_season_v2`: N days from any whole UTC hour, with a `votes[]` array (`name` may
+    open before the start; `anniversary` only during travel).
+  - `replan_season`: rewrites a draft, unstarted season. It refuses any ballot, presence,
+    contribution, outcome, postcard, reaction, photo, slot, runtime progress or sponsor money
+    state.
+  - `reschedule_season` accepts any whole hour.
+  - `votes.kind` allows `anniversary`.
+  - `reconcile_season_state` closes each season vote at its own `closes_at`, not only at the
+    season end.
+  - Applied and remote-verified 16 Sep: dev `tkntxptfhmjnqaaveddx` (all suites except the known
+    data-shadowed `phase4-distance` #16) and production `pqtfhkiftiubwuwxnuzd` (26 suites, 638
+    assertions including 45 in `phase28-anniversary-season`; lint clean).
+- **Production data.** `pnpm production:season:replan --apply` converted draft Season 1 (7 days,
+  18 Sep 16:00Z) into the calendar above. `production:season:retire-rehearsal --slug
+  phase2-seven-day-preview --apply` marked the ended rehearsal `completed`, with nothing deleted.
+  Production has 0 sponsorships, payments and webhook events.
+- **Cron.** `/api/cron/reconcile` uses the stored `rollover_utc_hour` (19) of a season that is
+  live, starts within a day or ended within a day, and otherwise `ROLLOVER_UTC_HOUR`. Prewarm
+  runs in the five minutes before that boundary for the day then on screen, and skips (200)
+  when no journey is near. `vercel.json` backup: `0 19 * * *`. Calendar days advance with no
+  watchers; distance does not.
+- **Votes.** Season snapshots (prelaunch, live, completed) read the season's latest opened
+  ballot by journey (`latestSeasonVoteId`), and `/api/me` resolves the same vote for the
+  visitor's selection. `VoteChip` counts down to `vote.closesAt` and shows only while open.
+  Journey's Anniversary setting section keeps the results after closing.
+- **Page.**
+  - Journey opens with `AnniversaryStory`: story, dates, progress ("Starts in …" / "Day N of
+    14" / "Journey complete"), coffee and sponsor links, and the virtual-versus-real
+    distinction.
+  - On 1 October, `src/content/anniversary/update.ts` supplies the owner-editable update.
+  - The six waiting lines are in `src/content/prelaunch/monologues.ts`. `requires.before`
+    drops dated lines on the synchronized clock (`controller.setWallClock`).
+  - Share buttons are `ShareOnXLink` (`x.com/intent/post` with encoded text and
+    `https://keephimwalking.com`).
+  - The audience modal "People on the journey" shows DataFast cards (active in the last 10
+    minutes; unique visitors all time since 15 Sep 2026) with dated last-good values and the
+    optional `DATAFAST_PUBLIC_DASHBOARD_URL` link. The header "N people watching" is unchanged
+    by owner decision.
+- **Sponsorship.** `SPONSORSHIP_MODE` defaults to `inquiry`: `SponsorInquiry` shows the
+  proposed $50 offer, a disabled checkout and the X link. `/sponsors` has no form.
+  `/api/season-sponsor/{requests,checkout,offer}` answer 404, the request status page renders
+  the not-found page, and `seasonCheckoutState` is `inquiry_mode` whatever else is set.
+  `season` and `daily` stay behind the flag.
+- **Launch flags.** Vercel Production has `PHASE2_ENABLED=true` and `LAUNCH_ENABLED=true`
+  (16 Sep); no booking variables.
+
 ### Seven-day seasons (Prompt 2, migration 0040)
 
 - **The record.** A season is a `journeys` row with `ends_at` set: its id, `season_number`,
@@ -2757,6 +2814,8 @@ Runtime configuration (`serverRuntimeConfig()`):
 | `POSTCARD_RETENTION_DAYS` | 365 | Postcard expiry |
 | `SPONSOR_RESERVATION_MINUTES` | 30 | Slot hold during checkout |
 | `SPONSOR_PAYMENT_PROVIDER` | `lemonsqueezy` | Or `fixture` |
+| `SPONSORSHIP_MODE` | `inquiry` | `inquiry` (X-only), `season` (request form + Dodo) or `daily` |
+| `DATAFAST_PUBLIC_DASHBOARD_URL` | unset | Public `https://datafa.st/…` dashboard linked from the audience modal |
 | `SPONSOR_BOOKING_ENABLED` | unset / false | First half of the paid-booking fail-closed gate |
 | `SPONSOR_PROVIDER_APPROVED` | unset / false | Confirms the provider permits this offer and merchant |
 | `SPONSOR_PREMIUM_FULFILLED` | unset / false | Allows Premium only after bottle and café fulfillment is verified |
