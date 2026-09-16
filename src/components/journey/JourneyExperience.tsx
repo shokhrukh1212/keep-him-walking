@@ -29,7 +29,8 @@ import { safeDemoSponsorLogo, sponsorPresentation } from "@/lib/traveler/demo-sp
 import { formatPriceUsd } from "@/lib/sponsors/pricing";
 import { useJourneyAudio } from "@/hooks/useJourneyAudio";
 import { useJourneyPresence } from "@/hooks/useJourneyPresence";
-import { useOnlineVisitors } from "@/hooks/useOnlineVisitors";
+import { useAudienceCounts } from "@/hooks/useOnlineVisitors";
+import { AudienceMetrics } from "@/components/hud/AudienceMetrics";
 import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { useQualityTier } from "@/hooks/useQualityTier";
 import { useRouteRuntime } from "@/hooks/useRouteRuntime";
@@ -101,6 +102,8 @@ type Props = {
   sponsorshipMode?: "inquiry" | "season" | "daily";
   /** The owner's public X profile, the sponsorship contact in inquiry mode. */
   sponsorXUrl?: string | null;
+  /** The owner's public DataFast dashboard. */
+  datafastDashboardUrl?: string | null;
   /** Server-validated owner profile; null keeps the label visible without inventing a destination. */
   coffeeUrl?: string | null;
 };
@@ -130,7 +133,7 @@ function currentlyActiveEvent(
 
 const subscribeNever = () => () => {};
 
-export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "inquiry", sponsorXUrl = null, coffeeUrl = null }: Props) {
+export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "inquiry", sponsorXUrl = null, datafastDashboardUrl = null, coffeeUrl = null }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeatState, setHeartbeat] = useState<{
     countryDayId: string;
@@ -484,7 +487,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   useEffect(() => { broadcastHint.current = broadcastReactionHint; }, [broadcastReactionHint]);
   const activeViewers = heartbeat?.activeViewers ?? snapshot.presence.activeViewers;
   // What the page calls "people watching": DataFast's visitors with the site open.
-  const onlineVisitors = useOnlineVisitors();
+  const audienceCounts = useAudienceCounts();
+  const onlineVisitors = audienceCounts.online;
   const authoritativeWalking = snapshot.mode === "live"
     && walkingLeaseIsActive(walkingLease, realNowMs);
   const wakeBeatEndsAtMs = wakeBeat ? Date.parse(wakeBeat.wokeAt) + 3_000 : 0;
@@ -1266,11 +1270,16 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
 
       <OverlayModal
         open={openPanel === "audience"}
-        title="Who is carrying him"
-        eyebrow="Today · carried time"
+        title="People on the journey"
+        eyebrow="Site visitors · DataFast"
         onClose={closePanel}
         testId="audience-modal"
       >
+        <AudienceMetrics
+          counts={audienceCounts}
+          dashboardUrl={datafastDashboardUrl}
+          formatTime={(iso) => new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(iso))}
+        />
         <CountryLeaderboardSheet
           todayTop={snapshot.countries.todayTop}
           activeViewers={activeViewers}

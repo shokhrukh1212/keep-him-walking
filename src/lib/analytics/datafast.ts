@@ -17,6 +17,27 @@ export type AudienceCounts = {
 export const DATAFAST_API_ORIGIN = "https://datafa.st/api/v1";
 
 /**
+ * The first day DataFast recorded a visit for keephimwalking.com (Asia/Tashkent calendar),
+ * read from its daily timeseries on 16 September 2026; the script shipped on 15 September.
+ */
+export const DATAFAST_TRACKING_STARTED_ON = "2026-09-15";
+
+const DATAFAST_HOSTS = new Set(["datafa.st", "www.datafa.st"]);
+
+/** The owner's PUBLIC DataFast dashboard link, or null. A private app URL is never shown. */
+export function publicDatafastDashboardUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" || !DATAFAST_HOSTS.has(url.hostname.toLowerCase()) || url.username || url.password) return null;
+    if (url.pathname === "/" || url.pathname.startsWith("/api/") || url.pathname.startsWith("/dashboard")) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * How long Next.js's shared fetch cache may reuse each read, in seconds. Every server
  * instance shares these entries, which keeps the site far inside DataFast's 60 requests
  * a minute however many people load the page.

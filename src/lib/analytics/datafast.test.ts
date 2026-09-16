@@ -76,3 +76,15 @@ describe("fetchAudienceCounts", () => {
     expect(counts).toMatchObject({ online: null, last24Hours: 140, allTime: null });
   });
 });
+
+describe("publicDatafastDashboardUrl", () => {
+  it("accepts only a public https DataFast page, never a private dashboard or the API", async () => {
+    const { publicDatafastDashboardUrl } = await import("./datafast");
+    expect(publicDatafastDashboardUrl("https://datafa.st/share/keephimwalking.com")).toBe("https://datafa.st/share/keephimwalking.com");
+    expect(publicDatafastDashboardUrl("https://datafa.st/dashboard/abc")).toBeNull();
+    expect(publicDatafastDashboardUrl("https://datafa.st/api/v1/analytics/overview")).toBeNull();
+    expect(publicDatafastDashboardUrl("http://datafa.st/share/x")).toBeNull();
+    expect(publicDatafastDashboardUrl("https://example.com/share/x")).toBeNull();
+    expect(publicDatafastDashboardUrl(undefined)).toBeNull();
+  });
+});

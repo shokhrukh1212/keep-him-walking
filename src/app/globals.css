@@ -4438,3 +4438,21 @@ a:focus-visible,
 }
 .share-on-x:hover { border-color: var(--paper); }
 .share-on-x:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* People on the journey: two DataFast metric cards. */
+.audience-metrics { display: grid; gap: .6rem; margin-bottom: 1rem; }
+.audience-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .6rem; }
+.audience-metric {
+  display: grid;
+  gap: .2rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.audience-metric-value { color: var(--paper); font-family: var(--font-display); font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.audience-metric-label { color: var(--paper); font-family: var(--font-controls); font-size: .78rem; }
+.audience-metric small,
+.audience-updated { color: var(--muted); font-size: .76rem; }
+.audience-updated { margin: 0; }
+.audience-dashboard { width: fit-content; color: var(--paper); font-family: var(--font-controls); font-size: .78rem; text-underline-offset: .2em; }
