@@ -19,12 +19,14 @@ export default function TermsPage() {
         <span className="legal-section-number">01</span>
         <h2>What the service is</h2>
         <p>Keep Him Walking is a free, anonymous interactive viewing experience. A shared traveler advances only while at least one ready, visible browser is confirmed as watching. Seasons, cities, scenes, stories, votes and availability may change. The displayed status identifies whether information is live, reconnecting, extrapolated or last confirmed.</p>
+        <p>Season 1, “The Anniversary Journey”, runs on Asia/Tashkent calendar days from 17 to 30 September 2026, two days in each of seven cities, with an anniversary update on 1 October. The traveler and the cities are virtual and illustrated. The maker’s real anniversary plans in Tashkent are separate from the virtual journey.</p>
       </section>
 
       <section>
         <span className="legal-section-number">02</span>
         <h2>Viewer interactions</h2>
         <p>You may use the available enum reactions, cast an eligible vote, create an eligible postcard, share public pages and submit a private correction. Interactions may be rate-limited, deduplicated per anonymous visitor, closed at a stated time, delayed by the shared action schedule or refused to preserve fairness and security. They have no cash value and do not create ownership or a promise that a requested action or vote outcome will occur.</p>
+        <p>The anniversary-setting vote is free, allows one vote per anonymous visitor and closes at its stated time. It chooses a type of setting in Tashkent; the maker confirms the exact venue later. Payments, Buy Me a Coffee contributions and sponsorship never influence any vote. “Share on X” opens a draft on X in a new tab; nothing is posted unless you review and post it yourself.</p>
       </section>
 
       <section>
@@ -43,7 +45,8 @@ export default function TermsPage() {
         <span className="legal-section-number">05</span>
         <h2>Content, sponsors and links</h2>
         <p>Site artwork, code, writing and branding remain owned by their respective rights holders. You may share the public links and generated share assets made available by the service, but may not falsely claim ownership, endorsement or affiliation.</p>
-        <p>Sponsor placements are advertising and are manually reviewed, but Keep Him Walking does not guarantee or endorse a sponsor, its claims, products or destination. External websites are controlled by their operators. Report concerns through <Link href="/contact">Contact &amp; support</Link>. Sponsor submissions are governed by the <Link href="/sponsor-terms">Sponsor Terms</Link> and <Link href="/content-moderation">Content and Listing Moderation Policy</Link>.</p>
+        <p>Sponsorship is not currently sold through the service. A proposed sponsorship is awaiting payment-provider approval; inquiries are handled by message on X, and no bid, payment or reservation is accepted through the site. Any sponsor placement that is shown is advertising and manually reviewed, but Keep Him Walking does not guarantee or endorse a sponsor, its claims, products or destination. External websites are controlled by their operators. Report concerns through <Link href="/contact">Contact &amp; support</Link>. Sponsorship is described in the <Link href="/sponsor-terms">Sponsor Terms</Link> and <Link href="/content-moderation">Content and Listing Moderation Policy</Link>.</p>
+        <p>Buy Me a Coffee contributions are voluntary support, processed by Buy Me a Coffee under its own terms. They do not buy sponsorship, a placement, a vote or any service, and they do not fund real international travel.</p>
       </section>
 
       <section>

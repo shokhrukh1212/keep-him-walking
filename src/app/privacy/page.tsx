@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       eyebrow="YOUR DATA"
       testId="privacy-page"
-      summary="This policy describes the data used to run the anonymous viewing experience, moderate sponsor requests, measure reliability and process a future sponsorship payment."
+      summary="This policy describes the data used to run the anonymous viewing experience, count visits, handle voluntary support and review any sponsorship, and to keep the service reliable."
     >
       <section>
         <span className="legal-section-number">01</span>
@@ -26,13 +26,14 @@ export default function PrivacyPage() {
         <h2>Anonymous viewing and interactions</h2>
         <p>No visitor account, name or email is required to watch. The application sets one first-party <code>khw_visitor</code> cookie containing a random identifier; analytics cookies are described in section 05. It is HttpOnly, SameSite=Lax, secure in production and lasts up to one year. The server converts it to a keyed one-way hash before storing presence, contribution, vote, reaction, postcard or sponsor-metric records in Supabase.</p>
         <p>A random tab-session identifier is used while the page is open to avoid counting duplicate tabs. The hosting edge supplies a two-letter country code for the audience display. Raw IP addresses are not written to the application database; short abuse limits use a keyed one-way hash of the edge-reported network address.</p>
+        <p>Votes, including the free anniversary-setting vote, are stored as one ballot per hashed visitor identifier. “Share on X” only opens X’s compose page in a new tab with draft text and this site’s address; X handles anything you choose to post.</p>
         <p>The sound choice is kept in browser local storage. Vemetric uses a random session-storage context while the tab session lasts. These browser values are not accounts.</p>
       </section>
 
       <section>
         <span className="legal-section-number">03</span>
         <h2>Sponsor and correction submissions</h2>
-        <p>A season sponsorship request stores the submitted product or company name, HTTPS website, short description, contact name, contact email and a re-encoded WebP copy of the logo. Unapproved material stays in a private Supabase Storage bucket. Only an approved name, description, website and public logo copy can be published; contact details are not published.</p>
+        <p>Sponsorship requests are not currently accepted through the site; sponsorship inquiries happen by message on X under X’s own terms. If the request form is enabled again, a season sponsorship request stores the submitted product or company name, HTTPS website, short description, contact name, contact email and a re-encoded WebP copy of the logo. Unapproved material stays in a private Supabase Storage bucket. Only an approved name, description, website and public logo copy can be published; contact details are not published.</p>
         <p>The private corrections queue is the only visitor free-text feature outside sponsor requests. It stores the correction, category, referenced city pack and optional place, country code and anonymous visitor hash. Correction text is never automatically published.</p>
       </section>
 
@@ -40,14 +41,14 @@ export default function PrivacyPage() {
         <span className="legal-section-number">04</span>
         <h2>Payments</h2>
         <p>Checkout is currently disabled. If it is enabled after provider approval, approved sponsors are sent to Dodo Payments for a one-time payment. The site sends the approved contact name and email, season and booking identifiers, and the configured product. Dodo handles card, billing and tax details; full card details do not reach Keep Him Walking. Payment, refund, webhook and dispute identifiers and status are kept in Supabase so the booking can be fulfilled, reconciled and supported.</p>
-        <p>The optional Buy Me a Coffee link opens the operator&apos;s profile on Buy Me a Coffee; its site handles that contribution. The owner may add a supporter&apos;s public display name, contribution date and exact coffee count to the Supporters list only with permission. Keep Him Walking does not receive or publish emails, payment identifiers or messages.</p>
+        <p>The optional Buy Me a Coffee link opens the operator&apos;s profile on Buy Me a Coffee; its site handles that voluntary contribution under its own policies. The Supporters list is maintained by hand: the owner may add a supporter&apos;s public display name, contribution date and exact coffee count only with permission. Keep Him Walking does not receive or publish emails, payment identifiers or messages.</p>
       </section>
 
       <section>
         <span className="legal-section-number">05</span>
         <h2>Analytics, logs and infrastructure</h2>
         <p>Vemetric is enabled only when its public token is configured. It receives page URLs, referrers, a session context, event names and limited event details such as city, route zone, rendering quality and sponsor identifiers. It is initialized with analytics cookies disabled. Private sponsor-request, legacy report and postcard tokens are masked from analytics page URLs.</p>
-        <p>DataFast measures visits on every page. Its script, loaded from <code>datafa.st</code>, receives page URLs, referrers and campaign parameters, browser, operating system and device details, and a location derived from the network address, and it sets DataFast cookies such as <code>datafast_visitor_id</code> to tell new visitors from returning ones. The number of people shown as watching is DataFast&apos;s count of visitors active in the last ten minutes; the server reads it with a private key and the browser receives only the totals.</p>
+        <p>DataFast measures visits on every page. Its script, loaded from <code>datafa.st</code>, receives page URLs, referrers and campaign parameters, browser, operating system and device details, and a location derived from the network address, and it sets DataFast cookies such as <code>datafast_visitor_id</code> to tell new visitors from returning ones. The number of people shown as watching is DataFast&apos;s count of visitors active in the last ten minutes, and the audience panel also shows DataFast&apos;s all-time unique visitor total. The server reads both with a private key and the browser receives only those aggregate totals, never an individual visitor&apos;s record.</p>
         <p>Sentry is enabled only when its DSN is configured and receives errors and sampled performance traces with default personally identifying data disabled. Better Stack is enabled only when its source token is configured and receives structured operational logs. Application logging redacts cookies, authorization values, tokens, visitor identifiers, email fields, payloads and signatures. Vercel hosts the application and necessarily processes web requests and operational logs.</p>
         <p>Supabase hosts the database, Realtime channel and private/public object storage. Cloudflare R2 serves public city, character and audio assets from <code>assets.keephimwalking.com</code>; it does not receive sponsor form submissions from this app.</p>
       </section>

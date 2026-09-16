@@ -4,6 +4,8 @@ import { LegalFooter } from "./LegalFooter";
 import styles from "@/app/public-pages.module.css";
 
 export const LEGAL_EFFECTIVE_DATE = "14 September 2026";
+/** The Anniversary Journey revision: sponsorship became an X inquiry and the vote a free poll. */
+export const LEGAL_LAST_UPDATED = "16 September 2026";
 
 export function LegalPage({
   title,
@@ -31,7 +33,7 @@ export function LegalPage({
           <span className={styles.eyebrow}>{eyebrow}</span>
           <h1 id={titleId}>{title}</h1>
           <p>{summary}</p>
-          <p className={styles.policyDates}>Effective {LEGAL_EFFECTIVE_DATE} · Last updated {LEGAL_EFFECTIVE_DATE}</p>
+          <p className={styles.policyDates}>Effective {LEGAL_EFFECTIVE_DATE} · Last updated {LEGAL_LAST_UPDATED}</p>
         </section>
 
         <article className={`${styles.legalArticle} ${styles.legalArticleStack}`} aria-labelledby={titleId}>

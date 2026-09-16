@@ -18,7 +18,7 @@ export default function ContentModerationPage() {
       <section>
         <span className="legal-section-number">01</span>
         <h2>No open publishing</h2>
-        <p>Visitors cannot independently publish public posts or listings. Sponsor material is never automatically published. The corrections queue is private and does not publish visitor text.</p>
+        <p>Visitors cannot independently publish public posts or listings. Sponsorship is not currently sold through the site; this policy applies to any sponsor material considered after an inquiry and to any listing already shown. Sponsor material is never automatically published. The corrections queue is private and does not publish visitor text.</p>
       </section>
 
       <section>

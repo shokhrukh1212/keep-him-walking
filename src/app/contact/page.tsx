@@ -28,7 +28,7 @@ export default function ContactPage() {
       title="Contact & Support"
       eyebrow="A REAL PERSON REVIEWS IT"
       testId="contact-page"
-      summary="Use this page for sponsor material, listing reports, corrections, moderation appeals, cancellations, refunds, privacy requests and accessibility support."
+      summary="Use this page for sponsorship inquiries, listing reports, corrections, moderation appeals, refunds, privacy requests and accessibility support."
     >
       <section>
         <span className="legal-section-number">01</span>
@@ -41,7 +41,7 @@ export default function ContactPage() {
       <section>
         <span className="legal-section-number">02</span>
         <h2>What to include</h2>
-        <p>For a sponsor request, report, correction or appeal, include the sponsor name or destination URL and a short explanation. For a cancellation, refund or private-status question, include the unguessable sponsorship reference from your saved status page.</p>
+        <p>To discuss sponsorship, message on X; no payment or reservation is made there or on this site. For a report, correction or appeal, include the sponsor name or destination URL and a short explanation. For a question about an earlier sponsorship, include its private reference.</p>
         <p>Do not send passwords, payment-card details, identity documents or other sensitive information. Payment details are handled by the payment provider.</p>
       </section>
 

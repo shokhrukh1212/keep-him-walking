@@ -26,13 +26,13 @@ const plexMono = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://keephimwalking.com"),
-  title: "Keep Him Walking",
-  description: "He only walks while someone is watching. Drop in, meet the locals, and help him explore the world.",
+  title: "Keep Him Walking — The Anniversary Journey",
+  description: "A fourteen-day virtual journey, September 17–30. He only walks while someone is watching. Help choose the anniversary setting in Tashkent.",
   alternates: { canonical: "/" },
   icons: { icon: [{ url: "/favicon.ico", type: "image/x-icon" }] },
   openGraph: {
-    title: "Keep Him Walking",
-    description: "He only walks while someone is watching. Drop in, meet the locals, and help him explore the world.",
+    title: "Keep Him Walking — The Anniversary Journey",
+    description: "A fourteen-day virtual journey, September 17–30. He only walks while someone is watching. Help choose the anniversary setting in Tashkent.",
     url: "/",
     siteName: "Keep Him Walking",
     images: [{
@@ -45,8 +45,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Keep Him Walking",
-    description: "He only walks while someone is watching. Drop in, meet the locals, and help him explore the world.",
+    title: "Keep Him Walking — The Anniversary Journey",
+    description: "A fourteen-day virtual journey, September 17–30. He only walks while someone is watching. Help choose the anniversary setting in Tashkent.",
     images: [{ url: "/og-image.png?v=1", alt: "Keep Him Walking — he only walks while someone is watching." }],
   },
 };
