@@ -1,13 +1,6 @@
-"use client";
+import { ShareOnXLink } from "@/components/share/ShareOnXLink";
 
-import { shareCard } from "@/lib/share/client";
-
-export function CountryShareButton({ code, text }: { code: string; text: string }) {
-  return <button type="button" onClick={() => void shareCard({
-    title: "Keep Him Walking",
-    text,
-    url: `${window.location.origin}/country/${code.toLowerCase()}`,
-    imageUrl: `${window.location.origin}/api/og/country/${code.toLowerCase()}`,
-    fileName: `keep-him-walking-${code.toLowerCase()}.png`,
-  })}>Share this result</button>;
+/** A country page's share control: a prefilled X draft the visitor posts themselves. */
+export function CountryShareButton({ text }: { code?: string; text: string }) {
+  return <ShareOnXLink text={text} />;
 }

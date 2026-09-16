@@ -1,13 +1,6 @@
-"use client";
+import { ShareOnXLink } from "@/components/share/ShareOnXLink";
 
-import { shareCard } from "@/lib/share/client";
-
-export function SeasonShareButton({ seasonNumber, text }: { seasonNumber: number; text: string }) {
-  return <button type="button" className="primary-button" onClick={() => void shareCard({
-    title: "Keep Him Walking",
-    text,
-    url: `${window.location.origin}/season/${seasonNumber}`,
-    imageUrl: `${window.location.origin}/api/og/season/${seasonNumber}`,
-    fileName: `keep-him-walking-season-${seasonNumber}.png`,
-  })}>Share the season sheet</button>;
+/** The season sheet's share control: a prefilled X draft the visitor posts themselves. */
+export function SeasonShareButton({ text }: { seasonNumber?: number; text: string }) {
+  return <ShareOnXLink text={text} className="primary-button" />;
 }

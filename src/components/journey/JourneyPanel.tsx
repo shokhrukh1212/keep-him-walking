@@ -12,6 +12,7 @@ import type { PlaceDot } from "@/components/hud/PlaceDots";
 import { TomorrowPreview } from "@/components/hud/TomorrowPreview";
 import { DayPhotoStrip } from "@/components/journey/DayPhotoStrip";
 import { JourneyMapEmbed } from "@/components/map/JourneyMapEmbed";
+import { ShareOnXLink } from "@/components/share/ShareOnXLink";
 
 type Props = {
   /** Opened from an old Passport link: start at the visitor's own part. */
@@ -46,7 +47,8 @@ type Props = {
   sponsorLabel?: string;
   /** The season a prelaunch Journey is waiting for. */
   seasonNumber?: number;
-  onShare: () => void;
+  /** The X draft for this moment of the shared journey. */
+  shareText: string;
   onSponsor: () => void;
 };
 
@@ -56,7 +58,7 @@ export function JourneyPanel({
   distanceMetres, dailyGoalMetres, marathonMetres, freshness, onlineVisitors,
   prelaunch, seasonNumber = 1, contribution, streak, collectedToday, secondsToCollect,
   encounters, photos, tomorrow, ticket, wakeCard, postcard, seasonRecap, story, seasonSponsor,
-  sponsorLabel = "Sponsor a day", onShare, onSponsor,
+  sponsorLabel = "Sponsor a day", shareText, onSponsor,
 }: Props) {
   const ids = useId();
   const yourPart = useRef<HTMLElement>(null);
@@ -161,7 +163,7 @@ export function JourneyPanel({
           </p>
         ) : null}
         <div className="journey-actions">
-          <button type="button" onClick={onShare}>Share</button>
+          <ShareOnXLink text={shareText} />
           {postcard}
         </div>
       </section>

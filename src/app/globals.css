@@ -4419,3 +4419,22 @@ a:focus-visible,
 .anniversary-results { display: grid; gap: .35rem; margin: 0 0 .6rem; padding: 0; list-style: none; }
 .anniversary-results li { display: flex; justify-content: space-between; gap: .75rem; }
 .anniversary-results small { color: var(--muted); font-family: var(--font-controls); font-variant-numeric: tabular-nums; }
+
+/* Share on X: a link styled as the existing secondary control; it only opens a draft on X. */
+.share-on-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  width: fit-content;
+  min-height: 2.75rem;
+  padding: .5rem 1.05rem;
+  border: 1px solid var(--control-border);
+  border-radius: 7px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+  text-decoration: none;
+}
+.share-on-x:hover { border-color: var(--paper); }
+.share-on-x:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }

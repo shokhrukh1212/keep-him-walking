@@ -6,6 +6,9 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { WEATHER_TTL_SECONDS } from "@/lib/weather/open-meteo";
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { seasonCheckoutState, sponsorshipMode } from "@/lib/config/sponsorship";
+import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
+import { seasonPhaseAt } from "@/lib/season/clock";
+import { loadSeasons } from "@/lib/season/state";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +29,23 @@ export async function GET(request: NextRequest) {
   let scenePackId = "paris-v3";
   let weather: unknown = null;
   let launchAt: string | null = null;
+  let schedule: { seasonStartsAt: string | null; seasonEndsAt: string | null; totalDays: number | null; phase: string; matches: boolean } | null = null;
   if (supabase) {
+    // The configured season against the owner's calendar in src/lib/season/anniversary.ts.
+    const seasons = await loadSeasons(supabase).catch(() => null);
+    if (seasons) {
+      const season = seasons.find((entry) => entry.number === ANNIVERSARY_JOURNEY.seasonNumber) ?? null;
+      schedule = {
+        seasonStartsAt: season?.startsAt ?? null,
+        seasonEndsAt: season?.endsAt ?? null,
+        totalDays: season?.totalDays ?? null,
+        phase: seasonPhaseAt(seasons, now.getTime()).kind,
+        matches: Boolean(season
+          && Date.parse(season.startsAt) === Date.parse(ANNIVERSARY_JOURNEY.travelStartsAt)
+          && Date.parse(season.endsAt) === Date.parse(ANNIVERSARY_JOURNEY.travelEndsAt)
+          && season.totalDays === ANNIVERSARY_JOURNEY.totalDays),
+      };
+    }
     const { data: journey, error } = await supabase.from("journeys")
       .select("id,launch_at").eq("phase2_enabled", true).in("status", ["preview", "active"])
       .order("starts_at", { ascending: false }).limit(1).maybeSingle();
@@ -79,7 +98,9 @@ export async function GET(request: NextRequest) {
     && (!weatherEnabled || (weatherStatus === "fresh" && providers.weather === "ready"));
   const launchState = process.env.VERCEL_ENV === "production" && process.env.LAUNCH_ENABLED !== "true"
     ? "disabled"
-    : launchAt && new Date(launchAt).getTime() > now.getTime() ? "armed" : "live";
+    : schedule?.phase === "prelaunch" || (launchAt && new Date(launchAt).getTime() > now.getTime())
+      ? "armed"
+      : schedule?.phase === "completed" ? "completed" : "live";
   return NextResponse.json({
     status: ready ? "ready" : "degraded",
     checks: {
@@ -99,7 +120,9 @@ export async function GET(request: NextRequest) {
         status: assetBase,
         origin: assetUrlValue ? new URL(assetUrlValue).origin : null,
       },
-      launch: { status: launchState, at: launchAt },
+      launch: { status: launchState, at: launchAt ?? schedule?.seasonStartsAt ?? null },
+      // Checkout is not a launch gate: the schedule decides, the flags arm it.
+      schedule,
     },
     latencyMs: Math.round(performance.now() - started),
     release: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) || "local",

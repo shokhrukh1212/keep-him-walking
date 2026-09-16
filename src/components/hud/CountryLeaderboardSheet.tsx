@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { countryDisplayName, flagEmoji, formatWatchDuration } from "@/lib/countries/flags";
+import { ShareOnXLink } from "@/components/share/ShareOnXLink";
 import type { ConnectionStatus, CountryWatchView } from "@/lib/contracts";
 
 type Props = {
@@ -13,7 +14,7 @@ type Props = {
   waitingDuration?: string | null;
   wakeCountdown?: number | null;
   launchCountdown?: string | null;
-  onShare: () => void;
+  shareText: string;
 };
 
 /**
@@ -22,7 +23,7 @@ type Props = {
  */
 export function CountryLeaderboardSheet({
   todayTop, activeViewers, walking, status, preview = false,
-  waitingSinceLocalTime, waitingDuration, wakeCountdown, launchCountdown, onShare,
+  waitingSinceLocalTime, waitingDuration, wakeCountdown, launchCountdown, shareText,
 }: Props) {
   return (
     <div className="country-sheet">
@@ -43,7 +44,7 @@ export function CountryLeaderboardSheet({
                       ? `He has been waiting ${waitingDuration ?? `since ${waitingSinceLocalTime}`}.`
                       : "He is waiting for a viewer."}
       </p>
-      <button className="audience-share" type="button" onClick={onShare}>Bring a friend →</button>
+      <ShareOnXLink text={shareText} className="audience-share" />
       {todayTop.length === 0 ? (
         <p className="country-sheet-empty">No country has carried him yet today.</p>
       ) : (

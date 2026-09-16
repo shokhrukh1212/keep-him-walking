@@ -74,7 +74,6 @@ import {
   waitingBehaviorAt,
 } from "@/lib/presence/waiting";
 import { WakeCard } from "@/components/journey/WakeCard";
-import { shareCard } from "@/lib/share/client";
 import { launchCountdown } from "@/lib/story-clock/launch";
 import { seasonClockParts } from "@/lib/season/clock";
 import { SeasonCompleteCard } from "@/components/journey/SeasonCompleteCard";
@@ -86,6 +85,7 @@ import { PreviewCaption } from "@/components/preview/PreviewCaption";
 import { usePreviewMonologue } from "@/hooks/usePreviewMonologue";
 import { SupportFooterRow } from "@/components/supporters/SupportFooterRow";
 import { SupportersFeed } from "@/components/supporters/SupportersFeed";
+import { anniversaryShareText } from "@/lib/share/x-intent";
 import { SponsorInquiry } from "@/components/sponsor/SponsorInquiry";
 import { AnniversaryStory } from "@/components/journey/AnniversaryStory";
 import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
@@ -905,26 +905,17 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     [snapshot.assets.route.zones],
   );
 
-  const share = async () => {
-    await shareCard({
-      title: "Keep Him Walking",
-      text: `He only walks while someone is watching. I’m helping him cross ${snapshot.countryDay.cityName}.`,
-      url: window.location.href,
-    });
-  };
-  const shareUrl = async () => {
-    await shareCard({ title: "Keep Him Walking", text: "Bring a friend → keep him walking.", url: window.location.href });
-  };
-  const shareWake = async (moment: WakeMoment) => {
-    const text = `I found him waiting alone in ${snapshot.countryDay.cityName} at ${formatWaitingLocalTime(moment.wokeAt, snapshot.countryDay.timeZone)}. He'd been standing there ${formatWaitDuration(moment.waitedSeconds)}. →`;
-    await shareCard({
-      title: "I woke him up",
-      text,
-      url: window.location.href,
-      imageUrl: moment.shareToken ? `/api/og/first?token=${encodeURIComponent(moment.shareToken)}` : undefined,
-      fileName: "first-watcher.png",
-    });
-  };
+  // One X draft for this moment of the shared journey; it names no count and no personal claim.
+  const shareText = anniversaryShareText(snapshot.journeyState === "prelaunch"
+    ? { state: "prelaunch" }
+    : snapshot.journeyState === "completed"
+      ? { state: "completed" }
+      : {
+        state: "live",
+        dayNumber: snapshot.countryDay.dayNumber,
+        totalDays: snapshot.season?.totalDays ?? snapshot.countryDay.totalDays,
+        cityName: snapshot.countryDay.cityName,
+      });
   // Only a start the server really configured is counted down. Older payloads carry it on the day.
   const launchStartsAt = snapshot.journeyState !== "prelaunch"
     ? null
@@ -1197,7 +1188,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
               cityName={snapshot.countryDay.cityName}
               localTime={formatWaitingLocalTime(wakeCard.wokeAt, snapshot.countryDay.timeZone)}
               waitedDuration={formatWaitDuration(wakeCard.waitedSeconds)}
-              onShare={() => void shareWake(wakeCard)}
+              shareText={shareText}
             />
           ) : null}
           postcard={snapshot.journeyState === "live" && snapshot.assets.schemaVersion === 3 ? (
@@ -1229,7 +1220,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           ) : null}
           seasonSponsor={snapshot.seasonSponsor ? <SeasonSponsorRow sponsor={snapshot.seasonSponsor} /> : null}
           sponsorLabel={sponsorshipMode === "daily" ? "Sponsor a day" : "Sponsor a season"}
-          onShare={() => void share()}
+          shareText={shareText}
           onSponsor={() => showPanel("sponsor")}
         />
       </OverlayModal>
@@ -1290,7 +1281,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           waitingDuration={formatWaitDuration(waitedSeconds)}
           wakeCountdown={wakeCountdown}
           launchCountdown={startsIn}
-          onShare={() => void shareUrl()}
+          shareText={shareText}
         />
       </OverlayModal>
 

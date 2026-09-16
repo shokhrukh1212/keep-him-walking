@@ -1,11 +1,13 @@
+import { ShareOnXLink } from "@/components/share/ShareOnXLink";
+
 type Props = {
   cityName: string;
   localTime: string;
   waitedDuration: string;
-  onShare: () => void;
+  shareText: string;
 };
 
-export function WakeCard({ cityName, localTime, waitedDuration, onShare }: Props) {
+export function WakeCard({ cityName, localTime, waitedDuration, shareText }: Props) {
   return (
     <aside className="wake-card" aria-label="You woke him up">
       <span className="eyebrow">FIRST WATCHER</span>
@@ -14,7 +16,7 @@ export function WakeCard({ cityName, localTime, waitedDuration, onShare }: Props
         You found him waiting in <strong>{cityName}</strong> at {localTime}. He had
         waited {waitedDuration}.
       </p>
-      <button type="button" onClick={onShare}>Share</button>
+      <ShareOnXLink text={shareText} />
     </aside>
   );
 }
