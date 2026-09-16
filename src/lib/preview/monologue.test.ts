@@ -178,8 +178,8 @@ describe("monologue caption and wake-ups", () => {
 
 describe("dated Anniversary Journey lines", () => {
   const context = { cityName: "Paris", sponsorOpen: null, sponsorSpoken: false, previousText: null };
-  const beforeLaunch = Date.parse("2026-09-16T18:59:59Z");
-  const afterLaunch = Date.parse("2026-09-16T19:00:00Z");
+  const beforeLaunch = Date.parse("2026-09-17T09:59:59Z");
+  const afterLaunch = Date.parse("2026-09-17T10:00:00Z");
   const afterPollOpens = Date.parse("2026-09-23T19:00:00Z");
 
   it("says the start date only before launch, and skips it afterwards", () => {

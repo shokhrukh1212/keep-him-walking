@@ -89,8 +89,8 @@ describe("buildAnniversaryPlan", () => {
     expect(plan.season).toMatchObject({
       slug: "season-1",
       title: "The Anniversary Journey",
-      startsAt: "2026-09-16T19:00:00.000Z",
-      endsAt: "2026-09-30T19:00:00.000Z",
+      startsAt: "2026-09-17T10:00:00.000Z",
+      endsAt: "2026-10-01T10:00:00.000Z",
       totalDays: 14,
     });
     expect(plan.season.startsAt).toBe(ANNIVERSARY_JOURNEY.travelStartsAt);
@@ -103,13 +103,13 @@ describe("buildAnniversaryPlan", () => {
     expect(plan.days.filter((_, index) => index % 2 === 1).every((day) => day.arrivalMode === "walk")).toBe(true);
     expect(plan.days.filter((_, index) => index % 2 === 0).every((day) => day.events.length === 0)).toBe(true);
     expect(plan.days[1]?.events.length).toBeGreaterThan(0);
-    expect(plan.days[1]?.events.every((event) => event.startsAt === "2026-09-18T19:00:00.000Z")).toBe(true);
-    expect(plan.days[13]?.events.every((event) => event.startsAt === "2026-09-30T19:00:00.000Z")).toBe(true);
+    expect(plan.days[1]?.events.every((event) => event.startsAt === "2026-09-19T10:00:00.000Z")).toBe(true);
+    expect(plan.days[13]?.events.every((event) => event.startsAt === "2026-10-01T10:00:00.000Z")).toBe(true);
   });
 
   it("runs the name vote from the preview day until launch and the poll from Day 8 until 20:00 on 28 September", () => {
     expect(plan.votes.map((vote) => [vote.kind, vote.opensAt, vote.closesAt])).toEqual([
-      ["name", "2026-09-15T19:00:00.000Z", "2026-09-16T19:00:00.000Z"],
+      ["name", "2026-09-15T19:00:00.000Z", "2026-09-17T10:00:00.000Z"],
       ["anniversary", "2026-09-23T19:00:00.000Z", "2026-09-28T15:00:00.000Z"],
     ]);
     expect(plan.votes[1]?.options.map((option) => option.label)).toEqual(["A park in Tashkent", "A café in Tashkent", "A scenic spot in Tashkent"]);

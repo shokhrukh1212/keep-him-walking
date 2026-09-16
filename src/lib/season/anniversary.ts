@@ -1,8 +1,9 @@
 /**
  * Season 1, "The Anniversary Journey": the one place its calendar is written down.
  *
- * Calendar days are Asia/Tashkent days. Tashkent is UTC+5 all year (no daylight saving),
- * so every local midnight is 19:00 UTC on the previous date. The database stores the
+ * Dates are Asia/Tashkent dates. Tashkent is UTC+5 all year (no daylight saving). Travel
+ * launches at 15:00 Tashkent (10:00 UTC) on 17 September and each of the 14 days is 24 hours,
+ * so every day turns over at 15:00 Tashkent and the journey ends at 15:00 on 1 October. The database stores the
  * season's authoritative instants (configured from here by `pnpm season:replan`); page
  * copy that names a date and the plan builder both read this module, so the two cannot
  * drift apart silently (`plan.test.ts` and `/api/health` compare them).
@@ -35,8 +36,8 @@ export function tashkentDateLabel(iso: string): string {
 export const ANNIVERSARY_TIME_ZONE = "Asia/Tashkent";
 
 export const ANNIVERSARY_JOURNEY = (() => {
-  const travelStartsAt = tashkentMidnightUtc("2026-09-17");
-  const travelEndsAt = tashkentMidnightUtc("2026-10-01");
+  const travelStartsAt = tashkentHourUtc("2026-09-17", 15);
+  const travelEndsAt = tashkentHourUtc("2026-10-01", 15);
   const pollOpensAt = tashkentMidnightUtc("2026-09-24");
   const pollClosesAt = tashkentHourUtc("2026-09-28", 20);
   return {
@@ -51,7 +52,7 @@ export const ANNIVERSARY_JOURNEY = (() => {
     travelStartsAt,
     travelEndsAt,
     anniversaryDate: "2026-10-01",
-    /** Tashkent midnight in UTC: every season day starts and ends on this hour. */
+    /** 10:00 UTC (15:00 Tashkent): every season day starts and ends on this hour. */
     boundaryUtcHour: new Date(travelStartsAt).getUTCHours(),
     poll: {
       kind: "anniversary" as const,

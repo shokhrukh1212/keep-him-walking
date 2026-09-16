@@ -11,7 +11,7 @@ const DAY_MS = 24 * HOUR_MS;
 
 /**
  * The configured start of a season: an explicit instant with a UTC offset, on a whole
- * UTC hour (Season 1 turns over at Tashkent midnight, 19:00 UTC), and still in the
+ * UTC hour (Season 1 turns over at 15:00 Tashkent, 10:00 UTC), and still in the
  * future. Nothing guesses it.
  */
 export function parseSeasonStartsAt(raw: string, nowMs: number): Date {
@@ -198,7 +198,7 @@ export function buildSeasonPlan(input: {
 
 /**
  * Season 1, "The Anniversary Journey", built entirely from `anniversary.ts`: its seven
- * cities two days each from Tashkent midnight on 17 September, the name vote from the
+ * cities two days each from 15:00 Tashkent on 17 September, the name vote from the
  * preview day until launch, and the anniversary-setting poll.
  */
 export function buildAnniversaryPlan(itinerary: readonly CountryPackV3[]) {

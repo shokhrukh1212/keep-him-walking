@@ -196,7 +196,7 @@ describe("the controller's wall clock", () => {
       setTimer: (callback) => { wake = callback; return 1; },
       clearTimer: () => { wake = null; },
     });
-    controller.setWallClock(Date.parse("2026-09-16T19:00:00Z"));
+    controller.setWallClock(Date.parse("2026-09-17T10:00:00Z"));
     controller.start();
     controller.setModelReady();
     now = 5_000;
