@@ -1,15 +1,23 @@
 import { fixturePaymentsAllowed, type DeploymentEnvironment } from "@/lib/config/phase2-policy";
 
 /**
- * The single sponsorship switch. `season` (the default) sells one sponsor for a
- * whole seven-day season. `daily` restores the earlier per-day inventory, pricing
- * and checkout, which stay in the code and the database for that purpose and for
- * servicing any transaction made under it.
+ * The single sponsorship switch.
+ *
+ * - `inquiry` (the default since "The Anniversary Journey"): the Sponsor modal describes a
+ *   proposed offer and points to X. No form, request, offer read or checkout route answers,
+ *   and checkout is disabled whatever else is configured.
+ * - `season`: the earlier seven-day season request form and Dodo checkout.
+ * - `daily`: the earliest per-day inventory, pricing and checkout.
+ *
+ * The request form, admin records and payment code stay in the code and the database for
+ * those modes and for servicing any transaction made under them.
  */
-export type SponsorshipMode = "season" | "daily";
+export type SponsorshipMode = "inquiry" | "season" | "daily";
 
 export function sponsorshipMode(environment: DeploymentEnvironment = process.env): SponsorshipMode {
-  return environment.SPONSORSHIP_MODE === "daily" ? "daily" : "season";
+  if (environment.SPONSORSHIP_MODE === "daily") return "daily";
+  if (environment.SPONSORSHIP_MODE === "season") return "season";
+  return "inquiry";
 }
 
 /** The legacy day and Ticket purchase endpoints accept requests only in daily mode. */
@@ -30,7 +38,7 @@ export function seasonSponsorPriceCents(seasonNumber: number): number | null {
   return SEASON_SPONSOR_PRICES_CENTS[seasonNumber as keyof typeof SEASON_SPONSOR_PRICES_CENTS] ?? null;
 }
 
-/** Optional public contact route shown only while checkout is unavailable. */
+/** The owner's public X profile: the one sponsorship contact while checkout is unavailable. */
 export function seasonSponsorXUrl(environment: DeploymentEnvironment = process.env): string | null {
   const raw = environment.NEXT_PUBLIC_SPONSOR_X_URL;
   if (!raw) return null;
@@ -87,7 +95,7 @@ export type SeasonCheckoutState =
   | { enabled: true; provider: SeasonPaymentProvider; testMode: boolean }
   | {
     enabled: false;
-    reason: "legacy_mode" | "booking_disabled" | "provider_unapproved" | "provider_unconfigured" | "test_mode_in_production";
+    reason: "inquiry_mode" | "legacy_mode" | "booking_disabled" | "provider_unapproved" | "provider_unconfigured" | "test_mode_in_production";
   };
 
 /**
@@ -100,7 +108,9 @@ export function seasonCheckoutState(
   environment: DeploymentEnvironment = process.env,
   seasonNumber = 1,
 ): SeasonCheckoutState {
-  if (sponsorshipMode(environment) !== "season") return { enabled: false, reason: "legacy_mode" };
+  const mode = sponsorshipMode(environment);
+  if (mode === "inquiry") return { enabled: false, reason: "inquiry_mode" };
+  if (mode !== "season") return { enabled: false, reason: "legacy_mode" };
   if (environment.SPONSOR_BOOKING_ENABLED !== "true") return { enabled: false, reason: "booking_disabled" };
   if (environment.SPONSOR_PROVIDER_APPROVED !== "true") return { enabled: false, reason: "provider_unapproved" };
   const provider = environment.SPONSOR_PAYMENT_PROVIDER;

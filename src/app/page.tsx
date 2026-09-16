@@ -1,6 +1,6 @@
 import { JourneyExperience } from "@/components/journey/JourneyExperience";
 import { offlineBootstrapSnapshot } from "@/lib/bootstrap/offline";
-import { sponsorshipMode } from "@/lib/config/sponsorship";
+import { seasonSponsorXUrl, sponsorshipMode } from "@/lib/config/sponsorship";
 import { demoSponsorAllowed, demoSponsorLogoAllowed } from "@/lib/traveler/demo-sponsor";
 import { configuredCoffeeUrl } from "@/lib/supporters/config";
 
@@ -16,6 +16,7 @@ export default async function HomePage() {
     // Sponsor inventory is deliberately outside the launch-critical path.
     sponsorPriceCents={null}
     sponsorshipMode={sponsorshipMode()}
+    sponsorXUrl={seasonSponsorXUrl()}
     coffeeUrl={configuredCoffeeUrl(process.env.BUY_ME_A_COFFEE_URL)}
   />;
 }

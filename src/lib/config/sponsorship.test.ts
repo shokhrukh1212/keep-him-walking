@@ -12,7 +12,8 @@ import {
   sponsorshipMode,
 } from "./sponsorship";
 
-const dodo = {
+const dodo: Record<string, string | undefined> = {
+  SPONSORSHIP_MODE: "season",
   SPONSOR_BOOKING_ENABLED: "true",
   SPONSOR_PROVIDER_APPROVED: "true",
   SPONSOR_PAYMENT_PROVIDER: "dodo",
@@ -22,11 +23,11 @@ const dodo = {
 };
 
 describe("sponsorship mode", () => {
-  it("defaults to season and keeps daily recoverable with one explicit value", () => {
-    expect(sponsorshipMode({})).toBe("season");
+  it("defaults to X-only inquiries and keeps season and daily recoverable with one explicit value", () => {
+    expect(sponsorshipMode({})).toBe("inquiry");
     expect(sponsorshipMode({ SPONSORSHIP_MODE: "season" })).toBe("season");
     expect(sponsorshipMode({ SPONSORSHIP_MODE: "daily" })).toBe("daily");
-    expect(sponsorshipMode({ SPONSORSHIP_MODE: "DAILY" })).toBe("season");
+    expect(sponsorshipMode({ SPONSORSHIP_MODE: "DAILY" })).toBe("inquiry");
   });
 
   it("closes the legacy day and Ticket purchase endpoints in season mode", () => {
@@ -56,8 +57,15 @@ describe("sponsorship mode", () => {
 });
 
 describe("season checkout gate", () => {
+  it("stays disabled in inquiry mode even with every booking switch and a live provider set", () => {
+    const everything = { ...dodo, VERCEL_ENV: "production", DODO_PAYMENTS_ENVIRONMENT: "live_mode" };
+    expect(seasonCheckoutState({ ...everything, SPONSORSHIP_MODE: undefined })).toEqual({ enabled: false, reason: "inquiry_mode" });
+    expect(seasonCheckoutState({ ...everything, SPONSORSHIP_MODE: "inquiry" })).toEqual({ enabled: false, reason: "inquiry_mode" });
+    expect(seasonCheckoutState({})).toEqual({ enabled: false, reason: "inquiry_mode" });
+  });
+
   it("is a request-only offer until every switch is set", () => {
-    expect(seasonCheckoutState({})).toEqual({ enabled: false, reason: "booking_disabled" });
+    expect(seasonCheckoutState({ SPONSORSHIP_MODE: "season" })).toEqual({ enabled: false, reason: "booking_disabled" });
     expect(seasonCheckoutState({ ...dodo, SPONSORSHIP_MODE: "daily" })).toEqual({ enabled: false, reason: "legacy_mode" });
     expect(seasonCheckoutState({ ...dodo, SPONSOR_PROVIDER_APPROVED: "false" })).toEqual({ enabled: false, reason: "provider_unapproved" });
     expect(seasonCheckoutState({ ...dodo, DODO_SEASON_PRODUCT_ID: "" })).toEqual({ enabled: false, reason: "provider_unconfigured" });
@@ -81,6 +89,7 @@ describe("season checkout gate", () => {
 
   it("allows the no-money fixture only in an explicit non-production rehearsal", () => {
     const fixture = {
+      SPONSORSHIP_MODE: "season",
       SPONSOR_BOOKING_ENABLED: "true",
       SPONSOR_PROVIDER_APPROVED: "true",
       SPONSOR_PAYMENT_PROVIDER: "fixture",

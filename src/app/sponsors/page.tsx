@@ -3,7 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SeasonRequestForm } from "@/components/sponsor/SeasonRequestForm";
 import { LegalFooter } from "@/components/legal/LegalFooter";
-import { SEASON_SPONSOR_PRICE_CENTS, seasonHoldMinutes, sponsorshipMode } from "@/lib/config/sponsorship";
+import { SponsorInquiry } from "@/components/sponsor/SponsorInquiry";
+import { SEASON_SPONSOR_PRICE_CENTS, seasonHoldMinutes, seasonSponsorXUrl, sponsorshipMode } from "@/lib/config/sponsorship";
+import { SPONSOR_INQUIRY_COPY } from "@/lib/sponsors/inquiry";
 import { loadSeasonOffer } from "@/lib/sponsors/season-data";
 import { SEASON_OFFER_COPY, formatSeasonInstant, formatUsdCents, seasonOfferHeadline, seasonTaxNote } from "@/lib/sponsors/season-offer";
 import styles from "../public-pages.module.css";
@@ -11,7 +13,7 @@ import styles from "../public-pages.module.css";
 export const revalidate = 60;
 export const metadata: Metadata = {
   title: "Sponsor a season",
-  description: "One sponsor. Seven days. $499. A disclosed placement beside the journey, in Journey and in the season recap.",
+  description: "Feature your product on Keep Him Walking — The Anniversary Journey. Proposed starting price $50, one featured sponsor at a time, pending payment-provider approval. Message me on X; no payment is taken here.",
 };
 
 /**
@@ -19,8 +21,10 @@ export const metadata: Metadata = {
  * payment reviewer sees exactly what is sold, when, for how much and on what terms.
  */
 export default async function SponsorsPage() {
+  const mode = sponsorshipMode();
+  if (mode === "inquiry") return <SponsorInquiryPage />;
   // Daily mode keeps its in-app panel, as before.
-  if (sponsorshipMode() !== "season") redirect("/?panel=sponsor");
+  if (mode !== "season") redirect("/?panel=sponsor");
   const offer = await loadSeasonOffer().catch(() => null);
   const season = offer?.season ?? null;
   const checkoutEnabled = offer?.checkout === "enabled";
@@ -123,6 +127,30 @@ export default async function SponsorsPage() {
       </div>
 
       <LegalFooter lead="One sponsor. Seven days. One journey." />
+    </div>
+  </main>;
+}
+
+/** Inquiry mode: the proposed offer and the X contact. No form, no offer read, no checkout. */
+function SponsorInquiryPage() {
+  return <main className={`${styles.publicPage} ${styles.sponsorPage}`} data-testid="sponsors-page">
+    <div className={styles.pageFrame}>
+      <header className={styles.siteHeader}>
+        <Link className={styles.backLink} href="/">← Return to the walk</Link>
+        <span className={styles.wordmark}>KEEP HIM WALKING</span>
+      </header>
+      <section className={styles.sponsorHero} aria-labelledby="sponsor-title">
+        <div className={styles.heroCopy}>
+          <span className={styles.eyebrow}>SUPPORT THE JOURNEY</span>
+          <h1 id="sponsor-title">Sponsor a season</h1>
+          <p className={styles.heroLead}>{SPONSOR_INQUIRY_COPY.headline}</p>
+          <p className={styles.heroBody}>{SPONSOR_INQUIRY_COPY.pending}</p>
+        </div>
+        <section className={styles.offerCard} aria-label="Proposed sponsorship">
+          <SponsorInquiry xUrl={seasonSponsorXUrl()} />
+        </section>
+      </section>
+      <LegalFooter lead="Keep Him Walking — The Anniversary Journey" />
     </div>
   </main>;
 }
