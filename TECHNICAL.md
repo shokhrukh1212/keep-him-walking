@@ -708,6 +708,13 @@ are read through a ref so the renderer is never torn down mid-journey.
   `actorLayout(viewportHeight, layout)` adapts these to height/bottom (§8.4).
 - Traveler and resident GLBs load in parallel; each reports availability upward so the
   React tree can swap away the static idle image and hide the 2D NPC picture.
+- **A missing traveler is temporary.** The model download retries on
+  `characterRetryDelayMs` (`src/lib/characters/retry.ts`: 1 s, 3 s, 8 s, 20 s, then 30 s,
+  the same shape the place paintings have always used), never while the tab is hidden, and
+  a `visibilitychange` listener starts the next attempt when it is looked at again. Until
+  P22 the model was fetched once and one failed request left the pavement empty, and the
+  "Loading the walk…" pill on, for the rest of the session. After 20 s that pill stops
+  claiming a walk is loading and says it is trying again while the distance keeps counting.
 - Per frame: accept the runtime into the shared `PresentationClock`, sample it, run
   `travelerMotionAt`, run `productCharacterSceneAt`, then push cues into both actors —
   with `snap = true` on the first frame and on every conversation boundary so a cut is a
@@ -726,6 +733,16 @@ are read through a ref so the renderer is never torn down mid-journey.
   canvas and re-reporting availability, and on unmount walks the whole scene disposing
   geometries, materials, textures and skeletons. Contact publications are cleared on
   context loss, invalid layout and unmount so Pixi cannot retain an orphan shadow.
+- **A lost context is asked back.** Preventing the default keeps the canvas restorable,
+  but nothing restores it by itself: the stage calls `renderer.forceContextRestore()` up to
+  `CONTEXT_RESTORE_ATTEMPTS` (3) times on the same backoff, writing
+  `data-context-restore-attempts`. If the context still has not returned, `stageBuild` is
+  bumped — the mount effect's one dependency — which disposes the renderer and builds a new
+  one around a new canvas, reloading him into it, at most `MAX_STAGE_REBUILDS` (3) times so
+  a device that cannot hold a context never loops. Pixi restores its own context; before
+  P22 this one never came back, which showed as a walking status line over an empty street.
+  Verified against the live build on 17 September: a forced context loss recovered by
+  rebuild (`data-mount-count` 2) about 22 s later, where it had previously stayed dead.
 - In the prelaunch preview (`command.facing === "camera"`) only the traveler root's yaw
   becomes 0, facing the viewer; his bones, anchor and the frame loop are unchanged, and the
   pose comes from sampling `command.preview` (§9, "Prelaunch preview").

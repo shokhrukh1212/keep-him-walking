@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
@@ -10,6 +10,7 @@ import { CharacterLights } from "@/lib/characters/appearance";
 import type { CharacterContacts, VisualGrade } from "@/lib/world/visual-grade";
 import { CHARACTER_MANIFEST, RESIDENT_TYPES, type ResidentType } from "@/lib/characters/manifest";
 import { loadCharacterGltf } from "@/lib/characters/loader";
+import { CONTEXT_RESTORE_ATTEMPTS, MAX_STAGE_REBUILDS, characterRetryDelayMs } from "@/lib/characters/retry";
 import { productCharacterSceneAt } from "@/lib/characters/product-timeline";
 import { packResidentType, walkerResidentType } from "@/lib/characters/residents";
 import { actorLayout } from "@/lib/traveler/actor-layout";
@@ -86,6 +87,10 @@ function disposeModel(root: THREE.Object3D) {
 export function ProductCharacterStage3D(props: Props) {
   const host = useRef<HTMLDivElement>(null);
   const latest = useRef(props);
+  // Bumped only when a lost context refuses to come back: the effect below then
+  // tears the renderer down and builds a new one, which reloads him into it.
+  const [stageBuild, setStageBuild] = useState(0);
+  const rebuilds = useRef(0);
   const captureWaiters = useRef<Array<(frame: HTMLCanvasElement | null) => void>>([]);
   useEffect(() => { latest.current = props; }, [props]);
   const onCaptureReady = props.onCaptureReady;
@@ -176,6 +181,22 @@ export function ProductCharacterStage3D(props: Props) {
     let firstSample = true;
     let previousConversation = false;
 
+    // A download that fails is not the end of the walk. One unlucky request used
+    // to leave the pavement empty for the rest of the session, because nothing
+    // ever asked for him again.
+    let travelerAttempt = 0;
+    let travelerRetry: number | null = null;
+    const retryTraveler = () => {
+      // A hidden tab is not a fault to fix: the visibility listener starts it again.
+      if (disposed || traveler || travelerRetry !== null || document.hidden) return;
+      const delay = characterRetryDelayMs(travelerAttempt);
+      travelerAttempt += 1;
+      element.dataset.characterAttempts = String(travelerAttempt + 1);
+      travelerRetry = window.setTimeout(() => {
+        travelerRetry = null;
+        void loadTraveler();
+      }, delay);
+    };
     const loadTraveler = async () => {
       let loadedRoot: THREE.Group | undefined;
       try {
@@ -196,8 +217,14 @@ export function ProductCharacterStage3D(props: Props) {
       } catch {
         if (loadedRoot) disposeModel(loadedRoot);
         latest.current.onTravelerAvailability?.(false);
+        retryTraveler();
       }
     };
+    const retryWhenVisible = () => {
+      if (!document.hidden) retryTraveler();
+    };
+    document.addEventListener("visibilitychange", retryWhenVisible);
+    element.dataset.characterAttempts = "1";
     void loadTraveler();
 
     /** Starts a resident's download once, and reports where it stands. */
@@ -523,6 +550,31 @@ export function ProductCharacterStage3D(props: Props) {
     };
     raf = requestAnimationFrame(draw);
 
+    // The browser reclaims a context whenever it likes — a long day on one tab,
+    // another page wanting the GPU. Preventing the default keeps this canvas
+    // restorable, but nothing restores it on its own, so ask, and if the answer
+    // never comes, build a new stage around a new context.
+    let restoreAttempt = 0;
+    let restoreTimer: number | null = null;
+    const askForContext = () => {
+      if (disposed || !contextLost || restoreTimer !== null) return;
+      if (restoreAttempt >= CONTEXT_RESTORE_ATTEMPTS) {
+        if (rebuilds.current >= MAX_STAGE_REBUILDS) return;
+        rebuilds.current += 1;
+        setStageBuild((build) => build + 1);
+        return;
+      }
+      const delay = characterRetryDelayMs(restoreAttempt);
+      restoreAttempt += 1;
+      restoreTimer = window.setTimeout(() => {
+        restoreTimer = null;
+        if (disposed || !contextLost) return;
+        element.dataset.contextRestoreAttempts = String(restoreAttempt);
+        // The browser may refuse outright; the next attempt, or the rebuild, answers that.
+        try { renderer.forceContextRestore(); } catch { /* handled by the next attempt */ }
+        askForContext();
+      }, delay);
+    };
     const lost = (event: Event) => {
       event.preventDefault();
       contextLost = true;
@@ -530,9 +582,13 @@ export function ProductCharacterStage3D(props: Props) {
       renderer.domElement.style.visibility = "hidden";
       latest.current.onTravelerAvailability?.(false);
       latest.current.onResidentAvailability?.(false);
+      askForContext();
     };
     const restored = () => {
       contextLost = false;
+      restoreAttempt = 0;
+      if (restoreTimer !== null) window.clearTimeout(restoreTimer);
+      restoreTimer = null;
       last = 0;
       renderer.domElement.style.visibility = "visible";
       latest.current.onTravelerAvailability?.(Boolean(traveler));
@@ -545,6 +601,9 @@ export function ProductCharacterStage3D(props: Props) {
       disposed = true;
       latest.current.contacts.current = { traveler: null, resident: null };
       cancelAnimationFrame(raf);
+      if (travelerRetry !== null) window.clearTimeout(travelerRetry);
+      if (restoreTimer !== null) window.clearTimeout(restoreTimer);
+      document.removeEventListener("visibilitychange", retryWhenVisible);
       observer.disconnect();
       latest.current.onTravelerAvailability?.(false);
       latest.current.onResidentAvailability?.(false);
@@ -560,7 +619,7 @@ export function ProductCharacterStage3D(props: Props) {
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, []);
+  }, [stageBuild]);
 
   return <div ref={host} className="product-character-stage" data-testid="product-character-stage" />;
 }

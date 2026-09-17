@@ -811,13 +811,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const preview = snapshot.mode === "prelaunch";
   const prelaunchSeasonNumber = snapshot.prelaunch?.seasonNumber ?? snapshot.season?.number ?? 1;
   const [worldFailed, setWorldFailed] = useState(false);
-  // A model that never arrives must not silence him: after a while the words come without it.
+  // A model that never arrives must not silence him in the preview, and must not
+  // leave a live visitor reading "Loading the walk…" at an empty pavement either.
   const [modelWaitElapsed, setModelWaitElapsed] = useState(false);
   useEffect(() => {
-    if (!preview || puppetReady || !experienceReady || modelWaitElapsed) return;
+    if (puppetReady || !experienceReady || modelWaitElapsed) return;
     const timer = window.setTimeout(() => setModelWaitElapsed(true), 20_000);
     return () => window.clearTimeout(timer);
-  }, [experienceReady, modelWaitElapsed, preview, puppetReady]);
+  }, [experienceReady, modelWaitElapsed, puppetReady]);
   const { controller: previewMonologue, caption: previewCaption } = usePreviewMonologue({
     active: preview,
     cityName: snapshot.countryDay.cityName,
@@ -1083,7 +1084,13 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       {/* A single connected idle frame holds the traveler's place until the 3D
           model reports ready. The sprite and Rive renderers it used to sit in
           front of were retired in P18; nothing else remains of that path. */}
-      {!puppetReady && sceneRenderer !== "static" ? <div className="traveler-loading" role="status">Loading the walk…</div> : null}
+      {!puppetReady && sceneRenderer !== "static" ? (
+        <div className="traveler-loading" role="status" data-state={modelWaitElapsed ? "retrying" : "loading"}>
+          {/* The stage keeps asking for him behind this line; the walk itself is the
+              server's and goes on being counted whether or not he can be drawn here. */}
+          {modelWaitElapsed ? "Still loading him — trying again. Today’s distance keeps counting." : "Loading the walk…"}
+        </div>
+      ) : null}
       {snapshot.journeyState !== "prelaunch" && snapshot.mode === "live" ? <ReactionButtons
         counts={heartbeat?.reactions.counts ?? snapshot.reactions.counts}
         activeViewers={activeViewers}
