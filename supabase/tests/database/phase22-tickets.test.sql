@@ -62,10 +62,10 @@ create temporary table day11 as select public.create_next_country_day(
   null
 ) as result;
 select is((select result ->> 'state' from day11),'created','rollover materializes the future Ticket day');
-select is((select scene_pack_id from public.country_days where day_number=11),'tbilisi-v1','the lock overrides the proposed ballot winner');
-select is((select country_name from public.country_days where day_number=11),'Georgia','the approved country is authoritative');
-select is((select arrival_mode from public.country_days where day_number=11),'flight','the Ticket transfer is explicitly a flight');
-select isnt((select ticket_id from public.country_days where day_number=11),null,'the created day retains the approval provenance');
+select is((select scene_pack_id from public.country_days where journey_id='22000000-0000-4000-8000-000000000001' and day_number=11),'tbilisi-v1','the lock overrides the proposed ballot winner');
+select is((select country_name from public.country_days where journey_id='22000000-0000-4000-8000-000000000001' and day_number=11),'Georgia','the approved country is authoritative');
+select is((select arrival_mode from public.country_days where journey_id='22000000-0000-4000-8000-000000000001' and day_number=11),'flight','the Ticket transfer is explicitly a flight');
+select isnt((select ticket_id from public.country_days where journey_id='22000000-0000-4000-8000-000000000001' and day_number=11),null,'the created day retains the approval provenance');
 select is(has_function_privilege('anon', 'public.approve_ticket(uuid,text,timestamptz,integer)', 'EXECUTE'), false, 'the browser cannot approve a Ticket');
 
 select * from finish();
