@@ -2,7 +2,7 @@
  * Season 1, "The Anniversary Journey": the one place its calendar is written down.
  *
  * Dates are Asia/Tashkent dates. Tashkent is UTC+5 all year (no daylight saving). Travel
- * launches at 21:00 Tashkent (16:00 UTC on 17 September) and each route day is
+ * launches at 23:00 Tashkent (18:00 UTC on 17 September) and each route day is
  * 24 hours. The database stores the
  * season's authoritative instants (configured from here by `pnpm season:replan`); page
  * copy that names a date and the plan builder both read this module, so the two cannot
@@ -55,7 +55,7 @@ export const SEASON_ONE_ROUTE = [
 
 export function seasonOneDayWindow(dayNumber: number) {
   if (!Number.isInteger(dayNumber) || dayNumber < 1 || dayNumber > SEASON_ONE_ROUTE.length) throw new RangeError("Invalid Season 1 day");
-  const start = Date.parse("2026-09-17T16:00:00.000Z") + (dayNumber - 1) * DAY_MS;
+  const start = Date.parse("2026-09-17T18:00:00.000Z") + (dayNumber - 1) * DAY_MS;
   return { startsAt: new Date(start).toISOString(), endsAt: new Date(start + DAY_MS).toISOString() };
 }
 
@@ -72,11 +72,11 @@ export const ANNIVERSARY_JOURNEY = (() => {
     totalDays: SEASON_ONE_ROUTE.length,
     daysPerCity: 1,
     /** The public preview day: the name vote runs for 24 hours before travel begins. */
-    previewStartsAt: "2026-09-16T16:00:00.000Z",
+    previewStartsAt: "2026-09-16T18:00:00.000Z",
     travelStartsAt,
     travelEndsAt,
     anniversaryDate: "2026-10-01",
-    /** 16:00 UTC is 21:00 in Tashkent. */
+    /** 18:00 UTC is 23:00 in Tashkent. */
     boundaryUtcHour: new Date(travelStartsAt).getUTCHours(),
     poll: {
       kind: "anniversary" as const,
