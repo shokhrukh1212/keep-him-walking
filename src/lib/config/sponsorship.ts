@@ -25,17 +25,27 @@ export function legacyPurchasesOpen(environment: DeploymentEnvironment = process
   return sponsorshipMode(environment) === "daily";
 }
 
-/** The agreed season prices, in USD minor units. A request snapshots one of these in Postgres. */
-export const SEASON_SPONSOR_PRICE_CENTS = 49_900;
+/** The first featured placement costs USD 50.00; each accepted replacement doubles it. */
+export const SEASON_SPONSOR_PRICE_CENTS = 5_000;
 export const SEASON_SPONSOR_PRICES_CENTS = {
-  1: 49_900,
-  2: 59_900,
-  3: 69_900,
+  1: 5_000,
+  2: 5_000,
+  3: 5_000,
 } as const;
 export const SEASON_SPONSOR_CURRENCY = "USD";
 
 export function seasonSponsorPriceCents(seasonNumber: number): number | null {
   return SEASON_SPONSOR_PRICES_CENTS[seasonNumber as keyof typeof SEASON_SPONSOR_PRICES_CENTS] ?? null;
+}
+
+/** The Dodo checkout amount for a new featured sponsor. The value is server-owned. */
+export function featuredSponsorPriceCents(currentSponsorPriceCents: number | null | undefined): number {
+  if (!currentSponsorPriceCents) return SEASON_SPONSOR_PRICE_CENTS;
+  if (!Number.isSafeInteger(currentSponsorPriceCents) || currentSponsorPriceCents < SEASON_SPONSOR_PRICE_CENTS
+    || currentSponsorPriceCents > 1_000_000_000) {
+    throw new RangeError("Invalid current featured-sponsor price");
+  }
+  return currentSponsorPriceCents * 2;
 }
 
 /** The owner's public X profile: the one sponsorship contact while checkout is unavailable. */
@@ -54,6 +64,7 @@ export function seasonSponsorXUrl(environment: DeploymentEnvironment = process.e
 
 /** Each fixed-price Dodo product must match the quoted season price. */
 export function seasonProductId(seasonNumber: number, environment: DeploymentEnvironment = process.env): string {
+  if (environment.DODO_SPONSOR_PRODUCT_ID) return environment.DODO_SPONSOR_PRODUCT_ID;
   if (seasonNumber === 1) return environment.DODO_SEASON_1_PRODUCT_ID || environment.DODO_SEASON_PRODUCT_ID || "";
   if (seasonNumber === 2) return environment.DODO_SEASON_2_PRODUCT_ID || "";
   if (seasonNumber === 3) return environment.DODO_SEASON_3_PRODUCT_ID || "";

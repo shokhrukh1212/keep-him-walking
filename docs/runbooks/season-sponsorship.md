@@ -1,4 +1,4 @@
-# Seven-day seasons and the season sponsor
+# Featured sponsor checkout
 
 What ships in Prompt 2, the switches that control it, and the owner's steps to turn
 each part on. Everything below is off or request-only until you do it.
@@ -9,10 +9,10 @@ each part on. Everything below is off or request-only until you do it.
   You configure it once; its seven days are written together and never grow an eighth.
   The season clock is wall-clock time. Walking distance still grows only while someone
   watches.
-- **One sponsor per season, one time.** Season 1 is USD 499.00, Season 2 USD 599.00 and
-  Season 3 USD 699.00. The sponsor sends material, you review it, and only approved
-  material can be paid for. Each request keeps its quoted price and dates. The database
-  admits one paid sponsor per season. The placement starts and ends with the season on its own.
+- **Featured placement.** The first approved sponsor is USD 50.00. A replacement is quoted
+  twice the current sponsor's server-confirmed price. After verified payment the replacement
+  receives the remaining journey period and the displaced sponsor's full payment enters the
+  Dodo refund ledger. Material is reviewed before payment.
 - **Until checkout is approved,** the Sponsor button and `/sponsors` say
   "Request this season". A request takes no payment and reserves nothing. Approval leaves
   it approved and awaiting checkout; the same private link continues once checkout opens.
@@ -32,9 +32,7 @@ All are Vercel environment variables. A change needs a redeploy.
 | `DODO_PAYMENTS_ENVIRONMENT` | `test_mode` | `live_mode` in Production; test mode is refused there |
 | `DODO_PAYMENTS_API_KEY` | — | Server only |
 | `DODO_PAYMENTS_WEBHOOK_SECRET` | — | The endpoint's signing secret |
-| `DODO_SEASON_1_PRODUCT_ID` | — | One-time USD 499.00 product (`DODO_SEASON_PRODUCT_ID` remains an alias) |
-| `DODO_SEASON_2_PRODUCT_ID` | — | One-time USD 599.00 product |
-| `DODO_SEASON_3_PRODUCT_ID` | — | One-time USD 699.00 product |
+| `DODO_SPONSOR_PRODUCT_ID` | — | One-time USD dynamic-price product; Dodo PWYW enabled and the server supplies the amount |
 | `SEASON_SPONSOR_PRICE_INCLUDES_TAX` | `false` | `true` only if the Dodo price already includes tax |
 | `SEASON_SPONSOR_CUTOFF_HOURS` | `24` | Material and booking close this long before a start |
 | `SPONSOR_RESERVATION_MINUTES` | `30` | How long a checkout holds the season |
@@ -86,17 +84,19 @@ Do these in order. Stop at any step you are not ready for; the site stays honest
    before the season's start, or the week runs with nobody able to watch and ends at 0 m.
    The cron-job.org minute job needs no change: it now also starts and ends seasons and
    releases lapsed checkout holds.
-6. **Payments, only after Dodo approves this model** (see `AFTER-P22.md` D11):
-   1. In Dodo, create one-time products at USD 499.00, USD 599.00 and USD 699.00 with
-      adaptive currency off, then set their matching season product IDs.
+6. **Payments, only after paid terms are complete:**
+   1. In Dodo, create one one-time USD product with Pay What You Want enabled and a
+      USD 50.00 minimum. The application passes the exact server-owned amount. Keep
+      adaptive currency **off**: a payment in any other currency fails the amount check
+      and is refunded automatically.
    2. Add the webhook `https://keephimwalking.com/api/webhooks/dodo` for
-      `payment.succeeded`, `refund.succeeded`, `dispute.opened`, `dispute.won` and
-      `dispute.lost`.
+      `payment.succeeded`, `payment.failed`, `payment.cancelled`, `refund.succeeded`,
+      `refund.failed`, `dispute.opened`, `dispute.won` and `dispute.lost`.
    3. Put the test-mode key, secret and product id in Vercel **Preview** and run the test
       walkthrough below.
    4. Put the live-mode values in **Production**, set `DODO_PAYMENTS_ENVIRONMENT=live_mode`,
-      `DODO_PAYMENTS_API_KEY`, `DODO_PAYMENTS_WEBHOOK_SECRET`, the three
-      `DODO_SEASON_<n>_PRODUCT_ID` values, `SPONSOR_PAYMENT_PROVIDER=dodo`,
+      `DODO_PAYMENTS_API_KEY`, `DODO_PAYMENTS_WEBHOOK_SECRET`, `DODO_SPONSOR_PRODUCT_ID`,
+      `SPONSOR_PAYMENT_PROVIDER=dodo`,
       `SPONSOR_BOOKING_ENABLED=true` and `SPONSOR_PROVIDER_APPROVED=true`, and redeploy.
       Until every value for the season on offer exists, checkout stays request-only.
 

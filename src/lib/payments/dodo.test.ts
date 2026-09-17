@@ -99,7 +99,7 @@ describe("Dodo API calls", () => {
   it("creates a one-product checkout whose metadata names the booking", async () => {
     const fetchImpl = vi.fn(async () => Response.json({ session_id: "cks_1", checkout_url: "https://test.checkout.dodopayments.com/session/cks_1" }));
     const request = dodoCheckoutBody({
-      productId: "pdt_season", customerEmail: "a@b.co", customerName: "Casey", returnUrl: "https://keephimwalking.com/sponsors/request/x",
+      productId: "pdt_season", amountCents: 5_000, customerEmail: "a@b.co", customerName: "Casey", returnUrl: "https://keephimwalking.com/sponsors/request/x",
       bookingId: "b-1", journeyId: "j-1", seasonNumber: 2,
     });
     await expect(createDodoCheckout(request, options(fetchImpl as unknown as typeof fetch))).resolves.toEqual({
@@ -109,13 +109,13 @@ describe("Dodo API calls", () => {
     expect(url).toBe("https://test.dodopayments.com/checkouts");
     expect(init.headers).toMatchObject({ Authorization: "Bearer sk_test" });
     expect(JSON.parse(String(init.body))).toMatchObject({
-      product_cart: [{ product_id: "pdt_season", quantity: 1 }],
+      product_cart: [{ product_id: "pdt_season", quantity: 1, amount: 5_000 }],
       metadata: { kind: "season_sponsorship", season_sponsorship_id: "b-1", season_number: 2 },
     });
   });
 
   it("fails closed on provider errors and odd responses", async () => {
-    const request = dodoCheckoutBody({ productId: "p", customerEmail: "a@b.co", customerName: "C", returnUrl: "https://x.y/", bookingId: "b", journeyId: "j", seasonNumber: 1 });
+    const request = dodoCheckoutBody({ productId: "p", amountCents: 5_000, customerEmail: "a@b.co", customerName: "C", returnUrl: "https://x.y/", bookingId: "b", journeyId: "j", seasonNumber: 1 });
     await expect(createDodoCheckout(request, options((async () => new Response("", { status: 422 })) as unknown as typeof fetch))).rejects.toThrow("DODO_CHECKOUT_422");
     await expect(createDodoCheckout(request, options((async () => Response.json({ session_id: "cks", checkout_url: "http://plain" })) as unknown as typeof fetch))).rejects.toThrow("INVALID_RESPONSE");
   });

@@ -2913,3 +2913,70 @@ provider as the live presence source, and never expose `SUPABASE_SECRET_KEY` or
   (§8.3, `98e1c77`), and both canvases now share the painted
   pavement and person scale (§8.4). Its exact accepted transfer budgets are 2,598,064
   bytes model + 1,973,112 bytes animations = 4,571,176 bytes total.
+
+### Featured sponsor Dodo integration (17 September 2026)
+
+Migrations `0047`–`0048` replace the retired fixed USD 499 season checkout with one
+featured sponsor: USD 50.00 initially and twice the current sponsor's confirmed price for
+each replacement. Dodo receives the exact server-owned amount through a one-time dynamic-price
+product; the browser never supplies an amount. `payment.succeeded` is accepted only after a
+five-minute Standard Webhooks signature check, a one-time webhook-ledger claim, a Dodo payment
+read-back and a locked Postgres confirmation. A successful replacement atomically makes the
+incumbent `refund_required`, records its original payment for refund, and starts the replacement
+for the remaining journey period. Refund requests are retried by the minute reconciler until
+`refund.succeeded` confirms them. Payment failure/cancellation releases only its matching held
+checkout. `SPONSORSHIP_MODE=inquiry` still disables all of this publicly; legal terms and the
+owner's explicit activation gate remain required before Production checkout can open.
+
+Development migration evidence: `202609170047` and corrective `202609170048` applied to
+`tkntxptfhmjnqaaveddx`; remote database lint returned `{"results":[]}`. The focused payment
+pgTAP suites passed; the all-suite run is separately blocked by the pre-existing
+`phase4-distance` bootstrap assertion.
+
+### Season 1 route revision (16 September 2026, local work)
+
+`src/lib/season/anniversary.ts` now owns the ordered 14-country itinerary and midnight
+Asia/Tashkent day windows: 17–30 September 2026, with UTC boundaries at 19:00 on
+the previous day. `buildAnniversaryPlan` rejects any pack order or city/country mismatch.
+Journey's virtual route is a contained, horizontally scrollable 14-stop list with
+visited/current/upcoming states and the current stop centered when opened. The map API
+uses the configured route for Season 1 and accepts server-confirmed completion only
+when a stored row matches that stop; it does not invent distance or visits.
+
+`pnpm season:assets:manifests` writes one independent JSON R2 scene manifest per city
+under `public/scenes/<city>/<version>/season1-manifest.json` and the exact local report
+`artifacts/season1-missing-assets.md`. Ten cities have scene files locally. Brussels,
+Amsterdam, Cologne and Budapest use pending, metadata-only fallback packs because
+their reviewed city packs and paintings do not exist. Their manifests contain zero
+city scene URLs and name the existing local scene fallback. Existing
+postcard backgrounds are retained as small history posters; missing cities use the
+generic fallback. The Pixi cache retains only the current place and the imminent next
+place; changing the city remounts the scene and releases its textures. Tomorrow's
+preloaded image is cleared at a day change.
+
+`pnpm season:assets:verify-r2 --base https://assets.keephimwalking.com` checked all
+140 existing Season 1 scene paths on 16 September: 140 passed CORS, type and local-byte
+checks, zero failed. The generic fallback also passed a separate R2 check. The four
+missing cities have zero city-specific paths and are listed in the report. A dry run of
+`pnpm season:assets:upload-manifests` listed exactly 14 JSON objects, 15,552 bytes;
+none was uploaded. Desktop and mobile route-map captures are in
+`artifacts/season1-route-map-chromium.png` and
+`artifacts/season1-route-map-mobile-320.png`.
+
+`pnpm season:assets:cleanup --day N` is dry-run by default. `--apply` requires a
+completed stored day matching the manifest, a later current day, a scheduled next pack
+with no missing files, successful R2 HEAD checks for all next-city scene files, and no
+retained thumbnail, future manifest or stored postcard background that points to a
+proposed deleted file. It signs single-object R2 DELETE requests only for the
+completed city's scene prefix. Neither this command nor manifest generation was run
+with `--apply` or R2 delete credentials. No uploaded source image was removed: source
+images live under `art/`, outside the public application bundle, and `public/` contains
+only runtime images plus logo/OG PNGs.
+
+**Deployment state:** these code and manifest changes are local. Production still has
+its previous stored seven-city, two-days-per-city schedule and prior map bundle.
+`scripts/season/replan.ts` accepts only the four explicit pending fallback packs in
+addition to reviewed packs, and checks every URL before writing. The matching app build
+must be deployed before production is replanned so the server can resolve all 14 IDs.
+Production data, R2 and Vercel were not changed by this revision. The older anniversary
+calendar paragraph above documents the prior deployment.

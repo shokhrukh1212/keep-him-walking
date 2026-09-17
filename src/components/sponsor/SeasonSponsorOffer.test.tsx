@@ -13,18 +13,18 @@ const offer: SeasonOffer = {
     saleClosesAt: "2026-09-29T16:00:00.000Z",
     cities: ["Paris", "Prague"],
   },
-  priceCents: 59_900,
+  priceCents: 10_000,
   currency: "USD",
   priceIncludesTax: false,
   cutoffHours: 24,
   checkout: "request_only",
   pricing: [
-    { number: 1, priceCents: 49_900, startsAt: null, endsAt: null },
-    { number: 2, priceCents: 59_900, startsAt: "2026-09-30T16:00:00.000Z", endsAt: "2026-10-07T16:00:00.000Z" },
-    { number: 3, priceCents: 69_900, startsAt: null, endsAt: null },
+    { number: 1, priceCents: 5_000, startsAt: null, endsAt: null },
+    { number: 2, priceCents: 10_000, startsAt: "2026-09-30T16:00:00.000Z", endsAt: "2026-10-07T16:00:00.000Z" },
+    { number: 3, priceCents: 5_000, startsAt: null, endsAt: null },
   ],
   ownerXUrl: "https://x.com/keephimwalking",
-  currentSponsor: { name: "Acme", seasonNumber: 1 },
+  currentSponsor: { name: "Acme", seasonNumber: 1, priceCents: 5_000 },
 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -36,7 +36,7 @@ describe("SeasonOfferDetails", () => {
     expect(screen.getByText("Wed 30 Sep 2026, 16:00 UTC")).toBeInTheDocument();
     expect(screen.getByText("Wed 7 Oct 2026, 16:00 UTC")).toBeInTheDocument();
     expect(screen.getByText("Tue 29 Sep 2026, 16:00 UTC")).toBeInTheDocument();
-    expect(screen.getByText("USD 599.00, one time")).toBeInTheDocument();
+    expect(screen.getByText("USD 100.00, one time")).toBeInTheDocument();
     expect(screen.getByText(/before tax/)).toBeInTheDocument();
     expect(screen.getByText(/does not reserve the season/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Request this season" })).toHaveAttribute("target", "_blank");
@@ -62,8 +62,8 @@ describe("SeasonSponsorOffer", () => {
     const fetchMock = vi.fn(async () => Response.json(offer));
     vi.stubGlobal("fetch", fetchMock);
     render(<SeasonSponsorOffer />);
-    expect(screen.getByText("Sponsor the next journey.")).toBeInTheDocument();
-    expect(screen.getByText("One sponsor. Seven days. $499.")).toBeInTheDocument();
+    expect(screen.getByText("Feature your product on the journey.")).toBeInTheDocument();
+    expect(screen.getByText("One featured sponsor. $50 to begin.")).toBeInTheDocument();
     expect(screen.getByText(/Audience size and results are not guaranteed\./)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId("season-offer-facts")).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith("/api/season-sponsor/offer", expect.anything());

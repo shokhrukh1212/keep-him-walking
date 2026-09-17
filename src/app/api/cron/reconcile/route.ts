@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rolloverUtcHour } from "@/lib/config/server";
 import { prewarmJourney } from "@/lib/launch/prewarm-service";
-import { reconcileSeasonHolds } from "@/lib/payments/season";
+import { reconcileSeasonHolds, reconcileSeasonRefunds } from "@/lib/payments/season";
 import { seasonBoundaryHourAt } from "@/lib/season/clock";
 import { loadSeasons, reconcileSeasonsNow } from "@/lib/season/state";
 import { minuteReconciliationPlan } from "@/lib/story-clock/boundary";
@@ -29,10 +29,11 @@ export async function GET(request: NextRequest) {
     // once no payment can arrive. All are idempotent, so repeats change nothing.
     const seasons = supabase ? await reconcileSeasonsNow(supabase, now) : null;
     const holds = supabase ? await reconcileSeasonHolds(supabase, now) : null;
+    const refunds = supabase ? await reconcileSeasonRefunds(supabase, now) : null;
     const prewarm = plan.prewarmDue
       ? await prewarmJourney(process.env.PRODUCTION_APP_URL || request.nextUrl.origin, now)
       : null;
-    return NextResponse.json({ ok: prewarm?.ok ?? true, boundary: plan.boundary.toISOString(), boundaryHour, rollover, seasons, holds, prewarm }, {
+    return NextResponse.json({ ok: prewarm?.ok ?? true, boundary: plan.boundary.toISOString(), boundaryHour, rollover, seasons, holds, refunds, prewarm }, {
       status: prewarm && !prewarm.ok ? 503 : 200,
       headers: { "Cache-Control": "no-store" },
     });

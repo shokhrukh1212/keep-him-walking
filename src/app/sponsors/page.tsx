@@ -69,13 +69,13 @@ export default async function SponsorsPage() {
       <section className={styles.priceSchedule} aria-labelledby="season-pricing">
         <div>
           <span className={styles.eyebrow}>SEASON 1 PRICE</span>
-          <h2 id="season-pricing">One placement for all seven days</h2>
+          <h2 id="season-pricing">One featured placement at a time</h2>
         </div>
         <ol>
           <li>
             <span>Season 1</span>
             <strong>{formatUsdCents(SEASON_SPONSOR_PRICE_CENTS)}</strong>
-            <small>One-time price before applicable tax</small>
+            <small>Starting price before applicable tax; each replacement doubles the current price</small>
           </li>
         </ol>
       </section>
@@ -111,9 +111,9 @@ export default async function SponsorsPage() {
               {checkoutEnabled
                 ? <li>Approved material receives a secure payment link. The season is held for you for {seasonHoldMinutes()} minutes while you pay.</li>
                 : <li>Payment is not open yet: our payment provider is still reviewing this advertising offer. Until then a request takes no payment and reserves nothing.</li>}
-              <li>Once the payment processor confirms payment, your placement starts automatically when the season starts and ends when it ends.</li>
+              <li>Once the payment processor confirms payment, your placement starts for the remaining journey period. A replacement receives that period and the displaced sponsor receives a full refund.</li>
             </ol>
-            <p className={styles.detailNote}>One sponsor per season. Material and booking close 24 hours before the season starts.</p>
+            <p className={styles.detailNote}>One featured sponsor at a time. The first price is USD 50.00; each replacement doubles the current sponsor&apos;s price.</p>
           </section>
         </div>
 
@@ -126,7 +126,7 @@ export default async function SponsorsPage() {
         </aside> : null}
       </div>
 
-      <LegalFooter lead="One sponsor. Seven days. One journey." />
+      <LegalFooter lead="One featured sponsor at a time." />
     </div>
   </main>;
 }

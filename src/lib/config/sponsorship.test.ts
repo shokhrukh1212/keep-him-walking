@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   legacyPurchasesOpen,
   seasonCheckoutState,
+  featuredSponsorPriceCents,
   seasonHoldGraceMinutes,
   seasonHoldMinutes,
   seasonPriceIncludesTax,
@@ -19,7 +20,7 @@ const dodo: Record<string, string | undefined> = {
   SPONSOR_PAYMENT_PROVIDER: "dodo",
   DODO_PAYMENTS_API_KEY: "key",
   DODO_PAYMENTS_WEBHOOK_SECRET: "whsec_c2VjcmV0",
-  DODO_SEASON_PRODUCT_ID: "pdt_season",
+  DODO_SPONSOR_PRODUCT_ID: "pdt_season",
 };
 
 describe("sponsorship mode", () => {
@@ -47,10 +48,13 @@ describe("sponsorship mode", () => {
   });
 
   it("keeps the configured season prices and optional X contact explicit", () => {
-    expect(seasonSponsorPriceCents(1)).toBe(49_900);
-    expect(seasonSponsorPriceCents(2)).toBe(59_900);
-    expect(seasonSponsorPriceCents(3)).toBe(69_900);
+    expect(seasonSponsorPriceCents(1)).toBe(5_000);
+    expect(seasonSponsorPriceCents(2)).toBe(5_000);
+    expect(seasonSponsorPriceCents(3)).toBe(5_000);
     expect(seasonSponsorPriceCents(4)).toBeNull();
+    expect(featuredSponsorPriceCents(null)).toBe(5_000);
+    expect(featuredSponsorPriceCents(5_000)).toBe(10_000);
+    expect(() => featuredSponsorPriceCents(4_999)).toThrow("Invalid current featured-sponsor price");
     expect(seasonSponsorXUrl({ NEXT_PUBLIC_SPONSOR_X_URL: "https://x.com/owner" })).toBe("https://x.com/owner");
     expect(seasonSponsorXUrl({ NEXT_PUBLIC_SPONSOR_X_URL: "https://example.com/owner" })).toBeNull();
   });
@@ -68,7 +72,7 @@ describe("season checkout gate", () => {
     expect(seasonCheckoutState({ SPONSORSHIP_MODE: "season" })).toEqual({ enabled: false, reason: "booking_disabled" });
     expect(seasonCheckoutState({ ...dodo, SPONSORSHIP_MODE: "daily" })).toEqual({ enabled: false, reason: "legacy_mode" });
     expect(seasonCheckoutState({ ...dodo, SPONSOR_PROVIDER_APPROVED: "false" })).toEqual({ enabled: false, reason: "provider_unapproved" });
-    expect(seasonCheckoutState({ ...dodo, DODO_SEASON_PRODUCT_ID: "" })).toEqual({ enabled: false, reason: "provider_unconfigured" });
+    expect(seasonCheckoutState({ ...dodo, DODO_SPONSOR_PRODUCT_ID: "" })).toEqual({ enabled: false, reason: "provider_unconfigured" });
     expect(seasonCheckoutState({ ...dodo, SPONSOR_PAYMENT_PROVIDER: "lemonsqueezy" })).toEqual({ enabled: false, reason: "provider_unconfigured" });
   });
 
@@ -79,12 +83,12 @@ describe("season checkout gate", () => {
       .toEqual({ enabled: true, provider: "dodo", testMode: false });
   });
 
-  it("requires the fixed-price product configured for the selected season", () => {
+  it("uses the one dynamic-price product for every replacement", () => {
     const products = { ...dodo, DODO_SEASON_2_PRODUCT_ID: "pdt_season_2" };
     expect(seasonProductId(1, products)).toBe("pdt_season");
-    expect(seasonProductId(2, products)).toBe("pdt_season_2");
+    expect(seasonProductId(2, products)).toBe("pdt_season");
     expect(seasonCheckoutState(products, 2)).toEqual({ enabled: true, provider: "dodo", testMode: true });
-    expect(seasonCheckoutState(dodo, 2)).toEqual({ enabled: false, reason: "provider_unconfigured" });
+    expect(seasonCheckoutState(dodo, 2)).toEqual({ enabled: true, provider: "dodo", testMode: true });
   });
 
   it("allows the no-money fixture only in an explicit non-production rehearsal", () => {

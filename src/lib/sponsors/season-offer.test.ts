@@ -33,15 +33,14 @@ describe("earliest eligible season", () => {
     expect(earliestEligibleSeason([two, one], new Set(), first - 3 * DAY, 24)).toBe(one);
   });
 
-  it("offers the next season once the earlier one is paid for", () => {
+  it("can retain the historical paid-season filter for servicing old bookings", () => {
     expect(earliestEligibleSeason([one, two], new Set(["j1"]), first - 3 * DAY, 24)).toBe(two);
   });
 
-  it("never sells a season that started unsponsored, or inside the 24-hour cutoff", () => {
-    expect(earliestEligibleSeason([{ ...one, status: "active" }, two], new Set(), first + DAY, 24)).toBe(two);
-    expect(earliestEligibleSeason([one], new Set(), first - DAY, 24)).toBeNull();
-    expect(earliestEligibleSeason([one], new Set(), first - DAY - 1, 24)).toBe(one);
-    expect(earliestEligibleSeason([one], new Set(), first - 2 * DAY, 72)).toBeNull();
+  it("keeps a live journey available until it ends, regardless of the retired cutoff", () => {
+    expect(earliestEligibleSeason([{ ...one, status: "active" }, two], new Set(), first + DAY, 24)).toEqual({ ...one, status: "active" });
+    expect(earliestEligibleSeason([one], new Set(), first - DAY, 24)).toBe(one);
+    expect(earliestEligibleSeason([one], new Set(), first - 2 * DAY, 72)).toBe(one);
   });
 
   it("offers nothing when no future season is configured", () => {
@@ -52,7 +51,7 @@ describe("earliest eligible season", () => {
 
 describe("offer wording", () => {
   it("keeps the approved copy exactly", () => {
-    expect(SEASON_OFFER_COPY.headline).toBe("One sponsor. Seven days. $499.");
+    expect(SEASON_OFFER_COPY.headline).toBe("One featured sponsor. $50 to begin.");
     expect(SEASON_OFFER_COPY.body).toContain("Audience size and results are not guaranteed.");
     expect(SEASON_OFFER_COPY.body).toContain("One-time payment; no renewal.");
   });
@@ -60,15 +59,15 @@ describe("offer wording", () => {
   it("prints exact UTC dates, the cutoff and the price", () => {
     expect(formatSeasonInstant("2026-09-23T16:00:00Z")).toBe("Wed 23 Sep 2026, 16:00 UTC");
     expect(saleClosesAt("2026-09-23T16:00:00Z", 24)).toBe("2026-09-22T16:00:00.000Z");
-    expect(formatUsdCents()).toBe("USD 499.00");
+    expect(formatUsdCents()).toBe("USD 50.00");
     expect(formatUsdCents(59_900)).toBe("USD 599.00");
-    expect(seasonOfferHeadline(69_900)).toBe("One sponsor. Seven days. $699.");
+    expect(seasonOfferHeadline(10_000)).toBe("One featured sponsor. $100.");
   });
 
   it("never claims the price includes tax unless configured so", () => {
     expect(seasonTaxNote(false)).toContain("before tax");
     expect(seasonTaxNote(false)).toContain("shown at checkout before you pay");
-    expect(seasonTaxNote(true)).toBe("USD 499.00 includes any tax the payment processor collects.");
+    expect(seasonTaxNote(true)).toBe("USD 50.00 includes any tax the payment processor collects.");
     expect(seasonTaxNote(true, 59_900)).toBe("USD 599.00 includes any tax the payment processor collects.");
   });
 });

@@ -2,9 +2,9 @@ import { SEASON_SPONSOR_PRICE_CENTS } from "@/lib/config/sponsorship";
 
 /** The offer, word for word. Nothing here promises traffic, posts, leads or sales. */
 export const SEASON_OFFER_COPY = {
-  lead: "Sponsor the next journey.",
-  headline: "One sponsor. Seven days. $499.",
-  body: "Your product appears beside the journey throughout the season, in Journey, and in the season recap. Includes your logo, name and website link. One-time payment; no renewal. Audience size and results are not guaranteed.",
+  lead: "Feature your product on the journey.",
+  headline: "One featured sponsor. $50 to begin.",
+  body: "One featured sponsor appears beside the journey. A replacement pays twice the current sponsor's price and the displaced sponsor receives a full refund. Material is reviewed before payment. One-time payment; no renewal. Audience size and results are not guaranteed.",
 } as const;
 
 export type OfferSeason = {
@@ -25,9 +25,10 @@ export function saleClosesAt(startsAt: string, cutoffHours: number): string {
 }
 
 /**
- * The one season on offer: the earliest configured future season that nobody has
- * paid for and that still leaves the full review window. A season that already
- * started is never sold as seven days, and no calendar of future weeks is built.
+ * The one journey on offer: a featured placement remains available until the journey
+ * ends, including while an incumbent is live. The caller supplies an empty paid set for
+ * the replacement offer; retaining the parameter keeps the retired fixed-season caller
+ * compatible while its records are serviced.
  */
 export function earliestEligibleSeason(
   seasons: readonly OfferSeason[],
@@ -35,9 +36,11 @@ export function earliestEligibleSeason(
   nowMs: number,
   cutoffHours: number,
 ): OfferSeason | null {
+  // Kept in the signature for the retired fixed-season caller; replacements use the journey end.
+  void cutoffHours;
   return [...seasons]
     .filter((season) => ["draft", "preview", "active"].includes(season.status))
-    .filter((season) => Date.parse(saleClosesAt(season.startsAt, cutoffHours)) > nowMs)
+    .filter((season) => Date.parse(season.endsAt) > nowMs)
     .filter((season) => !paidJourneyIds.has(season.id))
     .sort((left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt))[0] ?? null;
 }
@@ -61,7 +64,7 @@ export function formatUsdCents(cents: number = SEASON_SPONSOR_PRICE_CENTS): stri
 }
 
 export function seasonOfferHeadline(cents: number = SEASON_SPONSOR_PRICE_CENTS): string {
-  return `One sponsor. Seven days. $${(cents / 100).toFixed(0)}.`;
+  return `One featured sponsor. $${(cents / 100).toFixed(0)}.`;
 }
 
 /** Tax is whatever the approved processor is configured to do; the price never claims more. */

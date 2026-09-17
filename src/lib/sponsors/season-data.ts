@@ -4,10 +4,10 @@ import {
   SEASON_SPONSOR_CURRENCY,
   SEASON_SPONSOR_PRICE_CENTS,
   SEASON_SPONSOR_PRICES_CENTS,
+  featuredSponsorPriceCents,
   seasonCheckoutState,
   seasonPriceIncludesTax,
   seasonSaleCutoffHours,
-  seasonSponsorPriceCents,
   seasonSponsorXUrl,
 } from "@/lib/config/sponsorship";
 import { serverRuntimeConfig } from "@/lib/config/server";
@@ -33,8 +33,8 @@ export type SeasonOffer = {
   checkout: "enabled" | "request_only";
   pricing: Array<{ number: number; priceCents: number; startsAt: string | null; endsAt: string | null }>;
   ownerXUrl: string | null;
-  /** The live season's sponsor, so the offer can say the current week is taken. */
-  currentSponsor: { name: string; seasonNumber: number } | null;
+  /** The incumbent may be replaced at twice this server-confirmed price. */
+  currentSponsor: { name: string; seasonNumber: number; priceCents: number } | null;
 };
 
 const PAID = ["scheduled", "active", "completed"];
@@ -72,11 +72,11 @@ export async function loadSeasonOffer(now = new Date()): Promise<SeasonOffer> {
   });
   if (!seasons.length) return { ...base, pricing };
   const { data: paid, error } = await supabase.from("season_sponsorships")
-    .select("journey_id").in("status", PAID).in("journey_id", seasons.map((season) => season.id));
+    .select("journey_id,product_name,price_cents,status").in("status", PAID).in("journey_id", seasons.map((season) => season.id));
   if (error) throw error;
   const eligible = earliestEligibleSeason(
     seasons.filter((season) => priceBySeason.has(season.number)).map((season) => ({ ...season, cities: [] })),
-    new Set((paid ?? []).map((row) => String(row.journey_id))),
+    new Set(),
     now.getTime(),
     base.cutoffHours,
   );
@@ -89,9 +89,12 @@ export async function loadSeasonOffer(now = new Date()): Promise<SeasonOffer> {
   }
   const phase = seasonPhaseAt(seasons, now.getTime());
   const sponsor = phase.kind === "live" ? await seasonSponsorFor(supabase, phase.current, "live") : null;
+  const currentPayment = eligible
+    ? (paid ?? []).find((row) => String(row.journey_id) === eligible.id && ["scheduled", "active"].includes(String(row.status)))
+    : null;
   return {
     ...base,
-    priceCents: eligible ? priceBySeason.get(eligible.number) ?? base.priceCents : base.priceCents,
+    priceCents: eligible ? featuredSponsorPriceCents(currentPayment ? Number(currentPayment.price_cents) : null) : base.priceCents,
     checkout: eligible && seasonCheckoutState(process.env, eligible.number).enabled ? "enabled" : "request_only",
     pricing,
     season: eligible ? {
@@ -103,7 +106,11 @@ export async function loadSeasonOffer(now = new Date()): Promise<SeasonOffer> {
       saleClosesAt: saleClosesAt(eligible.startsAt, base.cutoffHours),
       cities,
     } : null,
-    currentSponsor: sponsor ? { name: sponsor.name, seasonNumber: sponsor.seasonNumber } : null,
+    currentSponsor: sponsor ? {
+      name: sponsor.name,
+      seasonNumber: sponsor.seasonNumber,
+      priceCents: currentPayment ? Number(currentPayment.price_cents) : base.priceCents,
+    } : null,
   };
 }
 
@@ -154,19 +161,17 @@ export async function loadSeasonRequest(publicId: string, now = new Date()): Pro
     season_number: number; title: string; starts_at: string; ends_at: string;
   } | null;
   if (!season) return null;
-  const closesAt = saleClosesAt(season.starts_at, seasonSaleCutoffHours());
+  const closesAt = season.ends_at;
   const checkoutAvailable = seasonCheckoutState(process.env, Number(season.season_number)).enabled;
   const bookingClosed = Date.parse(closesAt) <= now.getTime();
   const scheduleChanged = Date.parse(String(data.quoted_starts_at)) !== Date.parse(season.starts_at)
     || Date.parse(String(data.quoted_ends_at)) !== Date.parse(season.ends_at);
-  const quoteChanged = Number(data.price_cents) !== seasonSponsorPriceCents(Number(season.season_number));
-  const { count: paidCount, error: paidError } = await supabase.from("season_sponsorships")
-    .select("id", { count: "exact", head: true })
-    .eq("journey_id", String(data.journey_id))
-    .neq("id", String(data.id))
-    .in("status", PAID);
+  const { data: incumbent, error: paidError } = await supabase.from("season_sponsorships")
+    .select("price_cents").eq("journey_id", String(data.journey_id)).neq("id", String(data.id))
+    .in("status", ["scheduled", "active"]).maybeSingle();
   if (paidError) throw paidError;
-  const seasonAvailable = (paidCount ?? 0) === 0;
+  const quoteChanged = Number(data.price_cents) !== featuredSponsorPriceCents(incumbent ? Number(incumbent.price_cents) : null);
+  const seasonAvailable = Date.parse(season.ends_at) > now.getTime();
   return {
     publicId: String(data.public_id),
     status: String(data.status),

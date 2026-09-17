@@ -114,6 +114,7 @@ export function seasonPaymentFacts(payment: unknown, productId: string): SeasonP
 
 export function dodoCheckoutBody(input: {
   productId: string;
+  amountCents: number;
   customerEmail: string;
   customerName: string;
   returnUrl: string;
@@ -122,7 +123,9 @@ export function dodoCheckoutBody(input: {
   seasonNumber: number;
 }) {
   return {
-    product_cart: [{ product_id: input.productId, quantity: 1 }],
+    // Dodo's one-time PWYW product accepts this server-owned amount. The browser
+    // never supplies it, and Postgres independently verifies the resulting payment.
+    product_cart: [{ product_id: input.productId, quantity: 1, amount: input.amountCents }],
     customer: { email: input.customerEmail, name: input.customerName },
     return_url: input.returnUrl,
     metadata: {

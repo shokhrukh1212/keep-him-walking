@@ -86,7 +86,7 @@ const offer: SeasonOffer = (() => {
       { number: 3, priceCents: 69_900, startsAt: null, endsAt: null },
     ],
     ownerXUrl: "https://x.com/keephimwalking",
-    currentSponsor: { name: sponsor.name, seasonNumber: 1 },
+    currentSponsor: { name: sponsor.name, seasonNumber: 1, priceCents: 5_000 },
   };
 })();
 

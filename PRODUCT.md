@@ -23,7 +23,8 @@ The three sentences the interface actually says to visitors are:
   he is walking.
 - **"He's waiting for a watcher"** — shown when nobody is present.
 
-The journey runs in seven-day seasons, one city a day. Each season can have one sponsor,
+Season 1 is a 14-day virtual journey, one country and city per Asia/Tashkent calendar day,
+17–30 September 2026. A season can have one sponsor,
 disclosed in a quiet line beside the journey — never on him.
 
 ---
@@ -69,12 +70,12 @@ number the server has not confirmed. When something is unknown, the interface sa
 **Journey → country-days → route zones → story beats.**
 
 - A **journey** is a fixed-length run of consecutive country-days with a launch
-  timestamp. Season 1 is a 30-day journey. The approved launch route begins in
-  **London**; the Day-1 ballot names him Milo, Nur, Sami or Bek, and the reviewed
-  Day-2 fallback is **Paris by train**. Belgium and Germany are the first later route
-  priorities. A country is public only when its versioned art and cultural review are
-  ready—the older Central Asia and southeast-Europe packs remain rehearsal/rollback
-  content, not the current launch order.
+  timestamp. Season 1 runs from midnight on 17 September to midnight on 1 October in
+  Asia/Tashkent. The ordered virtual route is Paris, Brussels, Amsterdam, Cologne,
+  Prague, Vienna, Bratislava, Budapest, Ljubljana, Zagreb, Belgrade, Sofia, Istanbul,
+  Tashkent. Brussels, Amsterdam, Cologne and Budapest still need city paintings and
+  reviewed city packs; until those exist their entries use an explicitly generic safe fallback.
+  Production's stored schedule must be replanned before this new order is live.
 
 - A **country-day** is a 24-hour window with its own city, timezone, local clock
   display, content pack, sponsor slot, daily vote and postcard. Days cannot overlap —
@@ -276,11 +277,10 @@ precipitation or freshness claim in the interface.
 
 ## 7. The sponsor model
 
-**One sponsor. Seven days.** Each seven-day season can have one sponsor. The configured
-one-time prices are Season 1 USD 499.00, Season 2 USD 599.00 and Season 3 USD 699.00,
-with no renewal. A request keeps the price quoted when it was submitted. These are launch
-prices to validate, not promised revenue or promised value. Watching, reactions and votes
-stay free.
+**One featured sponsor at a time.** The first sponsor is USD 50.00. Each replacement pays
+twice the current sponsor's server-confirmed price ($50 → $100 → $200 → $400…), receives the
+remaining journey period, and displaces the prior sponsor with a full refund. Material is
+reviewed before payment; watching, reactions and votes stay free.
 
 - **What the sponsor gets.** A disclosed line, "Season supported by [logo] [name] ↗",
   beside the journey on every day of the season; one row in Journey with a short factual
@@ -288,14 +288,14 @@ stay free.
   season recap. Links open in a new tab.
 - **What it is not.** Nothing on his clothes or backpack, nothing in conversations, no
   banner, and no promised posts, impressions, leads or sales.
-- **How it is sold.** `/sponsors` publishes the exact offer and the one season on sale: the
-  earliest scheduled season nobody has paid for, with its exact UTC dates, cities and price.
-  A season that already started runs unsponsored. The sponsor sends material, it is reviewed
-  by hand, and only approved material can be paid for, until 24 hours before the start. The
-  database admits one paid sponsor per season; a late or second payment is refunded.
-- **Today.** Payment waits for the payment provider to approve this offer, so the button
-  says "Request this season" and a request takes no money and reserves nothing. An approved
-  request stays approved and continues from its private link after checkout opens.
+- **How it is sold.** `/sponsors` publishes the exact offer and the current journey period.
+  The sponsor sends material, it is reviewed by hand, and only approved material can be paid
+  for. The database fixes the quoted replacement price under the journey row lock; a late,
+  duplicate or mismatched payment is refunded.
+- **Today.** Paid checkout remains behind the owner activation gate while paid terms are
+  incomplete, so the button says "Request this season" and a request takes no money or
+  reservation. An approved request stays approved and continues from its private link after
+  checkout opens.
 
 ### Daily mode (kept for rollback, `SPONSORSHIP_MODE=daily`)
 
