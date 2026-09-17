@@ -5,8 +5,10 @@ import { useJourneyAudio } from "./useJourneyAudio";
 class FakeAudio {
   loop = false;
   volume = 1;
+  preload = "";
   play = vi.fn().mockResolvedValue(undefined);
   pause = vi.fn();
+  addEventListener = vi.fn();
 }
 
 afterEach(() => {
@@ -23,7 +25,7 @@ describe("useJourneyAudio", () => {
     await waitFor(() => expect(result.current.resumesOnTap).toBe(true));
 
     // Their first gesture brings it back; nothing plays before that.
-    await act(async () => { window.dispatchEvent(new Event("pointerdown")); });
+    await act(async () => { window.dispatchEvent(new Event("click")); });
     await waitFor(() => expect(result.current.enabled).toBe(true));
 
     await act(async () => { await result.current.toggle(); });
@@ -35,13 +37,36 @@ describe("useJourneyAudio", () => {
   it("does nothing on a tap when sound was never turned on", async () => {
     vi.stubGlobal("Audio", FakeAudio);
     const { result, unmount } = renderHook(() => useJourneyAudio());
-    await act(async () => { window.dispatchEvent(new Event("pointerdown")); });
+    await act(async () => { window.dispatchEvent(new Event("click")); });
     expect(result.current.enabled).toBe(false);
     expect(result.current.resumesOnTap).toBe(false);
 
     await act(async () => { await result.current.toggle(); });
     expect(result.current.enabled).toBe(true);
     expect(window.localStorage.getItem("khw_sound")).toBe("on");
+    unmount();
+  });
+
+  it("keeps the toggle usable when the browser refuses to play without a gesture", async () => {
+    class RefusedAudio extends FakeAudio {
+      play = vi.fn().mockRejectedValue(new DOMException("gesture required", "NotAllowedError"));
+    }
+    vi.stubGlobal("Audio", RefusedAudio);
+    const { result, unmount } = renderHook(() => useJourneyAudio());
+    await act(async () => { await result.current.toggle(); });
+    expect(result.current.enabled).toBe(false);
+    expect(result.current.available).toBe(true);
+    unmount();
+  });
+
+  it("marks sound unavailable only when the file cannot be played", async () => {
+    class BrokenAudio extends FakeAudio {
+      play = vi.fn().mockRejectedValue(new DOMException("no source", "NotSupportedError"));
+    }
+    vi.stubGlobal("Audio", BrokenAudio);
+    const { result, unmount } = renderHook(() => useJourneyAudio());
+    await act(async () => { await result.current.toggle(); });
+    expect(result.current.available).toBe(false);
     unmount();
   });
 });
