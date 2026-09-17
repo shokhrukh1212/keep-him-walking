@@ -14,7 +14,7 @@ import { serverRuntimeConfig } from "@/lib/config/server";
 import { seasonPhaseAt } from "@/lib/season/clock";
 import { loadSeasons, seasonSponsorFor } from "@/lib/season/state";
 import { getServerSupabase } from "@/lib/supabase/server";
-import { earliestEligibleSeason, saleClosesAt } from "./season-offer";
+import { earliestEligibleSeason } from "./season-offer";
 
 export type SeasonOffer = {
   season: {
@@ -103,7 +103,9 @@ export async function loadSeasonOffer(now = new Date()): Promise<SeasonOffer> {
       title: eligible.title,
       startsAt: eligible.startsAt,
       endsAt: eligible.endsAt,
-      saleClosesAt: saleClosesAt(eligible.startsAt, base.cutoffHours),
+      // A featured placement can be taken until the journey ends, so the pre-start
+      // cutoff no longer closes it; the requester's view already reads it this way.
+      saleClosesAt: eligible.endsAt,
       cities,
     } : null,
     currentSponsor: sponsor ? {

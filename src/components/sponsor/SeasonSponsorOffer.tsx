@@ -82,10 +82,10 @@ export function SeasonOfferDetails({ offer }: { offer: SeasonOffer }) {
           </p> : null}
         </>
       ) : <p className="booking-off">
-        Checkout is available after material approval. A new request is not booked until its payment is confirmed.
+        Enter your details and continue straight to checkout. The placement is not booked until its payment is confirmed.
       </p>}
       <a className="primary-button season-offer-cta" href="/sponsors#request" target="_blank" rel="noopener">
-        {offer.checkout === "enabled" ? "Submit for review" : "Request this season"}
+        {offer.checkout === "enabled" ? "Sponsor this season" : "Request this season"}
       </a>
     </>
   );

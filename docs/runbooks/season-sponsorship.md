@@ -12,7 +12,11 @@ each part on. Everything below is off or request-only until you do it.
 - **Featured placement.** The first approved sponsor is USD 50.00. A replacement is quoted
   twice the current sponsor's server-confirmed price. After verified payment the replacement
   receives the remaining journey period and the displaced sponsor's full payment enters the
-  Dodo refund ledger. Material is reviewed before payment.
+  Dodo refund ledger. Material is **not** reviewed before payment: a sponsor fills in the
+  form on `/sponsors` and goes straight to the Dodo checkout. The logo is published to its
+  public path and the request approved by the server in the same call, but nothing shows
+  beside the journey until Dodo confirms the payment. The private admin list still has
+  `remove` and `require_refund` for anything that breaks the moderation policy.
 - **Until checkout is approved,** the Sponsor button and `/sponsors` say
   "Request this season". A request takes no payment and reserves nothing. Approval leaves
   it approved and awaiting checkout; the same private link continues once checkout opens.

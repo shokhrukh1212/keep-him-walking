@@ -18,13 +18,13 @@ export default function ContentModerationPage() {
       <section>
         <span className="legal-section-number">01</span>
         <h2>No open publishing</h2>
-        <p>Visitors cannot independently publish public posts or listings. Sponsorship is not currently sold through the site; this policy applies to any sponsor material considered after an inquiry and to any listing already shown. Sponsor material is never automatically published. The corrections queue is private and does not publish visitor text.</p>
+        <p>Visitors cannot independently publish public posts or listings. This policy applies to every sponsor submission and to any listing already shown. The corrections queue is private and does not publish visitor text.</p>
       </section>
 
       <section>
         <span className="legal-section-number">02</span>
-        <h2>Manual review before payment or publication</h2>
-        <p>Every sponsor submission is manually reviewed before approval and before it can proceed to payment or publication. Submission is only an application: it is not acceptance, a reservation or a purchase. Approval of material is not an endorsement of the sponsor, and Dodo Payments does not endorse or approve an individual sponsor merely because its payment service may be used.</p>
+        <h2>Review and removal</h2>
+        <p>A sponsor submits its own material and pays directly; it is not reviewed beforehand. Every submission and every published placement is checked against this policy and may be removed at any time, with a refund of the amount paid, if it breaks the rules below. Submitting material is not acceptance: a placement exists only once the payment processor confirms the payment. Publication is not an endorsement of the sponsor, and Dodo Payments does not endorse or approve an individual sponsor merely because its payment service may be used.</p>
       </section>
 
       <section>

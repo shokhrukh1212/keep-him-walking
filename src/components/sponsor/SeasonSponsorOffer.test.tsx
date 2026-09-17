@@ -43,9 +43,10 @@ describe("SeasonOfferDetails", () => {
     expect(screen.getByRole("link", { name: /Message me on X/ })).toHaveAttribute("href", "https://x.com/keephimwalking");
   });
 
-  it("still requires review and hides the secondary contact when checkout is enabled", () => {
+  it("sends the visitor straight to checkout and hides the secondary contact when checkout is enabled", () => {
     render(<SeasonOfferDetails offer={{ ...offer, checkout: "enabled", currentSponsor: null }} />);
-    expect(screen.getByRole("link", { name: "Submit for review" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sponsor this season" })).toBeInTheDocument();
+    expect(screen.getByText(/continue straight to checkout/)).toBeInTheDocument();
     expect(screen.queryByText(/does not reserve the season/)).toBeNull();
     expect(screen.queryByRole("link", { name: /Message me on X/ })).toBeNull();
   });

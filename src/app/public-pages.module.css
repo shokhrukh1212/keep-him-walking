@@ -221,6 +221,11 @@
 .priceSchedule li > span { color: var(--muted); font-size: .66rem; }
 .priceSchedule li > strong { color: var(--paper); font-size: .9rem; font-weight: 500; }
 .priceSchedule li > small { color: var(--muted); font-size: .58rem; line-height: 1.4; }
+.priceSchedule > div > p { margin: .7rem 0 0; color: var(--muted); font-size: .82rem; line-height: 1.55; }
+/* The step a new sponsor would actually pay today. */
+.priceSchedule li[aria-current="true"] { border-left-color: var(--gold); }
+.priceSchedule li[aria-current="true"] > strong,
+.priceSchedule li[aria-current="true"] > small { color: var(--gold); }
 
 .sponsorDetails {
   display: grid;

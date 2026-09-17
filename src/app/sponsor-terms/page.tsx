@@ -5,40 +5,40 @@ import { SPONSOR_INQUIRY_COPY, formatLadder, replacementPriceLadder, PROPOSED_ST
 
 export const metadata: Metadata = {
   title: "Sponsor Terms — Keep Him Walking",
-  description: "The proposed sponsorship for Keep Him Walking: not yet available, pending payment-provider approval, inquiries by message on X.",
+  description: "The sponsor terms for Keep Him Walking: one featured sponsor at a time, $50 to begin, each replacement pays double and the sponsor it replaces is refunded in full.",
 };
 
 export default function SponsorTermsPage() {
   return (
     <LegalPage
       title="Sponsor Terms"
-      eyebrow="PROPOSED · NOT YET AVAILABLE"
+      eyebrow="IN EFFECT"
       testId="sponsor-terms-page"
-      summary="Sponsorship is not currently sold through Keep Him Walking. These terms describe the proposed sponsorship offered by Shokhrukh Karimov, which is awaiting payment-provider approval."
+      summary="These terms govern the one featured sponsorship sold through Keep Him Walking by Shokhrukh Karimov. Payment is taken by Dodo Payments; a placement exists only once that processor confirms the payment."
     >
       <section>
         <span className="legal-section-number">01</span>
         <h2>Current status</h2>
-        <p>Checkout is unavailable while the payment provider reviews the proposal. No bid, request, payment or reservation is accepted through the site. Sponsorship can be discussed by message on X through <Link href="/contact">Contact &amp; support</Link>. A conversation is not an agreement, a reservation or a purchase.</p>
+        <p>Checkout is open. A sponsor enters its details on <Link href="/sponsors">Sponsor a season</Link> and continues straight to the payment page; nothing is reviewed or approved beforehand. Submitting details is not an agreement, a reservation or a purchase: the placement exists only once Dodo Payments confirms the payment.</p>
       </section>
 
       <section>
         <span className="legal-section-number">02</span>
-        <h2>The proposal</h2>
-        <p>{SPONSOR_INQUIRY_COPY.headline}. The proposed starting price is USD {PROPOSED_STARTING_PRICE_USD}. {SPONSOR_INQUIRY_COPY.oneAtATime}</p>
-        <p>Under the proposed future rule, each replacement sponsor would pay twice the current sponsor’s price ({formatLadder(replacementPriceLadder(PROPOSED_STARTING_PRICE_USD, 4))}). The displaced sponsor would receive a full refund, and the replacement would receive the remaining travel period. The placement, dates, tax handling and refund steps would be published in full before any payment is accepted, and the proposal may change before then.</p>
+        <h2>What is sold</h2>
+        <p>{SPONSOR_INQUIRY_COPY.headline}. The starting price is USD {PROPOSED_STARTING_PRICE_USD}. {SPONSOR_INQUIRY_COPY.oneAtATime}</p>
+        <p>Each replacement sponsor pays twice the current sponsor’s price ({formatLadder(replacementPriceLadder(PROPOSED_STARTING_PRICE_USD, 4))}), and the doubling continues from there. The displaced sponsor receives a full refund and the replacement receives the remaining travel period. The exact price, dates, tax handling and refund steps are published on <Link href="/sponsors">Sponsor a season</Link> and shown at checkout before payment.</p>
       </section>
 
       <section>
         <span className="legal-section-number">03</span>
         <h2>No promised audience or outcome</h2>
-        <p>Any sponsorship would be advertising space on this website. No traffic, uptime level, impressions, clicks, watch time, leads, conversions or sales are guaranteed. Any first-party view and click counts are informational, privacy-protected measurements rather than billing commitments. Watching, reactions and votes remain free, and sponsorship never influences a vote.</p>
+        <p>Sponsorship is advertising space on this website. No traffic, uptime level, impressions, clicks, watch time, leads, conversions or sales are guaranteed. Any first-party view and click counts are informational, privacy-protected measurements rather than billing commitments. Watching, reactions and votes remain free, and sponsorship never influences a vote.</p>
       </section>
 
       <section>
         <span className="legal-section-number">04</span>
         <h2>Review</h2>
-        <p>Any sponsor name, logo, description and destination URL would be manually reviewed under the <Link href="/content-moderation">Content and Listing Moderation Policy</Link> before publication. The sponsor must own or have permission to use every item it provides.</p>
+        <p>A sponsor name, logo, description and destination URL are not reviewed before payment. They are checked against the <Link href="/content-moderation">Content and Listing Moderation Policy</Link> once live and may be removed at any time, with a refund, if they break it. The sponsor must own or have permission to use every item it provides.</p>
       </section>
 
       <section>
@@ -50,8 +50,8 @@ export default function SponsorTermsPage() {
       <section>
         <span className="legal-section-number">06</span>
         <h2>Privacy, responsibility and contact</h2>
-        <p>Sponsorship inquiries on X are handled under X’s own terms and privacy policy. Any sponsor contact details later shared would be used privately for review, payment and support. See the <Link href="/privacy">Privacy Policy</Link>.</p>
-        <p>A sponsor would be responsible for its material, destination and legal compliance. Keep Him Walking is operated by Shokhrukh Karimov. A governing-law jurisdiction and forum have not yet been configured; checkout remains disabled and those details require owner confirmation before payment begins. Questions can be sent through <Link href="/contact">Contact &amp; support</Link>.</p>
+        <p>Sponsor contact details are used privately for payment, moderation and support, and are never published. See the <Link href="/privacy">Privacy Policy</Link>.</p>
+        <p>A sponsor is responsible for its material, destination and legal compliance. Keep Him Walking is operated by Shokhrukh Karimov. Questions, removal requests and refund requests can be sent through <Link href="/contact">Contact &amp; support</Link>.</p>
       </section>
     </LegalPage>
   );

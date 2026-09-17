@@ -11,9 +11,11 @@ import { SEASON_OFFER_COPY, formatSeasonInstant, formatUsdCents, seasonOfferHead
 import styles from "../public-pages.module.css";
 
 export const revalidate = 60;
+/** The published doubling ladder. The price actually charged is always the server's. */
+const PRICE_LADDER = [1, 2, 4, 8, 16].map((step) => SEASON_SPONSOR_PRICE_CENTS * step);
 export const metadata: Metadata = {
   title: "Sponsor a season",
-  description: "Feature your product on Keep Him Walking — The Anniversary Journey. Proposed starting price $50, one featured sponsor at a time, pending payment-provider approval. Message me on X; no payment is taken here.",
+  description: "Feature your product on Keep Him Walking — The Anniversary Journey. One featured sponsor at a time: $50 to begin, and each replacement pays twice the current price while the sponsor it replaces is refunded in full.",
 };
 
 /**
@@ -68,14 +70,30 @@ export default async function SponsorsPage() {
 
       <section className={styles.priceSchedule} aria-labelledby="season-pricing">
         <div>
-          <span className={styles.eyebrow}>SEASON 1 PRICE</span>
-          <h2 id="season-pricing">One featured placement at a time</h2>
+          <span className={styles.eyebrow}>HOW THE PRICE MOVES</span>
+          <h2 id="season-pricing">One featured placement. Each replacement pays double.</h2>
+          <p>
+            There is one featured sponsor at a time. The first pays {formatUsdCents(SEASON_SPONSOR_PRICE_CENTS)}.
+            Anyone who wants that place next pays twice what the sponsor holding it paid, and the sponsor they
+            replace is refunded in full. Nobody is ever outbid without getting their money back.
+          </p>
         </div>
-        <ol>
+        <ol data-testid="season-price-ladder">
+          {PRICE_LADDER.map((cents, index) => (
+            <li key={cents} aria-current={cents === (offer?.priceCents ?? SEASON_SPONSOR_PRICE_CENTS) ? "true" : undefined}>
+              <span>{index === 0 ? "First sponsor" : `Replacement ${index}`}</span>
+              <strong>{formatUsdCents(cents)}</strong>
+              <small>
+                {cents === (offer?.priceCents ?? SEASON_SPONSOR_PRICE_CENTS)
+                  ? "The price right now"
+                  : index === 0 ? "Starting price, before applicable tax" : "Twice the price before it"}
+              </small>
+            </li>
+          ))}
           <li>
-            <span>Season 1</span>
-            <strong>{formatUsdCents(SEASON_SPONSOR_PRICE_CENTS)}</strong>
-            <small>Starting price before applicable tax; each replacement doubles the current price</small>
+            <span>And so on</span>
+            <strong>×2</strong>
+            <small>The doubling continues for as long as the journey runs</small>
           </li>
         </ol>
       </section>
@@ -106,14 +124,22 @@ export default async function SponsorsPage() {
               <h2 id="how">How booking works</h2>
             </div>
             <ol className={styles.stepList}>
-              <li>Send your product name, website, a short description, your logo and a contact email.</li>
-              <li>We manually review the name, logo, description and destination website. Nothing is published or sent to payment before approval.</li>
-              {checkoutEnabled
-                ? <li>Approved material receives a secure payment link. The season is held for you for {seasonHoldMinutes()} minutes while you pay.</li>
-                : <li>Payment is not open yet: our payment provider is still reviewing this advertising offer. Until then a request takes no payment and reserves nothing.</li>}
-              <li>Once the payment processor confirms payment, your placement starts for the remaining journey period. A replacement receives that period and the displaced sponsor receives a full refund.</li>
+              <li>Fill in the form: your product name, website, a short description, your logo and a contact email.</li>
+              {checkoutEnabled ? <>
+                <li>You go straight to secure checkout — there is no waiting for approval. The place is held for you for {seasonHoldMinutes()} minutes while you pay.</li>
+                <li>The payment page shows the exact amount, plus any tax it calculates from your billing details, before you pay. Card details are handled by the payment processor; they never reach this website.</li>
+                <li>Once the processor confirms the payment, your placement starts immediately and runs for the rest of the journey. Nothing appears on the site before that confirmation.</li>
+                <li>If someone later replaces you at twice your price, they take the remaining period and you are refunded in full, automatically.</li>
+              </> : <>
+                <li>Payment is not open yet: our payment provider is still reviewing this advertising offer. Until then a request takes no payment and reserves nothing.</li>
+                <li>Once the payment processor confirms payment, your placement starts for the remaining journey period. A replacement receives that period and the displaced sponsor receives a full refund.</li>
+              </>}
             </ol>
-            <p className={styles.detailNote}>One featured sponsor at a time. The first price is USD 50.00; each replacement doubles the current sponsor&apos;s price.</p>
+            <p className={styles.detailNote}>
+              We do not vet your material before you pay. We do keep the right to remove a placement and refund it if
+              it breaks the <Link href="/content-moderation">Content &amp; Listing Moderation Policy</Link> — for
+              example adult content, hate, weapons, drugs, scams or impersonation. Read it before you pay.
+            </p>
           </section>
         </div>
 

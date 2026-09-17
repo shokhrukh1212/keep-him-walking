@@ -4,7 +4,7 @@ import { SEASON_SPONSOR_PRICE_CENTS } from "@/lib/config/sponsorship";
 export const SEASON_OFFER_COPY = {
   lead: "Feature your product on the journey.",
   headline: "One featured sponsor. $50 to begin.",
-  body: "One featured sponsor appears beside the journey. A replacement pays twice the current sponsor's price and the displaced sponsor receives a full refund. Material is reviewed before payment. One-time payment; no renewal. Audience size and results are not guaranteed.",
+  body: "One featured sponsor appears beside the journey. A replacement pays twice the current sponsor's price and the displaced sponsor receives a full refund. One-time payment; no renewal. Audience size and results are not guaranteed.",
 } as const;
 
 export type OfferSeason = {

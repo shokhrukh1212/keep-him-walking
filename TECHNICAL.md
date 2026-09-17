@@ -1745,9 +1745,19 @@ personal step estimate. The signed legacy steps-card endpoint remains available 
 links and reads its number from `visitor_day_contributions` rather than the browser.
 
 `useJourneyAudio` starts muted, creates an `HTMLAudioElement` only after a visitor
-gesture, and loops the bundled calm background track. The control is labelled
+gesture, and loops the calm background track. The control is labelled
 “Background music”. The former generated per-place noise clips are no longer selected
 by the landing page; there is no speech, TTS or lip-sync audio path.
+
+The loop is resolved through `publicAssetUrl`, not the bare `/audio/calm-background.wav`
+path (17 September 2026). `public/audio/` is in `.vercelignore` and mirrored on the asset
+origin, so the same-origin path exists only in development; in Production it 404ed, the
+element's `error` event marked sound unavailable and the toggle was rendered permanently
+`disabled`. The control is no longer disabled at all: a failed load is labelled “could
+not be loaded — press to try again”, and the next press discards the element and
+refetches, so a transient failure cannot leave a dead button on the page. A new file under
+`public/audio/` needs `pnpm assets:upload --upload --prefix audio --skip-existing` with
+`ASSET_BASE_URL` set, or it will be missing in Production.
 
 The landing footer has one centred journey panel (720 px maximum on desktop and the
 available inset width on phones) above Sponsor/Vote/Journey. It contains, in order, the
@@ -2486,6 +2496,21 @@ also renders and stores any missing immutable recap cards through the running ap
   16 px mobile inputs. It separately requires the existing rights confirmation and agreement
   to the Sponsor Terms and Content and Listing Moderation Policy; the server refuses either
   unchecked value before storing a request.
+- **Checkout without review (17 September 2026).** The review queue no longer stands
+  between a sponsor and the payment page. When `seasonCheckoutState` is enabled,
+  `POST /api/season-sponsor/requests` copies the stored logo once to its immutable public
+  path, calls `review_season_sponsorship` with `approved`, then `startSeasonCheckout`, and
+  answers with `checkoutUrl`; `SeasonRequestForm` sends the browser straight there. Every
+  failure in that sequence returns `checkoutUrl: null`, so the request is saved, nothing is
+  charged and the requester continues from their private link. Nothing is published beside
+  the journey until `confirm_season_payment` accepts the provider's event, and the private
+  `remove` / `require_refund` actions are unchanged. `loadSeasonOffer` now reports
+  `saleClosesAt` as the journey end, matching `loadSeasonRequest` and the replacement model
+  that keeps the placement sellable while the journey runs. `/sponsors` publishes the
+  doubling ladder ($50 → $100 → $200 → …) and marks the step a new sponsor would pay today.
+  `/terms`, `/sponsor-terms` and `/content-moderation` were moved from "not sold yet, every
+  submission reviewed first" to what actually happens: sold, unreviewed before payment,
+  removable with a refund under the moderation policy.
 - **Public compliance routes (14 September 2026).** `/terms`, `/privacy`,
   `/refund-policy`, `/sponsor-terms`, `/content-moderation` and `/contact` are ordinary
   anonymous pages, not modal states. One shared `LegalFooter` links directly to all six from
