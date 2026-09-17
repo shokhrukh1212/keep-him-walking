@@ -8,7 +8,7 @@ type Props = {
 
 export function SoundToggle({ enabled, available, resumesOnTap, onToggle }: Props) {
   const label = !available
-    ? "Background music unavailable"
+    ? "Background music could not be loaded — press to try again"
     : enabled
       ? "Background music on"
       : resumesOnTap
@@ -19,10 +19,12 @@ export function SoundToggle({ enabled, available, resumesOnTap, onToggle }: Prop
       type="button"
       className="sound-toggle"
       data-state={enabled ? "on" : "off"}
+      data-available={available ? "yes" : "no"}
       aria-pressed={enabled}
       aria-label={label}
       title={label}
-      disabled={!available}
+      // Never disabled: a failed load is retried on the next press, so the control
+      // cannot end up permanently dead after one refused or missing file.
       onClick={onToggle}
     >
       <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22">

@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { publicAssetUrl } from "@/lib/assets/url";
 
 const PREFERENCE_KEY = "khw_sound";
-const BACKGROUND_MUSIC_URL = "/audio/calm-background.wav";
+// public/audio is excluded from the deployment and mirrored on the asset origin, so the
+// same-origin path only exists in development. Resolving it is what makes sound reach
+// production at all; a bare "/audio/..." is a 404 there.
+const BACKGROUND_MUSIC_PATH = "/audio/calm-background.wav";
 
 function savedPreference(): boolean {
   try {
@@ -28,8 +32,10 @@ function savePreference(on: boolean) {
  *
  * A refused play (no user activation yet — iOS Safari does not count
  * pointerdown, for example) is not a broken file: the toggle stays usable and
- * the next tap on it tries again. Only a file the browser cannot load or
- * decode marks sound unavailable.
+ * the next tap on it tries again. A file the browser could not load or decode
+ * marks sound unavailable, but never permanently: the next press throws the
+ * element away and fetches again, so a 404 or a dropped connection that is
+ * later fixed does not leave a dead button on the page.
  */
 export function useJourneyAudio() {
   const [enabled, setEnabled] = useState(false);
@@ -47,16 +53,23 @@ export function useJourneyAudio() {
     ambience.current?.pause();
   }, []);
 
-  const element = useCallback(() => {
+  const element = useCallback((fresh: boolean) => {
+    if (fresh && ambience.current) {
+      // Silence the discarded element: a late error from it must not contradict
+      // the state of the one now playing.
+      ambience.current.onerror = null;
+      ambience.current.pause();
+      ambience.current = null;
+    }
     if (!ambience.current) {
-      const audio = new Audio(BACKGROUND_MUSIC_URL);
+      const audio = new Audio(publicAssetUrl(BACKGROUND_MUSIC_PATH));
       audio.loop = true;
       audio.volume = 0.14;
       audio.preload = "auto";
-      audio.addEventListener("error", () => {
+      audio.onerror = () => {
         setFailed(true);
         setEnabled(false);
-      });
+      };
       ambience.current = audio;
     }
     return ambience.current;
@@ -64,7 +77,9 @@ export function useJourneyAudio() {
 
   const start = useCallback(async () => {
     // play() must be called synchronously inside the gesture, before any await.
-    const audio = element();
+    // A previous failure gets a new element so the browser refetches the file.
+    const audio = element(failed);
+    setFailed(false);
     const playing = audio.play();
     try {
       await playing;
@@ -76,7 +91,7 @@ export function useJourneyAudio() {
       setEnabled(false);
       if (error instanceof DOMException && error.name === "NotSupportedError") setFailed(true);
     }
-  }, [element]);
+  }, [element, failed]);
 
   const stop = useCallback(() => {
     ambience.current?.pause();

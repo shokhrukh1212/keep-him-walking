@@ -2,18 +2,23 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useJourneyAudio } from "./useJourneyAudio";
 
+const sources: string[] = [];
+
 class FakeAudio {
   loop = false;
   volume = 1;
   preload = "";
   play = vi.fn().mockResolvedValue(undefined);
   pause = vi.fn();
-  addEventListener = vi.fn();
+  onerror: (() => void) | null = null;
+  constructor(src: string) { sources.push(src); }
 }
 
 afterEach(() => {
   window.localStorage.clear();
+  sources.length = 0;
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("useJourneyAudio", () => {
@@ -67,6 +72,39 @@ describe("useJourneyAudio", () => {
     const { result, unmount } = renderHook(() => useJourneyAudio());
     await act(async () => { await result.current.toggle(); });
     expect(result.current.available).toBe(false);
+    unmount();
+  });
+
+  it("retries with a new element after a failed load instead of staying dead", async () => {
+    let attempts = 0;
+    class FlakyAudio extends FakeAudio {
+      play = vi.fn(() => {
+        attempts += 1;
+        return attempts === 1
+          ? Promise.reject(new DOMException("no source", "NotSupportedError"))
+          : Promise.resolve();
+      });
+    }
+    vi.stubGlobal("Audio", FlakyAudio);
+    const { result, unmount } = renderHook(() => useJourneyAudio());
+    await act(async () => { await result.current.toggle(); });
+    expect(result.current.available).toBe(false);
+    expect(sources).toHaveLength(1);
+
+    await act(async () => { await result.current.toggle(); });
+    expect(result.current.available).toBe(true);
+    expect(result.current.enabled).toBe(true);
+    expect(sources).toHaveLength(2);
+    unmount();
+  });
+
+  // public/audio is not deployed; a bare path 404s in production and killed the control.
+  it("loads the loop from the asset origin when one is configured", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ASSET_BASE_URL", "https://assets.keephimwalking.com");
+    vi.stubGlobal("Audio", FakeAudio);
+    const { result, unmount } = renderHook(() => useJourneyAudio());
+    await act(async () => { await result.current.toggle(); });
+    expect(sources).toEqual(["https://assets.keephimwalking.com/audio/calm-background.wav"]);
     unmount();
   });
 });

@@ -2973,7 +2973,7 @@ button:focus-visible,
   cursor: pointer;
 }
 .sound-toggle[data-state="on"] { border-color: rgb(255 215 119 / 60%); color: #ffd777; }
-.sound-toggle:disabled { cursor: default; opacity: 0.5; }
+.sound-toggle[data-available="no"] { opacity: 0.55; }
 .sound-toggle:focus-visible { outline: 3px solid #ffd777; outline-offset: 3px; }
 .compact-dock { right: calc(max(1rem, env(safe-area-inset-right)) + 3.4rem); }
 .dock-label-short { display: none; }

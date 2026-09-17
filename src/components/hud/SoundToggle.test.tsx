@@ -18,7 +18,11 @@ describe("SoundToggle", () => {
     rerender(<SoundToggle enabled={false} available resumesOnTap onToggle={onToggle} />);
     expect(screen.getByRole("button", { name: "Background music off, resumes on your first tap" })).toBeInTheDocument();
 
+    // A failed load stays pressable so the next press can refetch the file.
     rerender(<SoundToggle enabled={false} available={false} resumesOnTap={false} onToggle={onToggle} />);
-    expect(screen.getByRole("button", { name: "Background music unavailable" })).toBeDisabled();
+    const failed = screen.getByRole("button", { name: "Background music could not be loaded — press to try again" });
+    expect(failed).toBeEnabled();
+    await userEvent.click(failed);
+    expect(onToggle).toHaveBeenCalledTimes(2);
   });
 });
