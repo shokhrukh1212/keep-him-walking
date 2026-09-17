@@ -3,16 +3,16 @@ import { SEASON_ONE_ROUTE, seasonOneDayWindow } from "./anniversary";
 import { cityAssetManifest, cleanupEligible, sceneAssetWindow, SEASON_SCENE_FALLBACK } from "./asset-manifest";
 
 describe("Season 1 route and R2 manifests", () => {
-  it("has 14 distinct countries and contiguous 21:00 Tashkent route days", () => {
+  it("has 14 distinct countries and contiguous 23:00 Tashkent route days", () => {
     expect(SEASON_ONE_ROUTE).toHaveLength(14);
     expect(new Set(SEASON_ONE_ROUTE.map((stop) => stop.code)).size).toBe(14);
     for (let day = 1; day <= 14; day += 1) {
       const window = seasonOneDayWindow(day);
-      expect(window.startsAt).toBe(new Date(Date.parse("2026-09-17T16:00:00.000Z") + (day - 1) * 86_400_000).toISOString());
+      expect(window.startsAt).toBe(new Date(Date.parse("2026-09-17T18:00:00.000Z") + (day - 1) * 86_400_000).toISOString());
       expect(Date.parse(window.endsAt) - Date.parse(window.startsAt)).toBe(86_400_000);
       if (day < 14) expect(window.endsAt).toBe(seasonOneDayWindow(day + 1).startsAt);
     }
-    expect(seasonOneDayWindow(14).endsAt).toBe("2026-10-01T16:00:00.000Z");
+    expect(seasonOneDayWindow(14).endsAt).toBe("2026-10-01T18:00:00.000Z");
     expect(() => seasonOneDayWindow(0)).toThrow();
     expect(() => seasonOneDayWindow(15)).toThrow();
   });

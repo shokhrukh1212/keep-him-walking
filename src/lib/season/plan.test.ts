@@ -89,12 +89,12 @@ describe("buildAnniversaryPlan", () => {
   }));
   const plan = buildAnniversaryPlan(itinerary);
 
-  it("walks fourteen countries one day each, from 21:00 Tashkent to the anniversary", () => {
+  it("walks fourteen countries one day each, from 23:00 Tashkent to the anniversary", () => {
     expect(plan.season).toMatchObject({
       slug: "season-1",
       title: "The Anniversary Journey",
-      startsAt: "2026-09-17T16:00:00.000Z",
-      endsAt: "2026-10-01T16:00:00.000Z",
+      startsAt: "2026-09-17T18:00:00.000Z",
+      endsAt: "2026-10-01T18:00:00.000Z",
       totalDays: 14,
     });
     expect(plan.season.startsAt).toBe(ANNIVERSARY_JOURNEY.travelStartsAt);
@@ -103,17 +103,17 @@ describe("buildAnniversaryPlan", () => {
     expect(plan.days.map((day) => day.dayNumber)).toEqual(Array.from({ length: 14 }, (_, index) => index + 1));
   });
 
-  it("keeps every country distinct and schedules departure at each 21:00 Tashkent boundary", () => {
+  it("keeps every country distinct and schedules departure at each 23:00 Tashkent boundary", () => {
     expect(new Set(plan.days.map((day) => day.countryCode)).size).toBe(14);
     expect(plan.days[0]?.arrivalMode).toBe("walk");
-    expect(plan.days[13]?.events.every((event) => event.startsAt === "2026-10-01T16:00:00.000Z")).toBe(true);
+    expect(plan.days[13]?.events.every((event) => event.startsAt === "2026-10-01T18:00:00.000Z")).toBe(true);
     expect(() => buildAnniversaryPlan([...itinerary].reverse())).toThrow(/Day 1 must be Paris/);
   });
 
   it("runs the name vote from the preview day until launch and the poll from Day 8 until 20:00 on 28 September", () => {
     expect(plan.votes.map((vote) => [vote.kind, vote.opensAt, vote.closesAt])).toEqual([
-      ["name", "2026-09-16T16:00:00.000Z", "2026-09-17T16:00:00.000Z"],
-      ["anniversary", "2026-09-24T16:00:00.000Z", "2026-09-28T15:00:00.000Z"],
+      ["name", "2026-09-16T18:00:00.000Z", "2026-09-17T18:00:00.000Z"],
+      ["anniversary", "2026-09-24T18:00:00.000Z", "2026-09-28T15:00:00.000Z"],
     ]);
     expect(plan.votes[1]?.options.map((option) => option.label)).toEqual(["A park in Tashkent", "A café in Tashkent", "A scenic spot in Tashkent"]);
   });
