@@ -1784,8 +1784,14 @@ available inset width on phones) above Sponsor/Vote/Journey. It contains, in ord
 truthful current activity, the current manifest stop plus time to the next scene change,
 and today&apos;s distance with one daily-goal bar. Landing-page dots are gone; the Journey
 modal remains the place for the full data-derived stop list and current-stop highlight.
-The distance stays against the daily goal even after 8 km, while the marathon remains
-secondary information behind the accessible explanation and in Journey.
+The distance row follows whichever goal is current, from the one `distanceProgress`
+decision the Journey panel already used: today's shared 8 km until it is reached, then
+"9.3 / 42.2 km marathon" against the marathon the ⓘ explanation has been promising, then
+"43.0 km · marathon reached" once that is passed too. The bar restarts against the new
+goal instead of sitting full, `data-goal` names it, and the explanation is rewritten for
+the goal actually being counted. Until P22 the row stayed against the 8 km all day: with
+viewers watching continuously he passes it about 1 h 50 m into a 24-hour day, so the bar
+was full and the number climbed past its own goal for the remaining 22 hours (D14).
 
 `JourneyExperience` measures the complete rendered footer region with a `ResizeObserver`
 and remeasures for window and `visualViewport` changes. That live inset is an explicit

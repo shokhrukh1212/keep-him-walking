@@ -48,11 +48,28 @@ describe("GoalBar", () => {
     expect(screen.getByRole("note")).toHaveTextContent("42.2 km marathon");
   });
 
-  it("keeps the landing bar tied to today's goal after the goal is reached", () => {
+  it("moves the landing bar on to the marathon once today's goal is reached", () => {
     const { container } = renderBar({ distanceMetres: 9_100, freshness: "last confirmed" });
-    expect(screen.getByText("Today · 9.1 / 8 km")).toBeInTheDocument();
+    expect(screen.getByText("Today · 9.1 / 42.2 km marathon")).toBeInTheDocument();
     expect(screen.getByText("confirmed")).toBeInTheDocument();
+    // 9,100 of 42,195: the bar restarts against the new goal instead of sitting full.
+    expect(container.querySelector(".goal-track span")).toHaveStyle({ width: "21.566536319469133%" });
+    expect(container.querySelector(".goal-bar")).toHaveAttribute("data-goal", "marathon");
+  });
+
+  it("says the marathon is the goal now, once it is the one being counted", async () => {
+    const user = userEvent.setup();
+    renderBar({ distanceMetres: 9_100 });
+    await user.click(screen.getByRole("button", { name: "About the distance goals" }));
+    expect(screen.getByRole("note")).toHaveTextContent("the goal is now a 42.2 km marathon");
+    expect(screen.getByRole("note")).not.toHaveTextContent("After that, the next goal");
+  });
+
+  it("stops counting against a goal once the marathon itself is reached", () => {
+    const { container } = renderBar({ distanceMetres: 43_000, freshness: "last confirmed" });
+    expect(screen.getByText("Today · 43.0 km · marathon reached")).toBeInTheDocument();
     expect(container.querySelector(".goal-track span")).toHaveStyle({ width: "100%" });
+    expect(container.querySelector(".goal-bar")).toHaveAttribute("data-goal", "complete");
   });
 
   it("uses truthful summary copy for non-walking states", () => {

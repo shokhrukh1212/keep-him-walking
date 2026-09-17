@@ -29,6 +29,7 @@ finish rather than what it got wrong.
 | D11 | Paid sponsorship waits for Dodo to approve the changed proposal ($50, replace-by-doubling with full refund) | No — the Anniversary Journey launched free; sponsors can only message on X | Owner (send `docs/launch-finalization/dodo-sponsorship-notice.md`) |
 | D12 | Paid terms still need a governing law and dispute forum | **Yes for checkout; no for free viewing** | Owner (legal choice) |
 | D13 | The Buy Me a Coffee supporter list needs a working read-only token | No — the coffee link works without it | Owner (Buy Me a Coffee developer access) |
+| D14 | The 8 km day goal is reached in under two hours, and the header count and the walking rule are measured differently | No — the row now moves on to the marathon, and walking follows the server | Owner (goal sizes, and which count the header shows) |
 
 ---
 
@@ -521,3 +522,44 @@ new acknowledgments must be added by hand and the site cannot automatically reco
 creator API token and decide whether the site should show the platform's supporter list
 without storing it locally. That work must restore privacy checks and a tested direct-sync
 route before the list is shown.
+
+---
+
+## D14 — He passes the day's 8 km goal before the day is a tenth old
+
+**What it is.** Two separate things came out of the 17 September launch evening, and both
+are choices rather than faults.
+
+*The goal is small for the day.* He walks at 1.5 metres a second whenever at least one
+person is watching, and a day runs a full 24 hours, 18:00 UTC to 18:00 UTC. On the first
+evening people watched continuously, so he passed the 8 km day goal 1 hour 50 minutes into
+the day, and he is on course for roughly 110 km before the day ends. The landing row used
+to stay against the 8 km, so it read "~9.3 / 8 km" with a full bar for the other 22 hours.
+That is fixed for now: once the 8 km is reached the row moves on to the 42.195 km marathon
+it always promised, and says "marathon reached" after that. He will still reach the
+marathon around 07:00 UTC on a well-watched day and then have nothing left to aim at.
+
+*The counted audience and the shown audience are not the same number.* The header's
+"N people watching" is DataFast's count of visitors with the site open (owner decision,
+15 September). Whether he walks is the confirmed presence count in Postgres. They usually
+agree, but DataFast shows 0 for a visitor who blocks trackers or is taken for a bot, and
+the page then shows "0 people watching" beside a man who is walking — which is exactly
+what he should not do, since he only walks while someone is watching.
+
+**What happens if nothing changes.** The distance row is honest but anticlimactic: both
+goals are gone by breakfast and the rest of the day has no target. And a minority of
+visitors keep seeing a walking traveler next to a count of zero, which reads as broken
+even though the walking is correct.
+
+**What to do.** Two decisions, independently:
+
+1. *The goals.* Choose one: **(a)** leave it as it is now — 8 km, then the marathon, then
+   an open count; **(b)** repeat the 8 km as laps, so the row reads "Lap 4 · 1.3 / 8 km
+   today"; or **(c)** raise the day goal to something a watched day actually reaches, near
+   100–130 km, and keep the marathon as the milestone inside it. (b) and (c) are each
+   about an hour of work plus a pack change per city; (a) costs nothing.
+2. *The header count.* Choose one: **(a)** keep DataFast, and accept that it disagrees
+   with the walking rule for tracker-blocking visitors; or **(b)** show the confirmed
+   presence count that actually decides whether he walks, and keep DataFast for the
+   owner's own analytics only. (b) makes the page self-consistent and is about half a
+   day's work, including the tests that pin what the header may claim.
