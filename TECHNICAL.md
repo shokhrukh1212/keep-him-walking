@@ -1749,15 +1749,18 @@ gesture, and loops the calm background track. The control is labelled
 “Background music”. The former generated per-place noise clips are no longer selected
 by the landing page; there is no speech, TTS or lip-sync audio path.
 
-The loop is resolved through `publicAssetUrl`, not the bare `/audio/calm-background.wav`
-path (17 September 2026). `public/audio/` is in `.vercelignore` and mirrored on the asset
-origin, so the same-origin path exists only in development; in Production it 404ed, the
-element's `error` event marked sound unavailable and the toggle was rendered permanently
-`disabled`. The control is no longer disabled at all: a failed load is labelled “could
-not be loaded — press to try again”, and the next press discards the element and
-refetches, so a transient failure cannot leave a dead button on the page. A new file under
-`public/audio/` needs `pnpm assets:upload --upload --prefix audio --skip-existing` with
-`ASSET_BASE_URL` set, or it will be missing in Production.
+The loop has two sources, tried in order (17 September 2026): the same-origin
+`/audio/calm-background.wav` and then `publicAssetUrl` of the same path on the asset
+origin. `public/audio/` is in `.vercelignore`, so the bare path 404ed in Production, the
+element's `error` event marked sound unavailable and the toggle rendered permanently
+`disabled` — one press killed it for the visit. That single file is now un-ignored
+(0.7 MB) exactly as `scene-fallback.webp` is, and it is uploaded to R2 as well, so neither
+a missing deployment copy nor an unreachable, blocked or stale asset origin can take the
+sound away. A `NotSupportedError` moves to the next source inside the same gesture; only
+when every source fails is sound reported unavailable, and the control is never
+`disabled`, so the next press discards the element and fetches again. A new file under
+`public/audio/` still needs `pnpm assets:upload --upload --prefix audio --skip-existing`
+with `ASSET_BASE_URL` set.
 
 The landing footer has one centred journey panel (720 px maximum on desktop and the
 available inset width on phones) above Sponsor/Vote/Journey. It contains, in order, the

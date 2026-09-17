@@ -1,13 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { publicAssetUrl } from "@/lib/assets/url";
 
 const PREFERENCE_KEY = "khw_sound";
-// public/audio is excluded from the deployment and mirrored on the asset origin, so the
-// same-origin path only exists in development. Resolving it is what makes sound reach
-// production at all; a bare "/audio/..." is a 404 there.
 const BACKGROUND_MUSIC_PATH = "/audio/calm-background.wav";
+
+/**
+ * Where the loop may be fetched from, in order. `public/audio` is excluded from the
+ * deployment and mirrored on the asset origin, but this one file is un-ignored so the
+ * same-origin copy always exists: the control must not die because the asset origin is
+ * unreachable, blocked by an extension or serving a stale 404. The origin copy is the
+ * second chance, and a dev build where both resolve the same way keeps only one.
+ */
+function musicSources(): string[] {
+  const mirrored = publicAssetUrl(BACKGROUND_MUSIC_PATH);
+  return mirrored === BACKGROUND_MUSIC_PATH ? [BACKGROUND_MUSIC_PATH] : [BACKGROUND_MUSIC_PATH, mirrored];
+}
 
 function savedPreference(): boolean {
   try {
@@ -33,15 +42,17 @@ function savePreference(on: boolean) {
  * A refused play (no user activation yet — iOS Safari does not count
  * pointerdown, for example) is not a broken file: the toggle stays usable and
  * the next tap on it tries again. A file the browser could not load or decode
- * marks sound unavailable, but never permanently: the next press throws the
- * element away and fetches again, so a 404 or a dropped connection that is
- * later fixed does not leave a dead button on the page.
+ * is retried immediately from the other source, and only when every source has
+ * failed is sound reported unavailable — never permanently, because the next
+ * press throws the element away and fetches again.
  */
 export function useJourneyAudio() {
   const [enabled, setEnabled] = useState(false);
   const [failed, setFailed] = useState(false);
   const [resumesOnTap, setResumesOnTap] = useState(false);
   const ambience = useRef<HTMLAudioElement | null>(null);
+  const sources = useMemo(() => musicSources(), []);
+  const source = useRef(0);
   const available = !failed;
 
   useEffect(() => {
@@ -62,17 +73,26 @@ export function useJourneyAudio() {
       ambience.current = null;
     }
     if (!ambience.current) {
-      const audio = new Audio(publicAssetUrl(BACKGROUND_MUSIC_PATH));
+      const audio = new Audio(sources[source.current % sources.length]);
       audio.loop = true;
       audio.volume = 0.14;
       audio.preload = "auto";
       audio.onerror = () => {
+        // Whatever failed, the next attempt starts from the other source.
+        source.current += 1;
         setFailed(true);
         setEnabled(false);
       };
       ambience.current = audio;
     }
     return ambience.current;
+  }, [sources]);
+
+  const started = useCallback(() => {
+    setEnabled(true);
+    setFailed(false);
+    setResumesOnTap(false);
+    savePreference(true);
   }, []);
 
   const start = useCallback(async () => {
@@ -83,15 +103,27 @@ export function useJourneyAudio() {
     const playing = audio.play();
     try {
       await playing;
-      setEnabled(true);
-      setFailed(false);
-      setResumesOnTap(false);
-      savePreference(true);
+      started();
+      return;
     } catch (error) {
       setEnabled(false);
-      if (error instanceof DOMException && error.name === "NotSupportedError") setFailed(true);
+      // A refused play is only a missing gesture; the toggle tries again on the next press.
+      if (!(error instanceof DOMException) || error.name !== "NotSupportedError") return;
     }
-  }, [element, failed]);
+    // This source cannot be fetched or decoded. The gesture is still recent, so the
+    // other source gets its chance now rather than costing the visitor a second press.
+    source.current += 1;
+    if (sources.length > 1) {
+      try {
+        await element(true).play();
+        started();
+        return;
+      } catch {
+        // Both sources refused; fall through to the honest unavailable state.
+      }
+    }
+    setFailed(true);
+  }, [element, failed, sources.length, started]);
 
   const stop = useCallback(() => {
     ambience.current?.pause();

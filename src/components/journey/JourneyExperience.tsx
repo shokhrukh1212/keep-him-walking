@@ -79,7 +79,6 @@ import { launchCountdown } from "@/lib/story-clock/launch";
 import { seasonClockParts } from "@/lib/season/clock";
 import { SeasonCompleteCard } from "@/components/journey/SeasonCompleteCard";
 import { SeasonSponsorLine } from "@/components/sponsor/SeasonSponsorLine";
-import { SeasonSponsorOffer } from "@/components/sponsor/SeasonSponsorOffer";
 import { SeasonSponsorRow } from "@/components/sponsor/SeasonSponsorRow";
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { PreviewCaption } from "@/components/preview/PreviewCaption";
@@ -265,6 +264,15 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     else if (step.method === "replace") window.history.replaceState(step.state, "", step.url);
     setPanelLocation({ panel, section });
   }, []);
+  /**
+   * In season mode the Sponsor control leaves the scene for the offer and checkout
+   * page. Nothing stands between a sponsor and the payment page, so there is no
+   * sponsor modal to open; inquiry and daily mode keep theirs.
+   */
+  const openSponsor = useCallback(() => {
+    if (sponsorshipMode === "season") window.location.assign("/sponsors#request");
+    else showPanel("sponsor");
+  }, [showPanel, sponsorshipMode]);
   const closePanel = useCallback(() => {
     const step = closePanelStep(window.location.href, window.history.state);
     setPanelLocation({ panel: null, section: null });
@@ -1140,7 +1148,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
               <img src={sponsor.logo} alt="" width={40} height={40} /> : null}
             <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
               {sponsor.href ? <a href={sponsor.href}>{sponsor.cta} ↗</a> : null}</div>
-          </aside> : <button className="sponsor-invitation" data-hud-region="sponsor" type="button" aria-haspopup="dialog" aria-label={sponsorLabel} onClick={() => showPanel("sponsor")}>
+          </aside> : <button className="sponsor-invitation" data-hud-region="sponsor" type="button" aria-haspopup={sponsorshipMode === "season" ? undefined : "dialog"} aria-label={sponsorLabel} onClick={openSponsor}>
             <span className="dock-label-long" aria-hidden="true">{sponsorLabel}</span>
             <span className="dock-label-short" aria-hidden="true">Sponsor</span>
           </button>}
@@ -1228,18 +1236,18 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
               nowMs={realNowMs}
               coffeeUrl={coffeeUrl}
               onVote={() => showPanel("vote")}
-              onSponsor={() => showPanel("sponsor")}
+              onSponsor={openSponsor}
             />
           ) : null}
           seasonSponsor={snapshot.seasonSponsor ? <SeasonSponsorRow sponsor={snapshot.seasonSponsor} /> : null}
           sponsorLabel={sponsorshipMode === "daily" ? "Sponsor a day" : "Sponsor a season"}
           shareText={shareText}
-          onSponsor={() => showPanel("sponsor")}
+          onSponsor={openSponsor}
         />
       </OverlayModal>
 
       <OverlayModal
-        open={openPanel === "sponsor"}
+        open={openPanel === "sponsor" && sponsorshipMode !== "season"}
         title={sponsorshipMode === "daily" ? "Sponsor a day" : "Sponsor a season"}
         eyebrow="Support the journey"
         onClose={closePanel}
@@ -1247,7 +1255,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       >
         {/* Inquiry mode reads and submits nothing; season mode reads its one offer only while this modal is open. */}
         {sponsorshipMode === "inquiry" ? <SponsorInquiry xUrl={sponsorXUrl} />
-          : sponsorshipMode === "season" ? (openPanel === "sponsor" ? <SeasonSponsorOffer /> : null) : (
+          : sponsorshipMode === "season" ? null : (
           <div className="sponsor-copy">
             <p>One sponsor can be clearly disclosed on a day of the shared journey.</p>
             <p>Standard includes the disclosed sponsor card and approved traveler patch. Premium is shown only when both the bottle label and café placement can be fulfilled.</p>

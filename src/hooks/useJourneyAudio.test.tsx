@@ -75,7 +75,27 @@ describe("useJourneyAudio", () => {
     unmount();
   });
 
-  it("retries with a new element after a failed load instead of staying dead", async () => {
+  it("falls back to the asset origin within the same press when the first source fails", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ASSET_BASE_URL", "https://assets.keephimwalking.com");
+    class FirstSourceBroken extends FakeAudio {
+      play = vi.fn(() => sources.length === 1
+        ? Promise.reject(new DOMException("no source", "NotSupportedError"))
+        : Promise.resolve());
+    }
+    vi.stubGlobal("Audio", FirstSourceBroken);
+    const { result, unmount } = renderHook(() => useJourneyAudio());
+    await act(async () => { await result.current.toggle(); });
+
+    expect(sources).toEqual([
+      "/audio/calm-background.wav",
+      "https://assets.keephimwalking.com/audio/calm-background.wav",
+    ]);
+    expect(result.current.enabled).toBe(true);
+    expect(result.current.available).toBe(true);
+    unmount();
+  });
+
+  it("retries with a new element after every source failed instead of staying dead", async () => {
     let attempts = 0;
     class FlakyAudio extends FakeAudio {
       play = vi.fn(() => {
@@ -98,13 +118,12 @@ describe("useJourneyAudio", () => {
     unmount();
   });
 
-  // public/audio is not deployed; a bare path 404s in production and killed the control.
-  it("loads the loop from the asset origin when one is configured", async () => {
+  it("prefers the same-origin copy, which is deployed for exactly this reason", async () => {
     vi.stubEnv("NEXT_PUBLIC_ASSET_BASE_URL", "https://assets.keephimwalking.com");
     vi.stubGlobal("Audio", FakeAudio);
     const { result, unmount } = renderHook(() => useJourneyAudio());
     await act(async () => { await result.current.toggle(); });
-    expect(sources).toEqual(["https://assets.keephimwalking.com/audio/calm-background.wav"]);
+    expect(sources).toEqual(["/audio/calm-background.wav"]);
     unmount();
   });
 });
