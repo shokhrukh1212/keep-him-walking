@@ -25,6 +25,11 @@ function savePreference(on: boolean) {
  * The calm background loop always starts muted. A visitor who turned it on
  * before gets it back on their first tap or key press, because browsers only
  * play audio after a gesture; nobody hears anything they did not ask for.
+ *
+ * A refused play (no user activation yet — iOS Safari does not count
+ * pointerdown, for example) is not a broken file: the toggle stays usable and
+ * the next tap on it tries again. Only a file the browser cannot load or
+ * decode marks sound unavailable.
  */
 export function useJourneyAudio() {
   const [enabled, setEnabled] = useState(false);
@@ -42,23 +47,36 @@ export function useJourneyAudio() {
     ambience.current?.pause();
   }, []);
 
-  const start = useCallback(async () => {
-    try {
+  const element = useCallback(() => {
+    if (!ambience.current) {
       const audio = new Audio(BACKGROUND_MUSIC_URL);
       audio.loop = true;
       audio.volume = 0.14;
-      await audio.play();
-      ambience.current?.pause();
+      audio.preload = "auto";
+      audio.addEventListener("error", () => {
+        setFailed(true);
+        setEnabled(false);
+      });
       ambience.current = audio;
+    }
+    return ambience.current;
+  }, []);
+
+  const start = useCallback(async () => {
+    // play() must be called synchronously inside the gesture, before any await.
+    const audio = element();
+    const playing = audio.play();
+    try {
+      await playing;
       setEnabled(true);
       setFailed(false);
       setResumesOnTap(false);
       savePreference(true);
-    } catch {
-      setFailed(true);
+    } catch (error) {
       setEnabled(false);
+      if (error instanceof DOMException && error.name === "NotSupportedError") setFailed(true);
     }
-  }, []);
+  }, [element]);
 
   const stop = useCallback(() => {
     ambience.current?.pause();
@@ -74,11 +92,12 @@ export function useJourneyAudio() {
       if (event.target instanceof Element && event.target.closest(".sound-toggle")) return;
       void start();
     };
-    window.addEventListener("pointerdown", resume, { once: true });
-    window.addEventListener("keydown", resume, { once: true });
+    // click and touchend grant user activation in every browser; pointerdown does not on iOS.
+    // Not once: a refused attempt leaves the listeners in place, and success removes them.
+    const events = ["click", "touchend", "keydown"] as const;
+    for (const name of events) window.addEventListener(name, resume);
     return () => {
-      window.removeEventListener("pointerdown", resume);
-      window.removeEventListener("keydown", resume);
+      for (const name of events) window.removeEventListener(name, resume);
     };
   }, [enabled, resumesOnTap, start]);
 
