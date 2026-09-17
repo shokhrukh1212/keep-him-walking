@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "day": 10,
+  "city": "Zagreb",
+  "country": "Croatia",
+  "packId": "zagreb-v1",
+  "startsAt": "2026-09-26T16:00:00.000Z",
+  "endsAt": "2026-09-27T16:00:00.000Z",
+  "thumbnail": "/postcards/zagreb/v1/background.webp",
+  "fullResolution": [
+    "/scenes/zagreb/v1/zones/cafe-street/fallback.webp",
+    "/scenes/zagreb/v1/zones/dolac-market/fallback.webp",
+    "/scenes/zagreb/v1/zones/jelacic-arrival/fallback.webp",
+    "/scenes/zagreb/v1/zones/strossmayer-evening/fallback.webp",
+    "/scenes/zagreb/v1/zones/upper-town/fallback.webp"
+  ],
+  "missing": [],
+  "fallback": "/scenes/tashkent/v1/scene-fallback.webp"
+}

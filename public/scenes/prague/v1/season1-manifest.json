@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "day": 5,
+  "city": "Prague",
+  "country": "Czechia",
+  "packId": "prague-v1",
+  "startsAt": "2026-09-21T16:00:00.000Z",
+  "endsAt": "2026-09-22T16:00:00.000Z",
+  "thumbnail": "/postcards/prague/v1/background.webp",
+  "fullResolution": [
+    "/scenes/prague/v1/zones/charles-bridge-evening/fallback.webp",
+    "/scenes/prague/v1/zones/havelske-market/fallback.webp",
+    "/scenes/prague/v1/zones/historic-lanes/fallback.webp",
+    "/scenes/prague/v1/zones/old-town-arrival/fallback.webp",
+    "/scenes/prague/v1/zones/vltava-cafe/fallback.webp"
+  ],
+  "missing": [],
+  "fallback": "/scenes/tashkent/v1/scene-fallback.webp"
+}

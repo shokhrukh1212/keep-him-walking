@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cacheControlFor, collectAssets, runAssetUpload, signAssetPut, uploadConfig } from "../../../scripts/assets/upload";
+import { cacheControlFor, collectAssets, runAssetUpload, signAssetDelete, signAssetPut, uploadConfig } from "../../../scripts/assets/upload";
 
 const directories: string[] = [];
 const env = {
@@ -71,6 +71,15 @@ describe("asset upload", () => {
     expect(signAssetPut(config, "scenes/a !'().webp", body, "image/webp", now)).toEqual(signed);
     expect(signAssetPut(config, "scenes/a !'().webp", Buffer.from("abd"), "image/webp", now).headers.authorization).not.toBe(signed.headers.authorization);
     expect(() => signAssetPut(config, "scenes/../private.env", body, "text/plain", now)).toThrow("Invalid public asset key");
+  });
+  it("signs only canonical scene deletions without exposing the secret", () => {
+    const config = uploadConfig(env);
+    const signed = signAssetDelete(config, "scenes/paris/v3/full.webp", new Date("2026-09-08T12:00:00Z"));
+    expect(signed.url).toBe("https://account.r2.cloudflarestorage.com/walking-assets/scenes/paris/v3/full.webp");
+    expect(signed.headers.authorization).toMatch(/^AWS4-HMAC-SHA256 Credential=test-access-id\/20260908\/auto\/s3\/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=[a-f0-9]{64}$/);
+    expect(signed.headers.authorization).not.toContain(env.ASSET_S3_SECRET_ACCESS_KEY);
+    expect(() => signAssetDelete(config, "postcards/paris/thumb.webp", new Date())).toThrow("canonical scene keys");
+    expect(() => signAssetDelete(config, "scenes/../private", new Date())).toThrow("canonical scene keys");
   });
   it("uploads the bytes to the matching key with MIME, bounded cache and redirect protection", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 200 }));

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "day": 14,
+  "city": "Tashkent",
+  "country": "Uzbekistan",
+  "packId": "tashkent-v5",
+  "startsAt": "2026-09-30T16:00:00.000Z",
+  "endsAt": "2026-10-01T16:00:00.000Z",
+  "thumbnail": "/postcards/tashkent/v4/background.webp",
+  "fullResolution": [
+    "/scenes/tashkent/v4/zones/arrival-boulevard/fallback.webp",
+    "/scenes/tashkent/v4/zones/chorsu-market/fallback.webp",
+    "/scenes/tashkent/v4/zones/evening-landmark/fallback.webp",
+    "/scenes/tashkent/v4/zones/mahalla-street/fallback.webp",
+    "/scenes/tashkent/v4/zones/plov-cafe/fallback.webp"
+  ],
+  "missing": [],
+  "fallback": "/scenes/tashkent/v1/scene-fallback.webp"
+}

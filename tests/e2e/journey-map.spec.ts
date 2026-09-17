@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { offlineBootstrapSnapshot } from "../../src/lib/bootstrap/offline";
 import type { JourneyMapData } from "../../src/lib/map/data";
+import { SEASON_ONE_ROUTE } from "../../src/lib/season/anniversary";
 
 const mapFixture: JourneyMapData = {
   cities: [
@@ -17,7 +18,7 @@ const mapFixture: JourneyMapData = {
   currentDayNumber: 3,
 };
 
-async function installJourneyApi(page: Page) {
+async function installJourneyApi(page: Page, mapData: JourneyMapData = mapFixture) {
   await page.route("**/api/bootstrap", async (route) => {
     const now = new Date();
     const snapshot = offlineBootstrapSnapshot(now);
@@ -32,15 +33,41 @@ async function installJourneyApi(page: Page) {
     const now = new Date().toISOString();
     await route.fulfill({ json: { countryDayId: offlineBootstrapSnapshot().countryDay.id, serverNow: now, realServerNow: now, activeViewers: 2, walking: true, globalSteps: 180, visitorActiveSeconds: 10, ttlSeconds: 50, nextHeartbeatInMs: 20_000, globalActiveSeconds: 100, globalDistanceMetres: 125, paceRate: 2, routeAuthoritativeAt: now, waitingSince: null, wokeHim: false, reactions: { counts: { wave: 0, water: 0, photo: 0 }, scheduled: [], nextScheduledAction: null } } });
   });
-  await page.route("**/api/map", (route) => route.fulfill({ json: mapFixture }));
+  await page.route("**/api/map", (route) => route.fulfill({ json: mapData }));
   await page.route("**/api/observability/vitals", (route) => route.fulfill({ status: 204 }));
 }
+
+test("the 14-country virtual route fits the Journey modal and records desktop/mobile views", async ({ page }, testInfo) => {
+  const cities: JourneyMapData["cities"] = SEASON_ONE_ROUTE.map((stop, index) => ({
+    countryDayId: `season1-${index + 1}`, dayNumber: index + 1,
+    cityName: stop.city, countryName: stop.country, countryCode: stop.code,
+    scenePackId: stop.packId, lat: stop.lat, lon: stop.lon,
+    status: index < 4 ? "completed" : index === 4 ? "current" : "upcoming",
+    outcome: index === 4 ? "current" : "unfinished", distanceMetres: 0,
+    transferFromPrevious: index === 0 ? null : "train",
+  }));
+  await installJourneyApi(page, { cities, candidates: [], ticketFlights: [], stats: { days: 5, confirmedDistanceMetres: 0, landmarks: 0, marathons: 0 }, currentDayNumber: 5 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Journey", exact: true }).click();
+  await page.getByText("Route map", { exact: true }).click();
+  const map = page.getByTestId("journey-map-compact");
+  await expect(map).toBeVisible();
+  await expect(map.locator(".map-city")).toHaveCount(14);
+  await expect(map.locator('[data-status="completed"]')).toHaveCount(4);
+  await expect(map.locator('[data-status="current"]')).toHaveCount(1);
+  await expect(map.locator('[data-status="upcoming"]')).toHaveCount(9);
+  const frame = map.locator(".journey-map-frame");
+  expect(await frame.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+  expect(await frame.evaluate((element) => element.getBoundingClientRect().right <= window.innerWidth + 1)).toBe(true);
+  await map.screenshot({ path: `artifacts/season1-route-map-${testInfo.project.name}.png` });
+});
 
 test("the compact journey map renders three visited days and two live candidates", async ({ page }) => {
   test.setTimeout(120_000);
   await installJourneyApi(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Journey", exact: true }).click();
+  await page.getByText("Route map", { exact: true }).click();
   const map = page.getByTestId("journey-map-compact");
   await expect(map).toBeVisible();
   await expect(map.locator(".map-city")).toHaveCount(3);

@@ -187,8 +187,9 @@ describe("backward compatible stage metadata", () => {
 
   it("validates every registered pack with and without stage blocks", () => {
     const packs = registeredCountryPacks();
-    // V4 remains registered as the calibrated rollback for launch identity v5.
-    expect(packs).toHaveLength(18);
+    // V4 remains registered as the calibrated rollback for launch identity v5; the last
+    // four are the Season 1 fallback cities (Brussels, Amsterdam, Cologne, Budapest).
+    expect(packs).toHaveLength(22);
     for (const pack of packs) {
       expect(readableCountryPackSchema.safeParse(pack).success).toBe(true);
       const legacy = JSON.parse(JSON.stringify(pack));

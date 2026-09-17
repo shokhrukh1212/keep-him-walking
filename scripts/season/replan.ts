@@ -4,17 +4,19 @@
  *   pnpm season:replan
  *   pnpm production:season:replan --apply
  *
- * It keeps the season's configured cities in their stored order and walks each for two
- * days from 17 September 00:00 Asia/Tashkent, with the name vote until launch and the
- * anniversary-setting poll, all taken from src/lib/season/anniversary.ts. The database
- * refuses a season that has started, has any visitor activity, or has a sponsor payment.
+ * It follows the single Season 1 route, one city per Tashkent calendar day, with the name vote until launch and the
+ * anniversary-setting poll, all taken from src/lib/season/anniversary.ts. Pending
+ * city-art packs use the generic fallback. The database refuses a season that has
+ * started, has visitor activity, or has a sponsor payment. Deploy matching code first.
  */
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { getCountryPack } from "../../src/content/countries/registry";
+import { SEASON_ONE_FALLBACK_IDS } from "../../src/content/countries/season1-fallback";
 import { isVoteReadyPack, type CountryPackV3 } from "../../src/lib/content/schema";
-import { ANNIVERSARY_JOURNEY } from "../../src/lib/season/anniversary";
+import { ANNIVERSARY_JOURNEY, SEASON_ONE_ROUTE } from "../../src/lib/season/anniversary";
+import { SEASON_SCENE_FALLBACK } from "../../src/lib/season/asset-manifest";
 import { buildAnniversaryPlan } from "../../src/lib/season/plan";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -29,22 +31,14 @@ const { data: season, error } = await supabase.from("journeys")
   .maybeSingle();
 if (error) throw error;
 if (!season) throw new Error(`Season ${ANNIVERSARY_JOURNEY.seasonNumber} is not configured`);
-const { data: days, error: dayError } = await supabase.from("country_days")
-  .select("day_number,scene_pack_id")
-  .eq("journey_id", season.id)
-  .order("day_number", { ascending: true });
-if (dayError) throw dayError;
-
-// The configured cities in their stored order, each named once.
-const packIds = (days ?? []).map((day) => String(day.scene_pack_id))
-  .filter((id, index, all) => index === 0 || all[index - 1] !== id);
-const cityCount = ANNIVERSARY_JOURNEY.totalDays / ANNIVERSARY_JOURNEY.daysPerCity;
-if (new Set(packIds).size !== cityCount || packIds.length !== cityCount) {
-  throw new Error(`Season ${ANNIVERSARY_JOURNEY.seasonNumber} names ${packIds.length} cities (${packIds.join(", ")}); expected ${cityCount} distinct cities`);
-}
-const itinerary: CountryPackV3[] = packIds.map((id) => {
+const itinerary: CountryPackV3[] = SEASON_ONE_ROUTE.map(({ packId: id }) => {
   const pack = getCountryPack(id);
-  if (!pack || pack.schemaVersion !== 3 || !isVoteReadyPack(pack)) throw new Error(`${id} is not an approved, asset-ready v3 pack`);
+  if (!pack || pack.schemaVersion !== 3 || (!isVoteReadyPack(pack) && !(
+    SEASON_ONE_FALLBACK_IDS.has(id)
+    && pack.culturalReview.status === "pending"
+    && pack.route.zones.length === 1
+    && pack.route.zones[0]?.fallbackUrl === SEASON_SCENE_FALLBACK
+  ))) throw new Error(`${id} is neither a reviewed pack nor the safe, explicitly pending fallback`);
   return pack;
 });
 for (const pack of itinerary) {
@@ -59,6 +53,7 @@ for (const pack of itinerary) {
 
 const plan = buildAnniversaryPlan(itinerary);
 const apply = process.argv.includes("--apply");
+const discardPrelaunchActivity = process.argv.includes("--discard-prelaunch-activity");
 process.stdout.write(`${JSON.stringify({
   mode: apply ? "apply" : "dry-run",
   projectRef: new URL(url).hostname.split(".")[0],
@@ -72,6 +67,9 @@ if (!apply) {
   process.stdout.write("Dry run. Re-run with --apply to replan this season.\n");
   process.exit(0);
 }
-const { data, error: replanError } = await supabase.rpc("replan_season", { p_plan: plan, p_now: new Date().toISOString() });
+const { data, error: replanError } = await supabase.rpc(
+  discardPrelaunchActivity ? "replan_prelaunch_season" : "replan_season",
+  { p_plan: discardPrelaunchActivity ? { ...plan, confirmDiscardPrelaunchActivity: true } : plan, p_now: new Date().toISOString() },
+);
 if (replanError) throw replanError;
 process.stdout.write(`${JSON.stringify(data)}\n`);

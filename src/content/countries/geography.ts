@@ -14,6 +14,26 @@ export type PackGeography = {
 };
 
 export const PACK_GEOGRAPHY: Record<string, PackGeography> = {
+  "brussels-v1": {
+    lat: 50.8503, lon: 4.3517,
+    neighbours: ["paris-v3", "amsterdam-v1", "cologne-v1"],
+    voteBlurb: "A virtual Brussels stop; city artwork is being prepared.",
+  },
+  "amsterdam-v1": {
+    lat: 52.3676, lon: 4.9041,
+    neighbours: ["brussels-v1", "cologne-v1"],
+    voteBlurb: "A virtual Amsterdam stop; city artwork is being prepared.",
+  },
+  "cologne-v1": {
+    lat: 50.9375, lon: 6.9603,
+    neighbours: ["amsterdam-v1", "brussels-v1", "prague-v1"],
+    voteBlurb: "A virtual Cologne stop; city artwork is being prepared.",
+  },
+  "budapest-v1": {
+    lat: 47.4979, lon: 19.0402,
+    neighbours: ["bratislava-v1", "vienna-v1", "ljubljana-v1", "zagreb-v1", "belgrade-v1"],
+    voteBlurb: "A virtual Budapest stop; city artwork is being prepared.",
+  },
   "tashkent-v5": {
     lat: 41.2995,
     lon: 69.2401,
@@ -71,37 +91,37 @@ export const PACK_GEOGRAPHY: Record<string, PackGeography> = {
   "belgrade-v1": {
     lat: 44.7866,
     lon: 20.4489,
-    neighbours: ["sofia-v1", "zagreb-v1"],
+    neighbours: ["sofia-v1", "zagreb-v1", "budapest-v1"],
     voteBlurb: "A fortress where the Sava meets the Danube, above a city that never quite sleeps.",
   },
   "zagreb-v1": {
     lat: 45.815,
     lon: 15.9819,
-    neighbours: ["ljubljana-v1", "belgrade-v1"],
+    neighbours: ["ljubljana-v1", "belgrade-v1", "budapest-v1"],
     voteBlurb: "An upper town of gas lamps and tiled roofs above a café-lined lower town.",
   },
   "ljubljana-v1": {
     lat: 46.0569,
     lon: 14.5058,
-    neighbours: ["zagreb-v1", "vienna-v1"],
+    neighbours: ["zagreb-v1", "vienna-v1", "budapest-v1"],
     voteBlurb: "A castle hill, a green river and a centre small enough to cross on foot.",
   },
   "vienna-v1": {
     lat: 48.2082,
     lon: 16.3738,
-    neighbours: ["prague-v1", "bratislava-v1", "ljubljana-v1"],
+    neighbours: ["prague-v1", "bratislava-v1", "ljubljana-v1", "budapest-v1"],
     voteBlurb: "Imperial avenues, coffee houses, and the Danube on the edge of it all.",
   },
   "bratislava-v1": {
     lat: 48.1486,
     lon: 17.1077,
-    neighbours: ["prague-v1", "vienna-v1"],
+    neighbours: ["prague-v1", "vienna-v1", "budapest-v1"],
     voteBlurb: "A compact old town beneath a white castle, an hour downriver from Vienna.",
   },
   "prague-v1": {
     lat: 50.0755,
     lon: 14.4378,
-    neighbours: ["bratislava-v1", "vienna-v1"],
+    neighbours: ["cologne-v1", "bratislava-v1", "vienna-v1"],
     voteBlurb: "Bridges over the Vltava, and a hundred spires above the red rooftops.",
   },
   "paris-v1": {
@@ -119,7 +139,7 @@ export const PACK_GEOGRAPHY: Record<string, PackGeography> = {
   "paris-v3": {
     lat: 48.8566,
     lon: 2.3522,
-    neighbours: [],
+    neighbours: ["brussels-v1"],
     voteBlurb: "Station boulevards, canal paths, gardens, bookshops and bridges across ten Paris places.",
   },
 };

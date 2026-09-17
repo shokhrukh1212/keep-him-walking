@@ -1,67 +1,59 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import { flagEmoji } from "@/lib/countries/flags";
-import { mapPointString, projectEquirectangular } from "@/lib/map/projection";
 import type { JourneyMapData } from "@/lib/map/data";
 
+/** A compact, ordered route. Visited and current states come from matching server-confirmed days. */
 export function JourneyMap({ data, compact = false }: { data: JourneyMapData; compact?: boolean }) {
-  const routePoints = data.cities.map((city) => mapPointString(city)).join(" ");
-  const current = data.cities.find((city) => city.status === "current") ?? data.cities.at(-1) ?? null;
+  const frameRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const frame = frameRef.current;
+    const current = frame?.querySelector<HTMLElement>('.map-city[data-status="current"]');
+    if (frame && current) frame.scrollLeft = Math.max(0, current.offsetLeft - frame.clientWidth / 2 + current.clientWidth / 2);
+  }, [data.currentDayNumber]);
   return (
     <section className="journey-map" data-compact={compact} data-testid={compact ? "journey-map-compact" : "journey-map-full"}>
-      {!compact ? <header>
-        <span className="eyebrow">SEASON 1 · THE ROUTE SO FAR</span>
-        <h1>One day, one city, one continuous journey.</h1>
-      </header> : <h2>Journey map</h2>}
-      <div className="journey-map-frame">
-        <svg viewBox="0 0 1000 500" role="img" aria-label={`Journey map with ${data.cities.length} visited cities and ${data.candidates.length} candidates`}>
-          <image href="/map/world.svg" x="0" y="0" width="1000" height="500" />
-          {data.cities.length > 1 ? <polyline className="season-route" points={routePoints} /> : null}
-          {data.cities.slice(1).map((city, index) => {
-            const from = data.cities[index]!;
-            return <line key={`segment-${city.countryDayId}`} className={`route-segment ${city.transferFromPrevious ?? "walk"}`} x1={projectEquirectangular(from).x} y1={projectEquirectangular(from).y} x2={projectEquirectangular(city).x} y2={projectEquirectangular(city).y} data-transfer={city.transferFromPrevious} />;
-          })}
-          {current ? data.candidates.map((candidate) => {
-            const start = projectEquirectangular(current);
-            const point = projectEquirectangular(candidate);
-            const textAnchor = point.x > 850 ? "end" : "start";
-            const labelX = point.x + (textAnchor === "end" ? -11 : 11);
-            return <g key={candidate.optionId} className="map-candidate" data-transfer={candidate.transfer}>
-              <line x1={start.x} y1={start.y} x2={point.x} y2={point.y} />
-              <circle cx={point.x} cy={point.y} r="6" />
-              <text x={labelX} y={point.y - 9} textAnchor={textAnchor}>{flagEmoji(candidate.countryCode)} {candidate.percent}%</text>
-              {!compact ? <text className="candidate-name" x={labelX} y={point.y + 10} textAnchor={textAnchor}>{candidate.label}{candidate.transfer !== "walk" ? ` · ${candidate.transfer}` : ""}</text> : null}
-            </g>;
-          }) : null}
-          {current ? data.ticketFlights.map((ticket) => {
-            const start = projectEquirectangular(current);
-            const point = projectEquirectangular(ticket);
-            return <g key={ticket.ticketId} className="map-ticket-flight" data-testid="ticket-flight" data-transfer="flight">
-              <line className="route-segment flight" x1={start.x} y1={start.y} x2={point.x} y2={point.y} />
-              <circle cx={point.x} cy={point.y} r="7" />
-              {!compact ? <text x={point.x + 11} y={point.y - 9}>{flagEmoji(ticket.countryCode)} Day {ticket.dayNumber} · {ticket.cityName}</text> : null}
-            </g>;
-          }) : null}
-          {data.cities.map((city) => {
-            const point = projectEquirectangular(city);
-            return <a key={city.countryDayId} href={city.status === "current" ? "/" : `/day/${city.dayNumber}`} aria-label={`Day ${city.dayNumber}: ${city.cityName}, ${city.outcome}`}>
-              <g className="map-city" data-outcome={city.outcome} data-current={city.status === "current"} transform={`translate(${point.x} ${point.y})`}>
-                <circle className="map-city-pulse" r="14" />
-                <circle className="map-city-stamp" r={compact ? 7 : 9} />
-                {!compact ? <text x="13" y="-12">{flagEmoji(city.countryCode)} {city.cityName}</text> : null}
-              </g>
-            </a>;
-          })}
-        </svg>
+      <header>
+        <span className="eyebrow">SEASON 1 · VIRTUAL ROUTE</span>
+        {compact ? <h2>{data.cities.length} cities · {new Set(data.cities.map((city) => city.countryCode)).size} countries</h2> : <h1>One day, one city, one virtual journey.</h1>}
+      </header>
+      <div ref={frameRef} className="journey-map-frame" role="region" aria-label="Virtual route, scroll for all days" tabIndex={0}>
+        <ol className="journey-route-list">
+          {data.cities.map((city) => (
+            <li key={city.countryDayId} className="map-city" data-status={city.status} data-current={city.status === "current"}>
+              {city.status === "upcoming" ? (
+                <div className="map-city-content" aria-label={`Day ${city.dayNumber}: ${city.cityName}, ${city.countryName}, upcoming`}>
+                  <span className="map-city-day">{city.dayNumber}</span>
+                  <span className="map-city-flag" aria-hidden="true">{flagEmoji(city.countryCode)}</span>
+                  <span className="map-city-name">{city.cityName}<small>{city.countryName}</small></span>
+                </div>
+              ) : (
+                <a className="map-city-content" href={city.status === "current" ? "/" : `/day/${city.dayNumber}`} aria-label={`Day ${city.dayNumber}: ${city.cityName}, ${city.countryName}, ${city.status}`}>
+                  <span className="map-city-day">{city.dayNumber}</span>
+                  <span className="map-city-flag" aria-hidden="true">{flagEmoji(city.countryCode)}</span>
+                  <span className="map-city-name">{city.cityName}<small>{city.countryName}</small></span>
+                </a>
+              )}
+            </li>
+          ))}
+        </ol>
       </div>
-      {!compact ? <>
-        <div className="map-stats" aria-label="Season map statistics">
-          <div><strong>{data.stats.days}</strong><small>days visited</small></div>
-          <div><strong>{(data.stats.confirmedDistanceMetres / 1_000).toFixed(1)} km</strong><small>confirmed distance</small></div>
-          <div><strong>{data.stats.landmarks}</strong><small>landmarks</small></div>
-          <div><strong>{data.stats.marathons}</strong><small>marathons</small></div>
-        </div>
-        <div className="map-legend" aria-label="Map legend"><span className="landmark">● landmark</span><span className="marathon">● marathon</span><span className="unfinished">● unfinished</span><span>— walk · ┄ train/flight</span></div>
-        <small className="map-attribution">Map geometry: Natural Earth 1:110m · public domain</small>
-      </> : null}
+      {data.candidates.length > 0 ? <div className="map-vote-candidates" aria-label="Destination vote candidates">
+        {data.candidates.map((candidate) => <span key={candidate.optionId} className="map-candidate" data-transfer={candidate.transfer}>
+          {flagEmoji(candidate.countryCode)} {candidate.label} · {candidate.percent}% · {candidate.transfer}
+        </span>)}
+      </div> : null}
+      {data.ticketFlights.length > 0 ? <div className="map-vote-candidates" aria-label="Approved ticket destinations">
+        {data.ticketFlights.map((ticket) => <span key={ticket.ticketId} className="map-ticket-flight" data-testid="ticket-flight">
+          {flagEmoji(ticket.countryCode)} Day {ticket.dayNumber} · {ticket.cityName} · flight
+        </span>)}
+      </div> : null}
+      <div className="map-legend" aria-label="Route status"><span>● Visited</span><span>● Current city</span><span>○ Upcoming</span></div>
+      {!compact ? <div className="map-stats" aria-label="Season map statistics">
+        <div><strong>{data.stats.days}</strong><small>days reached</small></div>
+        <div><strong>{(data.stats.confirmedDistanceMetres / 1_000).toFixed(1)} km</strong><small>confirmed distance</small></div>
+      </div> : null}
     </section>
   );
 }

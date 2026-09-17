@@ -100,7 +100,11 @@
     "test:e2e:phase3": "playwright test tests/e2e/phase3.spec.ts",
     "record:phase3:preview": "playwright test --config=playwright.phase3-preview.config.ts",
     "verify:phase3:code": "pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build && pnpm content:validate && pnpm assets:report:phase2 && pnpm content:phase3",
-    "verify:phase3": "pnpm verify:phase3:code && pnpm phase2:preflight && pnpm db:lint:phase3 && pnpm db:test:phase3 && pnpm test:e2e"
+    "verify:phase3": "pnpm verify:phase3:code && pnpm phase2:preflight && pnpm db:lint:phase3 && pnpm db:test:phase3 && pnpm test:e2e",
+    "season:assets:manifests": "node --import tsx scripts/season/asset-manifests.ts",
+    "season:assets:cleanup": "node --import tsx --env-file-if-exists=.env.local scripts/season/cleanup-assets.ts",
+    "season:assets:verify-r2": "node --import tsx scripts/season/verify-r2.ts",
+    "season:assets:upload-manifests": "node --import tsx --env-file-if-exists=.env.production.local scripts/season/upload-manifests.ts"
   },
   "dependencies": {
     "@rive-app/react-webgl2": "^4.33.0",

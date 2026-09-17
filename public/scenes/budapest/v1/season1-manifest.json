@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "day": 8,
+  "city": "Budapest",
+  "country": "Hungary",
+  "packId": "budapest-v1",
+  "startsAt": "2026-09-24T16:00:00.000Z",
+  "endsAt": "2026-09-25T16:00:00.000Z",
+  "thumbnail": "/scenes/tashkent/v1/scene-fallback.webp",
+  "fullResolution": [],
+  "missing": [
+    "city-specific reviewed pack for budapest-v1 (generic fallback only)",
+    "public/scenes/budapest/v1/ (city paintings and renditions)"
+  ],
+  "fallback": "/scenes/tashkent/v1/scene-fallback.webp"
+}

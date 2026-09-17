@@ -1,0 +1,130 @@
+{
+  "base": "https://assets.keephimwalking.com",
+  "checkedAt": "2026-09-16T11:47:23.386Z",
+  "results": [
+    {
+      "day": 1,
+      "city": "Paris",
+      "packId": "paris-v3",
+      "localMissing": [],
+      "r2Checked": 95,
+      "r2Failures": []
+    },
+    {
+      "day": 2,
+      "city": "Brussels",
+      "packId": "brussels-v1",
+      "localMissing": [
+        "city-specific reviewed pack for brussels-v1 (generic fallback only)",
+        "public/scenes/brussels/v1/ (city paintings and renditions)"
+      ],
+      "r2Checked": 0,
+      "r2Failures": []
+    },
+    {
+      "day": 3,
+      "city": "Amsterdam",
+      "packId": "amsterdam-v1",
+      "localMissing": [
+        "city-specific reviewed pack for amsterdam-v1 (generic fallback only)",
+        "public/scenes/amsterdam/v1/ (city paintings and renditions)"
+      ],
+      "r2Checked": 0,
+      "r2Failures": []
+    },
+    {
+      "day": 4,
+      "city": "Cologne",
+      "packId": "cologne-v1",
+      "localMissing": [
+        "city-specific reviewed pack for cologne-v1 (generic fallback only)",
+        "public/scenes/cologne/v1/ (city paintings and renditions)"
+      ],
+      "r2Checked": 0,
+      "r2Failures": []
+    },
+    {
+      "day": 5,
+      "city": "Prague",
+      "packId": "prague-v1",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    },
+    {
+      "day": 6,
+      "city": "Vienna",
+      "packId": "vienna-v1",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    },
+    {
+      "day": 7,
+      "city": "Bratislava",
+      "packId": "bratislava-v1",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    },
+    {
+      "day": 8,
+      "city": "Budapest",
+      "packId": "budapest-v1",
+      "localMissing": [
+        "city-specific reviewed pack for budapest-v1 (generic fallback only)",
+        "public/scenes/budapest/v1/ (city paintings and renditions)"
+      ],
+      "r2Checked": 0,
+      "r2Failures": []
+    },
+    {
+      "day": 9,
+      "city": "Ljubljana",
+      "packId": "ljubljana-v1",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    },
+    {
+      "day": 10,
+      "city": "Zagreb",
+      "packId": "zagreb-v1",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    },
+    {
+      "day": 11,
+      "city": "Belgrade",
+      "packId": "belgrade-v1",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    },
+    {
+      "day": 12,
+      "city": "Sofia",
+      "packId": "sofia-v1",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    },
+    {
+      "day": 13,
+      "city": "Istanbul",
+      "packId": "istanbul-v1",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    },
+    {
+      "day": 14,
+      "city": "Tashkent",
+      "packId": "tashkent-v5",
+      "localMissing": [],
+      "r2Checked": 5,
+      "r2Failures": []
+    }
+  ]
+}

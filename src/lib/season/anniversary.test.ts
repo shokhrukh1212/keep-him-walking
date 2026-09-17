@@ -10,18 +10,19 @@ describe("the Anniversary Journey calendar", () => {
     expect(tashkentMidnightUtc("2026-09-17")).toBe("2026-09-16T19:00:00.000Z");
     expect(tashkentMidnightUtc("2026-10-01")).toBe("2026-09-30T19:00:00.000Z");
     expect(() => tashkentMidnightUtc("17 September")).toThrow();
+    expect(() => tashkentMidnightUtc("2026-02-30")).toThrow();
   });
 
   it("names the owner's instants", () => {
     expect(ANNIVERSARY_JOURNEY).toMatchObject({
       totalDays: 14,
-      daysPerCity: 2,
-      previewStartsAt: "2026-09-15T19:00:00.000Z",
-      travelStartsAt: "2026-09-17T10:00:00.000Z",
-      travelEndsAt: "2026-10-01T10:00:00.000Z",
-      boundaryUtcHour: 10,
+      daysPerCity: 1,
+      previewStartsAt: "2026-09-16T16:00:00.000Z",
+      travelStartsAt: "2026-09-17T16:00:00.000Z",
+      travelEndsAt: "2026-10-01T16:00:00.000Z",
+      boundaryUtcHour: 16,
     });
-    expect(ANNIVERSARY_JOURNEY.poll.opensAt).toBe("2026-09-23T19:00:00.000Z");
+    expect(ANNIVERSARY_JOURNEY.poll.opensAt).toBe("2026-09-24T16:00:00.000Z");
     expect(ANNIVERSARY_JOURNEY.poll.closesAt).toBe("2026-09-28T15:00:00.000Z");
     expect(ANNIVERSARY_LABELS).toMatchObject({
       travelStarts: "September 17", lastTravelDay: "September 30", anniversary: "October 1",
@@ -29,24 +30,24 @@ describe("the Anniversary Journey calendar", () => {
     });
   });
 
-  it("is a preview until the launch millisecond (15:00 Tashkent), then Day 1", () => {
-    expect(anniversaryPhaseAt(at("2026-09-17T09:59:59.999Z"))).toBe("preview");
-    expect(anniversaryDayAt(at("2026-09-17T09:59:59.999Z"))).toBeNull();
-    expect(anniversaryPhaseAt(at("2026-09-17T10:00:00.000Z"))).toBe("travel");
-    expect(anniversaryDayAt(at("2026-09-17T10:00:00.000Z"))).toBe(1);
+  it("is a preview until 21:00 Tashkent, then Day 1", () => {
+    expect(anniversaryPhaseAt(at("2026-09-17T15:59:59.999Z"))).toBe("preview");
+    expect(anniversaryDayAt(at("2026-09-17T15:59:59.999Z"))).toBeNull();
+    expect(anniversaryPhaseAt(at("2026-09-17T16:00:00.000Z"))).toBe("travel");
+    expect(anniversaryDayAt(at("2026-09-17T16:00:00.000Z"))).toBe(1);
   });
 
-  it("reaches Day 14 on 30 September and the anniversary at 15:00 Tashkent on 1 October", () => {
-    expect(anniversaryDayAt(at("2026-09-30T10:00:00.000Z"))).toBe(14);
-    expect(anniversaryDayAt(at("2026-10-01T09:59:59.999Z"))).toBe(14);
-    expect(anniversaryPhaseAt(at("2026-10-01T10:00:00.000Z"))).toBe("anniversary");
-    expect(anniversaryDayAt(at("2026-10-01T10:00:00.000Z"))).toBeNull();
+  it("reaches Day 14 on 30 September and the anniversary at 21:00 Tashkent on 1 October", () => {
+    expect(anniversaryDayAt(at("2026-09-30T16:00:00.000Z"))).toBe(14);
+    expect(anniversaryDayAt(at("2026-10-01T15:59:59.999Z"))).toBe(14);
+    expect(anniversaryPhaseAt(at("2026-10-01T16:00:00.000Z"))).toBe("anniversary");
+    expect(anniversaryDayAt(at("2026-10-01T16:00:00.000Z"))).toBeNull();
     expect(anniversaryPhaseAt(at("2026-11-01T00:00:00.000Z"))).toBe("anniversary");
   });
 
   it("opens the poll on 24 September and closes it at 20:00 Tashkent on 28 September", () => {
-    expect(pollPhaseAt(at("2026-09-23T18:59:59.999Z"))).toBe("upcoming");
-    expect(pollPhaseAt(at("2026-09-23T19:00:00.000Z"))).toBe("open");
+    expect(pollPhaseAt(at("2026-09-24T15:59:59.999Z"))).toBe("upcoming");
+    expect(pollPhaseAt(at("2026-09-24T16:00:00.000Z"))).toBe("open");
     expect(pollPhaseAt(at("2026-09-28T14:59:59.999Z"))).toBe("open");
     expect(pollPhaseAt(at("2026-09-28T15:00:00.000Z"))).toBe("closed");
   });

@@ -5,6 +5,8 @@ import sharp from "sharp";
 import { registeredCountryPacks } from "../src/content/countries/registry";
 import { readableCountryPackSchema, type SceneVariant } from "../src/lib/content/schema";
 import { horizontalEdgeMismatch } from "../src/lib/content/seam-audit";
+import { SEASON_ONE_FALLBACK_IDS } from "../src/content/countries/season1-fallback";
+import { SEASON_SCENE_FALLBACK } from "../src/lib/season/asset-manifest";
 
 const packs = registeredCountryPacks();
 const versions = new Set<string>();
@@ -75,7 +77,7 @@ for (const candidate of packs) {
   for (const url of urls) {
     const assetPath = path.join(process.cwd(), "public", url);
     await access(assetPath);
-    if (url.includes("/scenes/")) {
+    if (url.includes("/scenes/") && !(SEASON_ONE_FALLBACK_IDS.has(pack.assetVersion) && url === SEASON_SCENE_FALLBACK)) {
       const owner = assetOwners.get(url);
       if (owner && owner !== pack.countryCode) {
         throw new Error(`Scene asset ${url} is reused by ${owner} and ${pack.countryCode}`);

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "day": 12,
+  "city": "Sofia",
+  "country": "Bulgaria",
+  "packId": "sofia-v1",
+  "startsAt": "2026-09-28T16:00:00.000Z",
+  "endsAt": "2026-09-29T16:00:00.000Z",
+  "thumbnail": "/postcards/sofia/v1/background.webp",
+  "fullResolution": [
+    "/scenes/sofia/v1/zones/banitsa-cafe/fallback.webp",
+    "/scenes/sofia/v1/zones/central-market/fallback.webp",
+    "/scenes/sofia/v1/zones/nevsky-arrival/fallback.webp",
+    "/scenes/sofia/v1/zones/vitosha-evening/fallback.webp",
+    "/scenes/sofia/v1/zones/yellow-stones/fallback.webp"
+  ],
+  "missing": [],
+  "fallback": "/scenes/tashkent/v1/scene-fallback.webp"
+}

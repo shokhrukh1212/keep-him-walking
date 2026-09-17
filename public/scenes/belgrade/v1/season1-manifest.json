@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "day": 11,
+  "city": "Belgrade",
+  "country": "Serbia",
+  "packId": "belgrade-v1",
+  "startsAt": "2026-09-27T16:00:00.000Z",
+  "endsAt": "2026-09-28T16:00:00.000Z",
+  "thumbnail": "/postcards/belgrade/v1/background.webp",
+  "fullResolution": [
+    "/scenes/belgrade/v1/zones/dorcol-streets/fallback.webp",
+    "/scenes/belgrade/v1/zones/green-market/fallback.webp",
+    "/scenes/belgrade/v1/zones/kalemegdan-evening/fallback.webp",
+    "/scenes/belgrade/v1/zones/republic-arrival/fallback.webp",
+    "/scenes/belgrade/v1/zones/riverside-cafe/fallback.webp"
+  ],
+  "missing": [],
+  "fallback": "/scenes/tashkent/v1/scene-fallback.webp"
+}

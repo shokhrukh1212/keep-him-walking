@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "day": 2,
+  "city": "Brussels",
+  "country": "Belgium",
+  "packId": "brussels-v1",
+  "startsAt": "2026-09-18T16:00:00.000Z",
+  "endsAt": "2026-09-19T16:00:00.000Z",
+  "thumbnail": "/scenes/tashkent/v1/scene-fallback.webp",
+  "fullResolution": [],
+  "missing": [
+    "city-specific reviewed pack for brussels-v1 (generic fallback only)",
+    "public/scenes/brussels/v1/ (city paintings and renditions)"
+  ],
+  "fallback": "/scenes/tashkent/v1/scene-fallback.webp"
+}

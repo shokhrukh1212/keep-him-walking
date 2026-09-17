@@ -19,7 +19,7 @@ export default function TermsPage() {
         <span className="legal-section-number">01</span>
         <h2>What the service is</h2>
         <p>Keep Him Walking is a free, anonymous interactive viewing experience. A shared traveler advances only while at least one ready, visible browser is confirmed as watching. Seasons, cities, scenes, stories, votes and availability may change. The displayed status identifies whether information is live, reconnecting, extrapolated or last confirmed.</p>
-        <p>Season 1, “The Anniversary Journey”, runs on Asia/Tashkent calendar days from 17 to 30 September 2026, two days in each of seven cities, with an anniversary update on 1 October. The traveler and the cities are virtual and illustrated. The maker’s real anniversary plans in Tashkent are separate from the virtual journey.</p>
+        <p>Season 1, “The Anniversary Journey”, runs on Asia/Tashkent calendar days from 17 to 30 September 2026, one day in each of 14 cities and 14 countries, with an anniversary update on 1 October. The traveler and the cities are virtual and illustrated. The maker’s real anniversary plans in Tashkent are separate from the virtual journey.</p>
       </section>
 
       <section>

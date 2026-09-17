@@ -2,7 +2,7 @@ import { isVoteReadyPack, type CountryPack, type CountryPackV3 } from "@/lib/con
 import { TRAVELER_NAME_OPTIONS } from "@/lib/launch/seed-plan";
 import { scheduleStoryBeats } from "@/lib/story-clock/cadence";
 import { buildDestinationCandidates } from "@/lib/vote/candidates";
-import { ANNIVERSARY_JOURNEY } from "./anniversary";
+import { ANNIVERSARY_JOURNEY, SEASON_ONE_ROUTE } from "./anniversary";
 import { SEASON_LENGTH_DAYS } from "./clock";
 
 export const SEASON_FIRST_PACK_ID = "paris-v3";
@@ -197,13 +197,19 @@ export function buildSeasonPlan(input: {
 }
 
 /**
- * Season 1, "The Anniversary Journey", built entirely from `anniversary.ts`: its seven
- * cities two days each from 15:00 Tashkent on 17 September, the name vote from the
+ * Season 1, "The Anniversary Journey", built entirely from `anniversary.ts`: its fourteen
+ * cities one day each from 21:00 Tashkent on 17 September, the name vote from the
  * preview day until launch, and the anniversary-setting poll.
  */
 export function buildAnniversaryPlan(itinerary: readonly CountryPackV3[]) {
   const schedule = ANNIVERSARY_JOURNEY;
-  return buildSeasonPlan({
+  for (const [index, stop] of SEASON_ONE_ROUTE.entries()) {
+    const pack = itinerary[index];
+    if (!pack || pack.assetVersion !== stop.packId || pack.countryCode !== stop.code || pack.cityName !== stop.city || pack.countryName !== stop.country) {
+      throw new Error(`Day ${index + 1} must be ${stop.city}, ${stop.country} (${stop.packId})`);
+    }
+  }
+  const plan = buildSeasonPlan({
     startsAt: new Date(schedule.travelStartsAt),
     seasonNumber: schedule.seasonNumber,
     itinerary,
@@ -218,4 +224,13 @@ export function buildAnniversaryPlan(itinerary: readonly CountryPackV3[]) {
       options: schedule.poll.options,
     },
   });
+  return {
+    ...plan,
+    days: plan.days.map((day, index) => ({
+      ...day,
+      arrivalMode: "transferFromPrevious" in SEASON_ONE_ROUTE[index]!
+        ? SEASON_ONE_ROUTE[index]!.transferFromPrevious
+        : day.arrivalMode,
+    })),
+  };
 }

@@ -6,7 +6,7 @@ import { ASSET_ROOTS, validateAssetBaseUrl } from "../../src/lib/assets/url";
 const MIME: Record<string, string> = {
   ".glb": "model/gltf-binary", ".webp": "image/webp", ".png": "image/png",
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".wav": "audio/wav",
-  ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".md": "text/markdown; charset=utf-8",
+  ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".json": "application/json", ".md": "text/markdown; charset=utf-8",
 };
 const MAX_BYTES = 100 * 1024 * 1024;
 /** Scene renditions carry a content hash in their name, so their bytes can never change. */
@@ -106,6 +106,32 @@ export function signAssetPut(config: UploadConfig, key: string, body: Uint8Array
   const signedHeaders = Object.keys(headers).sort().join(";");
   const canonicalHeaders = Object.keys(headers).sort().map((name) => `${name}:${headers[name].trim()}\n`).join("");
   const canonical = ["PUT", uri, "", canonicalHeaders, signedHeaders, hash(body)].join("\n");
+  const scope = `${day}/${config.region}/s3/aws4_request`;
+  const signingKey = hmac(hmac(hmac(hmac(`AWS4${config.secretAccessKey}`, day), config.region), "s3"), "aws4_request");
+  const signature = hmac(signingKey, ["AWS4-HMAC-SHA256", date, scope, hash(canonical)].join("\n")).toString("hex");
+  headers.authorization = `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  return { url: `${config.endpoint}${uri}`, headers };
+}
+
+/** Signed single-object DELETE, used only by the guarded completed-city cleanup. */
+export function signAssetDelete(config: UploadConfig, key: string, now: Date) {
+  if (!key.startsWith("scenes/") || key.split("/").some((part) => !part || part === "." || part === "..") || /[\\\r\n]/.test(key)) {
+    throw new Error("Cleanup accepts only canonical scene keys");
+  }
+  const encode = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  const uri = `/${encode(config.bucket)}/${key.split("/").map(encode).join("/")}`;
+  const date = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const day = date.slice(0, 8);
+  const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+  const hmac = (secret: string | Uint8Array, value: string) => createHmac("sha256", secret).update(value).digest();
+  const headers: Record<string, string> = {
+    host: new URL(config.endpoint).host,
+    "x-amz-content-sha256": hash(""),
+    "x-amz-date": date,
+  };
+  const signedHeaders = Object.keys(headers).sort().join(";");
+  const canonicalHeaders = Object.keys(headers).sort().map((name) => `${name}:${headers[name].trim()}\n`).join("");
+  const canonical = ["DELETE", uri, "", canonicalHeaders, signedHeaders, hash("")].join("\n");
   const scope = `${day}/${config.region}/s3/aws4_request`;
   const signingKey = hmac(hmac(hmac(hmac(`AWS4${config.secretAccessKey}`, day), config.region), "s3"), "aws4_request");
   const signature = hmac(signingKey, ["AWS4-HMAC-SHA256", date, scope, hash(canonical)].join("\n")).toString("hex");

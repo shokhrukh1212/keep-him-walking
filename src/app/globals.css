@@ -4456,3 +4456,27 @@ a:focus-visible,
 .audience-updated { color: var(--muted); font-size: .76rem; }
 .audience-updated { margin: 0; }
 .audience-dashboard { width: fit-content; color: var(--paper); font-family: var(--font-controls); font-size: .78rem; text-underline-offset: .2em; }
+
+/* Season 1 virtual route: one contained scroll area, including inside Journey. */
+.journey-map { min-width: 0; }
+.journey-map header h2 { margin: 0.25rem 0 0; font-size: 1rem; }
+.journey-map-frame { max-width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+.journey-route-list { display: flex; width: max-content; min-width: 100%; margin: 0; padding: 1rem; list-style: none; }
+.journey-route-list .map-city { position: relative; flex: none; width: 9.5rem; min-height: 6.2rem; }
+.journey-route-list .map-city:not(:last-child)::after { content: ""; position: absolute; top: 1.65rem; left: calc(100% - 1.15rem); width: 2.3rem; height: 2px; background: #80969a; z-index: 1; }
+.map-city-content { display: grid; grid-template-columns: 2rem 1fr; column-gap: 0.35rem; align-content: start; width: calc(100% - 0.55rem); min-height: 6.2rem; padding: 0.65rem; border: 1px solid #536970; border-radius: 0.65rem; background: #17343d; color: #fff7e5; text-decoration: none; }
+.map-city-day { display: grid; place-items: center; grid-row: span 2; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: #536970; color: #fff7e5; font-size: 0.8rem; font-weight: 800; }
+.map-city-flag { font-size: 1rem; line-height: 1.8rem; }
+.map-city-name { grid-column: 2; min-width: 0; font-size: 0.8rem; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+.map-city-name small { display: block; margin-top: 0.25rem; font-size: 0.67rem; font-weight: 500; color: #d5e2db; }
+.map-city[data-status="completed"] .map-city-content { border-color: #91d5b1; }
+.map-city[data-status="completed"] .map-city-day { background: #91d5b1; color: #102a32; }
+.map-city[data-status="current"] .map-city-content { border: 2px solid #ffd777; background: #31505a; box-shadow: 0 0 0 3px rgb(255 215 119 / 25%); }
+.map-city[data-status="current"] .map-city-day { background: #ffd777; color: #102a32; }
+.map-city[data-status="upcoming"] .map-city-content { opacity: 0.76; }
+@media (max-width: 600px) { .journey-route-list .map-city { width: 8.2rem; } .journey-route-list { padding: 0.75rem; } }
+.map-vote-candidates { display: flex; flex-wrap: wrap; gap: 0.4rem; font-size: 0.72rem; }
+.map-vote-candidates > span { padding: 0.35rem 0.55rem; border: 1px solid #80969a; border-radius: 0.4rem; background: #17343d; }
+.journey-map .map-legend span:first-child { color: #91d5b1; }
+.journey-map .map-legend span:nth-child(2) { color: #ffd777; font-weight: 800; }
+.journey-map .map-legend span:last-child { color: #aeb7b8; }

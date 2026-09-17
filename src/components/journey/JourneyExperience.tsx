@@ -253,6 +253,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const lastBudgetReport = useRef(0);
   const sponsorMetrics = useRef(new Set<string>());
   const preloadedTomorrow = useRef<string | null>(null);
+  const preloadedTomorrowImage = useRef<HTMLImageElement | null>(null);
   const [hasWalked, setHasWalked] = useState(false);
   const loadStarted = useRef(0);
   const reducedMotion = useMotionPreference();
@@ -681,6 +682,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     });
   }, [activeRouteZone, distanceMetres]);
 
+  useEffect(() => {
+    if (preloadedTomorrowImage.current) preloadedTomorrowImage.current.src = "";
+    preloadedTomorrowImage.current = null;
+    preloadedTomorrow.current = null;
+  }, [snapshot.countryDay.id]);
+
   // Tomorrow's first place only, and only in the last minutes of today: a visitor
   // who leaves earlier downloads nothing for a city they will not see.
   useEffect(() => {
@@ -698,7 +705,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     image.crossOrigin = "anonymous";
     image.decoding = "async";
     image.src = publicAssetUrl(choice.url);
-  }, [qualityTier, realNowMs, snapshot.countryDay.endsAt, snapshot.tomorrow]);
+    preloadedTomorrowImage.current = image;
+  }, [qualityTier, realNowMs, snapshot.countryDay.id, snapshot.countryDay.endsAt, snapshot.tomorrow]);
 
   useEffect(() => {
     if (!qualityTier || qualityReported.current) return;
@@ -999,6 +1007,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       style={{ "--journey-footer-inset": `${footerInsetPx}px` } as CSSProperties}
     >
       <SceneStage
+        key={snapshot.assets.assetVersion}
         // The first render is a placeholder at second zero; loading its place would
         // download a painting the live journey is not showing.
         settled={!loadingLive}

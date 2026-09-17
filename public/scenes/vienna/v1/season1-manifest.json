@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "day": 6,
+  "city": "Vienna",
+  "country": "Austria",
+  "packId": "vienna-v1",
+  "startsAt": "2026-09-22T16:00:00.000Z",
+  "endsAt": "2026-09-23T16:00:00.000Z",
+  "thumbnail": "/postcards/vienna/v1/background.webp",
+  "fullResolution": [
+    "/scenes/vienna/v1/zones/belvedere-evening/fallback.webp",
+    "/scenes/vienna/v1/zones/coffeehouse/fallback.webp",
+    "/scenes/vienna/v1/zones/naschmarkt/fallback.webp",
+    "/scenes/vienna/v1/zones/ringstrasse-arrival/fallback.webp",
+    "/scenes/vienna/v1/zones/stephansplatz-lanes/fallback.webp"
+  ],
+  "missing": [],
+  "fallback": "/scenes/tashkent/v1/scene-fallback.webp"
+}

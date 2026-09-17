@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { registeredCountryPacks } from "@/content/countries/registry";
-import { ANNIVERSARY_JOURNEY } from "./anniversary";
+import { ANNIVERSARY_JOURNEY, SEASON_ONE_ROUTE } from "./anniversary";
 import { buildAnniversaryPlan, buildSeasonPlan, parseSeasonStartsAt, planSeasonItinerary } from "./plan";
 
 const now = Date.parse("2026-09-14T09:00:00Z");
@@ -81,43 +81,46 @@ describe("buildSeasonPlan", () => {
 });
 
 describe("buildAnniversaryPlan", () => {
-  const itinerary = ["paris-v3", "prague-v1", "bratislava-v1", "vienna-v1", "ljubljana-v1", "zagreb-v1", "belgrade-v1"]
-    .map((id) => planSeasonItinerary({ packs, explicit: [id], cityCount: 1 })[0]!);
+  const paris = packs.find((pack) => pack.assetVersion === "paris-v3")!;
+  if (paris.schemaVersion !== 3) throw new Error("Paris v3 is required");
+  const itinerary = SEASON_ONE_ROUTE.map((stop) => ({
+    ...paris, assetVersion: stop.packId, packId: stop.packId,
+    countryCode: stop.code, countryName: stop.country, cityName: stop.city,
+  }));
   const plan = buildAnniversaryPlan(itinerary);
 
-  it("walks the seven configured cities two days each, from Tashkent midnight to the anniversary", () => {
+  it("walks fourteen countries one day each, from 21:00 Tashkent to the anniversary", () => {
     expect(plan.season).toMatchObject({
       slug: "season-1",
       title: "The Anniversary Journey",
-      startsAt: "2026-09-17T10:00:00.000Z",
-      endsAt: "2026-10-01T10:00:00.000Z",
+      startsAt: "2026-09-17T16:00:00.000Z",
+      endsAt: "2026-10-01T16:00:00.000Z",
       totalDays: 14,
     });
     expect(plan.season.startsAt).toBe(ANNIVERSARY_JOURNEY.travelStartsAt);
     expect(plan.season.endsAt).toBe(ANNIVERSARY_JOURNEY.travelEndsAt);
-    expect(plan.days.map((day) => day.scenePackId)).toEqual(itinerary.flatMap((pack) => [pack.assetVersion, pack.assetVersion]));
+    expect(plan.days.map((day) => day.scenePackId)).toEqual(itinerary.map((pack) => pack.assetVersion));
     expect(plan.days.map((day) => day.dayNumber)).toEqual(Array.from({ length: 14 }, (_, index) => index + 1));
   });
 
-  it("stays on foot inside a city and says goodbye only on the evening he leaves", () => {
-    expect(plan.days.filter((_, index) => index % 2 === 1).every((day) => day.arrivalMode === "walk")).toBe(true);
-    expect(plan.days.filter((_, index) => index % 2 === 0).every((day) => day.events.length === 0)).toBe(true);
-    expect(plan.days[1]?.events.length).toBeGreaterThan(0);
-    expect(plan.days[1]?.events.every((event) => event.startsAt === "2026-09-19T10:00:00.000Z")).toBe(true);
-    expect(plan.days[13]?.events.every((event) => event.startsAt === "2026-10-01T10:00:00.000Z")).toBe(true);
+  it("keeps every country distinct and schedules departure at each 21:00 Tashkent boundary", () => {
+    expect(new Set(plan.days.map((day) => day.countryCode)).size).toBe(14);
+    expect(plan.days[0]?.arrivalMode).toBe("walk");
+    expect(plan.days[13]?.events.every((event) => event.startsAt === "2026-10-01T16:00:00.000Z")).toBe(true);
+    expect(() => buildAnniversaryPlan([...itinerary].reverse())).toThrow(/Day 1 must be Paris/);
   });
 
   it("runs the name vote from the preview day until launch and the poll from Day 8 until 20:00 on 28 September", () => {
     expect(plan.votes.map((vote) => [vote.kind, vote.opensAt, vote.closesAt])).toEqual([
-      ["name", "2026-09-15T19:00:00.000Z", "2026-09-17T10:00:00.000Z"],
-      ["anniversary", "2026-09-23T19:00:00.000Z", "2026-09-28T15:00:00.000Z"],
+      ["name", "2026-09-16T16:00:00.000Z", "2026-09-17T16:00:00.000Z"],
+      ["anniversary", "2026-09-24T16:00:00.000Z", "2026-09-28T15:00:00.000Z"],
     ]);
     expect(plan.votes[1]?.options.map((option) => option.label)).toEqual(["A park in Tashkent", "A café in Tashkent", "A scenic spot in Tashkent"]);
   });
 
   it("refuses a poll outside the season", () => {
     expect(() => buildSeasonPlan({
-      startsAt: new Date(ANNIVERSARY_JOURNEY.travelStartsAt), seasonNumber: 1, itinerary, daysPerCity: 2,
+      startsAt: new Date(ANNIVERSARY_JOURNEY.travelStartsAt), seasonNumber: 1, itinerary, daysPerCity: 1, cityCount: 14,
       poll: { question: "Q", options: ["a", "b"], opensAt: new Date("2026-09-15T19:00:00Z"), closesAt: new Date("2026-09-20T19:00:00Z") },
     })).toThrow(/within the season/);
   });

@@ -16,6 +16,7 @@ import { pragueCountryPackV1 } from "./prague.v1";
 import type { CountryPack } from "@/lib/content/schema";
 import { PACK_GEOGRAPHY } from "./geography";
 import { authoredCountryPacks } from "./authored";
+import { seasonOneFallbackPacks } from "./season1-fallback";
 
 /**
  * Coordinates and land borders live in one reviewable table, applied here so
@@ -45,6 +46,7 @@ const packs = new Map<string, CountryPack>(([
   [bratislavaCountryPackV1.assetVersion, bratislavaCountryPackV1],
   [pragueCountryPackV1.assetVersion, pragueCountryPackV1],
   ...authoredCountryPacks.map((pack) => [pack.assetVersion, pack] as [string, CountryPack]),
+  ...seasonOneFallbackPacks.map((pack) => [pack.assetVersion, pack] as [string, CountryPack]),
 ] as Array<[string, CountryPack]>).map(([id, pack]) => [id, withGeography(pack)]));
 
 export function getCountryPack(scenePackId: string): CountryPack | null {
