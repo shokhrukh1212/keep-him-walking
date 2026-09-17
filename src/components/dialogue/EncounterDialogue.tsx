@@ -13,6 +13,11 @@ type Props = {
   motionSeconds?: number;
   reducedMotion?: boolean;
   showNpcImage?: boolean;
+  /**
+   * What the bubble is: a meeting with a resident, or the line he says to the
+   * viewer while nobody is watching. Only the first one is a local encounter.
+   */
+  kind?: "encounter" | "waiting";
 };
 
 export function EncounterDialogue({
@@ -22,6 +27,7 @@ export function EncounterDialogue({
   motionSeconds = 0,
   reducedMotion = false,
   showNpcImage = true,
+  kind = "encounter",
 }: Props) {
   const caption = line ? captionCueAt(line, motionSeconds) : "";
   return (
@@ -40,7 +46,7 @@ export function EncounterDialogue({
         </div>
       ) : null}
       {line ? (
-        <section className={`dialogue-bubble dialogue-${line.speaker}`} aria-live="polite">
+        <section className={`dialogue-bubble dialogue-${line.speaker}`} data-dialogue={kind} aria-live="polite">
           <span className="eyebrow">{speakerLabel ?? (line.speaker === "npc" ? "Local resident" : "Traveler")}</span>
           <p>{caption}</p>
         </section>

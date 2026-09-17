@@ -2621,7 +2621,8 @@ button:focus-visible,
   overflow: auto;
 }
 
-.dialogue-bubble .eyebrow::after { content: " · LOCAL ENCOUNTER"; }
+/* Only a meeting with a resident is an encounter; his waiting line is just him. */
+.dialogue-bubble:not([data-dialogue="waiting"]) .eyebrow::after { content: " · LOCAL ENCOUNTER"; }
 
 .launch-panel {
   position: absolute;

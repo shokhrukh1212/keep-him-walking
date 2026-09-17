@@ -57,6 +57,44 @@ export function waitingBehaviorAt(waitedSeconds: number, isLocalNight = false): 
   return waited < 60 ? takeInCycle(waited, FIRST_MINUTE) : takeInCycle(waited - 60, LONG_WAIT);
 }
 
+/**
+ * What he says while nobody is watching. He faces the viewer and asks, in his own
+ * words, for the one thing that moves him. The lines are fixed and owner-authored;
+ * nothing here may claim a visitor count, a distance or a time.
+ */
+const WAITING_LINES: readonly string[] = [
+  "I only walk while someone is watching.",
+  "I’ll wait right here for you.",
+  "Stay with me a moment and I’ll keep going.",
+];
+
+/** A short lead-in, so a one-second gap in presence never flashes a line. */
+export const WAITING_LINE_LEAD_SECONDS = 2;
+export const WAITING_LINE_SPOKEN_SECONDS = 6;
+export const WAITING_LINE_SILENT_SECONDS = 4;
+
+export type WaitingLine = {
+  text: string;
+  /** Which spoken turn this is since the wait began; the caption keys its fade on it. */
+  sequence: number;
+};
+
+/**
+ * Pure from the confirmed wait alone: every watcher of a waiting traveler sees the
+ * same line at the same second. He falls silent once he sits down to rest.
+ */
+export function waitingLineAt(waitedSeconds: number): WaitingLine | null {
+  const waited = Number.isFinite(waitedSeconds) ? waitedSeconds : 0;
+  if (waited >= WAITING_REST_AFTER_SECONDS) return null;
+  const since = waited - WAITING_LINE_LEAD_SECONDS;
+  if (since < 0) return null;
+  const turn = WAITING_LINE_SPOKEN_SECONDS + WAITING_LINE_SILENT_SECONDS;
+  const sequence = Math.floor(since / turn);
+  // The pause between two lines, so the bubble is not permanently on screen.
+  if (since - sequence * turn >= WAITING_LINE_SPOKEN_SECONDS) return null;
+  return { text: WAITING_LINES[sequence % WAITING_LINES.length]!, sequence };
+}
+
 export function waitedSecondsSince(waitingSince: string | null, nowMs: number): number {
   if (!waitingSince || !Number.isFinite(nowMs)) return 0;
   const waitingSinceMs = Date.parse(waitingSince);

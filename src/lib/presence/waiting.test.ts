@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { CLIP_DURATIONS } from "@/lib/characters/manifest";
 import {
+  WAITING_REST_AFTER_SECONDS,
   formatWaitDuration,
   formatWaitingLocalTime,
   waitedSecondsSince,
   waitingBehaviorAt,
+  waitingLineAt,
 } from "./waiting";
 
 describe("waiting presentation", () => {
@@ -44,6 +46,29 @@ describe("waiting presentation", () => {
     expect(formatWaitDuration(9_672)).toBe("2h 41m");
     expect(formatWaitDuration(65)).toBe("1m 05s");
     expect(formatWaitDuration(9)).toBe("9s");
+  });
+
+  it("says one fixed line at a time while he waits, with a pause between them", () => {
+    // Nothing in the first two seconds: a brief gap in presence must not flash a line.
+    expect(waitingLineAt(0)).toBeNull();
+    expect(waitingLineAt(1.9)).toBeNull();
+    expect(waitingLineAt(2)).toEqual({ text: "I only walk while someone is watching.", sequence: 0 });
+    expect(waitingLineAt(7.9)?.sequence).toBe(0);
+    // Six seconds spoken, four silent, then the next line.
+    expect(waitingLineAt(8)).toBeNull();
+    expect(waitingLineAt(11.9)).toBeNull();
+    expect(waitingLineAt(12)).toEqual({ text: "I’ll wait right here for you.", sequence: 1 });
+    expect(waitingLineAt(22)?.sequence).toBe(2);
+    // Three lines, then he starts again.
+    expect(waitingLineAt(32)).toEqual({ text: "I only walk while someone is watching.", sequence: 3 });
+  });
+
+  it("falls silent once he has sat down to rest, and never speaks on nonsense input", () => {
+    expect(waitingLineAt(WAITING_REST_AFTER_SECONDS - 6)).not.toBeNull();
+    expect(waitingLineAt(WAITING_REST_AFTER_SECONDS)).toBeNull();
+    expect(waitingLineAt(WAITING_REST_AFTER_SECONDS + 3_600)).toBeNull();
+    expect(waitingLineAt(Number.NaN)).toBeNull();
+    expect(waitingLineAt(-30)).toBeNull();
   });
 
   it("formats the wait origin in the country-day timezone", () => {

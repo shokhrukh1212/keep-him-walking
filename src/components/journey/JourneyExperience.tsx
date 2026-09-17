@@ -15,7 +15,7 @@ import {
   REACTION_HINT_SPACING_MS,
   createHintRefresher,
 } from "@/lib/reactions/hint-refresh";
-import type { TravelerState } from "@/lib/content/schema";
+import type { DialogueLine, TravelerState } from "@/lib/content/schema";
 import {
   estimatedServerNow,
   synchronizeClock,
@@ -73,6 +73,7 @@ import {
   formatWaitingLocalTime,
   waitedSecondsSince,
   waitingBehaviorAt,
+  waitingLineAt,
 } from "@/lib/presence/waiting";
 import { WakeCard } from "@/components/journey/WakeCard";
 import { launchCountdown } from "@/lib/story-clock/launch";
@@ -807,6 +808,24 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     : !walking && locomotionPhase !== "slow_walk" && locomotionPhase !== "stop"
       ? waitingBehavior.state
       : locomotionPhase;
+  // He is waiting because the server confirmed nobody is watching, which is the fact the
+  // status line names as "Waiting for the internet · since …". Not a conversation stop,
+  // not the three-second wake beat, and not this browser merely losing touch with the
+  // server: that is "Reconnecting…", and it says nothing about the audience. Only then
+  // does he turn out of the road to face whoever arrives, and say why he is standing still.
+  const waitingForWatchers = !walking
+    && !waking
+    && snapshot.mode === "live"
+    && connectionStatus === "live"
+    && currentWaitingSince !== null
+    && locomotionPhase !== "slow_walk"
+    && locomotionPhase !== "stop";
+  const waitingLine = waitingForWatchers ? waitingLineAt(waitedSeconds) : null;
+  const travelerName = snapshot.journey.travelerName?.trim() || "Traveler";
+  // A real conversation always outranks it: he never talks over a resident.
+  const spokenWaitingLine: DialogueLine | null = waitingLine && !activeLine
+    ? { speaker: "traveler", text: waitingLine.text, mood: "neutral" }
+    : null;
   // ---- The intentional prelaunch preview. Only the server declares it; a failed read never does.
   const preview = snapshot.mode === "prelaunch";
   const prelaunchSeasonNumber = snapshot.prelaunch?.seasonNumber ?? snapshot.season?.number ?? 1;
@@ -833,8 +852,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const command: TravelerCommand = {
     state: travelerState,
     mood: activeLine?.mood ?? "neutral",
-    // The preview faces the viewer; only his root turns, and his anchor never moves.
-    facing: preview ? "camera" : "right",
+    // The preview and the empty-audience wait both face the viewer; only his root
+    // turns, and his anchor never moves.
+    facing: preview || waitingForWatchers ? "camera" : "right",
     // Prelaunch only: the local monologue controller owns his pose. The live path never sees it.
     preview: preview ? previewMonologue : undefined,
     walkingSpeed: worldCommand.speedFactor,
@@ -1108,18 +1128,22 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         }}
         reconcile={refreshReactions}
       /> : null}
+      {/* His speech bubble: a conversation when he is in one, and while nobody is
+          watching, the line that says why he is standing still. No resident portrait
+          belongs beside that one, because nobody is talking to him. */}
       <EncounterDialogue
         line={review ? ["talk","listen","greet","goodbye"].includes(review.state)
-          ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine}
+          ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine ?? spokenWaitingLine}
         speakerLabel={activeLine && activeConversation
           ? activeLine.speaker === "npc"
             ? activeConversation.speakerName
-            : snapshot.journey.travelerName?.trim() || "Traveler"
-          : undefined}
+            : travelerName
+          : spokenWaitingLine ? travelerName : undefined}
         npcSrc={snapshot.assets.npcAssets[(review?review.state==="listen":activeLine?.speaker === "npc") ? "talk" : "neutral"] ?? snapshot.assets.npcAssets.neutral ?? ""}
         motionSeconds={motion.action?.conversationPhaseSeconds ?? motion.action?.elapsedSeconds}
         reducedMotion={reducedMotion}
-        showNpcImage={!residentReady}
+        showNpcImage={!residentReady && !spokenWaitingLine}
+        kind={spokenWaitingLine ? "waiting" : "encounter"}
       />
 
       <div
@@ -1329,7 +1353,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         {activeLine && activeConversation
           ? `${activeLine.speaker === "npc" ? activeConversation.speakerName : "Traveler"}: ${activeLine.text}`
           // The preview's whole line, once, when he starts it; the visible cues are not read out.
-          : preview && previewCaption.speaking ? `Traveler: ${previewCaption.lineText}` : ""}
+          : preview && previewCaption.speaking ? `Traveler: ${previewCaption.lineText}`
+          : spokenWaitingLine ? `${travelerName}: ${spokenWaitingLine.text}` : ""}
       </p>
     </main>
   );

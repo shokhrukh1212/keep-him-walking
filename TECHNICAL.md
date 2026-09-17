@@ -398,6 +398,19 @@ pockets/watch/pockets/stretch/yawn/look-up cycle.
 - **Missing takes.** They resolve through the manifest to the closest v2 pose.
 - **Inputs.** The waited duration and local hour are explicit inputs; authoritative route seconds remain unchanged.
 - **Arrival.** During the three-second first-arrival beat, a traveler still on his feet looks up. One whose wait reached the seated phase holds `sitting` for 0.8 s, then plays `stand_up` before locomotion resumes.
+- **Facing and words.** `JourneyExperience` derives `waitingForWatchers` from the fact the
+  status line already names — the server confirmed nobody is watching, this browser is in
+  touch with it, and he is neither mid-transition nor in the three-second wake beat. A
+  browser that has merely lost touch is "Reconnecting…" and says nothing about the
+  audience, so it is excluded. It turns him to the camera and asks
+  `waitingLineAt(waitedSeconds)` for the line he says: three fixed owner-authored lines,
+  6 s spoken and 4 s silent each, after a 2 s lead-in so a one-second gap in presence never
+  flashes one, and silence from the 600 s rest onwards because a seated or sleeping man
+  does not talk. The line uses the existing `EncounterDialogue` bubble with
+  `kind="waiting"` — no resident portrait, and no "· LOCAL ENCOUNTER" eyebrow, because
+  nobody is meeting him — a real conversation always outranks it, and the page's live
+  region announces it once. Both the facing and the words follow the authoritative walking
+  state, never the header's DataFast visitor count (D14).
 
 P11 also derives look-up, shoe-tying, one daily stumble and the marathon cheer from the
 pack id plus authoritative seconds/metres. Route beats win over crowd actions, which win
@@ -743,9 +756,12 @@ are read through a ref so the renderer is never torn down mid-journey.
   P22 this one never came back, which showed as a walking status line over an empty street.
   Verified against the live build on 17 September: a forced context loss recovered by
   rebuild (`data-mount-count` 2) about 22 s later, where it had previously stayed dead.
-- In the prelaunch preview (`command.facing === "camera"`) only the traveler root's yaw
-  becomes 0, facing the viewer; his bones, anchor and the frame loop are unchanged, and the
-  pose comes from sampling `command.preview` (§9, "Prelaunch preview").
+- In the prelaunch preview, and while the server has confirmed nobody is watching
+  (`command.facing === "camera"`), only the traveler root's yaw becomes 0, facing the
+  viewer; his bones, anchor and the frame loop are unchanged. In the preview the pose comes
+  from sampling `command.preview` (§9, "Prelaunch preview"); in the live wait it is the
+  ordinary `waitingBehaviorAt` choreography, now played towards the camera rather than
+  side-on to the road.
 - Writes `data-character-state`, `data-walk-time-scale`, `data-forward-lean-degrees`,
   `data-resident-visible`, `data-character-ready`, `data-traveler-yaw` and `data-preview`
   to the host element — these are what the Playwright suites assert against.

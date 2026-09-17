@@ -20,4 +20,28 @@ describe("EncounterDialogue", () => {
     expect(screen.getByText("Camille")).toBeInTheDocument();
     expect(screen.getByRole("paragraph").textContent).not.toBe(firstCue);
   });
+
+  it("marks his waiting line as his own words rather than a local encounter", () => {
+    const { container, rerender } = render(
+      <EncounterDialogue
+        line={{ speaker: "traveler", text: "I only walk while someone is watching.", mood: "neutral" }}
+        speakerLabel="Milo"
+        npcSrc="/npcs/neutral.webp"
+        showNpcImage={false}
+        kind="waiting"
+      />,
+    );
+    expect(screen.getByText("I only walk while someone is watching.")).toBeInTheDocument();
+    expect(container.querySelector(".dialogue-bubble")).toHaveAttribute("data-dialogue", "waiting");
+    // No resident is speaking to him, so no portrait is drawn beside it.
+    expect(container.querySelector(".npc-wrap")).not.toBeInTheDocument();
+    rerender(
+      <EncounterDialogue
+        line={{ speaker: "npc", text: "Bonjour.", mood: "neutral" }}
+        speakerLabel="Camille"
+        npcSrc="/npcs/neutral.webp"
+      />,
+    );
+    expect(container.querySelector(".dialogue-bubble")).toHaveAttribute("data-dialogue", "encounter");
+  });
 });
