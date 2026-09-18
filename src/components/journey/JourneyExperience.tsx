@@ -64,6 +64,8 @@ import { VoteChip } from "@/components/hud/VoteChip";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
 import { GoalBar } from "@/components/hud/GoalBar";
 import { JourneyPanel } from "@/components/journey/JourneyPanel";
+import { VisitModals } from "@/components/journey/VisitModals";
+import { useVisitModals } from "@/hooks/useVisitModals";
 import { OverlayModal } from "@/components/ui/OverlayModal";
 import { PostcardButton } from "@/components/postcard/PostcardButton";
 import { getCountryPack } from "@/content/countries/registry";
@@ -255,6 +257,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const preloadedTomorrow = useRef<string | null>(null);
   const preloadedTomorrowImage = useRef<HTMLImageElement | null>(null);
   const [hasWalked, setHasWalked] = useState(false);
+  /**
+   * The server's own identity cookie, the only thing that knows this visitor
+   * across a cleared localStorage: true on a genuinely first visit, false on a
+   * return, null while /api/me has not answered. The introduction modal reads it.
+   */
+  const [visitorIsNew, setVisitorIsNew] = useState<boolean | null>(null);
   const loadStarted = useRef(0);
   const reducedMotion = useMotionPreference();
   const qualityTier = useQualityTier(reducedMotion);
@@ -312,6 +320,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         postcard?: BootstrapSnapshot["postcard"];
         selectedOptionId?: string | null;
       };
+      if (typeof me.firstVisit === "boolean") setVisitorIsNew(me.firstVisit);
       setSnapshot((current) => ({
         ...current,
         firstVisit: me.firstVisit ?? current.firstVisit,
@@ -1015,6 +1024,36 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       ? { where: `Season ${prelaunchSeasonNumber}`, when: `Starts ${startsIn}` }
       : null;
 
+  // ── The first-visit introduction and the sustained-watching support ask ──
+  // Both are `OverlayModal`s over the scene. Nothing below reaches the walk: the
+  // presence heartbeat, the animation loop and the audio never learn one is open.
+  const seasonTotalDays = season?.totalDays ?? ANNIVERSARY_JOURNEY.totalDays;
+  // The same readiness the preview's own lines wait for: a renderer is up and he is
+  // drawn, or the attempt has been given up on rather than left loading for ever.
+  const visitModalSceneReady = experienceReady && (puppetReady || worldFailed || modelWaitElapsed);
+  const visitModalBlocked = openPanel !== null
+    // Loading, a failed read and the offline fallback are all states of their own.
+    || loadingLive
+    || bootstrapIssue !== null
+    || snapshot.mode === "offline_preview"
+    // A conversation and the wake moment are the page's own interaction overlays.
+    || activeLine !== null
+    || waking;
+  const visitModals = useVisitModals({
+    sceneReady: visitModalSceneReady,
+    blocked: visitModalBlocked,
+    // "You kept him walking" is only true of a live day; a preview and a finished
+    // season are never asked for support on a walk that is not happening.
+    supportEligible: snapshot.mode === "live" && snapshot.journeyState === "live",
+    returningVisitor: visitorIsNew === null ? null : !visitorIsNew,
+  });
+  // Where he is, worded for the state the status line is already naming.
+  const visitModalWhereLine = snapshot.journeyState === "prelaunch"
+    ? `He’s in ${snapshot.countryDay.cityName}, ${snapshot.countryDay.countryName}. Season ${prelaunchSeasonNumber} has not started yet, and he starts walking when it does.`
+    : snapshot.journeyState === "completed"
+      ? `He finished in ${snapshot.countryDay.cityName}, ${snapshot.countryDay.countryName}, on day ${seasonTotalDays} of ${seasonTotalDays}.`
+      : `He’s in ${snapshot.countryDay.cityName}, ${snapshot.countryDay.countryName} right now, on day ${snapshot.countryDay.dayNumber} of ${seasonTotalDays}.`;
+
   const acceptVote = (optionId: string, totalBallots: number) => {
     setSnapshot((current) => ({
       ...current,
@@ -1341,6 +1380,17 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           shareText={shareText}
         />
       </OverlayModal>
+
+      <VisitModals
+        open={visitModals.open}
+        controller={visitModals}
+        totalDays={seasonTotalDays}
+        whereLine={visitModalWhereLine}
+        watcherCount={onlineVisitors}
+        coffeeUrl={coffeeUrl}
+        onJourney={() => showPanel("journey")}
+        onSponsor={openSponsor}
+      />
 
       <WorldDiagnostics
         snapshot={worldDiagnostics}

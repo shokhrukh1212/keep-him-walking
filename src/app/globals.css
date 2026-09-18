@@ -4481,3 +4481,50 @@ a:focus-visible,
 .journey-map .map-legend span:first-child { color: #91d5b1; }
 .journey-map .map-legend span:nth-child(2) { color: #ffd777; font-weight: 800; }
 .journey-map .map-legend span:last-child { color: #aeb7b8; }
+
+/* The two one-time visitor modals. No chrome of their own: they are `OverlayModal`s,
+   so the panel, scrim, header, eyebrow, display heading and circular close are the
+   Journey panel's. Only the body below the header is described here, from the same
+   tokens the dock and the Journey sections already use. */
+.visit-modal { display: grid; gap: 1.1rem; }
+.visit-modal p { margin: 0; line-height: 1.5; }
+.visit-modal-live {
+  color: var(--gold);
+  font-family: var(--font-controls);
+  font-size: .82rem;
+}
+.visit-modal-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.visit-modal-actions > a,
+.visit-modal-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: .5rem 1.05rem;
+  border: 1px solid var(--control-border);
+  border-radius: 7px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-controls);
+  font-size: .82rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.visit-modal-actions > a:hover,
+.visit-modal-actions > button:hover { border-color: var(--gold); background: var(--surface); }
+.visit-modal-actions > .visit-modal-primary { border-color: var(--brick); background: var(--brick); }
+.visit-modal-actions > .visit-modal-primary:hover { border-color: var(--paper); background: #8e342d; }
+.visit-modal-quiet {
+  justify-self: start;
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-controls);
+  font-size: .78rem;
+  text-decoration: underline;
+  text-underline-offset: .2em;
+  cursor: pointer;
+}
+.visit-modal-quiet:hover { color: var(--paper); }

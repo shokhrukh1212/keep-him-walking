@@ -190,8 +190,8 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
   Below the ground line a place with its own pavement layer (`hasPavementLayer`) is
   covered by that tile, which runs to the bottom edge (`pavementBandHeightPx`) in Pixi
   and in the static poster; only a place without one needs its painting to reach it.
-- **Overlay modals.** Journey, Sponsor, Vote and the audience list are `OverlayModal`s
-  portalled to `document.body`.
+- **Overlay modals.** Journey, Sponsor, Vote, the audience list and the two one-time
+  visitor modals are `OverlayModal`s portalled to `document.body`.
   - The page behind is only `inert`: the Pixi application, the Three mixer, their
     layout and the presence session never move, resize or remount.
   - Modals are URL-addressed (`?panel=`); `openPanelStep` / `closePanelStep` push one
@@ -200,6 +200,44 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
     gone).
   - Next's development indicator is disabled because its fixed bottom-left button
     intercepted the Sponsor control at 320 px; build and runtime errors still surface.
+  - `onClose` carries how it was closed (`"escape" | "backdrop" | "x"`); callers that do
+    not care ignore the argument. `closeLabel` names the close button when the title is a
+    whole sentence rather than a word.
+- **The two one-time visitor modals** (`useVisitModals`, `VisitModals`). Not a second modal
+  system: both are `OverlayModal`s, so the panel, scrim, eyebrow, display heading, circular
+  close, focus trap, Escape, backdrop click and `inert` page behind are the Journey panel's.
+  - **Introduction**, 900 ms after the scene reports a renderer *and* he is drawn (or the
+    model has been given up on — the same readiness the prelaunch lines wait for). It names
+    the rule, the city and the day, and shows the header's own DataFast count when there is
+    one. `?panel=journey` is where "What is this?" sends the visitor.
+  - **Support**, after 75 s of *active* watching: the tab visible and the window focused,
+    paused on `visibilitychange` to hidden and on blur, resumed on return. The clock is
+    in-memory, so it starts again on a reload. It is armed only on a live journey, because
+    its first line claims he is walking. It carries no metres: the server confirms watched
+    seconds, never a per-visitor distance, and this page never turns one into the other.
+  - **Shown once, ever.** `khw.modal.intro.v1` / `khw.modal.support.v1` hold an ISO
+    timestamp in localStorage, falling back to a first-party one-year cookie and then to an
+    in-memory flag; every read and write is wrapped. The introduction is additionally
+    suppressed when `/api/me` reports `firstVisit: false`, so a cleared localStorage does
+    not bring it back for a visitor the identity cookie already knows.
+  - **Queue, never stack.** One at a time, the introduction first; the support ask waits 30 s
+    after the introduction closes. A panel, a failed or loading journey read, the offline
+    fallback, a conversation and the wake moment all hold the queue, which resumes 5 s after
+    the way is clear. A `?ref=` or `?sponsor=` arrival suppresses both for that session.
+  - **The walk is untouched.** Nothing here reads or writes presence, the animation loop or
+    the audio; an open modal is still the page being open, so it still counts as watching.
+    Measured on a modal open for 30 s beside a control page with no modal: identical walk
+    states, a moving animation clock and the same confirmed watcher count.
+  - **Reset.** `?resetModals=1` clears both records, marks a session override so the server's
+    "returning visitor" is ignored too, and reloads without the parameter.
+    `window.__khwResetModals()` does the same and exists outside production only.
+  - **Analytics.** `intro_modal_shown`, `intro_modal_dismissed { method }`,
+    `intro_modal_journey_click`, `support_modal_shown { active_seconds }`,
+    `support_modal_sponsor_click`, `support_modal_coffee_click`,
+    `support_modal_dismissed { method }`, through the existing `trackVisitorEvent`.
+  - `nextVisitModal`, `visitModalsSettled` and the watch clock in `src/lib/ui/visit-modals.ts`
+    are pure functions of their inputs and are unit-tested there; storage fallbacks are tested
+    in `visit-modal-storage.test.ts` and the two modals end to end in `VisitModals.test.tsx`.
 - **Unavailable preview data.** A `NO_ACTIVE_DAY` fallback can show the bundled neutral
   review scene and place sequence, but it hides reaction counts and renders distance as
   `unavailable`; zero is never presented as a server-confirmed live value. A deliberate

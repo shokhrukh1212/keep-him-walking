@@ -24,7 +24,15 @@ export type VisitorEvent =
   | "sponsor_checkout_started"
   | "sponsor_impression"
   | "sponsor_engaged_view"
-  | "sponsor_cta_clicked";
+  | "sponsor_cta_clicked"
+  // The two one-time visitor modals (src/hooks/useVisitModals.ts).
+  | "intro_modal_shown"
+  | "intro_modal_dismissed"
+  | "intro_modal_journey_click"
+  | "support_modal_shown"
+  | "support_modal_sponsor_click"
+  | "support_modal_coffee_click"
+  | "support_modal_dismissed";
 
 export function trackVisitorEvent(
   event: VisitorEvent,

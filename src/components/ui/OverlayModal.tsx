@@ -3,13 +3,19 @@
 import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+/** Which of the three ways out the visitor took. */
+export type OverlayCloseReason = "escape" | "backdrop" | "x";
+
 type Props = {
   open: boolean;
   title: string;
   eyebrow?: string;
-  onClose: () => void;
+  /** Existing callers ignore the reason; the visitor modals report it to analytics. */
+  onClose: (reason: OverlayCloseReason) => void;
   children: ReactNode;
   size?: "default" | "wide";
+  /** The close button's accessible name when the title is a whole sentence. */
+  closeLabel?: string;
   testId?: string;
 };
 
@@ -27,7 +33,7 @@ const subscribeNever = () => () => undefined;
  * layout are untouched. Escape, the close button and a tap on the scrim close it;
  * focus stays inside while open and returns to where it was.
  */
-export function OverlayModal({ open, title, eyebrow, onClose, children, size = "default", testId }: Props) {
+export function OverlayModal({ open, title, eyebrow, onClose, children, size = "default", closeLabel, testId }: Props) {
   const titleId = useId();
   const dialog = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -45,7 +51,7 @@ export function OverlayModal({ open, title, eyebrow, onClose, children, size = "
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onCloseRef.current();
+        onCloseRef.current("escape");
         return;
       }
       const root = dialog.current;
@@ -84,7 +90,7 @@ export function OverlayModal({ open, title, eyebrow, onClose, children, size = "
   if (!open || !mounted) return null;
   return createPortal(
     <div className="overlay-modal-root" data-testid={testId}>
-      <div className="overlay-modal-scrim" aria-hidden="true" onClick={() => onCloseRef.current()} />
+      <div className="overlay-modal-scrim" aria-hidden="true" onClick={() => onCloseRef.current("backdrop")} />
       <div
         ref={dialog}
         className={`overlay-modal overlay-modal-${size}`}
@@ -102,8 +108,8 @@ export function OverlayModal({ open, title, eyebrow, onClose, children, size = "
             ref={closeButton}
             type="button"
             className="overlay-modal-close"
-            onClick={() => onCloseRef.current()}
-            aria-label={`Close ${title}`}
+            onClick={() => onCloseRef.current("x")}
+            aria-label={closeLabel ?? `Close ${title}`}
           >
             <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20">
               <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
