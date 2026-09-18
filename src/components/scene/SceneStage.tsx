@@ -165,10 +165,13 @@ export function SceneStage({
 
   return (
     <div ref={container} className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"} data-bottom-inset={Math.round(bottomInsetPx)}>
-      <StaticScene zone={zone} assetVersion={pack.assetVersion} resolution={resolution}
+      {/* The paintings carry the pack's identity: a new pack rebuilds them, while the
+          people keep their models and their WebGL context and simply follow it. */}
+      <StaticScene key={pack.assetVersion} zone={zone} assetVersion={pack.assetVersion} resolution={resolution}
         bottomInsetPx={bottomInsetPx} defer={!pixiFailed} active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
       {qualityTier && settled && !pixiFailed ? (
         <PixiScene
+          key={pack.assetVersion}
           contacts={contacts}
           grade={grade}
           pack={pack}

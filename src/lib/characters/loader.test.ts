@@ -31,14 +31,33 @@ describe("loadCharacterGltf", () => {
     expect(result.animations.map(({ name }) => name)).toEqual(["idle", "greet"]);
   });
 
-  it("uses v2 without trying v3 animations when the preferred model is absent", async () => {
-    const fallback = gltf();
-    const loadAsync = vi.fn().mockRejectedValueOnce(new Error("missing")).mockResolvedValueOnce(fallback);
+  it("asks for the mesh and its takes together rather than one after the other", async () => {
+    let releaseMesh: (value: GLTF) => void = () => {};
+    const mesh = new Promise<GLTF>((resolve) => { releaseMesh = resolve; });
+    const loadAsync = vi.fn().mockReturnValueOnce(mesh).mockResolvedValueOnce(gltf());
+
+    const result = loadCharacterGltf({ loadAsync, setMeshoptDecoder: vi.fn() } as unknown as GLTFLoader, definition);
+    await Promise.resolve();
+
+    // The takes are already being fetched while the mesh is still in flight.
+    expect(loadAsync.mock.calls.map(([url]) => url)).toEqual([definition.url, definition.animationUrl]);
+    releaseMesh(gltf());
+    await result;
+  });
+
+  it("uses v2 when the preferred model is absent, and never attaches v3 takes to it", async () => {
+    const fallback = gltf([{ name: "v2-idle" } as GLTF["animations"][number]]);
+    const loadAsync = vi.fn()
+      .mockRejectedValueOnce(new Error("missing"))
+      .mockResolvedValueOnce(gltf([{ name: "greet" } as GLTF["animations"][number]]))
+      .mockResolvedValueOnce(fallback);
 
     const result = await loadCharacterGltf({ loadAsync, setMeshoptDecoder: vi.fn() } as unknown as GLTFLoader, definition);
 
     expect(result).toBe(fallback);
-    expect(loadAsync.mock.calls.map(([url]) => url)).toEqual([definition.url, definition.fallbackUrl]);
+    // The take set was requested beside the mesh; the fallback keeps only its own clips.
+    expect(loadAsync.mock.calls.map(([url]) => url))
+      .toEqual([definition.url, definition.animationUrl, definition.fallbackUrl]);
   });
 
   it("keeps the preferred model when only its optional animation file is absent", async () => {

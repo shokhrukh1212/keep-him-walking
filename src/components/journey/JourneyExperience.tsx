@@ -1075,7 +1075,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       style={{ "--journey-footer-inset": `${footerInsetPx}px` } as CSSProperties}
     >
       <SceneStage
-        key={snapshot.assets.assetVersion}
+        // Not keyed on the pack. The first render is a placeholder pack, and the live
+        // one replaces it a moment later: remounting here threw away the WebGL context
+        // and the traveler download that had already started, so every visitor fetched
+        // him twice and read “Still loading him” while it happened. The paintings
+        // inside SceneStage are keyed on the pack instead, and the character stage
+        // follows a pack change while staying mounted.
         // The first render is a placeholder at second zero; loading its place would
         // download a painting the live journey is not showing.
         settled={!loadingLive}

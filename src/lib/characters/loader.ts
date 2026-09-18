@@ -14,22 +14,33 @@ export function withMeshoptDecoder<T extends GLTFLoader>(loader: T): T {
   return loader;
 }
 
-/** Loads the preferred mesh, retaining the reviewed fallback until its replacement lands. */
+/**
+ * Loads the preferred mesh, retaining the reviewed fallback until its replacement lands.
+ *
+ * The mesh and its takes are two files of a few megabytes on one HTTP/2 origin, and
+ * asking for them in turn made a visitor wait for the sum of the two before anyone
+ * could be drawn. They are requested together, and a failed take set still leaves him
+ * standing there with whatever clips his own file carries.
+ */
 export async function loadCharacterGltf(loader: GLTFLoader, definition: CharacterDefinition): Promise<GLTF> {
   withMeshoptDecoder(loader);
+  // Both requests are made before either is awaited: the mesh first, because it is the
+  // one a fallback replaces. The take set is settled as it is created, so a failure
+  // while the mesh is still arriving is never an unhandled rejection.
+  const meshRequest = loader.loadAsync(publicAssetUrl(definition.url));
+  const takes: Promise<GLTF | null> = definition.animationUrl
+    ? loader.loadAsync(publicAssetUrl(definition.animationUrl)).then((gltf) => gltf, () => null)
+    : Promise.resolve(null);
   let mesh: GLTF;
   try {
-    mesh = await loader.loadAsync(publicAssetUrl(definition.url));
+    mesh = await meshRequest;
   } catch (error) {
     if (!definition.fallbackUrl) throw error;
-    // Animation takes target the preferred rig, so do not attach them to the fallback.
+    // Animation takes target the preferred rig, so the set asked for above is dropped
+    // rather than attached to the fallback.
     return loader.loadAsync(publicAssetUrl(definition.fallbackUrl));
   }
-  if (!definition.animationUrl) return mesh;
-  try {
-    const animation = await loader.loadAsync(publicAssetUrl(definition.animationUrl));
-    return { ...mesh, animations: [...mesh.animations, ...animation.animations] };
-  } catch {
-    return mesh;
-  }
+  const animation = await takes;
+  if (!animation) return mesh;
+  return { ...mesh, animations: [...mesh.animations, ...animation.animations] };
 }
