@@ -2117,16 +2117,42 @@ an untouched copy of that resident's model, which the stage keeps for the purpos
 cloning the conversation partner's converted scene, as walkers once did, copied its
 outline meshes and then outlined them again. `CharacterActor` mutates the scene it is
 given, so each walker needs its own rig. The pack's own resident downloads at mount and
-the other the first time a pass needs it, so a low-tier device, which shows no walkers,
-never fetches it. A pass whose model is still loading is skipped, rather than borrowing
-the other resident's or arriving late mid-street. Walkers face the way they walk at
+the other as soon as he himself is drawn, on a tier that shows walkers; a low-tier
+device, which shows none, still fetches neither (2026-09-18: fetching the second one only
+when a pass asked for it meant the first person to pass never appeared, because a pass
+whose model is still loading is skipped rather than borrowing the other resident's or
+arriving late mid-street).
+
+**A resident download is retried (2026-09-18).** One interrupted request used to end the
+residents for the session: `failed` went into the model map and nothing ever asked for
+that type again — no conversation partner, and, because nobody sets off before the
+partner is in, an empty pavement for as long as the tab stayed open. A failure is now
+retried on the same backoff as his (`characterRetryDelayMs`), the draw loop builds the
+partner as soon as the model lands, and the walkers' gate waits only while the partner is
+still *downloading*, so a partner being retried no longer holds the street empty.
+Measured on production: `resident-b.glb` answered 200 and died mid-body, after which
+`data-walker-gate` read `resident-loading` for 237 consecutive samples over 355 s with no
+pass even scheduled; after the fix the same watch read `open` for 188 of 236 samples, the
+rest being real stops and a conversation.
+
+**Why a quiet pavement is not always a fault.** A pass that falls inside an activity
+window, a conversation, or the 12 s before a stop is dropped, not deferred, and his stops
+run at a similar cadence to the 150-second pass blocks. In one 6-minute production watch
+both scheduled passes (walking seconds 35413 and 35561) landed inside blocked windows and
+nobody crossed the screen, with nothing broken. Deferring a blocked pass to the next
+clear moment inside its block is an open option, not current behaviour. Walkers face the way they walk at
 `rotation.y = ±0.68` and get a contact shadow like his: the stage publishes
 `contacts.walkers`, and `PixiScene` draws up to two more ellipses on the ground layer.
 When a crowd wave fires, `wavingWalker`, keyed on the wave's start second, picks one
 person who stops and waves for the whole wave. The old window removed every walker the
 moment the wave began, so until now nobody ever waved back. Probes on the character
-stage: `data-walkers`, `data-walker-residents`, `data-walker-foot-x` and
-`data-walker-waving`; on the world: `data-walker-shadows`.
+stage: `data-walkers`, `data-walker-residents`, `data-walker-foot-x`,
+`data-walker-waving`, and, since 2026-09-18, `data-walker-gate` (the one word holding
+passes back: `tier`, `first-frame`, `resident-loading`, `not-traveling`, `not-walking`,
+`conversation`, `action-<kind>`, `stop-soon`, or `open`), `data-walker-second` (the
+walking second the schedule is read at), `data-walker-passes` as spawned/scheduled and
+`data-walker-dropped` (why the last scheduled pass put nobody on the street); on the
+world: `data-walker-shadows`.
 
 **Not shipped: awning flutter.** `props = coherentPanorama ? [] : …` disables foreground
 cutouts for every live pack; they were removed in Phase 3 because they rendered as a
