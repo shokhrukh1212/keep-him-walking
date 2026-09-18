@@ -88,8 +88,15 @@ export function SceneStage({
   onReady,
 }: Props) {
   const [pixiFailed, setPixiFailed] = useState(false);
-  const [pixiReady, setPixiReady] = useState(false);
-  const activeRenderer = useRef<"pixi" | "static" | null>(null);
+  // The pack whose live world has drawn, not a plain flag: a new pack rebuilds both
+  // paintings, so the world starts again with nothing drawn and the place goes back to
+  // the static poster until the new city is up. The people are not rebuilt with it —
+  // they keep their models and their WebGL context and follow the new pack.
+  const [drawnPack, setDrawnPack] = useState<string | null>(null);
+  const pixiReady = drawnPack === pack.assetVersion;
+  const activeRenderer = useRef<{ renderer: "pixi" | "static" | null; pack: string | null }>(
+    { renderer: null, pack: null },
+  );
   const stageFrame = useRef<StageFrame | null>(null);
   const contacts = useRef<CharacterContacts>({ traveler: null, resident: null });
   const grade = useRef<VisualGrade>({ exposure: 1, tint: { r: 1, g: 1, b: 1 } });
@@ -117,7 +124,10 @@ export function SceneStage({
     return () => window.cancelAnimationFrame(check);
   }, [onWorldFailure]);
   const publishStage = useCallback((frame: StageFrame, source: "static" | "pixi") => {
-    if (source === "static" && activeRenderer.current === "pixi") return;
+    // The poster yields to the live world only once that world is drawing this very
+    // pack; through a pack change the poster is all there is, and the people need it.
+    if (source === "static" && activeRenderer.current.renderer === "pixi"
+      && activeRenderer.current.pack === frame.assetVersion) return;
     stageFrame.current = frame;
     const warning = stageScaleWarning(frame.assetVersion, frame.zoneId, frame.layout);
     const warningKey = `${frame.assetVersion}/${frame.zoneId}`;
@@ -131,26 +141,27 @@ export function SceneStage({
     shell?.style.setProperty("--stage-bottom", `${frame.viewportH - frame.layout.groundY}px`);
   }, []);
   const staticReady = useCallback(() => {
-    if (activeRenderer.current === "pixi") return;
-    activeRenderer.current = "static";
+    if (activeRenderer.current.renderer === "pixi"
+      && activeRenderer.current.pack === pack.assetVersion) return;
+    activeRenderer.current = { renderer: "static", pack: pack.assetVersion };
     onReady("static");
-  }, [onReady]);
+  }, [onReady, pack.assetVersion]);
   const liveReady = useCallback(() => {
-    activeRenderer.current = "pixi";
-    setPixiReady(true);
+    activeRenderer.current = { renderer: "pixi", pack: pack.assetVersion };
+    setDrawnPack(pack.assetVersion);
     onReady("pixi");
-  }, [onReady]);
+  }, [onReady, pack.assetVersion]);
   const liveFailed = useCallback(() => {
-    activeRenderer.current = "static";
+    activeRenderer.current = { renderer: "static", pack: pack.assetVersion };
     setPixiFailed(true);
     onReady("static");
     onWorldFailure();
-  }, [onReady, onWorldFailure]);
+  }, [onReady, onWorldFailure, pack.assetVersion]);
   useEffect(() => {
     if (!pixiFailed) return;
     const update = window.setTimeout(() => {
-      activeRenderer.current = "static";
-      setPixiReady(false);
+      activeRenderer.current = { renderer: "static", pack: null };
+      setDrawnPack(null);
       onReady("static");
     }, 0);
     return () => window.clearTimeout(update);

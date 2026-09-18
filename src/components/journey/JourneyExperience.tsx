@@ -1239,7 +1239,25 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           />
           <button className="dock-journey" type="button" aria-haspopup="dialog" onClick={() => showPanel("journey")}>Journey</button>
         </section>
-        <SupportFooterRow coffeeUrl={coffeeUrl} onSupportersOpen={() => showPanel("supporters")} />
+        {/* The support actions keep the middle of the line; the question mark sits out
+            at its right edge, where a desktop visitor looks for help. It opens the same
+            introduction the first-time modal shows, so there is one answer to "what is
+            this", not two. A narrow screen has no room beside the centred row and keeps
+            the row alone. */}
+        <div className="support-footer-line">
+          <SupportFooterRow coffeeUrl={coffeeUrl} onSupportersOpen={() => showPanel("supporters")} />
+          <button
+            className="journey-help"
+            type="button"
+            aria-haspopup="dialog"
+            aria-label="What is this?"
+            title="What is this?"
+            data-testid="help-button"
+            onClick={visitModals.explain}
+          >
+            <span aria-hidden="true">?</span>
+          </button>
+        </div>
         <LegalFooter variant="landing" />
       </div>
 

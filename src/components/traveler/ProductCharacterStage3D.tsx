@@ -214,6 +214,14 @@ export function ProductCharacterStage3D(props: Props) {
         void actor.setBottle(latest.current.command?.sponsorBottleUrl);
         element.dataset.characterReady = "true";
         latest.current.onTravelerAvailability?.(true);
+        // He is in, so the people who pass can download now, behind him and never
+        // beside him. A pass whose model is still coming is missed rather than shown
+        // late mid-street, and passes are two or three walking minutes apart, so
+        // fetching them on demand meant a visitor could watch for minutes and see
+        // nobody. A tier that shows no walkers still fetches nobody.
+        if (QUALITY_LIMITS[latest.current.qualityTier].walkers > 0) {
+          for (const type of RESIDENT_TYPES) residentModel(type);
+        }
       } catch {
         if (loadedRoot) disposeModel(loadedRoot);
         latest.current.onTravelerAvailability?.(false);

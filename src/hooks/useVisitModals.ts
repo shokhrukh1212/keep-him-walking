@@ -43,6 +43,8 @@ export type VisitModalsController = {
   dismiss: (method: VisitModalDismissMethod) => void;
   /** Closes it because the visitor is being sent somewhere the modal named. */
   follow: (event: "intro_modal_journey_click" | "support_modal_sponsor_click" | "support_modal_coffee_click") => void;
+  /** Shows the introduction because the visitor asked what this is. */
+  explain: () => void;
 };
 
 type Session = {
@@ -144,6 +146,22 @@ export function useVisitModals({ sceneReady, blocked, supportEligible, returning
     closeOpenModal(() => trackVisitorEvent(event));
   }, [closeOpenModal]);
 
+  /**
+   * The introduction, asked for by the visitor rather than queued. It is recorded
+   * exactly as the queued one is: an introduction that has been read once, whoever
+   * asked for it, is not shown again by itself later in the visit.
+   */
+  const explain = useCallback(() => {
+    const held = session.current;
+    if (held.openModal !== null) return;
+    const shownAt = Date.now();
+    held.openModal = "intro";
+    held.introShownAtMs = shownAt;
+    writeVisitModalRecord(VISIT_MODAL_KEYS.intro, shownAt);
+    setOpen("intro");
+    trackVisitorEvent("intro_modal_shown", { source: "help_button" });
+  }, []);
+
   useEffect(() => {
     const held = session.current;
     if (new URLSearchParams(window.location.search).has(RESET_PARAM)) {
@@ -216,5 +234,5 @@ export function useVisitModals({ sceneReady, blocked, supportEligible, returning
     };
   }, []);
 
-  return { open, dismiss, follow };
+  return { open, dismiss, follow, explain };
 }
