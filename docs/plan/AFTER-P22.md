@@ -30,6 +30,7 @@ finish rather than what it got wrong.
 | D12 | Paid terms still need a governing law and dispute forum | **Yes for checkout; no for free viewing** | Owner (legal choice) |
 | D13 | The Buy Me a Coffee supporter list needs a working read-only token | No — the coffee link works without it | Owner (Buy Me a Coffee developer access) |
 | D14 | The 8 km day goal is reached in under two hours, and the header count and the walking rule are measured differently | No — the row now moves on to the marathon, and walking follows the server | Owner (goal sizes, and which count the header shows) |
+| D15 | A passer-by scheduled while he is stopped is dropped, not delayed, so the pavement can stay empty for a long time | No — people do pass; the fault that emptied the pavement is fixed | Owner (whether a missed pass should wait for the next clear moment) |
 
 ---
 
@@ -563,3 +564,33 @@ even though the walking is correct.
    presence count that actually decides whether he walks, and keep DataFast for the
    owner's own analytics only. (b) makes the page self-consistent and is about half a
    day's work, including the tests that pin what the header may claim.
+
+
+---
+
+## D15 — A passer-by scheduled while he is stopped never arrives at all
+
+**What it is.** Somebody is due to walk past him about every two and a half minutes.
+If that moment happens to fall while he is stopped, talking to someone, or in the twelve
+seconds before a stop begins, that person is dropped rather than held back for a few
+seconds — and his stops run at roughly the same rhythm as the passers-by, so the two keep
+colliding. In one six-minute watch of the live site on 18 September 2026, both of the two
+people due to pass were dropped this way and nobody crossed the screen, with nothing
+broken and no error anywhere.
+
+This is separate from the fault fixed the same day, where one interrupted download left
+the pavement empty for the whole visit. That one was a bug and is gone.
+
+**What happens if nothing changes.** The street is emptier than it was designed to be,
+and it is emptiest exactly when he is standing still — the moments a visitor is most
+likely to be looking at the scene rather than at him. Nothing looks broken; the city just
+feels less alive than the artwork promises.
+
+**What to do.** Choose one:
+
+1. **Leave it.** Costs nothing. People still pass during the long walking stretches.
+2. **Let a missed pass wait.** A person whose moment was blocked sets off at the first
+   clear moment inside the same two-and-a-half-minute block, and is forgotten after that,
+   so nobody ever arrives late enough to look odd. About two hours, including the unit
+   tests that pin the new rule, and it stays a pure function of the shared clock, so every
+   viewer still sees the same person at the same moment. **Recommended.**
