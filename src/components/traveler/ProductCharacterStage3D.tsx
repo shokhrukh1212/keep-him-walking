@@ -171,6 +171,13 @@ export function ProductCharacterStage3D(props: Props) {
     let walkers: Walker[] = [];
     // The walking second the walkers last moved at; passes start in the interval since.
     let walkerSecond: number | undefined;
+    // Diagnostics for the pavement: how many passes this session has scheduled, how many
+    // of them actually put someone on the street, and why a frame is starting nobody.
+    // A pass that is dropped leaves no other trace, which is what made an empty pavement
+    // impossible to tell apart from a quiet one.
+    let passesSeen = 0;
+    let passesSpawned = 0;
+    let passesDropped = "";
     const removeWalker = (walker: Walker) => {
       walkerRoot.remove(walker.anchor);
       walker.actor.dispose();
@@ -437,6 +444,19 @@ export function ProductCharacterStage3D(props: Props) {
         return window !== null && window[1] > sample.rawSeconds
           && window[0] - sample.rawSeconds < WALKER_STOP_CLEARANCE_SECONDS;
       });
+      // Why this frame is starting nobody, in one word, for the same reason every other
+      // state on this page is nameable.
+      const gate = walkerLimit <= 0 ? "tier"
+        : walkerSecond === undefined ? "first-frame"
+          : !residentGltf ? "resident-loading"
+            : !sample.traveling ? "not-traveling"
+              : !(state.command?.walking ?? true) ? "not-walking"
+                : cue.conversation ? "conversation"
+                  : motion.action ? `action-${motion.action.kind}`
+                    : stopSoon ? "stop-soon"
+                      : "open";
+      element.dataset.walkerGate = gate;
+      element.dataset.walkerSecond = String(Math.round(motion.routeSeconds));
       // Nobody sets off before the conversation partner's model is in, so a walker's
       // download never leaves the partner still loading.
       const passes = walkerSecond !== undefined && residentGltf && sample.traveling
@@ -450,6 +470,7 @@ export function ProductCharacterStage3D(props: Props) {
           )
         : [];
       walkerSecond = motion.routeSeconds;
+      passesSeen += passes.length;
       // Reduced motion forces the low tier, which shows nobody, so they stop at once.
       if (walkerLimit <= 0) {
         for (const walker of walkers) removeWalker(walker);
@@ -457,11 +478,11 @@ export function ProductCharacterStage3D(props: Props) {
       }
       for (const pass of passes) {
         // Never more walkers than residents, because two are never the same model.
-        if (walkers.length >= Math.min(walkerLimit, RESIDENT_TYPES.length)) continue;
+        if (walkers.length >= Math.min(walkerLimit, RESIDENT_TYPES.length)) { passesDropped = "full"; continue; }
         const type = walkerResidentType(walkers.map((walker) => walker.type), state.pack.assetVersion, pass.startSecond);
         // A model still downloading misses this pass rather than appearing late, mid-street.
         const model = residentModel(type);
-        if (typeof model !== "object") continue;
+        if (typeof model !== "object") { passesDropped = `model-${model}`; continue; }
         const heightMetres = CHARACTER_MANIFEST.residents[type].heightMetres;
         const placement = walkerPlacement(heightMetres, travelerHeight);
         const speed = walkerSpeedMetresPerSecond(type);
@@ -471,9 +492,10 @@ export function ProductCharacterStage3D(props: Props) {
           (back, walker) => (back === undefined || walker.street.x > back.street.x ? walker : back),
           undefined,
         );
-        if (!walkerCanFollow(rearmost?.street, speed, placement, horizontal)) continue;
+        if (!walkerCanFollow(rearmost?.street, speed, placement, horizontal)) { passesDropped = "gap"; continue; }
         const street = enterWalker(speed, walkerTakeMetresPerSecond(type), horizontal);
-        if (!street) continue;
+        if (!street) { passesDropped = "entry"; continue; }
+        passesSpawned += 1;
         const actor = residentActor(type, model);
         const anchor = new THREE.Group();
         anchor.add(actor.root);
@@ -534,6 +556,8 @@ export function ProductCharacterStage3D(props: Props) {
       // Arrival order is kept, because the person who waves back is chosen by it.
       walkers = walkers.filter((walker) => passing.has(walker));
       element.dataset.walkers = String(walkers.length);
+      element.dataset.walkerPasses = `${passesSpawned}/${passesSeen}`;
+      element.dataset.walkerDropped = passesDropped;
       element.dataset.walkerResidents = walkers.map((walker) => walker.type).join(" ");
       element.dataset.walkerFootX = walkerContacts.map((contact) => contact.footX.toFixed(1)).join(" ");
       element.dataset.walkerWaving = String(wavingBack);
