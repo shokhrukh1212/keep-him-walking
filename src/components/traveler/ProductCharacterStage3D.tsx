@@ -155,8 +155,6 @@ export function ProductCharacterStage3D(props: Props) {
     // The conversation partner: the resident the current script (or pack) names.
     let resident: CharacterActor | undefined;
     let residentType: ResidentType | undefined;
-    // Its model. Walkers wait for it, so the partner is never the one left loading.
-    let residentGltf: GLTF | undefined;
     // One untouched copy of each resident model. CharacterActor converts materials and
     // adds outlines to the scene it is given, so every actor, the partner included, is
     // built on its own skeleton clone. The other resident downloads the first time a
@@ -242,6 +240,27 @@ export function ProductCharacterStage3D(props: Props) {
     element.dataset.characterAttempts = "1";
     void loadTraveler();
 
+    // A resident download that fails is asked for again, exactly as his is. Until
+    // 2026-09-18 it was not: one interrupted request left `failed` in the map for the
+    // rest of the session, and nothing ever looked at that type again — no conversation
+    // partner, and, because nobody sets off before the partner is in, an empty pavement
+    // for as long as the tab stayed open. Measured on production: `resident-b.glb`
+    // answered 200 and then died mid-body, and the stage sat at `walker-gate:
+    // resident-loading` for the whole watch.
+    const residentAttempts = new Map<ResidentType, number>();
+    const residentRetries = new Map<ResidentType, number>();
+    const retryResident = (type: ResidentType) => {
+      if (disposed || residentRetries.has(type)) return;
+      const attempt = residentAttempts.get(type) ?? 0;
+      residentAttempts.set(type, attempt + 1);
+      residentRetries.set(type, window.setTimeout(() => {
+        residentRetries.delete(type);
+        if (disposed || typeof residentModels.get(type) === "object") return;
+        // Clear the answer first, or the request is never made again.
+        residentModels.delete(type);
+        residentModel(type);
+      }, characterRetryDelayMs(attempt)));
+    };
     /** Starts a resident's download once, and reports where it stands. */
     const residentModel = (type: ResidentType) => {
       const known = residentModels.get(type);
@@ -252,6 +271,7 @@ export function ProductCharacterStage3D(props: Props) {
         else residentModels.set(type, gltf);
       }, () => {
         residentModels.set(type, "failed");
+        retryResident(type);
       });
       return "loading" as const;
     };
@@ -344,7 +364,6 @@ export function ProductCharacterStage3D(props: Props) {
           residentRoot.remove(resident.root);
           resident.dispose();
           resident = undefined;
-          residentGltf = undefined;
           delete element.dataset.residentReady;
           state.onResidentAvailability?.(false);
         }
@@ -355,7 +374,6 @@ export function ProductCharacterStage3D(props: Props) {
             state.onResidentAvailability?.(false);
           } else {
             resident = residentActor(partnerType, partnerModel);
-            residentGltf = partnerModel;
             residentRoot.add(resident.root);
             element.dataset.residentReady = "true";
             state.onResidentAvailability?.(true);
@@ -448,7 +466,7 @@ export function ProductCharacterStage3D(props: Props) {
       // state on this page is nameable.
       const gate = walkerLimit <= 0 ? "tier"
         : walkerSecond === undefined ? "first-frame"
-          : !residentGltf ? "resident-loading"
+          : partnerModel === "loading" ? "resident-loading"
             : !sample.traveling ? "not-traveling"
               : !(state.command?.walking ?? true) ? "not-walking"
                 : cue.conversation ? "conversation"
@@ -457,9 +475,11 @@ export function ProductCharacterStage3D(props: Props) {
                       : "open";
       element.dataset.walkerGate = gate;
       element.dataset.walkerSecond = String(Math.round(motion.routeSeconds));
-      // Nobody sets off before the conversation partner's model is in, so a walker's
-      // download never leaves the partner still loading.
-      const passes = walkerSecond !== undefined && residentGltf && sample.traveling
+      // Nobody sets off while the conversation partner's model is still downloading, so
+      // a walker's download never leaves the partner still loading. A partner whose
+      // download failed is being asked for again; that must not hold the street empty
+      // until it lands, which is what waiting on the built partner used to do for ever.
+      const passes = walkerSecond !== undefined && partnerModel !== "loading" && sample.traveling
         && (state.command?.walking ?? true) && !cue.conversation && !motion.action && !stopSoon
         ? walkerPassesBetween(
             walkerSecond,
@@ -634,6 +654,8 @@ export function ProductCharacterStage3D(props: Props) {
       latest.current.contacts.current = { traveler: null, resident: null };
       cancelAnimationFrame(raf);
       if (travelerRetry !== null) window.clearTimeout(travelerRetry);
+      for (const timer of residentRetries.values()) window.clearTimeout(timer);
+      residentRetries.clear();
       if (restoreTimer !== null) window.clearTimeout(restoreTimer);
       document.removeEventListener("visibilitychange", retryWhenVisible);
       observer.disconnect();
