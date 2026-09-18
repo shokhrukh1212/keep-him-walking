@@ -31,6 +31,7 @@ finish rather than what it got wrong.
 | D13 | The Buy Me a Coffee supporter list needs a working read-only token | No — the coffee link works without it | Owner (Buy Me a Coffee developer access) |
 | D14 | The 8 km day goal is reached in under two hours, and the header count and the walking rule are measured differently | No — the row now moves on to the marathon, and walking follows the server | Owner (goal sizes, and which count the header shows) |
 | D15 | A passer-by scheduled while he is stopped is dropped, not delayed, so the pavement can stay empty for a long time | No — people do pass; the fault that emptied the pavement is fixed | Owner (whether a missed pass should wait for the next clear moment) |
+| D16 | Four Season 1 cities have no painting and borrow Tashkent's, so Brussels, Amsterdam, Cologne and Budapest are shown as Uzbekistan | **Live now — Day 2 is Brussels** | Owner (artwork, or accept a plain street) |
 
 ---
 
@@ -598,3 +599,49 @@ feels less alive than the artwork promises.
    so nobody ever arrives late enough to look odd. About two hours, including the unit
    tests that pin the new rule, and it stays a pure function of the shared clock, so every
    viewer still sees the same person at the same moment. **Recommended.**
+
+---
+
+## D16 — Four cities have no painting, and the stand-in is recognisably Tashkent
+
+**What it is.** Season 1 visits fourteen cities. Four of them — Brussels (day 2),
+Amsterdam (day 3), Cologne (day 4) and Budapest (day 8) — have no artwork at all. The
+other ten do. When a city has no painting the page falls back to one shared image,
+`public/scenes/tashkent/v1/scene-fallback.webp`, and that image is not neutral: it is a
+painting of Tashkent, with Uzbek tilework, turquoise domes and a minaret. So on 18
+September the header read "BRUSSELS · Belgium · 20:17" over a picture of Uzbekistan.
+
+The code is behaving exactly as written — the pack is labelled an "Illustrated virtual
+route" and the status line refuses to name a place — but nothing on screen tells a
+visitor that the picture is not Brussels, and the picture is confident enough to be
+believed. Confirmed against `artifacts/season1-missing-assets.md`: Brussels, Amsterdam,
+Cologne and Budapest each have **0 scene files**.
+
+**What happens if nothing changes.** Days 2, 3 and 4 run back to back — that is today,
+tomorrow and the day after — and all three show the same Uzbek square under a Belgian,
+Dutch and German name. Day 8 does it again. A visitor who knows either city sees an
+obvious mistake; a visitor who does not is quietly told something false about a real
+place.
+
+**What to do — pick one.**
+
+- **A — Leave it.** Costs nothing today. Four of the fourteen days show the wrong
+  country, and the day the journey reaches the real Tashkent the painting is no longer a
+  surprise.
+- **B — Show a plain street instead of a borrowed city.** The scene already knows how to
+  draw a neutral sky-and-pavement with no buildings; it is what a visitor sees when a
+  painting fails to download. Pointing the four artless cities at it means nothing on
+  screen ever claims to be a city it is not. It is a code change, no artwork, about two
+  to three hours with its tests — but those four days become visibly plain.
+  **Recommended if no artwork is coming this week.**
+- **C — One neutral illustrated street, made once.** A single painted backdrop that
+  belongs to no real city — a wide pavement, trees, unremarkable buildings — shared by
+  every city without art, now and in later seasons. One image, not four, and it does not
+  touch the London pilot or the 23 launch paintings. Owner artwork decision.
+- **D — Paint the four cities.** Brussels, Amsterdam, Cologne and Budapest get their own
+  packs like the other ten. This is the real fix and the most work, and the house rule
+  parks city art behind the owner's acceptance of the London pilot, so it cannot start
+  until that is accepted.
+
+Evidence: `artifacts/season1-missing-assets.md`, `src/content/countries/season1-fallback.ts`
+(`SEASON_ONE_FALLBACK_IDS`), `src/lib/season/asset-manifest.ts` (`SEASON_SCENE_FALLBACK`).
