@@ -634,7 +634,7 @@ transforms, arm IK, explicit palm frames and joint-specific finger flexion.
 - **Placement.** Each take is placed by where its feet start, so Stand To Sit, Sitting Idle and Sit To Stand meet where the previous take left off. Start Walking travels 1.91 m and Tripping 2.38 m, so their hips are held in place, because horizontal travel belongs to the scene clock. Male Laying Pose is a single frame, held for one second.
 - **Walk timing.** The 1.03 s source cycle is cut at left-foot placement and resampled piecewise to 1.2 s, with the right foot at 0.6 s. The planted foot travels at 1.48 m/s. It slid about 18% against the former 1.25 m/s route speed; since migration 0039 the route speed is 1.5 m/s and it stays planted.
 - **Waiting and arrival.** The waiting cycle plays each take whole at its own speed (§4). The first-arrival beat stands the traveler up only if his wait had reached the seated phase, because Sit To Stand starts seated.
-- **Props.** The `props.ts` drink and phone windows follow Drinking and Texting While Standing, and a V2 fallback uses the same windows. Drinking holds the bottle in the left hand while the runtime bottle sits in the right hand; `docs/plan/AFTER-P22.md` D6 lists this with the other clips to review.
+- **Props.** The `props.ts` drink and phone windows follow Drinking and Texting While Standing, and a V2 fallback uses the same windows. Drinking is left-handed, so since 2026-09-18 the bottle is carried by the hand the installed take actually raises and its neck is brought to his lips (§5.4 grip resolution); before that it hung in his right hand, untouched, for the whole drink.
 - **Size.** The animation file is 1.88 MiB compressed (3.18 MiB raw), so a first visit now fetches 2.48 + 1.88 MiB of traveler.
 - **Where the raw files live.** Raw downloads and the baked `.blend` stay in the ignored cache, because of Mixamo's terms and the public repository.
 - **Going live.** Files in `public/characters/v3/` become the live character on the next deploy.
@@ -725,16 +725,39 @@ change.
   matching Pixi's `ColorMatrixFilter` display-space operation without modifying texture
   colours. The eyes were previously left ungraded and stayed daylight-white at night.
 - **Props.** A capsule water bottle and a boxed phone are built in code (no asset).
-  `sampleProp()` returns a deterministic `{visible, contact, progress}` from
-  retrieve/contact/release/stow windows per clip — e.g. `drink` retrieves at 0.28 s,
-  contacts lips 1.2–3.85 s, stows at 5.18 s. Deterministic windows mean seeking,
-  cancelling and replaying can never leave a prop stuck in a hand.
-- **Grip resolution, in priority order:** authored grip transforms read from Blender
-  `userData` (`drinkGripPosition/Rotation`, etc.) if present; otherwise hand-space
-  sockets computed from `mixamorig:RightHand` with `Left|RightHandMiddle1` knuckles, the
-  device placed at the two-knuckle midpoint pushed 5.2 cm forward and rotated 180° so its
-  screen faces the actor (a previously confirmed bug had it facing away), and the bottle
-  offset and given a sip rotation scaled by the gesture envelope.
+  `sampleProp()` returns a deterministic `{visible, contact, reach, progress}` from
+  retrieve/contact/release/stow windows per clip — `drink` retrieves at 2.13 s, holds the
+  bottle to the lips 2.67–4.8 s and stows at 5.6 s, matching the installed take. `reach`
+  eases 0 → 1 → 0 across those four moments, so a prop arrives at the face with the arm
+  instead of snapping onto it. Deterministic windows mean seeking, cancelling and
+  replaying can never leave a prop stuck in a hand.
+- **Grip resolution, in priority order:** the drinking hand, measured once at load
+  (below); then authored grip transforms read from Blender `userData`
+  (`drinkGripPosition/Rotation`, etc.) if present; otherwise hand-space sockets computed
+  from `mixamorig:RightHand` with `Left|RightHandMiddle1` knuckles, the device placed at
+  the two-knuckle midpoint pushed 5.2 cm forward and rotated 180° so its screen faces the
+  actor (a previously confirmed bug had it facing away), and the bottle offset and given a
+  sip rotation scaled by the gesture envelope.
+- **The drinking hand (2026-09-18).** The authored grips were cut from the V2 right-handed
+  drink pose; the V3 Mixamo take drinks left-handed, so the bottle — and a premium
+  sponsor's label on it — hung at his side, 0.92 m from his head, for the whole drink.
+  `CharacterActor` now asks the take instead of assuming a hand. At load it poses the
+  drink clip at its contact moment, and whichever knuckle is nearer his mouth carries the
+  bottle. A right-handed take (the V2 fallback) keeps its authored grip untouched; a
+  left-handed one gets a grip baked from the take itself at the moment the bottle appears
+  — upright in his own frame, then rigid in the fist, so it rises and turns with the hand.
+  `bottleAtLips()` in `grip.ts` is the pure part: given that carried pose, the palm, the
+  mouth and `reach`, it eases the bottle into the drinking placement, where the neck
+  points from the palm at the mouth and the tip lands on the lip. Its `maxSlip` bound —
+  half the bottle's body — keeps the fist on the bottle if a take never brings a hand near
+  the face. `drink-grip.test.ts` drives the shipped files and measures the neck against
+  the skinned teeth: within 2 cm of a tooth for the whole contact window, and within 7 cm
+  of the palm knuckle.
+- **The lips.** Measured from the character's own teeth mesh at load, not from a constant:
+  the teeth ride the head rigidly, so the furthest of them from the head joint is the front
+  of the mouth, and a centimetre beyond that is the lip a bottle touches. One combined
+  matrix and a stride over roughly 600 vertices keeps it at about 2 ms. The head bone alone
+  is no use — it sits inside the skull.
 - **Sponsor patch.** The `SponsorPatch` material is cloned at load, then `setSponsor(url)`
   loads a texture with an incrementing revision guard so a slow response cannot overwrite
   a newer one. On failure the sewn patch stays visible in its base colour — the character

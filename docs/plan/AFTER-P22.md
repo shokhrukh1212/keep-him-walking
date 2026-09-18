@@ -213,6 +213,10 @@ actually fulfilled. The visual observations below remain as an honest historical
 walk's planted foot, which moves at about 1.48 m/s, no longer slides over the pavement.
 The "He walks" row below describes the former 1.25 m/s pace.
 
+**Update 18 September 2026.** The owner reported the drink as a bug, and the bottle now
+follows the hand that drinks and meets his lips (`TECHNICAL.md` §5.4, drinking hand). The
+rest of the rows below are unchanged, including the drink's speed.
+
 **What it is.** On 10 September 2026 his movements were replaced with Mixamo motion the owner
 picked. The owner approved using every clip exactly as downloaded, so they all went in, and
 the ones that look wrong in a specific moment are listed here to judge on screen at
@@ -223,7 +227,7 @@ the ones that look wrong in a specific moment are listed here to judge on screen
 
 | Moment | What viewers see |
 |---|---|
-| He drinks | He drinks with his **left** hand while the bottle, including a premium sponsor's label, sits in his right hand at his side. The drink also plays about 2× fast. |
+| He drinks | **Fixed 18 September 2026.** The bottle is now carried by the hand the take actually raises and its neck is brought to his lips; until then it hung in his right hand at his side, a premium sponsor's label with it, while he mimed the drink with his left. The drink still plays about 2× fast. |
 | He sleeps at night | After sitting down he jumps straight to lying on the pavement, with no lying-down movement, while the status line says "Asleep on a bench". When someone arrives he jumps back to sitting, then stands. |
 | He stumbles, once a day | He falls flat on his face, about 2× fast, then is instantly walking again. |
 | He ties his shoe, about every 15 minutes | He kneels and never gets up, then pops upright when he walks on. |
