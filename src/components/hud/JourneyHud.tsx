@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ConnectionStatus, CountryDayView } from "@/lib/contracts";
+import { peopleWatching } from "@/lib/presence/watching-count";
 
 type Props = {
   day: CountryDayView;
@@ -36,12 +37,13 @@ export function JourneyHud({
   soundControl,
 }: Props) {
   // The owner's choice (15 September 2026): the header counts people with the site open,
-  // from DataFast, before and after launch. Nothing is shown until the first answer.
-  const audienceLabel = onlineVisitors === undefined
-    ? null
-    : onlineVisitors === null
-      ? "Live count unavailable"
-      : `${onlineVisitors} ${onlineVisitors === 1 ? "person" : "people"} watching`;
+  // from DataFast, before and after launch — but never fewer than the watchers the
+  // server has confirmed, because that is the count deciding whether he walks.
+  // Nothing is shown while neither source has answered.
+  const watching = peopleWatching(activeViewers, onlineVisitors);
+  const audienceLabel = watching === null
+    ? onlineVisitors === null ? "Live count unavailable" : null
+    : `${watching} ${watching === 1 ? "person" : "people"} watching`;
   // The season clock carries the day number, so the headline names only the city.
   const headline = preview
     ? `${day.cityName} · Preview`

@@ -29,10 +29,30 @@ describe("JourneyHud", () => {
     expect(screen.getByRole("button", { name: "Ambient sound off" })).toBeInTheDocument();
   });
 
-  it("shows no count until the first answer arrives", () => {
+  it("shows the confirmed watchers before DataFast has answered", () => {
     render(<JourneyHud day={day} localTime="12:00" activeViewers={2} onlineVisitors={undefined} status="live"
       audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
+    expect(screen.getByRole("button", { name: "2 people watching" })).toBeInTheDocument();
+  });
+
+  it("shows no count while neither source has answered", () => {
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={null} onlineVisitors={undefined} status="live"
+      audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
     expect(screen.queryByText(/watching$|live count/i)).toBeNull();
+  });
+
+  it("never says nobody is watching while the server has confirmed watchers", () => {
+    // Reproduced on production, 18 September: DataFast answered 0 for three
+    // confirmed leases, so the header denied the rule printed beneath it.
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={3} onlineVisitors={0} status="live"
+      audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
+    expect(screen.getByRole("button", { name: "3 people watching" })).toBeInTheDocument();
+  });
+
+  it("falls back to the confirmed watchers when DataFast could not be read", () => {
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={4} onlineVisitors={null} status="live"
+      audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
+    expect(screen.getByRole("button", { name: "4 people watching" })).toBeInTheDocument();
   });
 
   it("keeps a really configured start beside the preview headline", () => {
@@ -44,7 +64,7 @@ describe("JourneyHud", () => {
     expect(screen.getByRole("button", { name: "1 person watching" })).toBeInTheDocument();
   });
 
-  it("says the count is unavailable when it could not be read", () => {
+  it("says the count is unavailable when neither source could be read", () => {
     render(<JourneyHud day={day} localTime="12:00" activeViewers={null} onlineVisitors={null} status="offline"
       audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
     expect(screen.getByRole("button", { name: "Open Journey from Paris" })).toHaveTextContent("Paris · Day 1");

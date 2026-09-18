@@ -35,6 +35,7 @@ import { useMotionPreference } from "@/hooks/useMotionPreference";
 import { useQualityTier } from "@/hooks/useQualityTier";
 import { useRouteRuntime } from "@/hooks/useRouteRuntime";
 import { confirmedWalkingLease, presenceReadIsCurrent, walkingLeaseIsActive } from "@/lib/presence/walking-lease";
+import { peopleWatching } from "@/lib/presence/watching-count";
 import { walkingStatusLabel, type WalkingStatus } from "@/lib/presence/status-label";
 import { mergeEncounterLog, playedEncounters, type PlayedEncounter } from "@/lib/journey/encounter-log";
 import {
@@ -505,9 +506,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   });
   useEffect(() => { broadcastHint.current = broadcastReactionHint; }, [broadcastReactionHint]);
   const activeViewers = heartbeat?.activeViewers ?? snapshot.presence.activeViewers;
-  // What the page calls "people watching": DataFast's visitors with the site open.
+  // What the page calls "people watching": DataFast's visitors with the site open,
+  // floored at the watchers the server confirmed, so the one number on the page can
+  // never read 0 while the confirmed audience is what is keeping him walking.
   const audienceCounts = useAudienceCounts();
   const onlineVisitors = audienceCounts.online;
+  const watchingNow = peopleWatching(activeViewers, onlineVisitors);
   const authoritativeWalking = snapshot.mode === "live"
     && walkingLeaseIsActive(walkingLease, realNowMs);
   const wakeBeatEndsAtMs = wakeBeat ? Date.parse(wakeBeat.wokeAt) + 3_000 : 0;
@@ -1283,7 +1287,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           dailyGoalMetres={snapshot.assets.dayRouteMetres}
           marathonMetres={snapshot.assets.marathonMetres}
           freshness={distanceFreshness}
-          onlineVisitors={onlineVisitors}
+          onlineVisitors={watchingNow}
           prelaunch={snapshot.journeyState === "prelaunch"}
           seasonNumber={prelaunchSeasonNumber}
           contribution={{
@@ -1409,7 +1413,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         controller={visitModals}
         totalDays={seasonTotalDays}
         whereLine={visitModalWhereLine}
-        watcherCount={onlineVisitors}
+        watcherCount={watchingNow}
         coffeeUrl={coffeeUrl}
         onJourney={() => showPanel("journey")}
         onSponsor={openSponsor}

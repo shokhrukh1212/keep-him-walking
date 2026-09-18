@@ -25,7 +25,7 @@ type Props = {
   dailyGoalMetres: number;
   marathonMetres: number;
   freshness: "extrapolated" | "last confirmed" | "reconnecting" | "unavailable";
-  /** DataFast's people with the site open; undefined until known, null when unavailable. */
+  /** The header pill's number: people with the site open, never below the confirmed watchers. */
   onlineVisitors: number | null | undefined;
   prelaunch: boolean;
   contribution: { seconds: number | null; status: "pending" | "confirmed" | "last_confirmed" | "unavailable" };

@@ -17,6 +17,15 @@ export type JourneyState = {
   sessions?: Set<string>;
   heartbeats?: number;
   assets?: BootstrapSnapshot["assets"];
+  /**
+   * The server confirms nobody is watching. He stops where he stands, turns out of
+   * the road to face the viewer and says why he is waiting. `waitingSince` is the
+   * instant it confirmed, and it is the only clock his wait is measured from.
+   */
+  emptyAudience?: boolean;
+  waitingSince?: string;
+  /** DataFast's answer for `/api/audience`; the header may never read below the leases. */
+  onlineVisitors?: number;
 };
 
 export function setRawSeconds(state: JourneyState, seconds: number) {
@@ -58,7 +67,9 @@ export function journeySnapshot(state: JourneyState): BootstrapSnapshot {
       scenePackId: state.assets?.assetVersion ?? base.countryDay.scenePackId,
     },
     refresh: { nextAt: null, afterMs: 300_000, reason: "none" },
-    presence: { activeViewers: 1, status: "live", ttlSeconds: 50, waitingSince: null },
+    presence: state.emptyAudience
+      ? { activeViewers: 0, status: "live", ttlSeconds: 50, waitingSince: waitingSince(state) }
+      : { activeViewers: 1, status: "live", ttlSeconds: 50, waitingSince: null },
     reactions: reactions(state),
     vote: state.vote ?? null,
     route: {
@@ -66,9 +77,14 @@ export function journeySnapshot(state: JourneyState): BootstrapSnapshot {
       globalDistanceMetres: distanceAt(state, seconds),
       paceRate: 1,
       authoritativeAt: now.toISOString(),
-      walking: true,
+      walking: !state.emptyAudience,
     },
   };
+}
+
+/** The confirmed start of the wait; a fixture that names none has just emptied. */
+function waitingSince(state: JourneyState): string {
+  return state.waitingSince ?? new Date(Date.now() - 3_000).toISOString();
 }
 
 export async function installJourneyApi(page: Page, state: JourneyState) {
@@ -80,7 +96,7 @@ export async function installJourneyApi(page: Page, state: JourneyState) {
   await page.route("**/api/me", (route) => route.fulfill({ json: { firstVisit: false } }));
   // DataFast's visitors with the site open: the header's "people watching".
   await page.route("**/api/audience", (route) => route.fulfill({ json: {
-    online: 1, last24Hours: 1, allTime: 1, fetchedAt: new Date().toISOString(),
+    online: state.onlineVisitors ?? 1, last24Hours: 1, allTime: 1, fetchedAt: new Date().toISOString(),
   } }));
   await page.route("**/api/reactions", (route) => route.fulfill({ json: { countryDayId: dayId, reactions: reactions(state) } }));
   await page.route("**/api/presence/heartbeat", (route) => {
@@ -93,8 +109,8 @@ export async function installJourneyApi(page: Page, state: JourneyState) {
       countryDayId: dayId,
       serverNow: now,
       realServerNow: now,
-      activeViewers: 1,
-      walking: true,
+      activeViewers: state.emptyAudience ? 0 : 1,
+      walking: !state.emptyAudience,
       globalSteps: Math.floor(seconds / 0.6),
       visitorActiveSeconds: 90,
       ttlSeconds: 50,
@@ -103,7 +119,7 @@ export async function installJourneyApi(page: Page, state: JourneyState) {
       globalDistanceMetres: distanceAt(state, seconds),
       paceRate: 1,
       routeAuthoritativeAt: now,
-      waitingSince: null,
+      waitingSince: state.emptyAudience ? waitingSince(state) : null,
       wokeHim: false,
       countryCode: "FR",
       reactions: reactions(state),

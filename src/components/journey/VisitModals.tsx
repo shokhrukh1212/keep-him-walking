@@ -15,7 +15,7 @@ type Props = {
    * names — a live day, a preview before the season, or a finished season.
    */
   whereLine: string;
-  /** DataFast's people with the site open, the same source as the header pill. */
+  /** The header pill's number: DataFast's people with the site open, never below the confirmed watchers. */
   watcherCount: number | null | undefined;
   /** The Buy Me a Coffee profile, or null when the owner has not configured one. */
   coffeeUrl: string | null;

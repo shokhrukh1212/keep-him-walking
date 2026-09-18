@@ -208,8 +208,8 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
   close, focus trap, Escape, backdrop click and `inert` page behind are the Journey panel's.
   - **Introduction**, 900 ms after the scene reports a renderer *and* he is drawn (or the
     model has been given up on — the same readiness the prelaunch lines wait for). It names
-    the rule, the city and the day, and shows the header's own DataFast count when there is
-    one. `?panel=journey` is where "What is this?" sends the visitor.
+    the rule, the city and the day, and shows the header's own count (`peopleWatching`) when
+    there is one. `?panel=journey` is where "What is this?" sends the visitor.
   - **Support**, after 75 s of *active* watching: the tab visible and the window focused,
     paused on `visibilitychange` to hidden and on blur, resumed on return. The clock is
     in-memory, so it starts again on a reload. It is armed only on a live journey, because
@@ -458,7 +458,7 @@ pockets/watch/pockets/stretch/yawn/look-up cycle.
   `kind="waiting"` — no resident portrait, and no "· LOCAL ENCOUNTER" eyebrow, because
   nobody is meeting him — a real conversation always outranks it, and the page's live
   region announces it once. Both the facing and the words follow the authoritative walking
-  state, never the header's DataFast visitor count (D14).
+  state, never the header's visitor count (D14).
 
 P11 also derives look-up, shoe-tying, one daily stumble and the marathon cheer from the
 pack id plus authoritative seconds/metres. Route beats win over crowd actions, which win
@@ -1828,14 +1828,30 @@ Every number on it is a stored aggregate; nothing is extrapolated.
   the 24-hour URL stable, so the site makes at most about four DataFast calls a minute.
 - **What the page shows.** Owner decision: the header's "N people watching" is DataFast's
   `online`, before launch, during a season and after it (`useOnlineVisitors` reads the route on
-  mount, every 60 s and on becoming visible; hidden tabs do not ask). Nothing shows until the
-  first answer, and "Live count unavailable" after a failed one. Journey's "N watching now"
-  uses the same number, and the audience sheet names the state without a count. `last24Hours`
-  and `allTime` are returned but not rendered yet.
+  mount, every 60 s and on becoming visible; hidden tabs do not ask). Journey's "N watching now"
+  and the first-visit modal use the same number, and the audience sheet names the state without
+  a count. `last24Hours` and `allTime` are returned but not rendered yet.
+- **Never below the confirmed watchers (18 September 2026).** `peopleWatching`
+  (`src/lib/presence/watching-count.ts`) returns the larger of DataFast's `online` and the
+  server's confirmed `activeViewers`, and `null` only when neither source has answered.
+  Reproduced on production the same day: DataFast answered `online: 0` while the header
+  carried `data-confirmed-watchers="3"` and he was walking, so the header denied the rule
+  printed directly beneath it. DataFast's window is ten minutes wide, it is cached for 30 s
+  behind a 15 s CDN entry, and it drops what it judges to be a bot — it under-reports by
+  design. Both inputs are server-confirmed, so nothing is invented by taking the larger.
+  A failed DataFast read now shows the confirmed watchers instead of "Live count
+  unavailable"; that label survives only when presence is unknown too. `empty-audience.spec.ts`
+  pins both directions.
 - **Walking is unchanged.** He still walks only while the heartbeat lease in Postgres counts at
   least one ready, visible browser. DataFast is not an input to presence, progress or reactions;
   its ten-minute window and ad-blocker losses make it unfit to be one. The server's confirmed
   watcher count is published as `data-confirmed-watchers` on the header for tests.
+- **The empty audience is unchanged and now covered.** When the heartbeat confirms zero
+  watchers the RPC always returns a `waiting_since` (`read_journey_runtime_v5` coalesces it),
+  so `waitingForWatchers` in `JourneyExperience` turns his root to the camera
+  (`data-traveler-yaw="0"`), the status line reads "Waiting for the internet · since HH:MM"
+  and `waitingLineAt` gives him a line for six seconds in every ten.
+  `tests/e2e/empty-audience.spec.ts` drives that state from a fixture and asserts all four.
 
 ### Landing HUD and sharing (P12)
 
