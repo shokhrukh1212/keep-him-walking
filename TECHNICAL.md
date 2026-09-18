@@ -228,10 +228,20 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
     the audio; an open modal is still the page being open, so it still counts as watching.
     Measured on a modal open for 30 s beside a control page with no modal: identical walk
     states, a moving animation clock and the same confirmed watcher count.
+  - **Asked for (2026-09-18).** A 44 px `?` at the right edge of the support line, level
+    with "Buy him a coffee" and "Supporters", opens the introduction on demand
+    (`controller.explain`, `[data-testid="help-button"]`). It is desktop only
+    (`min-width: 900px`): the centred row leaves no room beside it on a phone, where a
+    first-time visitor still meets the introduction by itself. Asking for it records the
+    introduction exactly as the queued one does, so the queue does not repeat it later,
+    and it is refused while a modal is already open. The line spans the footer but only
+    its two controls take pointer events, so the scene behind the empty space is still
+    the scene.
   - **Reset.** `?resetModals=1` clears both records, marks a session override so the server's
     "returning visitor" is ignored too, and reloads without the parameter.
     `window.__khwResetModals()` does the same and exists outside production only.
-  - **Analytics.** `intro_modal_shown`, `intro_modal_dismissed { method }`,
+  - **Analytics.** `intro_modal_shown` (`{ source: "help_button" }` when asked for),
+    `intro_modal_dismissed { method }`,
     `intro_modal_journey_click`, `support_modal_shown { active_seconds }`,
     `support_modal_sponsor_click`, `support_modal_coffee_click`,
     `support_modal_dismissed { method }`, through the existing `trackVisitorEvent`.
@@ -858,8 +868,13 @@ resident (§9, "Prelaunch preview"):
 ### 6.6 P11 animation extension and gaze
 
 The manifest accepts an optional skeleton-only `animationUrl` beside each mesh GLB.
-`loadCharacterGltf` loads the mesh first, appends animation tracks when that optional
-file succeeds, and keeps the embedded v2 actions when it does not. Source animation
+`loadCharacterGltf` requests the mesh and that file together — both before either is
+awaited, the mesh first because it is the one a fallback replaces — appends the
+animation tracks when the optional file succeeds, and keeps the embedded v2 actions
+when it does not. Requesting them in turn made a visitor wait for the sum of two
+multi-megabyte files before anyone could be drawn (2026-09-18). When the mesh fails and
+the reviewed fallback is used instead, the take set asked for beside it is dropped
+rather than attached to a rig it does not target. Source animation
 names are matched through normalized aliases. Only `idle` and `walk` are mandatory;
 every extended take has an acyclic fallback ending at one of those core clips.
 
@@ -1443,6 +1458,23 @@ following the route once the world is up.
   place until the first `/api/bootstrap` answer (`settled`). The static poster waits
   2.5 s for the world before fetching its own copy, and appears at once only when WebGL
   fails. A cold visit therefore downloads each painting once.
+- **The pack key is on the paintings, not on the stage** (2026-09-18). That first answer
+  also replaces the placeholder pack (`paris-v2`) with the live one, and `SceneStage`
+  used to carry `key={assetVersion}`: the swap unmounted the whole stage seconds into
+  every visit, threw away the WebGL context and abandoned the traveler download, which
+  then began again — 4.6 MB fetched twice over one connection, with "Still loading him —
+  trying again" (shown after 20 s) on screen while it happened. `StaticScene` and
+  `PixiScene` carry the key instead. The character stage already follows a pack that
+  changes while it is mounted, so it keeps its models and its context. Which renderer
+  owns the stage frame is held per pack (`{ renderer, pack }`), so a new pack hands the
+  place back to the static poster until its own live world has drawn, exactly as the
+  remount used to. Measured on production: ready at 12.2 s with one mount and one
+  request per file, against ~24–30 s and two requests before.
+- **Both residents download once he is drawn**, on a tier that shows people passing
+  (2026-09-18). A pass whose model is still arriving is missed rather than shown late
+  mid-street, and passes are 2–3 walking minutes apart, so fetching the second resident
+  only when a pass asked for it meant the first person to pass never appeared. The
+  download starts after `onTravelerAvailability(true)`, never beside his own.
 - Until this browser's first heartbeat the status line reads "Joining the walk…". It
   is neither "Reconnecting…" nor a claim that nobody is watching.
 
