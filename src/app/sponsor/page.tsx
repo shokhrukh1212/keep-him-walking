@@ -1,6 +1,6 @@
 import { permanentRedirect } from "next/navigation";
 
-/** The sponsor page is now the public price board at /sponsors. */
+/** Legacy sponsor links return to the scene and open the featured placement. */
 export default function SponsorPage() {
-  permanentRedirect("/sponsors");
+  permanentRedirect("/?placement=featured");
 }

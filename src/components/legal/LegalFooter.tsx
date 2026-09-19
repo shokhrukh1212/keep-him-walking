@@ -6,6 +6,7 @@ const POLICY_LINKS = [
   ["/refund-policy", "Refunds & cancellation"],
   ["/sponsor-terms", "Sponsor terms"],
   ["/content-moderation", "Content moderation"],
+  ["/faq", "FAQ"],
   ["/contact", "Contact & support"],
 ] as const;
 

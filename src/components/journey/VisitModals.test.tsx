@@ -238,7 +238,7 @@ describe("the support ask", () => {
     expect(coffee).toHaveAttribute("target", "_blank");
     expect(coffee).toHaveAttribute("rel", "noopener noreferrer");
 
-    await user.click(screen.getByRole("button", { name: "Become the sponsor" }));
+    await user.click(screen.getByRole("button", { name: "See sponsor placements" }));
     await waitFor(() => expect(screen.queryByTestId("support-modal")).toBeNull());
     expect(onSponsor).toHaveBeenCalledOnce();
     expect(tracked.map(([event]) => event)).toContain("support_modal_sponsor_click");

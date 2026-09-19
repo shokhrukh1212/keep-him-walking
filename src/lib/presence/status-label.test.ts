@@ -49,8 +49,8 @@ describe("walking status", () => {
 
   it("keeps prelaunch, preview and waking states explicit", () => {
     const prelaunch = { ...base, journeyState: "prelaunch" as const, mode: "prelaunch" as const, walking: false, connection: "scheduled" as const };
-    expect(walkingStatusLabel(prelaunch)).toEqual({ text: "The Anniversary Journey starts September 17.", tone: "prelaunch" });
-    expect(walkingStatusLabel({ ...prelaunch, seasonNumber: 2 }).text).toBe("Season 2 is preparing to begin.");
+    expect(walkingStatusLabel(prelaunch)).toEqual({ text: "Getting ready in Paris", tone: "prelaunch" });
+    expect(walkingStatusLabel({ ...prelaunch, seasonNumber: 2 }).text).toBe("Getting ready in Paris");
     // A real outage is still an outage, never dressed up as a prelaunch.
     expect(walkingStatusLabel({ ...base, mode: "offline_preview" }).text).toBe("Preview only · waiting for the live journey");
     expect(walkingStatusLabel({ ...base, mode: "offline_preview" }).tone).toBe("preview");

@@ -8,6 +8,7 @@ import type {
   HeartbeatResponse,
   ReactionsView,
   ScheduledEventView,
+  SponsorInventoryView,
 } from "@/lib/contracts";
 import { withReactionBoard } from "@/lib/reactions/payload";
 import {
@@ -57,6 +58,7 @@ import { EncounterDialogue } from "@/components/dialogue/EncounterDialogue";
 import { JourneyHud } from "@/components/hud/JourneyHud";
 import { CountryLeaderboardSheet } from "@/components/hud/CountryLeaderboardSheet";
 import { ReactionButtons } from "@/components/hud/ReactionButtons";
+import { WaitingReactionButtons } from "@/components/hud/WaitingReactionButtons";
 import { composeDayPhoto } from "@/lib/photos/capture";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 import { SoundToggle } from "@/components/hud/SoundToggle";
@@ -89,15 +91,15 @@ import { PreviewCaption } from "@/components/preview/PreviewCaption";
 import { usePreviewMonologue } from "@/hooks/usePreviewMonologue";
 // Parked with the footer row it draws; the component and its tests are unchanged.
 // import { SupportFooterRow } from "@/components/supporters/SupportFooterRow";
-import { SupportersFeed } from "@/components/supporters/SupportersFeed";
 import { anniversaryShareText } from "@/lib/share/x-intent";
 import { SponsorInquiry } from "@/components/sponsor/SponsorInquiry";
 import { SponsorRail } from "@/components/sponsor/SponsorRail";
 import { SponsorPlaceCarousel } from "@/components/sponsor/SponsorPlaceCarousel";
 import { SponsorPlacePanel } from "@/components/sponsor/SponsorPlacePanel";
-import { SPONSOR_PLACES, placeName, type SponsorPlace } from "@/lib/sponsors/places";
+import { placeName, type SponsorPlace } from "@/lib/sponsors/places";
 import { AnniversaryStory } from "@/components/journey/AnniversaryStory";
 import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
+import { placementDurationCopy } from "@/lib/relaunch/config";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -141,6 +143,12 @@ function currentlyActiveEvent(
 
 const subscribeNever = () => () => {};
 
+const EMPTY_SPONSOR_INVENTORY: SponsorInventoryView = {
+  journeyId: null, lifecycleState: "waiting", scheduledStartAt: null, startsAt: null, endsAt: null,
+  durationDays: 14, regularFilled: 0, featuredFilled: false, checkoutEnabled: false,
+  checkoutReason: "disabled", slots: [],
+};
+
 export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "inquiry", sponsorXUrl = null, datafastDashboardUrl = null, coffeeUrl = null }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeatState, setHeartbeat] = useState<{
@@ -167,6 +175,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   // A sponsor place names one tile, not a page worth linking to, so it stays out of
   // the URL and off the history stack the panels above share.
   const [activePlace, setActivePlace] = useState<SponsorPlace | null>(null);
+  const [sponsorInventory, setSponsorInventory] = useState<SponsorInventoryView>(EMPTY_SPONSOR_INVENTORY);
+  const [placementStatus, setPlacementStatus] = useState<string | null>(null);
+  const featuredPlace = sponsorInventory.slots.find((place) => place.tier === "featured") ?? null;
   const [wakeBeat, setWakeBeat] = useState<WakeMoment | null>(null);
   const [wakeCard, setWakeCard] = useState<WakeMoment | null>(null);
   const [actionReview,setActionReview]=useState<ActionReview>({action:"auto",startedAt:0});
@@ -276,6 +287,80 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const reducedMotion = useMotionPreference();
   const qualityTier = useQualityTier(reducedMotion);
 
+  const refreshSponsorInventory = useCallback(async () => {
+    const response = await fetch("/api/sponsor-placements", { cache: "no-store" }).catch(() => null);
+    if (!response?.ok) return;
+    setSponsorInventory(await response.json() as SponsorInventoryView);
+  }, []);
+
+  useEffect(() => {
+    const initial = window.setTimeout(() => void refreshSponsorInventory(), 0);
+    const timer = window.setInterval(() => void refreshSponsorInventory(), 5_000);
+    return () => { window.clearTimeout(initial); window.clearInterval(timer); };
+  }, [refreshSponsorInventory]);
+
+  useEffect(() => {
+    if (sponsorInventory.slots.length === 0) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("placement") !== "featured") return;
+    const featured = sponsorInventory.slots.find((place) => place.tier === "featured");
+    const frame = featured ? window.requestAnimationFrame(() => setActivePlace(featured)) : 0;
+    url.searchParams.delete("placement");
+    window.history.replaceState(window.history.state, "", url);
+    return () => window.cancelAnimationFrame(frame);
+  }, [sponsorInventory.slots]);
+
+  const readPlacementStatus = useCallback(async () => {
+    const response = await fetch("/api/sponsor-placements/status", { cache: "no-store" }).catch(() => null);
+    if (!response?.ok) return null;
+    const payload = await response.json() as { purchase: string | null; status?: string };
+    if (!payload.purchase || !payload.status) return null;
+    setPlacementStatus(payload.status);
+    if (payload.status === "active") void refreshSponsorInventory();
+    return payload.status;
+  }, [refreshSponsorInventory]);
+
+  useEffect(() => {
+    const initial = window.setTimeout(() => void readPlacementStatus(), 0);
+    return () => window.clearTimeout(initial);
+  }, [readPlacementStatus]);
+  useEffect(() => {
+    if (!placementStatus || !["reserved", "payment_pending", "paid_pending_publish"].includes(placementStatus)) return;
+    const timer = window.setInterval(() => void readPlacementStatus(), 2_500);
+    return () => window.clearInterval(timer);
+  }, [placementStatus, readPlacementStatus]);
+
+  const openSponsorPlace = useCallback((place: SponsorPlace) => {
+    setActivePlace(place);
+    if (!place.placement) return;
+    void fetch("/api/sponsor-placements/view", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId: place.placement.publicId, eventId: crypto.randomUUID() }),
+    }).catch(() => undefined);
+  }, []);
+
+  const beginPlacementCheckout = useCallback(async (checkout: {
+    checkoutUrl: string; paymentProvider: "dodo" | "fixture"; testMode: boolean;
+  }) => {
+    setActivePlace(null);
+    if (checkout.paymentProvider === "fixture") {
+      window.location.assign(checkout.checkoutUrl);
+      return;
+    }
+    try {
+      const { DodoPayments } = await import("dodopayments-checkout");
+      DodoPayments.Initialize({ mode: checkout.testMode ? "test" : "live", displayType: "overlay", onEvent: (event) => {
+        if (event.event_type === "checkout.closed" || event.event_type === "checkout.error") {
+          setPlacementStatus("payment_pending");
+          void readPlacementStatus();
+        }
+      } });
+      DodoPayments.Checkout.open({ checkoutUrl: checkout.checkoutUrl });
+    } catch {
+      setPlacementStatus("checkout_error");
+    }
+  }, [readPlacementStatus]);
+
   const showPanel = useCallback((panel: PanelName, section: PanelSection = null) => {
     const step = openPanelStep(window.location.href, window.history.state, panel);
     if (step.method === "push") window.history.pushState(step.state, "", step.url);
@@ -288,9 +373,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
    * sponsor modal to open; inquiry and daily mode keep theirs.
    */
   const openSponsor = useCallback(() => {
-    if (sponsorshipMode === "season") window.location.assign("/sponsors#request");
+    if (featuredPlace) openSponsorPlace(featuredPlace);
+    else if (sponsorshipMode === "season") window.location.assign("/sponsors#request");
     else showPanel("sponsor");
-  }, [showPanel, sponsorshipMode]);
+  }, [featuredPlace, openSponsorPlace, showPanel, sponsorshipMode]);
   const closePanel = useCallback(() => {
     const step = closePanelStep(window.location.href, window.history.state);
     setPanelLocation({ panel: null, section: null });
@@ -863,12 +949,52 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     active: preview,
     cityName: snapshot.countryDay.cityName,
     seasonNumber: prelaunchSeasonNumber,
+    lifecycleState: snapshot.journey.lifecycleState === "scheduled" ? "scheduled" : "waiting",
+    filledRegular: sponsorInventory.journeyId ? sponsorInventory.regularFilled : null,
     modelReady: puppetReady || worldFailed || modelWaitElapsed,
     // A modal, or a journey read that just failed, holds back the next line; one under way finishes.
-    deferred: openPanel !== null || bootstrapIssue !== null,
+    deferred: openPanel !== null || activePlace !== null || placementStatus !== null || bootstrapIssue !== null,
     reducedMotion,
     wallClockMs: realNowMs,
   });
+  const waitingStateBeats = useRef({ returning: false, filled: null as number | null, allFilled: false, finalMinute: false });
+  useEffect(() => {
+    if (!preview || visitorIsNew !== false || waitingStateBeats.current.returning) return;
+    waitingStateBeats.current.returning = true;
+    previewMonologue.enqueuePriorityBeat({
+      id: "returning-browser", text: "Back already? Good. I saved you the same view.", clip: "greet",
+    });
+  }, [preview, previewMonologue, visitorIsNew]);
+  useEffect(() => {
+    if (!preview) return;
+    const previous = waitingStateBeats.current.filled;
+    waitingStateBeats.current.filled = sponsorInventory.regularFilled;
+    if (previous !== null && sponsorInventory.regularFilled > previous) {
+      previewMonologue.enqueuePriorityBeat({
+        id: `sponsor-activated-${sponsorInventory.regularFilled}`,
+        text: "Someone just helped with the journey. That's a very good reason to stand up straight.",
+        clip: "wait_stretch",
+      });
+    }
+    if (sponsorInventory.regularFilled === 10 && !waitingStateBeats.current.allFilled) {
+      waitingStateBeats.current.allFilled = true;
+      previewMonologue.enqueuePriorityBeat({
+        id: "regular-sold-out", text: "All ten spots are taken. Now we wait for the host's starting signal.", clip: "talk",
+      });
+    }
+  }, [preview, previewMonologue, sponsorInventory.regularFilled]);
+  useEffect(() => {
+    const scheduledAt = snapshot.journey.lifecycleState === "scheduled"
+      ? snapshot.journey.scheduledStartAt : null;
+    if (!preview || !scheduledAt || waitingStateBeats.current.finalMinute) return;
+    const remaining = Date.parse(scheduledAt) - realNowMs;
+    if (remaining > 0 && remaining <= 60_000) {
+      waitingStateBeats.current.finalMinute = true;
+      previewMonologue.enqueuePriorityBeat({
+        id: "scheduled-final-minute", text: "One last backpack check. Then we go.", clip: "wait_stretch",
+      });
+    }
+  }, [preview, previewMonologue, realNowMs, snapshot.journey.lifecycleState, snapshot.journey.scheduledStartAt]);
 
   const command: TravelerCommand = {
     state: travelerState,
@@ -1074,6 +1200,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         ? { ...current.vote, selectedOptionId: optionId, totalBallots }
         : null,
     }));
+    if (preview) previewMonologue.enqueuePriorityBeat({
+      id: "name-vote-accepted", text: "A vote! My future passport thanks you.", clip: "greet",
+    });
   };
 
   return (
@@ -1149,8 +1278,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       />
       {/* The ten sponsor places. Down both edges on a desktop screen; on a phone the
           same ten ride in one row above the footer instead, and these are hidden. */}
-      <SponsorRail places={SPONSOR_PLACES} side="left" onOpen={setActivePlace} />
-      <SponsorRail places={SPONSOR_PLACES} side="right" onOpen={setActivePlace} />
+      <SponsorRail places={sponsorInventory.slots} side="left" onOpen={openSponsorPlace} />
+      <SponsorRail places={sponsorInventory.slots} side="right" onOpen={openSponsorPlace} />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
         <div className="connection-banner offline" role="status">
@@ -1172,7 +1301,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           {modelWaitElapsed ? "Still loading him — trying again. Today’s distance keeps counting." : "Loading the walk…"}
         </div>
       ) : null}
-      {snapshot.journeyState !== "prelaunch" && snapshot.mode === "live" ? <ReactionButtons
+      {preview ? <WaitingReactionButtons enabled={bootstrapIssue === null} onAccepted={(kind) => {
+        const beat = kind === "wave"
+          ? { id: `waiting-wave-${Date.now()}`, text: "I saw that wave. Very professional. Excellent wrist work.", clip: "greet" as const }
+          : kind === "water"
+            ? { id: `waiting-water-${Date.now()}`, text: "Hydrated. Dramatic. Still waiting.", clip: "drink" as const }
+            : { id: `waiting-photo-${Date.now()}`, text: "Use the good angle. The one that makes me look well-traveled.", clip: "photo_pose" as const };
+        previewMonologue.enqueuePriorityBeat(beat);
+      }} /> : snapshot.mode === "live" ? <ReactionButtons
         counts={heartbeat?.reactions.counts ?? snapshot.reactions.counts}
         activeViewers={activeViewers}
         enabled={snapshot.mode === "live" && connectionStatus === "live"}
@@ -1193,7 +1329,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           watching, the line that says why he is standing still. No resident portrait
           belongs beside that one, because nobody is talking to him. */}
       <EncounterDialogue
-        line={review ? ["talk","listen","greet","goodbye"].includes(review.state)
+        line={openPanel !== null || activePlace !== null || placementStatus !== null ? null : review ? ["talk","listen","greet","goodbye"].includes(review.state)
           ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine ?? spokenWaitingLine}
         speakerLabel={activeLine && activeConversation
           ? activeLine.speaker === "npc"
@@ -1228,6 +1364,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             placeCount={places.length}
             currentPlaceIndex={routePosition.zoneIndex}
             secondsToNextVisit={routePosition.secondsToNextVisit}
+            waitingSummary={preview ? `${sponsorInventory.regularFilled}/10 sponsor spots filled${sponsorInventory.featuredFilled ? " · Featured filled" : " · Featured available"}` : null}
           />
         </div>
         {/* One fixed slot for the whole season, beside the status and clear of him and the captions. */}
@@ -1235,7 +1372,12 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         {season?.state === "completed" ? <SeasonCompleteCard season={season} sponsor={snapshot.seasonSponsor ?? null} /> : null}
         <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
           {/* The day sponsor card belongs to daily mode; a season sponsor has its own line. */}
-          {sponsor && sponsorshipMode === "daily" ? <aside className="sponsor-card" data-hud-region="sponsor" aria-label={sponsor.disclosure}>
+          {featuredPlace ? <button className="sponsor-invitation featured-sponsor-button" data-hud-region="sponsor" type="button" aria-haspopup="dialog"
+            aria-label={featuredPlace.placement ? `Sponsored by ${featuredPlace.placement.name}` : "Become the featured sponsor for $100"}
+            disabled={featuredPlace.state !== "available" && !featuredPlace.placement} onClick={() => openSponsorPlace(featuredPlace)}>
+            {featuredPlace.placement ? <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={featuredPlace.placement.logoUrl} alt="" /><span>Sponsored by {featuredPlace.placement.name}</span></>
+              : <span>Featured Sponsor · $100</span>}
+          </button> : sponsor && sponsorshipMode === "daily" ? <aside className="sponsor-card" data-hud-region="sponsor" aria-label={sponsor.disclosure}>
             {sponsor.logo ? /* eslint-disable-next-line @next/next/no-img-element */
               <img src={sponsor.logo} alt="" width={40} height={40} /> : null}
             <div><small>{sponsor.disclosure}</small><strong>{sponsor.name}</strong>
@@ -1263,18 +1405,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         {/* Phone only: the ten places the desktop rails carry, in one drifting row.
             It sits in the space the coffee and supporters row used to take. */}
         <SponsorPlaceCarousel
-          places={SPONSOR_PLACES}
+          places={sponsorInventory.slots}
           reducedMotion={reducedMotion}
-          paused={openPanel !== null || activePlace !== null}
-          onOpen={setActivePlace}
+          paused={openPanel !== null || activePlace !== null || placementStatus !== null}
+          onOpen={openSponsorPlace}
         />
-        <div className="support-footer-line">
-          {/* Parked while the sponsor places are reviewed: the two support actions
-              pushed the panel and the dock up the screen, and the places need that
-              room. The Supporters feed and the coffee link are unchanged behind this;
-              put the row back to have them return.
-          <SupportFooterRow coffeeUrl={coffeeUrl} onSupportersOpen={() => showPanel("supporters")} />
-          */}
           <button
             className="journey-help"
             type="button"
@@ -1286,7 +1421,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           >
             <span aria-hidden="true">?</span>
           </button>
-        </div>
         <LegalFooter variant="landing" />
       </div>
 
@@ -1397,29 +1531,33 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         <DailyVote vote={snapshot.vote} onAccepted={acceptVote} />
       </OverlayModal>
 
-      <OverlayModal
-        open={openPanel === "supporters"}
-        title="Supporters"
-        eyebrow="Keeping the journey going"
-        onClose={closePanel}
-        testId="supporters-modal"
-      >
-        <SupportersFeed />
-      </OverlayModal>
-
       {/* One modal for all ten places: what the product is, or what the place costs. */}
       <OverlayModal
         open={activePlace !== null}
-        title={activePlace?.brand ? activePlace.brand.name : activePlace ? placeName(activePlace) : ""}
+        title={activePlace?.placement ? activePlace.placement.name : activePlace?.tier === "featured" ? "Become the featured sponsor" : activePlace ? "Sponsor this journey" : ""}
         eyebrow={activePlace
-          ? activePlace.brand
-            ? `Sponsor · ${placeName(activePlace)}`
-            : "Sponsor place · free"
+          ? activePlace.placement
+            ? "Sponsored placement"
+            : `${placeName(activePlace)} · ${formatPriceUsd(activePlace.priceCents)}`
           : undefined}
         onClose={() => setActivePlace(null)}
+        size="compact"
         testId="sponsor-place-modal"
       >
-        {activePlace ? <SponsorPlacePanel place={activePlace} /> : null}
+        {activePlace ? <SponsorPlacePanel place={activePlace} checkoutEnabled={sponsorInventory.checkoutEnabled}
+          durationCopy={placementDurationCopy({ state: sponsorInventory.lifecycleState, endsAt: sponsorInventory.endsAt })}
+          onCheckout={(checkout) => void beginPlacementCheckout(checkout)} /> : null}
+      </OverlayModal>
+
+      <OverlayModal open={placementStatus !== null} title={placementStatus === "active" ? "Your sponsor is live" : placementStatus === "pending_review" ? "Review in progress" : placementStatus === "checkout_error" ? "Checkout needs another try" : "Confirming your payment…"}
+        eyebrow="Sponsor placement" onClose={() => setPlacementStatus(null)} testId="placement-status-modal">
+        <div className="sponsor-place-panel">
+          <p>{placementStatus === "active" ? "The placement is now visible on this journey."
+            : placementStatus === "pending_review" ? "Payment is confirmed. The submitted content was flagged for owner review before publication."
+            : placementStatus === "refund_required" || placementStatus === "refund_requested" ? "This placement could not be fulfilled. A full refund is being reconciled."
+            : placementStatus === "checkout_error" ? "Your draft remains in this browser. Close this message and try checkout again."
+            : "We are waiting for verified confirmation from the payment provider. This page will update automatically."}</p>
+        </div>
       </OverlayModal>
 
       <OverlayModal

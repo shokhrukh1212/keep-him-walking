@@ -23,7 +23,7 @@ describe("JourneyHud", () => {
   it("counts people with the site open during the prelaunch preview", () => {
     render(<JourneyHud day={day} localTime="12:00" activeViewers={null} onlineVisitors={5} status="scheduled" preview
       audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
-    expect(screen.getByRole("button", { name: "Open Journey from Paris" })).toHaveTextContent("Paris · Preview");
+    expect(screen.getByRole("button", { name: "Open Journey from Paris" })).toHaveTextContent("Getting ready in Paris");
     expect(screen.getByRole("button", { name: "5 people watching" })).toBeInTheDocument();
     expect(screen.queryByTestId("season-clock")).toBeNull();
     expect(screen.getByRole("button", { name: "Ambient sound off" })).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("JourneyHud", () => {
     render(<JourneyHud day={day} localTime="12:00" activeViewers={null} onlineVisitors={1} status="scheduled" preview
       seasonClock={{ where: "Season 1", when: "Starts in 2d 4h" }}
       audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
-    expect(screen.getByRole("button", { name: "Open Journey from Paris" })).toHaveTextContent("Paris · Preview");
+    expect(screen.getByRole("button", { name: "Open Journey from Paris" })).toHaveTextContent("Getting ready in Paris");
     expect(screen.getByTestId("season-clock")).toHaveTextContent("Season 1 · Starts in 2d 4h");
     expect(screen.getByRole("button", { name: "1 person watching" })).toBeInTheDocument();
   });

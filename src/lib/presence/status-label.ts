@@ -1,5 +1,4 @@
 import type { ConnectionStatus } from "@/lib/contracts";
-import { ANNIVERSARY_JOURNEY, ANNIVERSARY_LABELS } from "@/lib/season/anniversary";
 
 export type WalkingStatusInput = {
   journeyState: "prelaunch" | "live" | "intermission" | "completed";
@@ -37,13 +36,7 @@ export type WalkingStatus = {
 export function walkingStatusLabel(input: WalkingStatusInput): WalkingStatus {
   // Nothing is live yet, so nothing is counted; any configured start is in the header.
   if (input.journeyState === "prelaunch") {
-    const seasonNumber = input.seasonNumber ?? ANNIVERSARY_JOURNEY.seasonNumber;
-    return {
-      text: seasonNumber === ANNIVERSARY_JOURNEY.seasonNumber
-        ? `${ANNIVERSARY_JOURNEY.title} starts ${ANNIVERSARY_LABELS.travelStarts}.`
-        : `Season ${seasonNumber} is preparing to begin.`,
-      tone: "prelaunch",
-    };
+    return { text: "Getting ready in Paris", tone: "prelaunch" };
   }
   // A finished season with nothing live: he is not walking and nobody is being waited for.
   if (input.journeyState === "completed") return { text: "Journey complete", tone: "complete" };

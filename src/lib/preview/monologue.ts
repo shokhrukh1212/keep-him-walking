@@ -1,5 +1,5 @@
 import type { PrelaunchMonologueLine } from "@/content/prelaunch/monologues";
-import { CLIP_DURATIONS } from "@/lib/characters/manifest";
+import { CLIP_DURATIONS, type CharacterClip } from "@/lib/characters/manifest";
 import { captionCues } from "@/lib/world/captions";
 import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 
@@ -9,15 +9,15 @@ import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
  */
 
 /** The first line comes this long after the model is ready. */
-export const PREVIEW_FIRST_DELAY_SECONDS = 5;
+export const PREVIEW_FIRST_DELAY_SECONDS = 2.5;
 /** One monologue every this many visible seconds, start to start. */
-export const PREVIEW_INTERVAL_SECONDS = 180;
+export const PREVIEW_INTERVAL_SECONDS = 15;
 /** The longest cue that still fits three readable lines in the narrowest phone caption band. */
 export const MONOLOGUE_CUE_CHARACTERS = 72;
 /** A speech is always whole takes of the existing talk animation, so its gesture completes. */
 export const TALK_LOOP_SECONDS = CLIP_DURATIONS.talk;
-export const MONOLOGUE_MIN_SECONDS = 10;
-export const MONOLOGUE_MAX_SECONDS = 16;
+export const MONOLOGUE_MIN_SECONDS = 5;
+export const MONOLOGUE_MAX_SECONDS = 8;
 const MIN_TALK_LOOPS = Math.ceil(MONOLOGUE_MIN_SECONDS / TALK_LOOP_SECONDS);
 const MAX_TALK_LOOPS = Math.floor(MONOLOGUE_MAX_SECONDS / TALK_LOOP_SECONDS);
 const READING_CHARACTERS_PER_SECOND = 14;
@@ -97,9 +97,11 @@ export type MonologueContext = {
   sponsorOpen: boolean | null;
   sponsorSpoken: boolean;
   previousText: string | null;
+  lifecycleState?: "waiting" | "scheduled";
+  filledRegular?: number | null;
 };
 
-export type MonologueChoice = { slot: number; id: string; text: string; sponsor: boolean };
+export type MonologueChoice = { slot: number; id: string; text: string; sponsor: boolean; clip?: CharacterClip };
 
 const SCHEDULED_INSTANTS = {
   travelStart: Date.parse(ANNIVERSARY_JOURNEY.travelStartsAt),
@@ -114,9 +116,13 @@ function resolveLine(line: PrelaunchMonologueLine, slot: number, context: Monolo
   // The offer is made only while genuinely open, never as the first thing he says, and once.
   const sponsorHolds = line.requires?.sponsorOpen === undefined
     || (context.sponsorOpen === true && !context.sponsorSpoken && slot > 0);
-  return timeHolds && cityHolds && sponsorHolds
-    ? { id: line.id, text: line.text, sponsor: line.requires?.sponsorOpen === true }
-    : { id: `${line.id}.fallback`, text: line.fallback ?? "", sponsor: false };
+  const scheduleHolds = line.requires?.scheduled === undefined || context.lifecycleState === "scheduled";
+  const filledHolds = line.requires?.filledRegular === undefined
+    || typeof context.filledRegular === "number";
+  const text = line.text.replace("{filledRegular}", String(context.filledRegular ?? 0));
+  return timeHolds && cityHolds && sponsorHolds && scheduleHolds && filledHolds
+    ? { id: line.id, text, sponsor: line.requires?.sponsorOpen === true, clip: line.action }
+    : { id: `${line.id}.fallback`, text: line.fallback ?? "", sponsor: false, clip: line.action };
 }
 
 /** Whether the line in this slot depends on sponsorship being open. */
@@ -179,6 +185,8 @@ export type MonologueStep = {
   sponsorOpen: boolean | null;
   /** Server-synchronized wall-clock milliseconds, for dated lines. */
   nowMs?: number | null;
+  lifecycleState?: "waiting" | "scheduled";
+  filledRegular?: number | null;
 };
 
 /**
@@ -198,6 +206,8 @@ export function advanceMonologues(state: MonologueSchedule, step: MonologueStep)
     sponsorOpen: step.sponsorOpen,
     sponsorSpoken: next.sponsorSpoken,
     previousText: next.lastText,
+    lifecycleState: step.lifecycleState,
+    filledRegular: step.filledRegular,
   });
   if (!choice) return next;
   const startedAt = step.at - next.nextStartAt <= ON_TIME_SECONDS ? next.nextStartAt : step.at;

@@ -24,7 +24,7 @@ export function SponsorRail({ places, side, onOpen }: Props) {
       data-side={side}
       aria-label={side === "left" ? "Sponsor places, left" : "Sponsor places, right"}
     >
-      {column.map((place) => <SponsorPlaceTile key={place.id} place={place} onOpen={onOpen} />)}
+      {column.map((place) => <SponsorPlaceTile key={place.slotId} place={place} onOpen={onOpen} />)}
     </aside>
   );
 }

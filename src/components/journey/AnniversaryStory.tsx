@@ -46,11 +46,11 @@ export function AnniversaryStory({ progress, completed, vote, nowMs, coffeeUrl, 
           {coffeeUrl ? (
             <a href={coffeeUrl} target="_blank" rel="noopener noreferrer">Buy him a coffee ↗</a>
           ) : null}
-          <button type="button" onClick={onSponsor}>Sponsor a season</button>
+          <button type="button" onClick={onSponsor}>Sponsor this journey</button>
         </div>
-        <p className="journey-muted anniversary-support-note">
+        {coffeeUrl ? <p className="journey-muted anniversary-support-note">
           Coffee is voluntary support toward my expenses and the gift. It does not buy a sponsor slot or a vote, or fund real travel.
-        </p>
+        </p> : null}
       </section>
 
       {completed ? (

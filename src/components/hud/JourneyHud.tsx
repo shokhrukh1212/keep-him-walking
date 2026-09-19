@@ -46,7 +46,7 @@ export function JourneyHud({
     : `${watching} ${watching === 1 ? "person" : "people"} watching`;
   // The season clock carries the day number, so the headline names only the city.
   const headline = preview
-    ? `${day.cityName} · Preview`
+    ? "Getting ready in Paris"
     : seasonClock ? day.cityName : `${day.cityName} · Day ${day.dayNumber}`;
   return (
     <header className="journey-hud" data-hud-region="header" data-confirmed-watchers={activeViewers ?? undefined}>

@@ -7,7 +7,7 @@ type Props = {
 };
 
 /** Milliseconds until the ballot's own stored closing instant, never negative. */
-export function millisecondsUntilClose(closesAt: string | undefined, nowMs: number): number {
+export function millisecondsUntilClose(closesAt: string | null | undefined, nowMs: number): number {
   const closes = closesAt ? Date.parse(closesAt) : Number.NaN;
   return Number.isFinite(closes) ? Math.max(0, closes - nowMs) : 0;
 }
@@ -66,7 +66,7 @@ export function VoteChip({ vote, onOpen }: Props) {
     return () => window.clearInterval(timer);
   }, [closesAt]);
 
-  if (!vote || vote.status !== "open" || remainingMs <= 0) return null;
+  if (!vote || vote.status !== "open" || (closesAt && remainingMs <= 0)) return null;
   const label = vote.kind === "name" ? "Name vote" : vote.kind === "anniversary" ? "Anniversary setting vote" : "Destination vote";
 
   return (
@@ -75,12 +75,12 @@ export function VoteChip({ vote, onOpen }: Props) {
       data-hud-region="vote"
       type="button"
       onClick={onOpen}
-      aria-label={`${label}. Closes in ${formatCountdown(remainingMs)}.`}
+      aria-label={closesAt ? `${label}. Closes in ${formatCountdown(remainingMs)}.` : `${label}. Open until launch.`}
     >
       <span className="vote-chip-label">{vote.kind === "name" ? "Name him" : "Vote"}</span>
-      <time className="vote-chip-countdown" dateTime={`PT${Math.floor(remainingMs / 1_000)}S`}>
+      {closesAt ? <time className="vote-chip-countdown" dateTime={`PT${Math.floor(remainingMs / 1_000)}S`}>
         {formatCountdown(remainingMs)}
-      </time>
+      </time> : null}
     </button>
   );
 }

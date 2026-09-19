@@ -13,7 +13,7 @@ type Props = {
   /** Existing callers ignore the reason; the visitor modals report it to analytics. */
   onClose: (reason: OverlayCloseReason) => void;
   children: ReactNode;
-  size?: "default" | "wide";
+  size?: "default" | "wide" | "compact";
   /** The close button's accessible name when the title is a whole sentence. */
   closeLabel?: string;
   testId?: string;

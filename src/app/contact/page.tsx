@@ -28,20 +28,20 @@ export default function ContactPage() {
       title="Contact & Support"
       eyebrow="A REAL PERSON REVIEWS IT"
       testId="contact-page"
-      summary="Use this page for sponsorship inquiries, listing reports, corrections, moderation appeals, refunds, privacy requests and accessibility support."
+      summary="Use this page for payment support, listing reports, corrections, moderation appeals, refunds, privacy requests and accessibility support."
     >
       <section>
         <span className="legal-section-number">01</span>
         <h2>How to reach us</h2>
         {email ? <p>Email <a href={`mailto:${email}`}>{email}</a>.</p> : null}
         {xContact ? <p>Contact <a href={xContact.href} target="_blank" rel="noopener noreferrer">{xContact.label} ↗</a>.</p> : null}
-        {!email && !xContact ? <p>No monitored public contact method is configured. Checkout remains disabled, and this must be resolved before accepting payment.</p> : null}
+        {!email && !xContact ? <p>No monitored public contact method is configured. Sponsor checkout stays disabled until one is configured.</p> : null}
       </section>
 
       <section>
         <span className="legal-section-number">02</span>
         <h2>What to include</h2>
-        <p>To discuss sponsorship, message on X; no payment or reservation is made there or on this site. For a report, correction or appeal, include the sponsor name or destination URL and a short explanation. For a question about an earlier sponsorship, include its private reference.</p>
+        <p>For a sponsor payment issue, report, correction or appeal, include the product name, destination URL and private payment reference where available. For a question about an earlier sponsorship, include its original reference and promise.</p>
         <p>Do not send passwords, payment-card details, identity documents or other sensitive information. Payment details are handled by the payment provider.</p>
       </section>
 

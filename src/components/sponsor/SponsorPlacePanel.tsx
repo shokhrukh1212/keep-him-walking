@@ -1,110 +1,106 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type ChangeEvent, type FormEvent } from "react";
+import type { SponsorPlace } from "@/lib/sponsors/places";
 import { formatPriceUsd } from "@/lib/sponsors/pricing";
-import {
-  SPONSOR_PLACE_PRICE_CENTS,
-  placeName,
-  type SponsorPlace,
-} from "@/lib/sponsors/places";
-import { SponsorPlaceMark } from "./SponsorPlaceMark";
 
-const PRICE = formatPriceUsd(SPONSOR_PLACE_PRICE_CENTS);
+type Checkout = { checkoutUrl: string; paymentProvider: "dodo" | "fixture"; testMode: boolean };
 
-/**
- * What a taken place has to say for itself: what the product is, how it has done
- * here so far, and one way to go and look at it.
- *
- * The two numbers are fixture values, not a measurement, and the line under them
- * says so. Nothing here may present a count the server has not confirmed as
- * though it had.
- */
-function TakenPlace({ place }: { place: SponsorPlace }) {
-  const brand = place.brand;
-  if (!brand) return null;
+function ProductProfile({ place }: { place: SponsorPlace }) {
+  const product = place.placement;
+  if (!product) return null;
   return (
     <div className="sponsor-place-panel" data-state="taken">
       <div className="sponsor-place-hero">
-        <span className="sponsor-place-mark" data-size="large"><SponsorPlaceMark mark={brand.mark} /></span>
-        <div>
-          <strong>{brand.name}</strong>
-          <p className="journey-muted">{brand.description}</p>
-        </div>
+        <span className="sponsor-place-mark" data-size="large">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={product.logoUrl} alt="" className="sponsor-place-logo" data-fit={product.logoFit} />
+        </span>
+        <p>{product.description}</p>
       </div>
-      <dl className="sponsor-place-stats">
-        <div><dt>Views</dt><dd>{brand.views.toLocaleString("en-US")}</dd></div>
-        <div><dt>Clicks</dt><dd>{brand.clicks.toLocaleString("en-US")}</dd></div>
-        <div><dt>Place</dt><dd>{placeName(place)}</dd></div>
-      </dl>
-      <p className="sponsor-place-note">Placeholder figures — this placement is not measured yet.</p>
-      <a
-        className="primary-button"
-        href={brand.href}
-        target="_blank"
-        rel="sponsored noopener noreferrer"
-        aria-label={`Visit ${brand.name} (opens in a new tab)`}
-      >
-        Visit {brand.name} ↗
-      </a>
-      <p className="policy-copy">Sponsored placement.</p>
+      <dl className="sponsor-profile-view"><div><dt>Views</dt><dd>{product.views === null ? "Unavailable" : product.views.toLocaleString("en-US")}</dd></div></dl>
+      <p className="sponsor-place-note">Product profile opens</p>
+      <a className="primary-button" href={product.websiteUrl} target="_blank" rel="sponsored noopener noreferrer">Visit website ↗</a>
+      <p className="policy-copy">Sponsored placement</p>
     </div>
   );
 }
 
-/**
- * What a free place has to say: the price, and a checkout.
- *
- * The checkout is a front end only. Nothing is submitted, stored or charged, and
- * the visitor is told so in the same words on the button they press. Wire it to the
- * provider the featured sponsor already uses when the product is decided.
- */
-function FreePlace({ place }: { place: SponsorPlace }) {
-  const [submitted, setSubmitted] = useState(false);
-  const name = placeName(place);
+function limitCodePoints(value: string, maximum: number) { return Array.from(value).slice(0, maximum).join(""); }
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSubmitted(true);
+function PurchaseForm({ place, checkoutEnabled, durationCopy, onCheckout }: {
+  place: SponsorPlace; checkoutEnabled: boolean; durationCopy: string; onCheckout: (checkout: Checkout) => void;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [logo, setLogo] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [fit, setFit] = useState<"crop" | "contain">("contain");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const descriptionId = useId();
+  const price = formatPriceUsd(place.priceCents);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  const chooseLogo = (event: ChangeEvent<HTMLInputElement>) => {
+    const next = event.target.files?.[0] ?? null;
+    if (preview) URL.revokeObjectURL(preview);
+    setLogo(next);
+    setPreview(next ? URL.createObjectURL(next) : null);
   };
-
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!logo || busy) return;
+    setBusy(true); setError(null);
+    const form = new FormData(event.currentTarget);
+    form.set("slotId", place.slotId); form.set("logoFit", fit); form.set("logo", logo);
+    try {
+      const response = await fetch("/api/sponsor-placements/checkout", { method: "POST", body: form });
+      const payload = await response.json() as Checkout & { error?: { message?: string } };
+      if (!response.ok) throw new Error(payload.error?.message || "Checkout could not be started.");
+      onCheckout(payload);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Checkout could not be started.");
+      setBusy(false);
+    }
+  };
   return (
     <div className="sponsor-place-panel" data-state="free">
-      <p className="sponsor-place-lead">{name} is free. {PRICE} to take it.</p>
-      <p className="journey-muted">
-        Your mark sits beside the walk with the other places, and a visitor who presses it sees
-        your name, one line about the product and a link to it. One-time payment, no renewal.
-        Audience size and results are not guaranteed.
-      </p>
-      <form className="sponsor-form sponsor-place-form" onSubmit={submit}>
-        <label>Product name
-          <input name="productName" minLength={2} maxLength={60} required autoComplete="organization" />
+      <p className="sponsor-place-lead"><strong>{place.tier === "featured" ? "Featured placement" : `Sponsor spot ${place.position}`}</strong> · {price} once</p>
+      <p className="journey-muted">{durationCopy}</p>
+      <form className="sponsor-place-form" onSubmit={submit}>
+        <label>Product URL<input name="productUrl" inputMode="url" placeholder="example.com" required autoComplete="url" /></label>
+        <label>Product logo <span className="field-hint">PNG, JPEG or WebP · 1 MB max</span>
+          <input name="logo" type="file" accept="image/png,image/jpeg,image/webp" required onChange={chooseLogo} />
         </label>
-        <label>Website
-          <input name="productUrl" type="url" placeholder="https://" required autoComplete="url" />
+        {preview ? <div className="sponsor-upload-preview">
+          <span className="sponsor-place-mark" data-size="large">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={preview} alt="Logo preview" className="sponsor-place-logo" data-fit={fit} /></span>
+          <fieldset><legend>Logo fit</legend><label><input type="radio" checked={fit === "contain"} onChange={() => setFit("contain")} /> Fit whole logo</label><label><input type="radio" checked={fit === "crop"} onChange={() => setFit("crop")} /> Fill square</label></fieldset>
+        </div> : null}
+        <label>Product name <span className="field-hint">{Array.from(name).length}/32</span>
+          <input name="productName" value={name} onChange={(event) => setName(limitCodePoints(event.target.value, 32))} required autoComplete="organization" />
         </label>
-        <label>Contact email
-          <input name="email" type="email" required autoComplete="email" />
+        <label>Short description <span className="field-hint">{160 - Array.from(description).length} left</span>
+          <textarea id={descriptionId} name="description" value={description} onChange={(event) => setDescription(limitCodePoints(event.target.value, 160))} rows={3} required />
         </label>
-        <dl className="sponsor-place-order">
-          <div><dt>{name}</dt><dd>{PRICE}</dd></div>
-          <div data-total="true"><dt>Total today</dt><dd>{PRICE}</dd></div>
-        </dl>
-        <button className="primary-button" type="submit">Pay {PRICE}</button>
-        {submitted ? (
-          <p className="sponsor-place-note" role="status">
-            Checkout is not connected yet, so nothing was charged and nothing you typed was sent anywhere.
-          </p>
-        ) : null}
+        <label className="sponsor-acknowledgment"><input name="rightsConfirmed" type="checkbox" value="true" required />
+          <span>I have rights to this content and accept the <a href="/sponsor-terms" target="_blank">Sponsor Terms</a> and <a href="/content-moderation" target="_blank">Content Moderation Policy</a>.</span>
+        </label>
+        <div className="sponsor-mini-preview" aria-label="Placement preview">
+          {preview ? <span className="sponsor-place-mark">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={preview} alt="" className="sponsor-place-logo" data-fit={fit} /></span> : <span className="sponsor-preview-empty" />}
+          <span>{name || "Your product"}</span>
+        </div>
+        {error ? <p className="form-error" role="alert">{error}</p> : null}
+        {!checkoutEnabled ? <p className="sponsor-place-note" role="status">Checkout will open after the payment provider approves this placement model.</p> : null}
+        <button className="primary-button" type="submit" disabled={busy || !checkoutEnabled}>{busy ? "Opening checkout…" : `Continue to checkout · ${price}`}</button>
       </form>
-      <p className="policy-copy">
-        Every product is reviewed before it appears. A place carries a name, a mark and one link —
-        no other copy.
-      </p>
+      <p className="policy-copy">Audience size and results are not guaranteed.</p>
     </div>
   );
 }
 
-/** The one modal both kinds of place open. */
-export function SponsorPlacePanel({ place }: { place: SponsorPlace }) {
-  return place.brand ? <TakenPlace place={place} /> : <FreePlace place={place} />;
+export function SponsorPlacePanel({ place, checkoutEnabled, durationCopy, onCheckout }: {
+  place: SponsorPlace; checkoutEnabled: boolean; durationCopy: string; onCheckout: (checkout: Checkout) => void;
+}) {
+  return place.placement ? <ProductProfile place={place} />
+    : <PurchaseForm place={place} checkoutEnabled={checkoutEnabled} durationCopy={durationCopy} onCheckout={onCheckout} />;
 }

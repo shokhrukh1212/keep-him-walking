@@ -96,8 +96,8 @@ export function VisitModals({
             no paywall, nothing gated.
           </p>
           <p>
-            If you want him to get further: buy me a coffee, or put your product on his screen.
-            There&apos;s one sponsor slot, and it travels with him through every country he has left.
+            If you are building something, you can put your product beside the journey.
+            There are ten regular placements and one separate featured placement.
           </p>
           <div className="visit-modal-actions">
             <button
@@ -108,7 +108,7 @@ export function VisitModals({
                 onSponsor();
               }}
             >
-              Become the sponsor
+              See sponsor placements
             </button>
             {coffeeUrl ? (
               <a

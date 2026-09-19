@@ -198,7 +198,7 @@ export function productCharacterSceneAt(
   // The prelaunch preview owns his pose outright: no route, crowd, resident or passer-by competes.
   if (preview) {
     return {
-      traveler: preview.speaking ? loopedCue("talk", preview.speechSeconds) : loopedCue("idle", preview.idleSeconds),
+      traveler: preview.speaking ? loopedCue(preview.clip ?? "talk", preview.speechSeconds) : loopedCue("idle", preview.idleSeconds),
       resident: { clip: "idle", seconds: 0 },
       showResident: false,
       conversation: false,

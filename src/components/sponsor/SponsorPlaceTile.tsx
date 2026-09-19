@@ -1,38 +1,26 @@
 "use client";
 
-import { placeName, placeTileLabel, type SponsorPlace } from "@/lib/sponsors/places";
-import { SponsorPlaceMark, SponsorPlusMark } from "./SponsorPlaceMark";
+import { placeTileLabel, type SponsorPlace } from "@/lib/sponsors/places";
+import { SponsorPlusMark } from "./SponsorPlaceMark";
 
-type Props = {
-  place: SponsorPlace;
-  /** The phone row names the product under its mark; the side rails have no room. */
-  showName?: boolean;
-  onOpen: (place: SponsorPlace) => void;
-};
+type Props = { place: SponsorPlace; showName?: boolean; duplicate?: boolean; onOpen: (place: SponsorPlace) => void };
 
-/**
- * One place, taken or free. Both open the same modal, because a visitor who taps a
- * product wants to know what it is and a visitor who taps a gap wants to know what
- * it costs, and neither of those belongs on top of the walk.
- */
-export function SponsorPlaceTile({ place, showName = false, onOpen }: Props) {
+export function SponsorPlaceTile({ place, showName = false, duplicate = false, onOpen }: Props) {
+  const occupied = place.state === "occupied" ? place.placement : null;
+  const available = place.state === "available";
   return (
-    <button
-      type="button"
-      className="sponsor-place"
-      data-state={place.brand ? "taken" : "free"}
-      data-place={place.id}
-      aria-haspopup="dialog"
-      aria-label={placeTileLabel(place)}
-      title={place.brand ? place.brand.name : `${placeName(place)} — free`}
-      onClick={() => onOpen(place)}
-    >
+    <button type="button" className="sponsor-place" data-state={occupied ? "taken" : available ? "free" : "held"}
+      data-place={place.slotId} aria-haspopup={available || occupied ? "dialog" : undefined}
+      aria-label={duplicate ? undefined : placeTileLabel(place)} aria-hidden={duplicate || undefined}
+      tabIndex={duplicate ? -1 : undefined} disabled={!occupied && !available}
+      title={occupied ? occupied.name : available ? `Sponsor spot ${place.position} · $50` : "Checkout in progress"}
+      onClick={() => onOpen(place)}>
       <span className="sponsor-place-mark">
-        {place.brand ? <SponsorPlaceMark mark={place.brand.mark} /> : <SponsorPlusMark />}
+        {occupied ? /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={occupied.logoUrl} alt="" className="sponsor-place-logo" data-fit={occupied.logoFit} />
+          : <><SponsorPlusMark /><i className="sponsor-invite-dots" aria-hidden="true"><b /><b /><b /></i></>}
       </span>
-      {showName ? (
-        <span className="sponsor-place-name">{place.brand ? place.brand.name : "Your product"}</span>
-      ) : null}
+      {showName ? <span className="sponsor-place-name">{occupied ? occupied.name : available ? "Your product · $50" : "Checkout in progress"}</span> : null}
     </button>
   );
 }

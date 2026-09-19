@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import { LegalFooter } from "./LegalFooter";
 import styles from "@/app/public-pages.module.css";
 
-export const LEGAL_EFFECTIVE_DATE = "14 September 2026";
-/** The Anniversary Journey revision: sponsorship became an X inquiry and the vote a free poll. */
-export const LEGAL_LAST_UPDATED = "16 September 2026";
+export const LEGAL_EFFECTIVE_DATE = "19 September 2026";
+/** Paris relaunch: fixed journey placements and the owner-controlled waiting state. */
+export const LEGAL_LAST_UPDATED = "19 September 2026";
 
 export function LegalPage({
   title,

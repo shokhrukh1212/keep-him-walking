@@ -58,13 +58,13 @@ function harness(options: Partial<PreviewControllerOptions> = {}) {
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("preview monologue controller", () => {
-  it("waits for the model, speaks five seconds later and hides the caption exactly when he stops", () => {
+  it("waits for the model, speaks 2.5 seconds later and hides the caption exactly when he stops", () => {
     const { controller, advance, timers, notifications, now } = harness();
     controller.start();
     advance(30_000);
     expect(controller.getSnapshot().speaking).toBe(false);
     controller.setModelReady();
-    advance(4_990);
+    advance(2_490);
     expect(controller.getSnapshot().speaking).toBe(false);
     advance(20);
     expect(controller.getSnapshot()).toMatchObject({ speaking: true, lineId: "waiting-in-paris", cueIndex: 0, sequence: 1 });
@@ -116,12 +116,12 @@ describe("preview monologue controller", () => {
     expect(timers.size).toBe(0);
     advance(10 * 60_000);
     expect(controller.getSnapshot()).toBe(during);
-    expect(controller.sample(now()).speechSeconds).toBeCloseTo(3, 1);
+    expect(controller.sample(now()).speechSeconds).toBeCloseTo(5.5, 1);
     setVisible(true);
     advance(2_000);
-    expect(controller.sample(now()).speechSeconds).toBeCloseTo(5, 1);
-    // The next line is 180 visible seconds after the first began (at 5 s), and it is the only one.
-    advance(5_000 + INTERVAL_MS - 10_000 - 10);
+    expect(controller.sample(now()).speechSeconds).toBeCloseTo(7.5, 1);
+    // The next line is 15 visible seconds after the first began (at 2.5 s), and it is the only one.
+    advance(2_500 + INTERVAL_MS - 10_000 - 10);
     expect(controller.getSnapshot().sequence).toBe(1);
     advance(20);
     expect(controller.getSnapshot()).toMatchObject({ speaking: true, sequence: 2, lineId: "packed-for-seven" });
@@ -158,7 +158,7 @@ describe("preview monologue controller", () => {
     controller.setReducedMotion(true);
     controller.start();
     controller.setModelReady();
-    advance(5_010);
+    advance(2_510);
     expect(controller.getSnapshot().speaking).toBe(true);
     expect(controller.sample(now())).toMatchObject({ speaking: false, speechSeconds: expect.any(Number) });
   });
@@ -184,7 +184,7 @@ describe("preview monologue controller", () => {
 });
 
 describe("the controller's wall clock", () => {
-  it("drops a dated Anniversary Journey line once the synchronized clock passes its moment", async () => {
+  it("keeps the Paris script independent of old anniversary dates", async () => {
     const { PRELAUNCH_MONOLOGUES: lines } = await import("@/content/prelaunch/monologues");
     const { PreviewMonologueController } = await import("./controller");
     let now = 0;
@@ -199,9 +199,9 @@ describe("the controller's wall clock", () => {
     controller.setWallClock(Date.parse("2026-09-17T18:00:00Z"));
     controller.start();
     controller.setModelReady();
-    now = 5_000;
+    now = 2_500;
     (wake as (() => void) | null)?.();
-    expect(controller.getSnapshot().lineText).toBe("My maker’s first wedding anniversary is October 1.");
+    expect(controller.getSnapshot().lineText).toBe("Oh, good. Company. I was about to interview that pigeon.");
     controller.stop();
   });
 });

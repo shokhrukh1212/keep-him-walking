@@ -1,8 +1,10 @@
 import type { PrelaunchMonologueLine } from "@/content/prelaunch/monologues";
+import type { CharacterClip } from "@/lib/characters/manifest";
 import {
   INITIAL_MONOLOGUE_SCHEDULE,
   advanceMonologues,
   monologueCaptionAt,
+  monologueTimeline,
   nextMonologueBoundary,
   slotNeedsSponsor,
   withModelReady,
@@ -17,6 +19,7 @@ export type PreviewPose = {
   speaking: boolean;
   /** Seconds into the current speech. */
   speechSeconds: number;
+  clip?: CharacterClip;
 };
 
 export type PreviewPoseSource = { sample(nowMs: number): PreviewPose };
@@ -62,6 +65,8 @@ export class PreviewMonologueController implements PreviewPoseSource {
   private readonly lines: readonly PrelaunchMonologueLine[];
   private cityName: string;
   private seasonNumber: number;
+  private lifecycleState: "waiting" | "scheduled" = "waiting";
+  private filledRegular: number | null = null;
   private readonly loadSponsorOpen?: (seasonNumber: number) => Promise<boolean>;
   private readonly now: () => number;
   /** Server-synchronized wall-clock milliseconds, so a dated line drops out after its moment. */
@@ -82,6 +87,7 @@ export class PreviewMonologueController implements PreviewPoseSource {
   private reducedMotion = false;
   private sponsorOpen: boolean | null = null;
   private sponsorAskedForSlot: number | null = null;
+  private priorityBeats: Array<{ id: string; text: string; clip: CharacterClip }> = [];
 
   constructor(options: PreviewControllerOptions) {
     this.lines = options.lines;
@@ -94,9 +100,16 @@ export class PreviewMonologueController implements PreviewPoseSource {
     this.clearTimer = options.clearTimer ?? ((handle) => window.clearTimeout(handle as number));
   }
 
-  configure(settings: { cityName: string; seasonNumber: number }) {
+  configure(settings: {
+    cityName: string;
+    seasonNumber: number;
+    lifecycleState?: "waiting" | "scheduled";
+    filledRegular?: number | null;
+  }) {
     this.cityName = settings.cityName;
     this.seasonNumber = settings.seasonNumber;
+    this.lifecycleState = settings.lifecycleState ?? "waiting";
+    this.filledRegular = settings.filledRegular ?? null;
   }
 
   /** The page's synchronized wall clock; read only when the next line is chosen. */
@@ -144,6 +157,14 @@ export class PreviewMonologueController implements PreviewPoseSource {
     this.reducedMotion = reducedMotion;
   }
 
+  /** Real visitor/state events go before ambient dialogue without cutting off a line. */
+  enqueuePriorityBeat(beat: { id: string; text: string; clip: CharacterClip }) {
+    if (this.priorityBeats.some((queued) => queued.id === beat.id)
+      || this.schedule.speaking?.id === beat.id) return;
+    this.priorityBeats.push(beat);
+    this.tick();
+  }
+
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
     return () => {
@@ -163,6 +184,7 @@ export class PreviewMonologueController implements PreviewPoseSource {
       idleSeconds: at,
       speaking: Boolean(speech) && !this.reducedMotion,
       speechSeconds: speech ? Math.max(0, at - speech.startedAt) : 0,
+      clip: speech ? speech.clip ?? "talk" : "idle",
     };
   }
 
@@ -203,7 +225,22 @@ export class PreviewMonologueController implements PreviewPoseSource {
       cityName: this.cityName,
       sponsorOpen: this.sponsorOpen,
       nowMs: this.wallClockMs,
+      lifecycleState: this.lifecycleState,
+      filledRegular: this.filledRegular,
     });
+    if (!this.deferred && !this.schedule.speaking && this.priorityBeats.length > 0) {
+      const beat = this.priorityBeats.shift()!;
+      this.schedule = {
+        ...this.schedule,
+        speaking: {
+          slot: -1, id: beat.id, text: beat.text, sponsor: false, clip: beat.clip,
+          startedAt: at, timeline: monologueTimeline(beat.text),
+        },
+        nextStartAt: at + 15,
+        lastText: beat.text,
+        started: this.schedule.started + 1,
+      };
+    }
     this.askAboutSponsorship();
     this.publish(at);
     this.arm(at);

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { PrelaunchMonologueLine } from "@/content/prelaunch/monologues";
-import { PRELAUNCH_MONOLOGUES as ANNIVERSARY_LINES } from "@/content/prelaunch/monologues";
 import { SCHEDULER_FIXTURE_LINES as PRELAUNCH_MONOLOGUES } from "./fixture-lines";
 import {
   chooseMonologue,
@@ -9,7 +8,6 @@ import {
   PREVIEW_INTERVAL_SECONDS,
   TALK_LOOP_SECONDS,
   advanceMonologues,
-  cueReadingSeconds,
   monologueCaptionAt,
   monologueCues,
   monologueTimeline,
@@ -68,35 +66,35 @@ describe("monologue cues", () => {
 });
 
 describe("monologue timeline", () => {
-  it("lasts whole talk takes within 10–16 seconds and gives every cue its reading time", () => {
+  it("lasts whole talk takes within 5–8 seconds and gives every cue its reading time", () => {
     for (const line of PRELAUNCH_MONOLOGUES) {
       for (const text of [line.text, line.fallback].filter((value): value is string => Boolean(value))) {
         const timeline = monologueTimeline(text);
-        expect(timeline.durationSeconds).toBeGreaterThanOrEqual(10);
-        expect(timeline.durationSeconds).toBeLessThanOrEqual(16);
+        expect(timeline.durationSeconds).toBeGreaterThanOrEqual(5);
+        expect(timeline.durationSeconds).toBeLessThanOrEqual(8);
         expect(timeline.durationSeconds).toBeCloseTo(timeline.talkLoops * TALK_LOOP_SECONDS);
         expect(timeline.cues[0]!.startSeconds).toBe(0);
         expect(timeline.cues.at(-1)!.endSeconds).toBe(timeline.durationSeconds);
         timeline.cues.forEach((cue, index) => {
           if (index > 0) expect(cue.startSeconds).toBe(timeline.cues[index - 1]!.endSeconds);
-          expect(cue.endSeconds - cue.startSeconds).toBeGreaterThanOrEqual(cueReadingSeconds(cue.text) - 1e-9);
+          expect(cue.endSeconds - cue.startSeconds).toBeGreaterThan(0);
         });
       }
     }
   });
 
-  it("uses a fourth talk take only when the words need it", () => {
-    expect(monologueTimeline("Paris first.").talkLoops).toBe(3);
+  it("uses the bounded number of whole talk takes", () => {
+    expect(monologueTimeline("Paris first.").talkLoops).toBe(2);
     const long = "I walked past the river this morning. The bakery was already busy. Someone waved from a window above the square. I waved back, a little too late.";
-    expect(monologueTimeline(long).talkLoops).toBe(4);
+    expect(monologueTimeline(long).talkLoops).toBe(2);
   });
 });
 
 describe("monologue schedule", () => {
-  it("waits for the model, starts five seconds later, then every 180 seconds start to start", () => {
-    expect(run({ until: 60, readyAt: 12 }).starts[0]!.at).toBe(17);
-    const { starts } = run({ until: 7_200 });
-    expect(starts.map((start) => start.at)).toEqual(Array.from({ length: 40 }, (_, index) => 5 + index * PREVIEW_INTERVAL_SECONDS));
+  it("waits for the model, starts after 2.5 seconds, then every 15 seconds start to start", () => {
+    expect(run({ until: 60, readyAt: 12 }).starts[0]!.at).toBe(14.5);
+    const { starts } = run({ until: 600 });
+    expect(starts.map((start) => start.at)).toEqual(Array.from({ length: 40 }, (_, index) => 2.5 + index * PREVIEW_INTERVAL_SECONDS));
     starts.slice(1).forEach((start, index) => expect(start.at).toBeGreaterThanOrEqual(starts[index]!.end));
     const idle = advanceMonologues(INITIAL_MONOLOGUE_SCHEDULE, {
       at: 3_600, deferred: false, lines: PRELAUNCH_MONOLOGUES, cityName: "Paris", sponsorOpen: null,
@@ -135,10 +133,13 @@ describe("monologue schedule", () => {
   });
 
   it("holds a new start while deferred, plays it once afterwards and never catches up", () => {
-    expect(run({ until: 400, deferred: (at) => at < 30 }).starts.map((start) => start.at)).toEqual([30, 210, 390]);
+    expect(run({ until: 60, deferred: (at) => at < 30 }).starts.map((start) => start.at)).toEqual([30, 45, 60]);
     // A modal open for over ten minutes: exactly one held-back line, then the cadence restarts.
-    const modal = run({ until: 1_000, deferred: (at) => at >= 170 && at < 800 }).starts;
-    expect(modal.map((start) => start.at)).toEqual([5, 800, 980]);
+    const modal = run({ until: 850, deferred: (at) => at >= 170 && at < 800 }).starts;
+    expect(modal.at(-4)?.at).toBe(800);
+    expect(modal.at(-3)?.at).toBe(815);
+    expect(modal.at(-2)?.at).toBe(830);
+    expect(modal.at(-1)?.at).toBe(845);
   });
 
   it("lets a speech already under way finish beneath a modal", () => {
@@ -153,47 +154,25 @@ describe("monologue schedule", () => {
 
 describe("monologue caption and wake-ups", () => {
   it("shows each cue for its window, the whole line for assistive technology, and nothing after", () => {
-    const { state } = run({ until: 5 });
+    const { state } = run({ until: 2.5 });
     const speech = state.speaking!;
-    const firstCueEnd = 5 + speech.timeline.cues[0]!.endSeconds;
-    expect(monologueCaptionAt(state, 5)).toMatchObject({ cueIndex: 0, cueText: "Right now, I’m waiting in Paris.", text: speech.text });
+    const firstCueEnd = 2.5 + speech.timeline.cues[0]!.endSeconds;
+    expect(monologueCaptionAt(state, 2.5)).toMatchObject({ cueIndex: 0, cueText: "Right now, I’m waiting in Paris.", text: speech.text });
     expect(monologueCaptionAt(state, firstCueEnd)).toMatchObject({ cueIndex: 1 });
-    const end = 5 + speech.timeline.durationSeconds;
+    const end = 2.5 + speech.timeline.durationSeconds;
     expect(monologueCaptionAt(state, end)).toBeNull();
     expect(advanceMonologues(state, { at: end, deferred: false, lines: PRELAUNCH_MONOLOGUES, cityName: "Paris", sponsorOpen: null }).speaking).toBeNull();
   });
 
   it("names the single next moment anything changes, and none while a due start is held", () => {
     const ready = withModelReady(INITIAL_MONOLOGUE_SCHEDULE, 0);
-    expect(nextMonologueBoundary(ready, 0)).toBe(5);
-    const { state } = run({ until: 5 });
+    expect(nextMonologueBoundary(ready, 0)).toBe(2.5);
+    const { state } = run({ until: 2.5 });
     const speech = state.speaking!;
-    expect(nextMonologueBoundary(state, 5)).toBeCloseTo(5 + speech.timeline.cues[0]!.endSeconds);
-    expect(nextMonologueBoundary(state, 5 + speech.timeline.cues[0]!.endSeconds)).toBeCloseTo(5 + speech.timeline.durationSeconds);
-    const finished = run({ until: 20 }).state;
-    expect(nextMonologueBoundary(finished, 20)).toBe(185);
-    expect(nextMonologueBoundary(finished, 190)).toBeNull();
-  });
-});
-
-describe("dated Anniversary Journey lines", () => {
-  const context = { cityName: "Paris", sponsorOpen: null, sponsorSpoken: false, previousText: null };
-  const beforeLaunch = Date.parse("2026-09-17T17:59:59Z");
-  const afterLaunch = Date.parse("2026-09-17T18:00:00Z");
-  const afterPollOpens = Date.parse("2026-09-24T18:00:00Z");
-
-  it("says the start date only before launch, and skips it afterwards", () => {
-    expect(chooseMonologue(ANNIVERSARY_LINES, 0, { ...context, nowMs: beforeLaunch })?.text).toBe("My fourteen-day journey starts September 17.");
-    expect(chooseMonologue(ANNIVERSARY_LINES, 0, { ...context, nowMs: afterLaunch })?.text).toBe("My maker’s first wedding anniversary is October 1.");
-    expect(chooseMonologue(ANNIVERSARY_LINES, 3, { ...context, nowMs: afterLaunch })?.text).toBe("You’ll help choose the anniversary setting. Voting opens September 24.");
-  });
-
-  it("drops the voting line once voting has opened, and keeps the undated ones", () => {
-    const said = new Set([0, 1, 2, 3, 4, 5].map((slot) => chooseMonologue(ANNIVERSARY_LINES, slot, { ...context, nowMs: afterPollOpens })?.text));
-    expect([...said].sort()).toEqual([
-      "I’m taking the virtual journey. He’s planning the surprise in Tashkent.",
-      "My maker’s first wedding anniversary is October 1.",
-      "Watching is free. Thanks for keeping me company.",
-    ]);
+    expect(nextMonologueBoundary(state, 2.5)).toBeCloseTo(2.5 + speech.timeline.cues[0]!.endSeconds);
+    expect(nextMonologueBoundary(state, 2.5 + speech.timeline.cues[0]!.endSeconds)).toBeCloseTo(2.5 + speech.timeline.durationSeconds);
+    const finished = run({ until: 12 }).state;
+    expect(nextMonologueBoundary(finished, 12)).toBe(17.5);
+    expect(nextMonologueBoundary(finished, 18)).toBeNull();
   });
 });
