@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import type { SponsorPlace } from "@/lib/sponsors/places";
 import { formatPriceUsd } from "@/lib/sponsors/pricing";
 
@@ -38,7 +38,6 @@ function PurchaseForm({ place, checkoutEnabled, durationCopy, onCheckout }: {
   const [fit, setFit] = useState<"crop" | "contain">("contain");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const descriptionId = useId();
   const price = formatPriceUsd(place.priceCents);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   const chooseLogo = (event: ChangeEvent<HTMLInputElement>) => {
@@ -76,11 +75,11 @@ function PurchaseForm({ place, checkoutEnabled, durationCopy, onCheckout }: {
           <span className="sponsor-place-mark" data-size="large">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={preview} alt="Logo preview" className="sponsor-place-logo" data-fit={fit} /></span>
           <fieldset><legend>Logo fit</legend><label><input type="radio" checked={fit === "contain"} onChange={() => setFit("contain")} /> Fit whole logo</label><label><input type="radio" checked={fit === "crop"} onChange={() => setFit("crop")} /> Fill square</label></fieldset>
         </div> : null}
-        <label>Product name <span className="field-hint">{Array.from(name).length}/32</span>
+        <label>Product name
           <input name="productName" value={name} onChange={(event) => setName(limitCodePoints(event.target.value, 32))} required autoComplete="organization" />
         </label>
-        <label>Short description <span className="field-hint">{160 - Array.from(description).length} left</span>
-          <textarea id={descriptionId} name="description" value={description} onChange={(event) => setDescription(limitCodePoints(event.target.value, 160))} rows={3} required />
+        <label>Short description
+          <textarea name="description" value={description} onChange={(event) => setDescription(limitCodePoints(event.target.value, 160))} rows={3} required />
         </label>
         <label className="sponsor-acknowledgment"><input name="rightsConfirmed" type="checkbox" value="true" required />
           <span>I have rights to this content and accept the <a href="/sponsor-terms" target="_blank">Sponsor Terms</a> and <a href="/content-moderation" target="_blank">Content Moderation Policy</a>.</span>
