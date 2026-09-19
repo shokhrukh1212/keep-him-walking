@@ -1,0 +1,70 @@
+# Paris relaunch rollout
+
+This change is prepared but does not deploy production or archive a journey by itself.
+
+## Database and legacy reconciliation
+
+Dev project `tkntxptfhmjnqaaveddx` has migrations `202609190049` and `202609190050`.
+The pre-change entitlement audit found zero daily sponsorship rows, zero season sponsorship
+rows and zero placement-payment rows in the inspected production database; all 14 legacy
+day slots were available. The old tables and webhook paths remain intact because a buyer may
+still hold an off-database promise or an outstanding provider transaction. Before enabling
+sales, compare any owner-held receipt or correspondence with the original promise. Do not
+move it into the new 10 + 1 inventory without an explicit written reconciliation.
+
+## Required settings
+
+Set no secrets in source control. New sales remain closed unless both business gates are
+true:
+
+```text
+SPONSOR_PLACEMENTS_ENABLED=true
+SPONSOR_PROVIDER_APPROVED_FOR_PLACEMENTS=true
+SPONSOR_PAYMENT_PROVIDER=dodo
+DODO_PAYMENTS_API_KEY=<secret>
+DODO_PAYMENTS_WEBHOOK_SECRET=<secret>
+DODO_REGULAR_PLACEMENT_PRODUCT_ID=<USD 50 one-time product>
+DODO_FEATURED_PLACEMENT_PRODUCT_ID=<USD 100 one-time product>
+DODO_PAYMENTS_ENVIRONMENT=test_mode|live_mode
+NEXT_PUBLIC_APP_URL=<canonical origin>
+NEXT_PUBLIC_CONTACT_EMAIL=<monitored support address>
+```
+
+Production refuses Dodo test mode. The no-money fixture is non-production only and also
+requires `SPONSOR_FIXTURE_SECRET`.
+
+## Prepare and control the journey
+
+Review the exact undated plan first:
+
+```bash
+pnpm relaunch:prepare
+```
+
+Create it only after the current live/scheduled journey is safe to archive. The first command
+will refuse to proceed if one exists; the second form makes that archive decision explicit:
+
+```bash
+pnpm relaunch:prepare --apply
+pnpm relaunch:prepare --apply --archive-current
+```
+
+The created journey is `waiting`, begins visually in Paris, has no start timestamp and has
+zero route progress. Sign in at `/admin`, open `/admin/journeys`, and use:
+
+- **Waiting** to clear a future schedule before launch.
+- **Schedule launch** to enter an explicit Asia/Tashkent (UTC+5) wall time and review the
+  resolved UTC instant.
+- **Cancel schedule** to disarm it.
+- **Start now** to launch once at the server-confirmed current instant.
+
+The admin page also lists flagged placements for approval or removal/refund. Reaching any
+sponsor count never starts the journey.
+
+## Payment-provider review
+
+The previous Dodo correspondence described a different coffee/acknowledgment offer. Send
+Dodo the current factual model before turning on the approval gate: ten separate USD 50
+journey placements, one separate USD 100 featured placement, one-time charges, the four
+product fields, waiting + 14-day duration, automated flag/manual review path, and the full
+refund cases in `/refund-policy`. Do not describe the new model as already approved.

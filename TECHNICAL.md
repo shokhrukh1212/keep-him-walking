@@ -24,9 +24,9 @@
 | Interface | React + plain CSS (`globals.css`), Tailwind v4 available but the journey UI is hand-written CSS |
 | Audio | An `HTMLAudioElement` managed by `useJourneyAudio`, playing a calm bundled `.wav` music loop |
 | Validation | Zod 4 for every content pack and every API body |
-| Payments | Season mode (default): one sponsor per seven-day season (configured USD 499/599/699 for Seasons 1/2/3) through a small Dodo Payments adapter, request-only until the provider approves the offer. Each request snapshots its quoted price and dates. The earlier Lemon Squeezy day adapter and its records are retained for `SPONSORSHIP_MODE=daily`; the no-money fixture remains rehearsal-only |
+| Payments | Paris relaunch: ten fixed USD 50 placements plus one independent USD 100 featured placement through Dodo overlay checkout, gated until the provider approves this exact offer. Legacy day/season ledgers and webhook processing remain intact; the no-money fixture is rehearsal-only |
 | Observability | Sentry (client/server/edge), Vemetric product analytics, Better Stack structured logs, Web Vitals endpoint |
-| Testing | Vitest + Playwright production-browser flows + pgTAP (**526 assertions** on the current dev schema) |
+| Testing | Vitest + Playwright production-browser flows + pgTAP (**704 assertions** across 28 current suites) |
 | Hosting | Vercel; functions in `syd1` adjacent to the Supabase project in `ap-southeast-2` |
 | Package manager | pnpm 11, Node ≥ 22 |
 
@@ -3182,3 +3182,47 @@ addition to reviewed packs, and checks every URL before writing. The matching ap
 must be deployed before production is replanned so the server can resolve all 14 IDs.
 Production data, R2 and Vercel were not changed by this revision. The older anniversary
 calendar paragraph above documents the prior deployment.
+## Paris relaunch lifecycle and journey placements (19 September 2026)
+
+Migrations `202609190049` and `202609190050` add an explicit business lifecycle without
+moving route authority into the browser. `journeys.lifecycle_state` is `waiting`,
+`scheduled`, `live` or `ended`. Waiting journeys keep 14 undated rows in
+`journey_day_plans`; only `activate_relaunch_journey`, under the journey row lock,
+materializes `country_days` and zeroed `journey_runtime` rows. A due schedule is reconciled
+by the existing authenticated cron and bootstrap catch-up path, using the owner-selected
+UTC instant as the effective start. Waiting reactions are enum-only rows and cannot advance
+runtime. The new name ballot is journey-scoped and resolves at launch by tally, then stable
+configured display order.
+
+`journey_sponsor_slots` seeds ten regular USD 50 places and one independent featured USD
+100 place for a newly prepared 14-day waiting journey. Reservation, checkout attachment,
+verified fulfillment, profile-view counting, moderation, refund, release and chargeback
+transitions are security-definer RPCs with row locks; browser roles have no direct execute
+grant. A slot holds one reserved or occupied order at a time. Provider payment facts are
+matched against order, journey, slot, tier, checkout, mode, configured product, currency
+and server-owned amount before activation. A late/conflicting paid order enters the refund
+ledger rather than replacing an occupant. Accepted profile opens use caller UUIDs for
+idempotency plus visitor/network limits and atomically increment `view_count`.
+
+New checkout is gated by both `SPONSOR_PLACEMENTS_ENABLED=true` and
+`SPONSOR_PROVIDER_APPROVED_FOR_PLACEMENTS=true`. Dodo additionally needs its API and
+webhook secrets, distinct regular/featured product IDs and a matching environment. The
+fixture is rejected in production and requires `SPONSOR_FIXTURE_SECRET` elsewhere. Legacy
+day/season webhook handlers and financial tables remain readable and process outstanding
+transactions, while the old public auction page redirects to the featured fixed placement.
+
+The scene reads placement inventory from `/api/sponsor-placements`. At 900×720 or larger,
+five adaptive square tiles are rendered on each side; smaller or shorter viewports use one
+148×48 logical-card carousel with an inert duplicate visual track. Product profiles count
+only deliberate opens. The purchase dialog has URL, decoded/re-encoded logo, product name
+and description as its four product inputs, plus the required rights/policy acknowledgment.
+Coffee/supporter surfaces are parked behind `PUBLIC_SUPPORT_FEATURE_ENABLED`; historical
+data and reusable components are retained.
+
+The waiting dialogue controller counts visible-page time, pauses new starts for dialogs and
+hidden tabs, gives persisted interactions/state changes priority, and uses only clips in the
+character manifest. The 20-line Paris pool is shuffled with category spacing and a small
+browser-local opener history. The arrival greeting is due at 2.5 seconds; ordinary beats
+start every 15 visible seconds and captions remain within 5–8 seconds. No compatible,
+performance-reviewed second-character cameo has been enabled, and no speech audio asset is
+claimed; the existing captions and mute behavior remain authoritative.
