@@ -4879,8 +4879,6 @@ a:focus-visible,
 .sponsor-place-form textarea { width: 100%; border: 1px solid var(--control-border); border-radius: 8px; padding: .65rem .7rem; background: #17343d; color: var(--paper); font: inherit; }
 .field-hint { float: right; color: var(--muted); font-weight: 400; }
 .sponsor-upload-preview { display: flex; align-items: center; gap: .8rem; }
-.sponsor-upload-preview fieldset { display: flex; flex-wrap: wrap; gap: .35rem .7rem; margin: 0; border: 0; padding: 0; font-size: .68rem; }
-.sponsor-upload-preview legend { width: 100%; color: var(--muted); }
 .sponsor-acknowledgment { display: flex; align-items: flex-start; gap: .5rem; font-size: .68rem; line-height: 1.45; }
 .sponsor-acknowledgment input { margin-top: .2rem; }
 .sponsor-mini-preview { display: flex; align-items: center; gap: .55rem; overflow: hidden; border: 1px solid var(--quiet-border); border-radius: 999px; padding: .25rem .55rem .25rem .25rem; font: 650 .68rem/1 var(--font-controls); }

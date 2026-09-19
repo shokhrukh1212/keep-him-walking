@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   }
   let prepared: Awaited<ReturnType<typeof prepareSponsorLogo>>;
   try {
-    prepared = await prepareSponsorLogo(new Uint8Array(await logo.arrayBuffer()), { fit: parsed.data.logoFit });
+    prepared = await prepareSponsorLogo(new Uint8Array(await logo.arrayBuffer()), { fit: "crop" });
   } catch (error) {
     const message = error instanceof SponsorLogoError && error.code === "LOGO_SIZE"
       ? "Choose a logo no larger than 1 MB."
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     p_product_name: parsed.data.productName,
     p_description: parsed.data.description,
     p_private_logo_path: privatePath,
-    p_logo_fit: parsed.data.logoFit,
+    p_logo_fit: "crop",
     p_rights_confirmed: true,
     p_provider: gate.provider,
     p_provider_product_id: placementProviderProductId(slot.tier, gate.provider),

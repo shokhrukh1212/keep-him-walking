@@ -35,7 +35,7 @@ function PurchaseForm({ place, checkoutEnabled, durationCopy, onCheckout }: {
   const [description, setDescription] = useState("");
   const [logo, setLogo] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [fit, setFit] = useState<"crop" | "contain">("contain");
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const price = formatPriceUsd(place.priceCents);
@@ -48,10 +48,19 @@ function PurchaseForm({ place, checkoutEnabled, durationCopy, onCheckout }: {
   };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!logo || busy) return;
-    setBusy(true); setError(null);
     const form = new FormData(event.currentTarget);
-    form.set("slotId", place.slotId); form.set("logoFit", fit); form.set("logo", logo);
+    if (!String(form.get("productUrl") ?? "").trim()) { setError("Enter the product URL before continuing."); return; }
+    if (!logo) { setError("Choose a PNG, JPEG or WebP product logo before continuing."); return; }
+    if (!name.trim()) { setError("Enter the product name before continuing."); return; }
+    if (!description.trim()) { setError("Enter a short product description before continuing."); return; }
+    if (!rightsConfirmed) { setError("Check the rights and policies box before continuing."); return; }
+    if (!checkoutEnabled) {
+      setError("Checkout is not available yet because the payment provider has not approved this placement. Your details were not sent and you have not been charged.");
+      return;
+    }
+    if (busy) return;
+    setBusy(true); setError(null);
+    form.set("slotId", place.slotId); form.set("logo", logo);
     try {
       const response = await fetch("/api/sponsor-placements/checkout", { method: "POST", body: form });
       const payload = await response.json() as Checkout & { error?: { message?: string } };
@@ -66,14 +75,16 @@ function PurchaseForm({ place, checkoutEnabled, durationCopy, onCheckout }: {
     <div className="sponsor-place-panel" data-state="free">
       <p className="sponsor-place-lead"><strong>{place.tier === "featured" ? "Featured placement" : `Sponsor spot ${place.position}`}</strong> · {price} once</p>
       <p className="journey-muted">{durationCopy}</p>
-      <form className="sponsor-place-form" onSubmit={submit}>
+      <form className="sponsor-place-form" onSubmit={submit} noValidate>
         <label>Product URL<input name="productUrl" inputMode="url" placeholder="example.com" required autoComplete="url" /></label>
         <label>Product logo <span className="field-hint">PNG, JPEG or WebP · 1 MB max</span>
           <input name="logo" type="file" accept="image/png,image/jpeg,image/webp" required onChange={chooseLogo} />
         </label>
         {preview ? <div className="sponsor-upload-preview">
-          <span className="sponsor-place-mark" data-size="large">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={preview} alt="Logo preview" className="sponsor-place-logo" data-fit={fit} /></span>
-          <fieldset><legend>Logo fit</legend><label><input type="radio" checked={fit === "contain"} onChange={() => setFit("contain")} /> Fit whole logo</label><label><input type="radio" checked={fit === "crop"} onChange={() => setFit("crop")} /> Fill square</label></fieldset>
+          <span className="sponsor-place-mark" data-size="large">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt="Logo preview" className="sponsor-place-logo" data-fit="crop" />
+          </span>
         </div> : null}
         <label>Product name
           <input name="productName" value={name} onChange={(event) => setName(limitCodePoints(event.target.value, 32))} required autoComplete="organization" />
@@ -81,16 +92,19 @@ function PurchaseForm({ place, checkoutEnabled, durationCopy, onCheckout }: {
         <label>Short description
           <textarea name="description" value={description} onChange={(event) => setDescription(limitCodePoints(event.target.value, 160))} rows={3} required />
         </label>
-        <label className="sponsor-acknowledgment"><input name="rightsConfirmed" type="checkbox" value="true" required />
+        <label className="sponsor-acknowledgment"><input name="rightsConfirmed" type="checkbox" value="true" checked={rightsConfirmed} onChange={(event) => { setRightsConfirmed(event.target.checked); setError(null); }} required />
           <span>I have rights to this content and accept the <a href="/sponsor-terms" target="_blank">Sponsor Terms</a> and <a href="/content-moderation" target="_blank">Content Moderation Policy</a>.</span>
         </label>
         <div className="sponsor-mini-preview" aria-label="Placement preview">
-          {preview ? <span className="sponsor-place-mark">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={preview} alt="" className="sponsor-place-logo" data-fit={fit} /></span> : <span className="sponsor-preview-empty" />}
+          {preview ? <span className="sponsor-place-mark">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt="" className="sponsor-place-logo" data-fit="crop" />
+          </span> : <span className="sponsor-preview-empty" />}
           <span>{name || "Your product"}</span>
         </div>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
-        {!checkoutEnabled ? <p className="sponsor-place-note" role="status">Checkout will open after the payment provider approves this placement model.</p> : null}
-        <button className="primary-button" type="submit" disabled={busy || !checkoutEnabled}>{busy ? "Opening checkout…" : `Continue to checkout · ${price}`}</button>
+        {!checkoutEnabled && !error ? <p className="sponsor-place-note" role="status">Checkout will open after the payment provider approves this placement model.</p> : null}
+        <button className="primary-button" type="submit" disabled={busy}>{busy ? "Opening checkout…" : `Continue to checkout · ${price}`}</button>
       </form>
       <p className="policy-copy">Audience size and results are not guaranteed.</p>
     </div>

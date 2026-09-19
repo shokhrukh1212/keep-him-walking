@@ -24,7 +24,6 @@ export const placementRequestSchema = z.object({
   }),
   productName: z.string().trim().min(1).refine((value) => codePoints(value) <= 32, "Product name must be 32 characters or fewer."),
   description: z.string().trim().min(1).refine((value) => codePoints(value) <= 160, "Description must be 160 characters or fewer."),
-  logoFit: z.enum(["crop", "contain"]),
   rightsConfirmed: z.literal("true", { error: "Confirm your rights and accept the sponsor policies." }),
 }).strict();
 
@@ -34,7 +33,6 @@ export function placementRequestFields(form: FormData) {
     productUrl: form.get("productUrl"),
     productName: form.get("productName"),
     description: form.get("description"),
-    logoFit: form.get("logoFit"),
     rightsConfirmed: form.get("rightsConfirmed"),
   };
 }

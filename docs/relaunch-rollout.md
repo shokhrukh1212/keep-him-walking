@@ -66,5 +66,6 @@ sponsor count never starts the journey.
 The previous Dodo correspondence described a different coffee/acknowledgment offer. Send
 Dodo the current factual model before turning on the approval gate: ten separate USD 50
 journey placements, one separate USD 100 featured placement, one-time charges, the four
-product fields, waiting + 14-day duration, automated flag/manual review path, and the full
+product fields, square-fill logo treatment, waiting + 14-day duration, automated
+flag/manual review path, and the full
 refund cases in `/refund-policy`. Do not describe the new model as already approved.

@@ -13,7 +13,7 @@ describe("placement request", () => {
   });
 
   it("counts Unicode names consistently with Postgres char_length", () => {
-    const base = { slotId: crypto.randomUUID(), productUrl: "example.com", description: "A product", logoFit: "contain", rightsConfirmed: "true" };
+    const base = { slotId: crypto.randomUUID(), productUrl: "example.com", description: "A product", rightsConfirmed: "true" };
     expect(placementRequestSchema.safeParse({ ...base, productName: "😀".repeat(32) }).success).toBe(true);
     expect(placementRequestSchema.safeParse({ ...base, productName: "😀".repeat(33) }).success).toBe(false);
   });

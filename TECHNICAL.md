@@ -3226,6 +3226,9 @@ five adaptive square tiles are rendered on each side; smaller or shorter viewpor
 148×48 logical-card carousel with an inert duplicate visual track. Product profiles count
 only deliberate opens. The purchase dialog has URL, decoded/re-encoded logo, product name
 and description as its four product inputs, plus the required rights/policy acknowledgment.
+New logos always use the square-fill crop; there is no visitor-selectable fit mode. A submit
+reports the first incomplete field, missing acknowledgment, or closed provider gate instead
+of presenting an inert checkout control.
 Coffee/supporter surfaces are parked behind `PUBLIC_SUPPORT_FEATURE_ENABLED`; historical
 data and reusable components are retained.
 
