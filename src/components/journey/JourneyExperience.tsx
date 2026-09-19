@@ -87,10 +87,15 @@ import { SeasonSponsorRow } from "@/components/sponsor/SeasonSponsorRow";
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { PreviewCaption } from "@/components/preview/PreviewCaption";
 import { usePreviewMonologue } from "@/hooks/usePreviewMonologue";
-import { SupportFooterRow } from "@/components/supporters/SupportFooterRow";
+// Parked with the footer row it draws; the component and its tests are unchanged.
+// import { SupportFooterRow } from "@/components/supporters/SupportFooterRow";
 import { SupportersFeed } from "@/components/supporters/SupportersFeed";
 import { anniversaryShareText } from "@/lib/share/x-intent";
 import { SponsorInquiry } from "@/components/sponsor/SponsorInquiry";
+import { SponsorRail } from "@/components/sponsor/SponsorRail";
+import { SponsorPlaceCarousel } from "@/components/sponsor/SponsorPlaceCarousel";
+import { SponsorPlacePanel } from "@/components/sponsor/SponsorPlacePanel";
+import { SPONSOR_PLACES, placeName, type SponsorPlace } from "@/lib/sponsors/places";
 import { AnniversaryStory } from "@/components/journey/AnniversaryStory";
 import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 
@@ -159,6 +164,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   // Modals live in the URL and over the scene; opening one never touches the stage.
   const [panelLocation, setPanelLocation] = useState<PanelLocation>({ panel: null, section: null });
   const openPanel = panelLocation.panel;
+  // A sponsor place names one tile, not a page worth linking to, so it stays out of
+  // the URL and off the history stack the panels above share.
+  const [activePlace, setActivePlace] = useState<SponsorPlace | null>(null);
   const [wakeBeat, setWakeBeat] = useState<WakeMoment | null>(null);
   const [wakeCard, setWakeCard] = useState<WakeMoment | null>(null);
   const [actionReview,setActionReview]=useState<ActionReview>({action:"auto",startedAt:0});
@@ -1036,6 +1044,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   // drawn, or the attempt has been given up on rather than left loading for ever.
   const visitModalSceneReady = experienceReady && (puppetReady || worldFailed || modelWaitElapsed);
   const visitModalBlocked = openPanel !== null
+    || activePlace !== null
     // Loading, a failed read and the offline fallback are all states of their own.
     || loadingLive
     || bootstrapIssue !== null
@@ -1138,6 +1147,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           />
         )}
       />
+      {/* The ten sponsor places. Down both edges on a desktop screen; on a phone the
+          same ten ride in one row above the footer instead, and these are hidden. */}
+      <SponsorRail places={SPONSOR_PLACES} side="left" onOpen={setActivePlace} />
+      <SponsorRail places={SPONSOR_PLACES} side="right" onOpen={setActivePlace} />
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
         <div className="connection-banner offline" role="status">
@@ -1243,13 +1256,25 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           />
           <button className="dock-journey" type="button" aria-haspopup="dialog" onClick={() => showPanel("journey")}>Journey</button>
         </section>
-        {/* The support actions keep the middle of the line; the question mark sits out
-            at its right edge, where a desktop visitor looks for help. It opens the same
-            introduction the first-time modal shows, so there is one answer to "what is
-            this", not two. A narrow screen has no room beside the centred row and keeps
-            the row alone. */}
+        {/* The question mark sits at the right edge of its own line, where a desktop
+            visitor looks for help. It opens the same introduction the first-time modal
+            shows, so there is one answer to "what is this", not two. A narrow screen
+            has no room out there and shows no mark. */}
+        {/* Phone only: the ten places the desktop rails carry, in one drifting row.
+            It sits in the space the coffee and supporters row used to take. */}
+        <SponsorPlaceCarousel
+          places={SPONSOR_PLACES}
+          reducedMotion={reducedMotion}
+          paused={openPanel !== null || activePlace !== null}
+          onOpen={setActivePlace}
+        />
         <div className="support-footer-line">
+          {/* Parked while the sponsor places are reviewed: the two support actions
+              pushed the panel and the dock up the screen, and the places need that
+              room. The Supporters feed and the coffee link are unchanged behind this;
+              put the row back to have them return.
           <SupportFooterRow coffeeUrl={coffeeUrl} onSupportersOpen={() => showPanel("supporters")} />
+          */}
           <button
             className="journey-help"
             type="button"
@@ -1380,6 +1405,21 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         testId="supporters-modal"
       >
         <SupportersFeed />
+      </OverlayModal>
+
+      {/* One modal for all ten places: what the product is, or what the place costs. */}
+      <OverlayModal
+        open={activePlace !== null}
+        title={activePlace?.brand ? activePlace.brand.name : activePlace ? placeName(activePlace) : ""}
+        eyebrow={activePlace
+          ? activePlace.brand
+            ? `Sponsor · ${placeName(activePlace)}`
+            : "Sponsor place · free"
+          : undefined}
+        onClose={() => setActivePlace(null)}
+        testId="sponsor-place-modal"
+      >
+        {activePlace ? <SponsorPlacePanel place={activePlace} /> : null}
       </OverlayModal>
 
       <OverlayModal

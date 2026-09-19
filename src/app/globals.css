@@ -4571,3 +4571,241 @@ a:focus-visible,
   cursor: pointer;
 }
 .visit-modal-quiet:hover { color: var(--paper); }
+
+/* ── The ten sponsor places ──────────────────────────────────────────────────
+   Five down each edge of the scene on a desktop screen; on a phone the same ten
+   ride in one drifting row above the footer and the rails are hidden. A place is
+   a tile: free ones carry a plus, taken ones carry the sponsor's mark. Both open
+   the same modal. Only the tiles take pointer events, so the painting between
+   them is still the painting. */
+
+.sponsor-rail {
+  position: absolute;
+  z-index: 22;
+  top: clamp(8.5rem, 19vh, 13rem);
+  bottom: calc(var(--journey-footer-inset, 0px) + 1rem);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(.5rem, 1.5vh, 1.15rem);
+  pointer-events: none;
+}
+
+.sponsor-rail[data-side="left"] { left: max(1rem, env(safe-area-inset-left)); }
+.sponsor-rail[data-side="right"] { right: max(1rem, env(safe-area-inset-right)); }
+.sponsor-rail > * { pointer-events: auto; }
+
+/* The rails need room beside the scene; a narrow screen has none and uses the row. */
+@media (min-width: 900px) {
+  .sponsor-rail { display: flex; }
+}
+
+.sponsor-place {
+  display: grid;
+  width: clamp(3.4rem, 4.4vw, 5rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  padding: 0;
+  background: rgb(8 15 25 / 62%);
+  color: var(--paper);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+
+.sponsor-place[data-state="free"] {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.sponsor-place:hover {
+  border-color: var(--gold);
+  background: rgb(8 15 25 / 80%);
+  color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.sponsor-place:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* A light puck so a sponsor's own colours read against the night-blue tile. */
+.sponsor-place-mark {
+  display: grid;
+  width: 62%;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+.sponsor-place[data-state="free"] .sponsor-place-mark {
+  width: 100%;
+  background: transparent;
+  color: inherit;
+}
+
+.sponsor-mark { width: 68%; height: auto; }
+.sponsor-mark-plus { width: 44%; }
+
+/* The phone row. It is an ordinary horizontal scroller, so a swipe always wins
+   over the drift; the scrollbar is hidden because the tiles are the affordance. */
+.sponsor-carousel {
+  display: none;
+  width: 100%;
+  gap: .5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.sponsor-carousel::-webkit-scrollbar { display: none; }
+
+.sponsor-carousel > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.sponsor-carousel .sponsor-place {
+  display: flex;
+  width: auto;
+  min-height: 2.65rem;
+  align-items: center;
+  gap: .45rem;
+  aspect-ratio: auto;
+  border-radius: 999px;
+  padding: .35rem .85rem .35rem .4rem;
+}
+
+.sponsor-carousel .sponsor-place-mark {
+  width: 1.85rem;
+  border-radius: 999px;
+}
+
+.sponsor-carousel .sponsor-place[data-state="free"] .sponsor-place-mark { width: 1.5rem; }
+
+.sponsor-place-name {
+  font-family: var(--font-controls);
+  font-size: .72rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 899px) {
+  .sponsor-carousel { display: flex; }
+
+  /* Edge to edge: the footer sits inside a gutter and the row reaches past it, so
+     the last tile is visibly cut off and the row reads as something to swipe. */
+  .journey-footer-region .sponsor-carousel {
+    width: calc(100% + 1.5rem);
+    margin-inline: -.75rem;
+    padding-inline: .75rem;
+  }
+}
+
+/* With the coffee and supporters row parked, the help mark is the only thing left
+   on this line and it is positioned; the line keeps its height for it. */
+.support-footer-line { min-height: 44px; }
+
+/* ── The place modal ─────────────────────────────────────────────────────────
+   One panel for both kinds of place: what the product is, or what the place costs. */
+
+.sponsor-place-panel { display: grid; gap: .9rem; }
+
+.sponsor-place-hero { display: flex; align-items: center; gap: .85rem; }
+.sponsor-place-hero strong { display: block; margin-bottom: .2rem; font-size: 1.05rem; }
+.sponsor-place-hero > div { min-width: 0; }
+
+.sponsor-place-mark[data-size="large"] {
+  flex: none;
+  width: 3.1rem;
+  border-radius: 10px;
+}
+
+.sponsor-place-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+  margin: 0;
+}
+
+.sponsor-place-stats > div {
+  display: grid;
+  gap: .25rem;
+  border: 1px solid var(--quiet-border);
+  border-radius: 8px;
+  padding: .6rem .7rem;
+  background: var(--surface);
+}
+
+.sponsor-place-stats dt {
+  color: var(--muted);
+  font-family: var(--font-controls);
+  font-size: .6rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.sponsor-place-stats dd {
+  margin: 0;
+  font-family: var(--font-controls);
+  font-size: 1.05rem;
+}
+
+/* Fixture figures. This line is why they are allowed on the screen at all. */
+.sponsor-place-note {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-controls);
+  font-size: .68rem;
+  line-height: 1.5;
+}
+
+.sponsor-place-lead {
+  margin: 0;
+  font-family: var(--font-controls);
+  font-size: .95rem;
+}
+
+.sponsor-place-panel .journey-muted { font-size: .78rem; }
+.sponsor-place-panel .policy-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.sponsor-place-panel > .primary-button { justify-self: start; }
+
+.sponsor-form.sponsor-place-form {
+  width: 100%;
+  gap: .7rem;
+  margin-top: 0;
+  border-radius: 10px;
+  padding: .9rem;
+}
+
+.sponsor-place-order {
+  display: grid;
+  gap: .35rem;
+  margin: .1rem 0 0;
+  border-top: 1px solid var(--quiet-border);
+  padding-top: .65rem;
+  font-family: var(--font-controls);
+  font-size: .78rem;
+}
+
+.sponsor-place-order > div { display: flex; justify-content: space-between; gap: 1rem; }
+.sponsor-place-order dt { color: var(--muted); }
+.sponsor-place-order dd { margin: 0; }
+.sponsor-place-order > div[data-total="true"] dt,
+.sponsor-place-order > div[data-total="true"] dd { color: var(--paper); font-weight: 700; }
+
+.sponsor-place-form .primary-button { width: 100%; }
+
+@media (max-width: 600px) {
+  .sponsor-place-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
