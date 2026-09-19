@@ -177,12 +177,15 @@ export function SceneStage({
   return (
     <div ref={container} className="scene-stage" data-renderer={pixiReady ? "pixi" : "static"} data-bottom-inset={Math.round(bottomInsetPx)}>
       {/* The paintings carry the pack's identity: a new pack rebuilds them, while the
-          people keep their models and their WebGL context and simply follow it. */}
-      <StaticScene key={pack.assetVersion} zone={zone} assetVersion={pack.assetVersion} resolution={resolution}
+          people keep their models and their WebGL context and simply follow it. The
+          two renderers are siblings, so each prefixes the pack with its own name: the
+          bare pack id gave both the same key, which React reports as a duplicate and
+          is free to resolve by dropping one of them. */}
+      <StaticScene key={`static-${pack.assetVersion}`} zone={zone} assetVersion={pack.assetVersion} resolution={resolution}
         bottomInsetPx={bottomInsetPx} defer={!pixiFailed} active={!pixiReady} onStageFrame={publishStage} onReady={staticReady} />
       {qualityTier && settled && !pixiFailed ? (
         <PixiScene
-          key={pack.assetVersion}
+          key={`pixi-${pack.assetVersion}`}
           contacts={contacts}
           grade={grade}
           pack={pack}
