@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
+  dodoPlacementCheckoutBody,
   createDodoCheckout,
   dodoCheckoutBody,
   dodoEnvironment,
@@ -47,6 +48,16 @@ describe("Standard Webhooks verification", () => {
 });
 
 describe("Dodo payloads", () => {
+  it("sets the server-owned placement price on the approved dynamic-price product", () => {
+    expect(dodoPlacementCheckoutBody({
+      productId: "pdt_approved", amountCents: 10_000, returnUrl: "https://keephimwalking.com/sponsor/return",
+      orderId: "order", journeyId: "journey", slotId: "slot", tier: "featured",
+    })).toMatchObject({
+      product_cart: [{ product_id: "pdt_approved", quantity: 1, amount: 10_000 }],
+      metadata: { kind: "journey_placement", tier: "featured" },
+    });
+  });
+
   it("reads the event type and the payment it concerns", () => {
     const event = parseDodoWebhook(body);
     expect(event.type).toBe("payment.succeeded");

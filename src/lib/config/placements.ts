@@ -7,8 +7,8 @@ export function placementProductId(
   environment: Record<string, string | undefined> = process.env,
 ): string {
   return tier === "featured"
-    ? environment.DODO_FEATURED_PLACEMENT_PRODUCT_ID ?? ""
-    : environment.DODO_REGULAR_PLACEMENT_PRODUCT_ID ?? "";
+    ? environment.DODO_FEATURED_PLACEMENT_PRODUCT_ID ?? environment.DODO_SPONSOR_PRODUCT_ID ?? ""
+    : environment.DODO_REGULAR_PLACEMENT_PRODUCT_ID ?? environment.DODO_SPONSOR_PRODUCT_ID ?? "";
 }
 
 export function placementProviderProductId(
@@ -20,8 +20,10 @@ export function placementProviderProductId(
 }
 
 export function placementCheckoutState(environment: Record<string, string | undefined> = process.env) {
-  if (environment.SPONSOR_PLACEMENTS_ENABLED !== "true") return { enabled: false as const, reason: "disabled" as const };
-  if (environment.SPONSOR_PROVIDER_APPROVED_FOR_PLACEMENTS !== "true") {
+  const placementsEnabled = environment.SPONSOR_PLACEMENTS_ENABLED ?? environment.SPONSOR_BOOKING_ENABLED;
+  const providerApproved = environment.SPONSOR_PROVIDER_APPROVED_FOR_PLACEMENTS ?? environment.SPONSOR_PROVIDER_APPROVED;
+  if (placementsEnabled !== "true") return { enabled: false as const, reason: "disabled" as const };
+  if (providerApproved !== "true") {
     return { enabled: false as const, reason: "provider_unapproved" as const };
   }
   const provider: PlacementPaymentProvider = environment.SPONSOR_PAYMENT_PROVIDER === "fixture" ? "fixture" : "dodo";

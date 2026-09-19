@@ -152,6 +152,7 @@ export function placementPaymentFacts(payment: unknown, productId: string): Plac
 
 export function dodoPlacementCheckoutBody(input: {
   productId: string;
+  amountCents: number;
   returnUrl: string;
   orderId: string;
   journeyId: string;
@@ -159,7 +160,7 @@ export function dodoPlacementCheckoutBody(input: {
   tier: "regular" | "featured";
 }) {
   return {
-    product_cart: [{ product_id: input.productId, quantity: 1 }],
+    product_cart: [{ product_id: input.productId, quantity: 1, amount: input.amountCents }],
     return_url: input.returnUrl,
     metadata: {
       kind: "journey_placement",

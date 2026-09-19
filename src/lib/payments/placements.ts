@@ -12,7 +12,7 @@ import {
 import { serverRuntimeConfig } from "@/lib/config/server";
 import { seasonPriceIncludesTax } from "@/lib/config/sponsorship";
 import { writeOperationalLog } from "@/lib/observability/logger";
-import { type SponsorPlacementTier } from "@/lib/relaunch/config";
+import { placementPriceCents, type SponsorPlacementTier } from "@/lib/relaunch/config";
 import { getServerSupabase } from "@/lib/supabase/server";
 import {
   DODO_PAYMENT_IN_PROGRESS,
@@ -72,6 +72,7 @@ export async function startPlacementCheckout(
       if (!options) throw new Error("DODO_NOT_CONFIGURED");
       const session = await createDodoCheckout(dodoPlacementCheckoutBody({
         productId,
+        amountCents: placementPriceCents(tier),
         returnUrl,
         orderId: String(order.id),
         journeyId: String(order.journey_id),

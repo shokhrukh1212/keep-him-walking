@@ -21,7 +21,7 @@ function ProductProfile({ place }: { place: SponsorPlace }) {
       <dl className="sponsor-profile-view"><div><dt>Views</dt><dd>{product.views === null ? "Unavailable" : product.views.toLocaleString("en-US")}</dd></div></dl>
       <p className="sponsor-place-note">Product profile opens</p>
       <a className="primary-button" href={product.websiteUrl} target="_blank" rel="sponsored noopener noreferrer">Visit website ↗</a>
-      <p className="policy-copy">Sponsored placement</p>
+      <p className="policy-copy">{product.demo ? "Recording placeholder · not a paid placement" : "Sponsored placement"}</p>
     </div>
   );
 }

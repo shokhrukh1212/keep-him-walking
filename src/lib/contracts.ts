@@ -77,6 +77,8 @@ export type SponsorPlacementView = {
     logoFit: "crop" | "contain";
     websiteUrl: string;
     views: number | null;
+    /** Non-production recording placeholder; never a paid or persisted placement. */
+    demo?: boolean;
   };
 };
 

@@ -3214,9 +3214,11 @@ and server-owned amount before activation. A late/conflicting paid order enters 
 ledger rather than replacing an occupant. Accepted profile opens use caller UUIDs for
 idempotency plus visitor/network limits and atomically increment `view_count`.
 
-New checkout is gated by both `SPONSOR_PLACEMENTS_ENABLED=true` and
-`SPONSOR_PROVIDER_APPROVED_FOR_PLACEMENTS=true`. Dodo additionally needs its API and
-webhook secrets, distinct regular/featured product IDs and a matching environment. The
+New checkout accepts the existing approved `SPONSOR_BOOKING_ENABLED=true` and
+`SPONSOR_PROVIDER_APPROVED=true` gates; the placement-specific names remain supported as
+explicit overrides. Dodo needs its API and webhook secrets and a matching environment. The
+existing Pay What You Want `DODO_SPONSOR_PRODUCT_ID` is used for both tiers with the
+server-owned USD 50 or USD 100 amount; separate tier product IDs remain supported. The
 fixture is rejected in production and requires `SPONSOR_FIXTURE_SECRET` elsewhere. Legacy
 day/season webhook handlers and financial tables remain readable and process outstanding
 transactions, while the old public auction page redirects to the featured fixed placement.
@@ -3231,6 +3233,12 @@ reports the first incomplete field, missing acknowledgment, or closed provider g
 of presenting an inert checkout control.
 Coffee/supporter surfaces are parked behind `PUBLIC_SUPPORT_FEATURE_ENABLED`; historical
 data and reusable components are retained.
+
+Development exposes `/recording` for a ten-minute launch-video rehearsal. It overlays ten
+clearly non-persisted sample brands plus featured Postis, advances a local presentation
+clock, and uses the approved walking gait without changing journey lifecycle, runtime,
+sponsor orders, or database inventory. The route returns 404 in production; refreshing it
+restarts the ten-minute rehearsal, while `/` remains the authoritative waiting experience.
 
 The waiting dialogue controller counts visible-page time, pauses new starts for dialogs and
 hidden tabs, gives persisted interactions/state changes priority, and uses only clips in the

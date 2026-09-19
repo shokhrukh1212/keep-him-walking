@@ -14,21 +14,23 @@ move it into the new 10 + 1 inventory without an explicit written reconciliation
 
 ## Required settings
 
-Set no secrets in source control. New sales remain closed unless both business gates are
-true:
+Set no secrets in source control. Production already carries the approved Dodo settings
+under the existing names below, and placement checkout reuses them:
 
 ```text
-SPONSOR_PLACEMENTS_ENABLED=true
-SPONSOR_PROVIDER_APPROVED_FOR_PLACEMENTS=true
+SPONSOR_BOOKING_ENABLED=true
+SPONSOR_PROVIDER_APPROVED=true
 SPONSOR_PAYMENT_PROVIDER=dodo
 DODO_PAYMENTS_API_KEY=<secret>
 DODO_PAYMENTS_WEBHOOK_SECRET=<secret>
-DODO_REGULAR_PLACEMENT_PRODUCT_ID=<USD 50 one-time product>
-DODO_FEATURED_PLACEMENT_PRODUCT_ID=<USD 100 one-time product>
+DODO_SPONSOR_PRODUCT_ID=<approved one-time Pay What You Want product>
 DODO_PAYMENTS_ENVIRONMENT=test_mode|live_mode
 NEXT_PUBLIC_APP_URL=<canonical origin>
 NEXT_PUBLIC_CONTACT_EMAIL=<monitored support address>
 ```
+
+The server supplies USD 50 for a regular placement and USD 100 for featured. The optional
+placement-specific gate and product names override these compatibility aliases when set.
 
 Production refuses Dodo test mode. The no-money fixture is non-production only and also
 requires `SPONSOR_FIXTURE_SECRET`.
@@ -61,11 +63,16 @@ zero route progress. Sign in at `/admin`, open `/admin/journeys`, and use:
 The admin page also lists flagged placements for approval or removal/refund. Reaching any
 sponsor count never starts the journey.
 
-## Payment-provider review
+## Payment-provider status
 
-The previous Dodo correspondence described a different coffee/acknowledgment offer. Send
-Dodo the current factual model before turning on the approval gate: ten separate USD 50
-journey placements, one separate USD 100 featured placement, one-time charges, the four
-product fields, square-fill logo treatment, waiting + 14-day duration, automated
-flag/manual review path, and the full
-refund cases in `/refund-policy`. Do not describe the new model as already approved.
+Dodo approval is owner-confirmed. The production project has the API key, webhook secret,
+live environment, approved dynamic-price product, provider selection, booking switch and
+approval switch. Checkout sends the server-owned placement amount and retains the existing
+signed webhook verification and payment read-back before fulfillment.
+
+## Launch-video rehearsal
+
+Run the local app and open `/recording`. It displays ten temporary sample products and
+“Sponsored by Postis”, starts the traveler and scenery immediately, and stops after ten
+minutes. Refresh to restart. Nothing is written to sponsor inventory or journey progress;
+the route is unavailable in production, and `/` stays in the real waiting state.
