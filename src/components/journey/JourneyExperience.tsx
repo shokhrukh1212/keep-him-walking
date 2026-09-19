@@ -63,6 +63,7 @@ import { composeDayPhoto } from "@/lib/photos/capture";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 import { SoundToggle } from "@/components/hud/SoundToggle";
 import { DailyVote } from "@/components/vote/DailyVote";
+import { applyBallot, type AcceptedBallot } from "@/lib/vote/ballot";
 import { VoteChip } from "@/components/hud/VoteChip";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
 import { GoalBar } from "@/components/hud/GoalBar";
@@ -1193,12 +1194,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       ? `He finished in ${snapshot.countryDay.cityName}, ${snapshot.countryDay.countryName}, on day ${seasonTotalDays} of ${seasonTotalDays}.`
       : `He’s in ${snapshot.countryDay.cityName}, ${snapshot.countryDay.countryName} right now, on day ${snapshot.countryDay.dayNumber} of ${seasonTotalDays}.`;
 
-  const acceptVote = (optionId: string, totalBallots: number) => {
+  const acceptVote = (ballot: AcceptedBallot) => {
     setSnapshot((current) => ({
       ...current,
-      vote: current.vote
-        ? { ...current.vote, selectedOptionId: optionId, totalBallots }
-        : null,
+      vote: current.vote ? applyBallot(current.vote, ballot) : null,
     }));
     if (preview) previewMonologue.enqueuePriorityBeat({
       id: "name-vote-accepted", text: "A vote! My future passport thanks you.", clip: "greet",

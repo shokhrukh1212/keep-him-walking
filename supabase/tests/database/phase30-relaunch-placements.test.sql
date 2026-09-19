@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(51);
+select plan(53);
 
 create function pg_temp.relaunch_plan(p_slug text)
 returns jsonb language sql as $$
@@ -49,6 +49,16 @@ select is(public.submit_journey_name_ballot(
   (select id from public.journey_name_votes where journey_id = pg_temp.journey_id('test-paris-relaunch')),
   (select o.id from public.journey_name_vote_options o join public.journey_name_votes v on v.id = o.vote_id where v.journey_id = pg_temp.journey_id('test-paris-relaunch') and o.label = 'Nur'),
   repeat('a', 64), '2035-01-01T00:01:00Z') ->> 'state', 'accepted', 'a waiting name ballot is persisted');
+select is((select (tally ->> 'votes')::int from jsonb_array_elements(public.submit_journey_name_ballot(
+  (select id from public.journey_name_votes where journey_id = pg_temp.journey_id('test-paris-relaunch')),
+  (select o.id from public.journey_name_vote_options o join public.journey_name_votes v on v.id = o.vote_id where v.journey_id = pg_temp.journey_id('test-paris-relaunch') and o.label = 'Nur'),
+  repeat('b', 64), '2035-01-01T00:02:00Z') -> 'tallies') tally
+  where tally ->> 'optionId' = (select o.id::text from public.journey_name_vote_options o join public.journey_name_votes v on v.id = o.vote_id where v.journey_id = pg_temp.journey_id('test-paris-relaunch') and o.label = 'Nur')),
+  2, 'the accepted ballot returns the option tally it just produced');
+select is((select count(*) from jsonb_array_elements(public.submit_journey_name_ballot(
+  (select id from public.journey_name_votes where journey_id = pg_temp.journey_id('test-paris-relaunch')),
+  (select o.id from public.journey_name_vote_options o join public.journey_name_votes v on v.id = o.vote_id where v.journey_id = pg_temp.journey_id('test-paris-relaunch') and o.label = 'Milo'),
+  repeat('c', 64), '2035-01-01T00:03:00Z') -> 'tallies')), 4::bigint, 'every option is named in the returned tallies');
 select is(public.set_relaunch_journey_state(pg_temp.journey_id('test-paris-relaunch'), 'schedule', '2035-02-01T19:00:00Z', 'owner', '2035-01-02T00:00:00Z') ->> 'state', 'scheduled', 'the owner can arm a future start');
 select is((select scheduled_start_at from public.journeys where slug = 'test-paris-relaunch'), '2035-02-01T19:00:00Z'::timestamptz, 'the exact armed instant is stored in UTC');
 select is(public.set_relaunch_journey_state(pg_temp.journey_id('test-paris-relaunch'), 'cancel', null, 'owner', '2035-01-03T00:00:00Z') ->> 'state', 'waiting', 'the owner can cancel an armed launch');

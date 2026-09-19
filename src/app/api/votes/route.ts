@@ -24,15 +24,14 @@ async function handlePost(request: NextRequest) {
   const visitor = visitorFromRequest(request);
   const visitorHash = hashOpaqueValue(visitor.visitorId);
   const now = new Date();
-  const currentCountryDay = await findCurrentCountryDay(now);
-  const ballotNow = currentCountryDay?.story_now
-    ? new Date(currentCountryDay.story_now)
-    : now;
-  const limit = await consumeRateLimit(visitorHash, RATE_LIMITS.vote, now);
+  // The rate limit and the vote lookup are independent, and the story clock is
+  // only needed by the phase 1 ballot: a vote should not wait on three serial
+  // round trips to a remote database before it is counted.
+  const [limit, { data: relaunchVote, error: relaunchVoteError }] = await Promise.all([
+    consumeRateLimit(visitorHash, RATE_LIMITS.vote, now),
+    supabase.from("journey_name_votes").select("id").eq("id", parsed.data.voteId).maybeSingle(),
+  ]);
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds, "Too many vote attempts.");
-
-  const { data: relaunchVote, error: relaunchVoteError } = await supabase.from("journey_name_votes")
-    .select("id").eq("id", parsed.data.voteId).maybeSingle();
   if (relaunchVoteError) return NextResponse.json({ error: "Vote could not be accepted." }, { status: 409 });
   if (relaunchVote) {
     const result = await supabase.rpc("submit_journey_name_ballot", {
@@ -40,14 +39,27 @@ async function handlePost(request: NextRequest) {
       p_voter_hash: visitorHash, p_now: now.toISOString(),
     });
     if (result.error) return NextResponse.json({ error: "Vote could not be accepted." }, { status: 409 });
-    const row = result.data as { optionId?: string; totalBallots?: number };
+    const row = result.data as {
+      optionId?: string;
+      totalBallots?: number;
+      tallies?: Array<{ optionId?: string; votes?: number }>;
+    };
     trackServerEvent("vote_submitted", visitorHash, { vote_id: parsed.data.voteId, option_id: parsed.data.optionId });
     const response = NextResponse.json({ accepted: true, idempotent: false,
-      selectedOptionId: row.optionId ?? parsed.data.optionId, totalBallots: Number(row.totalBallots ?? 0) });
+      selectedOptionId: row.optionId ?? parsed.data.optionId, totalBallots: Number(row.totalBallots ?? 0),
+      // Counted under the same row lock as the total, so the ballot and the
+      // per-option numbers the browser shows can never disagree.
+      tallies: (row.tallies ?? []).map((tally) => ({
+        optionId: String(tally.optionId), votes: Number(tally.votes ?? 0),
+      })) });
     attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
     return response;
   }
 
+  const currentCountryDay = await findCurrentCountryDay(now);
+  const ballotNow = currentCountryDay?.story_now
+    ? new Date(currentCountryDay.story_now)
+    : now;
   const { data, error } = await supabase.rpc("submit_phase1_ballot", {
     p_vote_id: parsed.data.voteId,
     p_option_id: parsed.data.optionId,

@@ -5,16 +5,20 @@ import { ballotPercentages } from "@/components/hud/VoteChip";
 import { flagEmoji } from "@/lib/countries/flags";
 import type { VoteView } from "@/lib/contracts";
 import { ANNIVERSARY_VOTE_COPY } from "@/lib/season/anniversary";
+import { applyBallot, type AcceptedBallot } from "@/lib/vote/ballot";
 
 type Props = {
   vote: VoteView | null;
-  onAccepted: (optionId: string, totalBallots: number) => void;
+  onAccepted: (ballot: AcceptedBallot) => void;
 };
 
 /** The ballot's contents. The surrounding modal owns its title, close button and focus. */
-export function DailyVote({ vote, onAccepted }: Props) {
+export function DailyVote({ vote: confirmed, onAccepted }: Props) {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The ballot is shown as counted the moment it is cast. The server's own
+  // tallies replace this guess when they arrive, and a rejection undoes it.
+  const vote = confirmed && submitting ? applyBallot(confirmed, { optionId: submitting }) : confirmed;
   const percentages = vote ? ballotPercentages(vote) : new Map<string, number>();
   // Named only once the ballot has closed; before that nothing is decided.
   const winner = vote && vote.status === "closed" && vote.resultOptionId
@@ -22,18 +26,23 @@ export function DailyVote({ vote, onAccepted }: Props) {
     : null;
 
   const submit = async (optionId: string) => {
-    if (!vote || vote.status !== "open") return;
+    if (!confirmed || confirmed.status !== "open" || submitting) return;
+    const voteId = confirmed.id;
     setSubmitting(optionId);
     setError(null);
     try {
       const response = await fetch("/api/votes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voteId: vote.id, optionId }),
+        body: JSON.stringify({ voteId, optionId }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Vote failed");
-      onAccepted(result.selectedOptionId, result.totalBallots);
+      onAccepted({
+        optionId: String(result.selectedOptionId ?? optionId),
+        totalBallots: Number(result.totalBallots),
+        tallies: Array.isArray(result.tallies) ? result.tallies : undefined,
+      });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Vote failed");
     } finally {
@@ -81,7 +90,9 @@ export function DailyVote({ vote, onAccepted }: Props) {
           <strong>{winner.label}</strong> ({percentages.get(winner.id) ?? 0}%)
         </p>
       ) : null}
-      <small className="vote-total">{vote.totalBallots} people have voted</small>
+      <small className="vote-total">
+        {vote.totalBallots === 1 ? "1 person has voted" : `${vote.totalBallots} people have voted`}
+      </small>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </div>
   );

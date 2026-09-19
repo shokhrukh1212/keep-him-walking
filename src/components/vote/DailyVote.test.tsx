@@ -37,12 +37,31 @@ describe("DailyVote", () => {
           selectedOptionId: vote.options[0]?.id,
           resultOptionId: null,
           totalBallots: 5,
+          tallies: [{ optionId: vote.options[0]?.id, votes: 5 }],
         }),
       }),
     );
     render(<DailyVote vote={vote} onAccepted={accepted} />);
     await userEvent.click(screen.getByRole("button", { name: "Find the best plov" }));
-    await waitFor(() => expect(accepted).toHaveBeenCalledWith(vote.options[0]?.id, 5));
+    await waitFor(() => expect(accepted).toHaveBeenCalledWith({
+      optionId: vote.options[0]?.id,
+      totalBallots: 5,
+      tallies: [{ optionId: vote.options[0]?.id, votes: 5 }],
+    }));
+  });
+
+  it("counts the ballot on screen before the server answers", async () => {
+    const counted: VoteView = {
+      ...vote,
+      options: [{ ...vote.options[0]!, votes: 3 }],
+    };
+    let settle: (value: unknown) => void = () => undefined;
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise((resolve) => { settle = resolve; })));
+    render(<DailyVote vote={counted} onAccepted={() => undefined} />);
+    await userEvent.click(screen.getByRole("button", { name: /Find the best plov/ }));
+    expect(screen.getByText(/4 votes/)).toBeInTheDocument();
+    expect(screen.getByText("5 people have voted")).toBeInTheDocument();
+    settle({ ok: true, json: () => Promise.resolve({ accepted: true, selectedOptionId: counted.options[0]?.id, totalBallots: 5 }) });
   });
 
   it("states why no vote appears offline", () => {

@@ -3194,6 +3194,16 @@ UTC instant as the effective start. Waiting reactions are enum-only rows and can
 runtime. The new name ballot is journey-scoped and resolves at launch by tally, then stable
 configured display order.
 
+Migration `202609190051` makes `submit_journey_name_ballot` return `tallies`, the per-option
+counts read under the same vote row lock that counted the total, so `/api/votes` can answer
+with numbers that cannot disagree with `totalBallots`. `applyBallot`
+(`src/lib/vote/ballot.ts`) is the one pure function that folds a ballot into a shown
+`VoteView`: with server tallies it is the authoritative apply used by `acceptVote`, and
+without them it is the in-flight optimistic view `DailyVote` renders between the click and
+the answer — the same arithmetic, so no number jumps when the response lands. The vote route
+runs its rate limit and vote lookup concurrently and resolves the story clock only on the
+phase-1 path, which the relaunch ballot does not take.
+
 `journey_sponsor_slots` seeds ten regular USD 50 places and one independent featured USD
 100 place for a newly prepared 14-day waiting journey. Reservation, checkout attachment,
 verified fulfillment, profile-view counting, moderation, refund, release and chargeback
