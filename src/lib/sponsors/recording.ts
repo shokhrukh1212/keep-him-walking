@@ -21,10 +21,10 @@ const REGULAR_BRANDS: readonly RecordingBrand[] = [
 ] as const;
 
 const FEATURED_BRAND: RecordingBrand = {
-  name: "Postis",
-  domain: "postis.eu",
-  websiteUrl: "https://www.postis.eu/",
-  description: "A digital platform for smarter last-mile delivery.",
+  name: "Postiz",
+  domain: "postiz.com",
+  websiteUrl: "https://postiz.com/",
+  description: "Create and schedule social content from one place.",
 };
 
 function favicon(domain: string): string {

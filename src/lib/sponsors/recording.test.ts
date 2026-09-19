@@ -33,7 +33,7 @@ describe("recording sponsor inventory", () => {
     const result = recordingSponsorInventory(inventory);
     expect(result.regularFilled).toBe(10);
     expect(result.featuredFilled).toBe(true);
-    expect(result.slots.find((slot) => slot.tier === "featured")?.placement?.name).toBe("Postis");
+    expect(result.slots.find((slot) => slot.tier === "featured")?.placement?.name).toBe("Postiz");
     expect(result.slots.filter((slot) => slot.tier === "regular").map((slot) => slot.placement?.name))
       .toEqual(["Google", "ChatGPT", "Claude", "Figma", "GitHub", "Notion", "Spotify", "Slack", "Canva", "Linear"]);
     expect(result.slots.every((slot) => slot.placement?.demo === true)).toBe(true);

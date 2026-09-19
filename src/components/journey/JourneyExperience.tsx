@@ -192,7 +192,6 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
     if (!recordingMode) return;
     let stop = 0;
     const start = window.setTimeout(() => {
-      const now = performance.now();
       setRecordingRouteRuntime({
         globalActiveSeconds: 0,
         globalDistanceMetres: 0,
@@ -200,10 +199,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         authoritativeAt: new Date().toISOString(),
         walking: true,
       });
-      setReviewNow(now);
-      setActionReview({ action: "walk", startedAt: now });
       stop = window.setTimeout(() => {
-        const stoppedAt = performance.now();
         setRecordingRouteRuntime({
           globalActiveSeconds: 10 * 60,
           globalDistanceMetres: 10 * 60 * METRES_PER_SECOND,
@@ -211,18 +207,16 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
           authoritativeAt: new Date().toISOString(),
           walking: false,
         });
-        setReviewNow(stoppedAt);
-        setActionReview({ action: "idle", startedAt: stoppedAt });
       }, 10 * 60_000);
     }, 0);
     return () => { window.clearTimeout(start); window.clearTimeout(stop); };
   }, [recordingMode]);
   useEffect(()=>{
-    if((!previewDemoSponsor&&!recordingMode)||actionReview.action==="auto")return;
+    if(!previewDemoSponsor||actionReview.action==="auto")return;
     const timer=window.setInterval(()=>setReviewNow(performance.now()),100);
     return ()=>window.clearInterval(timer);
-  },[previewDemoSponsor,recordingMode,actionReview]);
-  const review=previewDemoSponsor||recordingMode?reviewPoseAt(actionReview,reviewNow):null;
+  },[previewDemoSponsor,actionReview]);
+  const review=previewDemoSponsor?reviewPoseAt(actionReview,reviewNow):null;
   const newestHeartbeat = useRef(-Infinity);
   const broadcastHint = useRef<() => void>(() => undefined);
   const [loadingLive, setLoadingLive] = useState(true);
@@ -647,7 +641,11 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
   const waking = Boolean(authoritativeWalking
     && wakeBeat?.countryDayId === snapshot.countryDay.id
     && realNowMs < wakeBeatEndsAtMs);
-  const walking = authoritativeWalking && !waking;
+  // The development-only recording route uses the ordinary live-walk presentation
+  // without claiming or mutating a server-confirmed watcher lease.
+  const walking = recordingMode
+    ? recordingRouteRuntime?.walking === true
+    : authoritativeWalking && !waking;
   const wakeCountdown = waking
     ? Math.max(1, Math.ceil((wakeBeatEndsAtMs - realNowMs) / 1_000))
     : null;
@@ -735,9 +733,14 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
       ),
     );
-  const presentedRouteSeconds = recordingMode
-    ? actionReview.action === "idle" ? 10 * 60 : Math.min(10 * 60, review?.seconds ?? 0)
-    : routeSeconds;
+  const recordingRouteSeconds = recordingRouteRuntime === null
+    ? 0
+    : Math.min(10 * 60, recordingRouteRuntime.globalActiveSeconds + (
+        recordingRouteRuntime.walking
+          ? Math.max(0, (realNowMs - Date.parse(recordingRouteRuntime.authoritativeAt)) / 1_000)
+          : 0
+      ));
+  const presentedRouteSeconds = recordingMode ? recordingRouteSeconds : routeSeconds;
   const presentedRoutePosition = recordingMode
     ? scenePositionAt(snapshot.assets, presentedRouteSeconds)
     : routePosition;
@@ -1043,9 +1046,9 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
     mood: activeLine?.mood ?? "neutral",
     // The preview and the empty-audience wait both face the viewer; only his root
     // turns, and his anchor never moves.
-    facing: preview || waitingForWatchers ? "camera" : "right",
+    facing: !recordingMode && (preview || waitingForWatchers) ? "camera" : "right",
     // Prelaunch only: the local monologue controller owns his pose. The live path never sees it.
-    preview: preview ? previewMonologue : undefined,
+    preview: preview && !recordingMode ? previewMonologue : undefined,
     walkingSpeed: worldCommand.speedFactor,
     walking,
     motionPhaseSeconds: Math.max(0, (realNowMs - motionTransition.changedAtMs) / 1_000),
@@ -1061,7 +1064,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
       : undefined,
     sponsorPatchUrl: demoLogo ?? sponsor?.logo ?? undefined,
     sponsorBottleUrl: sponsor?.bottle ?? undefined,
-    actionReview: previewDemoSponsor || recordingMode ? actionReview : undefined,
+    actionReview: previewDemoSponsor ? actionReview : undefined,
   };
 
   const sceneDidReady = useCallback((renderer: "pixi" | "static") => {
@@ -1159,7 +1162,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
       ? renderedZone.label
       : null;
   const walkingStatus: WalkingStatus = recordingMode
-    ? review?.moving
+    ? walking
       ? { text: "Recording preview · Walking in Paris", tone: "walking" }
       : { text: "Recording preview · Standing in Paris", tone: "stopped" }
     : review
@@ -1411,6 +1414,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
             currentPlaceIndex={presentedRoutePosition.zoneIndex}
             secondsToNextVisit={presentedRoutePosition.secondsToNextVisit}
             waitingSummary={preview ? `${sponsorInventory.regularFilled}/10 sponsor spots filled${sponsorInventory.featuredFilled ? " · Featured filled" : " · Featured available"}` : null}
+            hideDistance={recordingMode}
           />
         </div>
         {/* One fixed slot for the whole season, beside the status and clear of him and the captions. */}

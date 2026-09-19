@@ -73,6 +73,6 @@ signed webhook verification and payment read-back before fulfillment.
 ## Launch-video rehearsal
 
 Run the local app and open `/recording`. It displays ten temporary sample products and
-“Sponsored by Postis”, starts the traveler and scenery immediately, and stops after ten
+“Sponsored by Postiz”, starts the traveler and scenery immediately, and stops after ten
 minutes. Refresh to restart. Nothing is written to sponsor inventory or journey progress;
 the route is unavailable in production, and `/` stays in the real waiting state.

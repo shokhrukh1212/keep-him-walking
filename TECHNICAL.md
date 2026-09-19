@@ -3235,7 +3235,7 @@ Coffee/supporter surfaces are parked behind `PUBLIC_SUPPORT_FEATURE_ENABLED`; hi
 data and reusable components are retained.
 
 Development exposes `/recording` for a ten-minute launch-video rehearsal. It overlays ten
-clearly non-persisted sample brands plus featured Postis, advances a local presentation
+clearly non-persisted sample brands plus featured Postiz, advances a local presentation
 clock, and uses the approved walking gait without changing journey lifecycle, runtime,
 sponsor orders, or database inventory. The route returns 404 in production; refreshing it
 restarts the ten-minute rehearsal, while `/` remains the authoritative waiting experience.
