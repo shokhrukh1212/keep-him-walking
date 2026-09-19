@@ -78,6 +78,7 @@ const paymentSchema = z.object({
     product_id: z.string(),
     quantity: z.number().int(),
   }).passthrough()).nullable().optional(),
+  customer: z.object({ email: z.string().email().optional() }).passthrough().nullable().optional(),
 }).passthrough();
 
 export type DodoPayment = z.infer<typeof paymentSchema>;
@@ -109,6 +110,64 @@ export function seasonPaymentFacts(payment: unknown, productId: string): SeasonP
     currency: parsed.currency.toUpperCase(),
     succeeded: parsed.status === "succeeded",
     productMatches: cart.length === 1 && cart[0]?.product_id === productId && cart[0]?.quantity === 1,
+  };
+}
+
+export type PlacementPaymentFacts = {
+  paymentId: string;
+  orderId: string | null;
+  journeyId: string | null;
+  slotId: string | null;
+  tier: "regular" | "featured" | null;
+  checkoutId: string | null;
+  amountCents: number;
+  taxCents: number | null;
+  currency: string;
+  customerEmail: string | null;
+  succeeded: boolean;
+  productMatches: boolean;
+};
+
+export function placementPaymentFacts(payment: unknown, productId: string): PlacementPaymentFacts {
+  const parsed = paymentSchema.parse(payment);
+  const metadata = parsed.metadata ?? {};
+  const uuid = (value: unknown) => typeof value === "string" && UUID.test(value) ? value.toLowerCase() : null;
+  const tier = metadata.tier === "regular" || metadata.tier === "featured" ? metadata.tier : null;
+  const cart = parsed.product_cart ?? [];
+  return {
+    paymentId: parsed.payment_id,
+    orderId: uuid(metadata.journey_sponsor_order_id),
+    journeyId: uuid(metadata.journey_id),
+    slotId: uuid(metadata.slot_id),
+    tier,
+    checkoutId: parsed.checkout_session_id ?? null,
+    amountCents: parsed.total_amount,
+    taxCents: parsed.tax ?? null,
+    currency: parsed.currency.toUpperCase(),
+    customerEmail: parsed.customer?.email?.toLowerCase() ?? null,
+    succeeded: parsed.status === "succeeded",
+    productMatches: cart.length === 1 && cart[0]?.product_id === productId && cart[0]?.quantity === 1,
+  };
+}
+
+export function dodoPlacementCheckoutBody(input: {
+  productId: string;
+  returnUrl: string;
+  orderId: string;
+  journeyId: string;
+  slotId: string;
+  tier: "regular" | "featured";
+}) {
+  return {
+    product_cart: [{ product_id: input.productId, quantity: 1 }],
+    return_url: input.returnUrl,
+    metadata: {
+      kind: "journey_placement",
+      journey_sponsor_order_id: input.orderId,
+      journey_id: input.journeyId,
+      slot_id: input.slotId,
+      tier: input.tier,
+    },
   };
 }
 
@@ -157,7 +216,7 @@ async function dodoRequest(path: string, options: DodoOptions, init: { method: "
 }
 
 export async function createDodoCheckout(
-  body: ReturnType<typeof dodoCheckoutBody>,
+  body: ReturnType<typeof dodoCheckoutBody> | ReturnType<typeof dodoPlacementCheckoutBody>,
   options: DodoOptions,
 ): Promise<{ sessionId: string; checkoutUrl: string }> {
   const response = await dodoRequest("/checkouts", options, { method: "POST", body });

@@ -48,12 +48,13 @@ export async function finishWebhookEvent(
   supabase: Supabase,
   id: string,
   status: "processed" | "ignored" | "failed",
-  detail: { errorCode?: string; seasonSponsorshipId?: string | null } = {},
+  detail: { errorCode?: string; seasonSponsorshipId?: string | null; journeySponsorOrderId?: string | null } = {},
 ): Promise<void> {
   await supabase.from("payment_webhook_events").update({
     processing_status: status,
     processed_at: new Date().toISOString(),
     error_code: detail.errorCode ?? null,
     season_sponsorship_id: detail.seasonSponsorshipId ?? null,
+    journey_sponsor_order_id: detail.journeySponsorOrderId ?? null,
   }).eq("id", id);
 }

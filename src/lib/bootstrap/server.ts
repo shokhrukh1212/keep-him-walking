@@ -29,6 +29,7 @@ import {
   type SeasonRow,
 } from "@/lib/season/state";
 import { weatherFromRow } from "@/lib/weather/payload";
+import { RELAUNCH_JOURNEY } from "@/lib/relaunch/config";
 
 const eventPayloadSchema = z.object({
   travelerState: travelerStateSchema.optional(),
@@ -259,6 +260,83 @@ async function prelaunchBootstrapSnapshot(
     refreshAt: launchAt,
   });
   return { ...snapshot, prelaunch: { startsAt: launchAt, seasonNumber: 1 } };
+}
+
+async function relaunchNameVote(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  journeyId: string,
+  visitorHash: string,
+): Promise<VoteView | null> {
+  const { data: vote, error } = await supabase.from("journey_name_votes")
+    .select("id,question,status,result_option_id,opened_at,closed_at,journey_name_vote_options!journey_name_vote_options_vote_id_fkey(id,label,display_order)")
+    .eq("journey_id", journeyId).maybeSingle();
+  if (error) throw error;
+  if (!vote) return null;
+  const [{ data: ballots, error: ballotError }, { data: mine, error: mineError }] = await Promise.all([
+    supabase.from("journey_name_ballots").select("option_id").eq("vote_id", vote.id),
+    supabase.from("journey_name_ballots").select("option_id").eq("vote_id", vote.id).eq("voter_hash", visitorHash).maybeSingle(),
+  ]);
+  if (ballotError || mineError) throw ballotError ?? mineError;
+  const rows = ballots ?? [];
+  const options = [...(vote.journey_name_vote_options ?? [])].sort((a, b) => a.display_order - b.display_order);
+  return {
+    id: String(vote.id), question: String(vote.question), kind: "name",
+    opensAt: String(vote.opened_at), closesAt: vote.closed_at,
+    status: vote.status === "open" ? "open" : "closed",
+    totalBallots: rows.length, selectedOptionId: mine?.option_id ?? null,
+    resultOptionId: vote.result_option_id ?? null,
+    options: options.map((option) => ({ id: String(option.id), label: String(option.label),
+      displayOrder: Number(option.display_order), packId: null, countryCode: null, blurb: null,
+      votes: rows.filter((ballot) => ballot.option_id === option.id).length })),
+  };
+}
+
+async function relaunchWaitingSnapshot(
+  now: Date,
+  visitorHash: string,
+  config: ReturnType<typeof serverRuntimeConfig>,
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+): Promise<BootstrapSnapshot | null> {
+  const { data: journey, error } = await supabase.from("journeys")
+    .select("id,total_days,season_number,traveler_name,rollover_utc_hour,lifecycle_state,scheduled_start_at,starts_at,ends_at")
+    .eq("slug", RELAUNCH_JOURNEY.slug).in("lifecycle_state", ["waiting", "scheduled"]).maybeSingle();
+  if (error) throw error;
+  if (!journey) return null;
+  const { data: day, error: dayError } = await supabase.from("journey_day_plans")
+    .select("day_number,country_code,country_name,city_name,time_zone,scene_pack_id,story_summary")
+    .eq("journey_id", journey.id).eq("day_number", 1).single();
+  if (dayError) throw dayError;
+  const scheduled = journey.lifecycle_state === "scheduled" ? journey.scheduled_start_at : null;
+  const instant = now.toISOString();
+  const snapshot = idleSnapshot({
+    day: { id: String(journey.id), journey_id: String(journey.id), day_number: Number(day.day_number),
+      country_code: String(day.country_code), country_name: String(day.country_name), city_name: String(day.city_name),
+      time_zone: String(day.time_zone), starts_at: scheduled ?? instant, ends_at: scheduled ?? instant,
+      story_summary: day.story_summary, scene_pack_id: String(day.scene_pack_id) },
+    totalDays: Number(journey.total_days), travelerName: journey.traveler_name,
+    rolloverUtcHour: Number(journey.rollover_utc_hour ?? config.rolloverUtcHour), now, config,
+    state: "prelaunch", refreshAt: scheduled,
+  });
+  return {
+    ...snapshot,
+    vote: await relaunchNameVote(supabase, String(journey.id), visitorHash),
+    prelaunch: { startsAt: scheduled, seasonNumber: Number(journey.season_number ?? 1) },
+    journey: { ...snapshot.journey, id: String(journey.id), lifecycleState: journey.lifecycle_state,
+      scheduledStartAt: scheduled, startsAt: null, endsAt: null },
+  };
+}
+
+async function withRelaunchLifecycle(
+  snapshot: BootstrapSnapshot,
+  journeyId: string | undefined,
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+): Promise<BootstrapSnapshot> {
+  if (!journeyId) return snapshot;
+  const { data } = await supabase.from("journeys")
+    .select("id,slug,lifecycle_state,scheduled_start_at,starts_at,ends_at").eq("id", journeyId).maybeSingle();
+  if (!data || data.slug !== RELAUNCH_JOURNEY.slug) return snapshot;
+  return { ...snapshot, journey: { ...snapshot.journey, id: String(data.id), lifecycleState: data.lifecycle_state,
+    scheduledStartAt: data.scheduled_start_at, startsAt: data.starts_at, endsAt: data.ends_at } };
 }
 
 type IdleDay = Omit<CountryDayRow, "journeys" | "story_now" | "story_scale">;
@@ -808,10 +886,12 @@ export async function liveBootstrapSnapshot(
   now = new Date(),
 ): Promise<BootstrapSnapshot | null> {
   const config = serverRuntimeConfig();
-  // An intentional prelaunch is answered as one, not as a missing day that looks like an outage.
   if (launchSwitchedOff()) return switchedOffPrelaunchSnapshot(now, config);
   const supabase = getServerSupabase();
   if (!supabase) return null;
+  await supabase.rpc("reconcile_relaunch_journeys", { p_now: now.toISOString() });
+  const relaunchWaiting = await relaunchWaitingSnapshot(now, visitorHash, config, supabase);
+  if (relaunchWaiting) return relaunchWaiting;
   let seasons: { phase: SeasonPhase; seasons: SeasonRow[] } | null = null;
   if (config.phase2Enabled) {
     // Seasons first: a missed or late scheduler run is caught up before a day is read.
@@ -836,7 +916,10 @@ export async function liveBootstrapSnapshot(
         bootstrapFromBundle(result.bundle, visitorHash, config, supabase),
         supabase,
       );
-      return withLiveSeason(live, result.bundle.country_day.journey_id, seasons, supabase);
+      return withRelaunchLifecycle(
+        await withLiveSeason(live, result.bundle.country_day.journey_id, seasons, supabase),
+        result.bundle.country_day.journey_id, supabase,
+      );
     }
     // No live day: a configured season's own scene, before it starts or after it ends.
     const idle = await seasonIdleSnapshot(seasons.phase, seasons.seasons, now, config, supabase);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { rolloverUtcHour } from "@/lib/config/server";
 import { prewarmJourney } from "@/lib/launch/prewarm-service";
 import { reconcileSeasonHolds, reconcileSeasonRefunds } from "@/lib/payments/season";
+import { reconcilePlacementHolds, reconcilePlacementRefunds } from "@/lib/payments/placements";
 import { seasonBoundaryHourAt } from "@/lib/season/clock";
 import { loadSeasons, reconcileSeasonsNow } from "@/lib/season/state";
 import { minuteReconciliationPlan } from "@/lib/story-clock/boundary";
@@ -30,10 +31,17 @@ export async function GET(request: NextRequest) {
     const seasons = supabase ? await reconcileSeasonsNow(supabase, now) : null;
     const holds = supabase ? await reconcileSeasonHolds(supabase, now) : null;
     const refunds = supabase ? await reconcileSeasonRefunds(supabase, now) : null;
+    const placementLifecycle = supabase
+      ? await supabase.rpc("reconcile_relaunch_journeys", { p_now: now.toISOString() })
+      : null;
+    const placementHolds = supabase ? await reconcilePlacementHolds(supabase, now) : null;
+    const placementRefunds = supabase ? await reconcilePlacementRefunds(supabase, now) : null;
     const prewarm = plan.prewarmDue
       ? await prewarmJourney(process.env.PRODUCTION_APP_URL || request.nextUrl.origin, now)
       : null;
-    return NextResponse.json({ ok: prewarm?.ok ?? true, boundary: plan.boundary.toISOString(), boundaryHour, rollover, seasons, holds, refunds, prewarm }, {
+    return NextResponse.json({ ok: prewarm?.ok ?? true, boundary: plan.boundary.toISOString(), boundaryHour,
+      rollover, seasons, holds, refunds, placementLifecycle: placementLifecycle?.data ?? null,
+      placementHolds, placementRefunds, prewarm }, {
       status: prewarm && !prewarm.ok ? 503 : 200,
       headers: { "Cache-Control": "no-store" },
     });

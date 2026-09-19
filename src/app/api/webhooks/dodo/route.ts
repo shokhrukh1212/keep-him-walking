@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseDodoWebhook, verifyStandardWebhook } from "@/lib/payments/dodo";
 import { handleDodoEvent } from "@/lib/payments/season";
+import { handlePlacementDodoEvent } from "@/lib/payments/placements";
 import { claimWebhookEvent, finishWebhookEvent } from "@/lib/payments/webhook-ledger";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { apiError, readLimitedText } from "@/lib/validation/http";
@@ -41,10 +42,12 @@ export async function POST(request: Request) {
   if (claim.state === "conflict") return apiError(409, "CONFLICT", "Provider event identity was reused with a different payload.");
   if (claim.state === "unavailable") return apiError(503, "UNAVAILABLE", "Webhook ledger unavailable.");
   try {
-    const outcome = await handleDodoEvent(supabase, event);
+    const placementOutcome = await handlePlacementDodoEvent(supabase, event);
+    const outcome = placementOutcome ?? await handleDodoEvent(supabase, event);
     await finishWebhookEvent(supabase, claim.id, outcome.status, {
       errorCode: outcome.errorCode,
-      seasonSponsorshipId: outcome.bookingId ?? null,
+      seasonSponsorshipId: "bookingId" in outcome ? outcome.bookingId ?? null : null,
+      journeySponsorOrderId: "orderId" in outcome ? outcome.orderId ?? null : null,
     });
     return NextResponse.json({ accepted: true, duplicate: false });
   } catch {

@@ -49,7 +49,9 @@ async function handleGet() {
       return rateLimitedResponse(RATE_LIMITS.bootstrapPublic.windowSeconds, "Too many refresh attempts.");
     }
     if (process.env.NODE_ENV !== "production") {
-      console.error("Live bootstrap failed", cause);
+      console.error("Live bootstrap failed", cause instanceof Error
+        ? { name: cause.name, message: cause.message, stack: cause.stack }
+        : cause);
     }
     return NextResponse.json(
       { code: "LIVE_UNAVAILABLE", error: "The live snapshot is temporarily unavailable." },

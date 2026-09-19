@@ -31,6 +31,23 @@ async function handlePost(request: NextRequest) {
   const limit = await consumeRateLimit(visitorHash, RATE_LIMITS.vote, now);
   if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSeconds, "Too many vote attempts.");
 
+  const { data: relaunchVote, error: relaunchVoteError } = await supabase.from("journey_name_votes")
+    .select("id").eq("id", parsed.data.voteId).maybeSingle();
+  if (relaunchVoteError) return NextResponse.json({ error: "Vote could not be accepted." }, { status: 409 });
+  if (relaunchVote) {
+    const result = await supabase.rpc("submit_journey_name_ballot", {
+      p_vote_id: parsed.data.voteId, p_option_id: parsed.data.optionId,
+      p_voter_hash: visitorHash, p_now: now.toISOString(),
+    });
+    if (result.error) return NextResponse.json({ error: "Vote could not be accepted." }, { status: 409 });
+    const row = result.data as { optionId?: string; totalBallots?: number };
+    trackServerEvent("vote_submitted", visitorHash, { vote_id: parsed.data.voteId, option_id: parsed.data.optionId });
+    const response = NextResponse.json({ accepted: true, idempotent: false,
+      selectedOptionId: row.optionId ?? parsed.data.optionId, totalBallots: Number(row.totalBallots ?? 0) });
+    attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
+    return response;
+  }
+
   const { data, error } = await supabase.rpc("submit_phase1_ballot", {
     p_vote_id: parsed.data.voteId,
     p_option_id: parsed.data.optionId,

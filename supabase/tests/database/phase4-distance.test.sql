@@ -21,6 +21,11 @@ insert into public.country_days (
   '2026-09-12T00:00:00Z', '2026-09-13T00:00:00Z', 'tashkent-v4', 'live'
 );
 
+-- The shared dev project can contain a later preview journey. This legacy bundle selects
+-- the latest eligible journey, so isolate the authority under test inside this transaction.
+update public.journeys set phase2_enabled = false
+where id <> '00000000-0000-4000-8000-000000000094';
+
 select has_column('public', 'journey_runtime', 'global_distance_metres', 'runtime stores authoritative metres');
 select has_column('public', 'journey_runtime', 'pace_rate', 'runtime stores the sampled pace');
 select is(public.walking_metres_per_second(), 1.5::double precision, 'he walks at one natural 1.5 metres per second');

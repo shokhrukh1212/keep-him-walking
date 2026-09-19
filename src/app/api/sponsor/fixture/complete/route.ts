@@ -5,7 +5,9 @@ import {
   seasonSaleCutoffHours,
 } from "@/lib/config/sponsorship";
 import { verifyFixtureToken } from "@/lib/payments/fixture";
+import { applyPlacementPayment } from "@/lib/payments/placements";
 import { applySeasonPayment } from "@/lib/payments/season";
+import { placementProviderProductId } from "@/lib/config/placements";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
 
@@ -23,6 +25,9 @@ export async function POST(request: NextRequest) {
   if (!claims || !supabase) return NextResponse.json({ error: "Invalid or expired fixture checkout." }, { status: 400 });
   if (claims.kind === "season") {
     return completeSeasonFixture(supabase, { ...claims, kind: "season" }, action);
+  }
+  if (claims.kind === "placement") {
+    return completePlacementFixture(supabase, { ...claims, kind: "placement" }, action);
   }
   // Day sponsorship fixtures rehearse daily mode only.
   if (!legacyPurchasesOpen()) return NextResponse.json({ error: "Fixture checkout is unavailable." }, { status: 404 });
@@ -58,6 +63,33 @@ export async function POST(request: NextRequest) {
     ? claims.returnUrl
     : new URL("/?fixture=cancelled", request.url).toString();
   return NextResponse.redirect(redirect, 303);
+}
+
+async function completePlacementFixture(
+  supabase: Supabase,
+  claims: { sponsorshipId: string; returnUrl: string; checkoutId?: string; kind: "placement" },
+  action: "confirm" | "cancel",
+) {
+  const now = new Date();
+  const { data: order, error } = await supabase.from("journey_sponsor_orders")
+    .select("id,journey_id,slot_id,tier,expected_price_cents,currency,provider_checkout_id,status")
+    .eq("id", claims.sponsorshipId).maybeSingle();
+  if (error || !order) return NextResponse.json({ error: "Unknown fixture checkout." }, { status: 404 });
+  if (action === "confirm") {
+    const checkoutId = claims.checkoutId ?? String(order.provider_checkout_id ?? `fixture_${order.id}`);
+    await applyPlacementPayment(supabase, "fixture", {
+      paymentId: `${checkoutId}_paid`, orderId: String(order.id), journeyId: String(order.journey_id),
+      slotId: String(order.slot_id), tier: order.tier as "regular" | "featured", checkoutId,
+      amountCents: Number(order.expected_price_cents), taxCents: 0, currency: String(order.currency),
+      customerEmail: null, succeeded: true,
+      productMatches: placementProviderProductId(order.tier as "regular" | "featured", "fixture").length > 0,
+    }, true, now);
+  } else {
+    await supabase.rpc("release_journey_sponsor_reservation", {
+      p_order_id: order.id, p_provider_terminal: true, p_reason: "cancelled", p_now: now.toISOString(),
+    });
+  }
+  return NextResponse.redirect(claims.returnUrl, 303);
 }
 
 /**

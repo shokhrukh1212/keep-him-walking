@@ -28,6 +28,8 @@ export const RATE_LIMITS = {
   seasonSponsorRequest: { action: "season_sponsor_request", limit: 3, windowSeconds: 3_600 },
   seasonSponsorRequestNetwork: { action: "season_sponsor_request_network", limit: 10, windowSeconds: 3_600 },
   seasonSponsorCheckout: { action: "season_sponsor_checkout", limit: 6, windowSeconds: 900 },
+  placementCheckout: { action: "placement_checkout", limit: 5, windowSeconds: 900 },
+  placementCheckoutNetwork: { action: "placement_checkout_network", limit: 20, windowSeconds: 900 },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 export async function consumeRateLimit(keyHash: string, policy: RateLimitPolicy, now = new Date()) {

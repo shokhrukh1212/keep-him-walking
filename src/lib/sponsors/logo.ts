@@ -18,7 +18,10 @@ export class SponsorLogoError extends Error {
  * at most 512 px. Re-encoding keeps pixels only, so metadata, scripts, SVG and
  * animation from the upload never reach a page.
  */
-export async function prepareSponsorLogo(bytes: Uint8Array): Promise<{ webp: Buffer; width: number; height: number }> {
+export async function prepareSponsorLogo(
+  bytes: Uint8Array,
+  options: { fit?: "crop" | "contain" } = {},
+): Promise<{ webp: Buffer; width: number; height: number }> {
   if (bytes.byteLength === 0 || bytes.byteLength > SPONSOR_LOGO_MAX_BYTES) throw new SponsorLogoError("LOGO_SIZE");
   let metadata: Awaited<ReturnType<ReturnType<typeof sharp>["metadata"]>>;
   try {
@@ -34,9 +37,12 @@ export async function prepareSponsorLogo(bytes: Uint8Array): Promise<{ webp: Buf
   if (width < MIN_EDGE || height < MIN_EDGE || width > MAX_EDGE || height > MAX_EDGE) {
     throw new SponsorLogoError("LOGO_DIMENSIONS");
   }
-  const webp = await sharp(bytes, { limitInputPixels: MAX_EDGE * MAX_EDGE })
-    .rotate()
-    .resize(512, 512, { fit: "inside", withoutEnlargement: true })
+  const pipeline = sharp(bytes, { limitInputPixels: MAX_EDGE * MAX_EDGE }).rotate();
+  const webp = await (options.fit === "crop"
+    ? pipeline.resize(512, 512, { fit: "cover", position: "centre" })
+    : options.fit === "contain"
+      ? pipeline.resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 }, withoutEnlargement: true })
+      : pipeline.resize(512, 512, { fit: "inside", withoutEnlargement: true }))
     .webp({ quality: 90, alphaQuality: 100 })
     .toBuffer();
   const output = await sharp(webp).metadata();

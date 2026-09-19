@@ -26,6 +26,9 @@ importers:
       '@vemetric/web':
         specifier: ^0.6.1
         version: 0.6.1
+      dodopayments-checkout:
+        specifier: ^1.9.9
+        version: 1.9.9
       next:
         specifier: ^16.3.3
         version: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -2073,6 +2076,10 @@ packages:
   doctrine@2.1.0:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
     engines: {node: '>=0.10.0'}
+
+  dodopayments-checkout@1.9.9:
+    resolution: {integrity: sha512-AgaAcer4x8gCWUK2waeTESIJc3/WiejogbCPbwkh5CIMWxLkAPIIAFy64q3qFYO/FNQ5xlM9uvLDNwJgXG/A4g==}
+    engines: {node: '>=18.0.0'}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -5549,6 +5556,8 @@ snapshots:
   doctrine@2.1.0:
     dependencies:
       esutils: 2.0.3
+
+  dodopayments-checkout@1.9.9: {}
 
   dom-accessibility-api@0.5.16: {}
 

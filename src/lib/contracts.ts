@@ -43,7 +43,8 @@ export type VoteView = {
    */
   kind: "destination" | "name" | "anniversary";
   opensAt: string;
-  closesAt: string;
+  /** Null for the waiting name vote, which closes atomically when the host launches. */
+  closesAt: string | null;
   status: "open" | "closed";
   totalBallots: number;
   selectedOptionId: string | null;
@@ -59,6 +60,38 @@ export type VoteView = {
     blurb: string | null;
     votes?: number;
   }>;
+};
+
+export type SponsorPlacementView = {
+  slotId: string;
+  tier: "regular" | "featured";
+  position: number;
+  priceCents: 5_000 | 10_000;
+  currency: "USD";
+  state: "available" | "held" | "occupied" | "closed";
+  placement: null | {
+    publicId: string;
+    name: string;
+    description: string;
+    logoUrl: string;
+    logoFit: "crop" | "contain";
+    websiteUrl: string;
+    views: number | null;
+  };
+};
+
+export type SponsorInventoryView = {
+  journeyId: string | null;
+  lifecycleState: "waiting" | "scheduled" | "live" | "ended";
+  scheduledStartAt: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  durationDays: 14;
+  regularFilled: number;
+  featuredFilled: boolean;
+  checkoutEnabled: boolean;
+  checkoutReason: "disabled" | "provider_unapproved" | "provider_unconfigured" | "test_mode_in_production" | null;
+  slots: SponsorPlacementView[];
 };
 
 export type LiveCountryView = {
@@ -168,7 +201,16 @@ export type BootstrapSnapshot = {
   refresh: { nextAt: string | null; afterMs: number; reason: "country_rollover" | "event" | "launch" | "none" };
   countryDay: CountryDayView;
   /** Season-level facts. travelerName is null until the Day-1 vote names him. */
-  journey: { travelerName: string | null; rolloverUtcHour: number };
+  journey: {
+    travelerName: string | null;
+    rolloverUtcHour: number;
+    /** New relaunch authority. Older/offline payloads may omit it. */
+    id?: string | null;
+    lifecycleState?: "waiting" | "scheduled" | "live" | "ended";
+    scheduledStartAt?: string | null;
+    startsAt?: string | null;
+    endsAt?: string | null;
+  };
   activeEvent: ScheduledEventView | null;
   nextEvent: ScheduledEventView | null;
   vote: VoteView | null;

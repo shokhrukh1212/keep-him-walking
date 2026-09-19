@@ -11,6 +11,7 @@ import { currentCountryDayForReactions } from "@/lib/reactions/current-day";
 import { reactionHttpStatus, reactionOutcome } from "@/lib/reactions/outcome";
 import { REACTION_COOLDOWN_SECONDS, REACTION_WINDOW_SECONDS } from "@/lib/reactions/threshold";
 import { clientAddress } from "@/lib/security/client-address";
+import { RELAUNCH_JOURNEY } from "@/lib/relaunch/config";
 
 function finiteOrNull(value: unknown): number | null {
   if (value === null || value === undefined) return null;
@@ -56,11 +57,34 @@ async function handlePost(request: NextRequest) {
     return NextResponse.json({ error: "Reactions are not configured." }, { status: 503 });
   }
   const now = new Date();
+  const visitor = visitorFromRequest(request);
+  const waiting = await supabase.from("journeys").select("id,lifecycle_state")
+    .eq("slug", RELAUNCH_JOURNEY.slug).in("lifecycle_state", ["waiting", "scheduled"]).maybeSingle();
+  if (waiting.error) return NextResponse.json({ error: "Reaction confirmation unavailable." }, { status: 503 });
+  if (waiting.data) {
+    const action = await supabase.rpc("submit_waiting_reaction", {
+      p_journey_id: waiting.data.id,
+      p_kind: parsed.data.kind,
+      p_visitor_hash: hashOpaqueValue(visitor.visitorId),
+      p_now: now.toISOString(),
+    });
+    if (action.error) {
+      const limited = action.error.message.toLowerCase().includes("rate limited");
+      return NextResponse.json({ error: limited ? "Please wait before asking again." : "Reaction could not be recorded." }, {
+        status: limited ? 429 : 503,
+        headers: limited ? { "Retry-After": "5" } : undefined,
+      });
+    }
+    const response = NextResponse.json({ accepted: true, kind: parsed.data.kind, waitingAction: action.data }, {
+      headers: { "Cache-Control": "no-store" },
+    });
+    attachVisitorCookie(response, visitor.visitorId, visitor.isNew);
+    return response;
+  }
   const countryDay = await currentCountryDayForReactions(now);
   if (!countryDay) {
     return NextResponse.json({ error: "No country-day is active." }, { status: 409 });
   }
-  const visitor = visitorFromRequest(request);
   // The limits, the watcher check and the count are one database call. The network
   // reaches the database only as a keyed hash, for its per-minute limit.
   const { data, error } = await supabase.rpc("submit_reaction_v2", {
