@@ -94,14 +94,4 @@ describe("GoalBar", () => {
     expect(screen.queryByText(/unavailable/)).not.toBeInTheDocument();
   });
 
-  it("can hide unconfirmed distance in a local recording rehearsal", () => {
-    const { container } = renderBar({
-      distanceMetres: null,
-      freshness: "unavailable",
-      hideDistance: true,
-    });
-    expect(screen.getByText("Walking to Canal Saint-Martin.")).toBeInTheDocument();
-    expect(container.querySelector(".goal-distance")).not.toBeInTheDocument();
-    expect(screen.queryByText(/distance unavailable/)).not.toBeInTheDocument();
-  });
 });

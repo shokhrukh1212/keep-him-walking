@@ -69,10 +69,3 @@ Dodo approval is owner-confirmed. The production project has the API key, webhoo
 live environment, approved dynamic-price product, provider selection, booking switch and
 approval switch. Checkout sends the server-owned placement amount and retains the existing
 signed webhook verification and payment read-back before fulfillment.
-
-## Launch-video rehearsal
-
-Run the local app and open `/recording`. It displays ten temporary sample products and
-“Sponsored by Postiz”, starts the traveler and scenery immediately, and stops after ten
-minutes. Refresh to restart. Nothing is written to sponsor inventory or journey progress;
-the route is unavailable in production, and `/` stays in the real waiting state.

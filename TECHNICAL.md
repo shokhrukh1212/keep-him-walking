@@ -3225,7 +3225,8 @@ transactions, while the old public auction page redirects to the featured fixed 
 
 The scene reads placement inventory from `/api/sponsor-placements`. At 900×720 or larger,
 five adaptive square tiles are rendered on each side; smaller or shorter viewports use one
-148×48 logical-card carousel with an inert duplicate visual track. Product profiles count
+continuously moving 148×48 logical-card carousel with an inert duplicate visual track
+(the operating system's reduced-motion preference still disables motion). Product profiles count
 only deliberate opens. The purchase dialog has URL, decoded/re-encoded logo, product name
 and description as its four product inputs, plus the required rights/policy acknowledgment.
 New logos always use the square-fill crop; there is no visitor-selectable fit mode. A submit
@@ -3234,16 +3235,12 @@ of presenting an inert checkout control.
 Coffee/supporter surfaces are parked behind `PUBLIC_SUPPORT_FEATURE_ENABLED`; historical
 data and reusable components are retained.
 
-Development exposes `/recording` for a ten-minute launch-video rehearsal. It overlays ten
-clearly non-persisted sample brands plus featured Postiz, advances a local presentation
-clock, and uses the approved walking gait without changing journey lifecycle, runtime,
-sponsor orders, or database inventory. The route returns 404 in production; refreshing it
-restarts the ten-minute rehearsal, while `/` remains the authoritative waiting experience.
-
 The waiting dialogue controller counts visible-page time, pauses new starts for dialogs and
 hidden tabs, gives persisted interactions/state changes priority, and uses only clips in the
-character manifest. The 20-line Paris pool is shuffled with category spacing and a small
-browser-local opener history. The arrival greeting is due at 2.5 seconds; ordinary beats
-start every 15 visible seconds and captions remain within 5–8 seconds. No compatible,
+character manifest. The 18-line Paris pool is shuffled with category spacing and a small
+browser-local opener history. Drink and photo are deliberately absent while he waits, and
+the reaction controls render only while the authoritative journey is walking. The arrival greeting
+is due at 2.5 seconds; ordinary beats start every 15 visible seconds and captions remain
+within 5–8 seconds. No compatible,
 performance-reviewed second-character cameo has been enabled, and no speech audio asset is
 claimed; the existing captions and mute behavior remain authoritative.

@@ -16,8 +16,6 @@ type Props = {
   seasonClock?: { where: string; when: string } | null;
   /** The intentional prelaunch: a preview scene. */
   preview?: boolean;
-  /** Development recording mode names itself instead of inventing a watcher count. */
-  audienceLabelOverride?: string | null;
   audienceOpen: boolean;
   onAudienceOpen: () => void;
   onJourneyOpen: () => void;
@@ -33,7 +31,6 @@ export function JourneyHud({
   weatherLabel = null,
   seasonClock = null,
   preview = false,
-  audienceLabelOverride,
   audienceOpen,
   onAudienceOpen,
   onJourneyOpen,
@@ -44,7 +41,7 @@ export function JourneyHud({
   // server has confirmed, because that is the count deciding whether he walks.
   // Nothing is shown while neither source has answered.
   const watching = peopleWatching(activeViewers, onlineVisitors);
-  const audienceLabel = audienceLabelOverride !== undefined ? audienceLabelOverride : watching === null
+  const audienceLabel = watching === null
     ? onlineVisitors === null ? "Live count unavailable" : null
     : `${watching} ${watching === 1 ? "person" : "people"} watching`;
   // The season clock carries the day number, so the headline names only the city.

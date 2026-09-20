@@ -24,8 +24,6 @@ export const PRELAUNCH_MONOLOGUES: readonly PrelaunchMonologueLine[] = [
   { id: "croissant", text: "I'm learning French. So far, every sentence ends in ‘croissant’.", action: "look_up", category: "ambient" },
   { id: "pavement", text: "This isn't a delay. It's a very thorough pavement inspection.", action: "rest", category: "rest" },
   { id: "wave", text: "I saw that wave. Very professional. Excellent wrist work.", action: "greet", category: "ambient" },
-  { id: "water", text: "Hydrated. Dramatic. Still waiting.", action: "drink", category: "ambient" },
-  { id: "photo", text: "Use the good angle. The one that makes me look well-traveled.", action: "photo_pose", category: "ambient" },
   { id: "route", text: "Checking the route again. Yes, it still begins with leaving.", action: "phone", category: "journey" },
   { id: "sponsor", text: "Building something? One of those little spots could be your product.", action: "talk", category: "sponsor", requires: { sponsorOpen: true }, fallback: "I have the route. I have the backpack. The host has the starting signal." },
   { id: "name-open", text: "The name vote is open. My passport is getting impatient.", action: "talk", category: "name" },

@@ -17,7 +17,6 @@ type Props = {
   currentPlaceIndex: number;
   secondsToNextVisit: number;
   waitingSummary?: string | null;
-  hideDistance?: boolean;
 };
 
 /**
@@ -30,7 +29,7 @@ export function GoalBar({
   walking, activityLabel, activityTone,
   distanceMetres, dailyGoalMetres, marathonMetres, freshness,
   placeCount, currentPlaceIndex, secondsToNextVisit,
-  waitingSummary = null, hideDistance = false,
+  waitingSummary = null,
 }: Props) {
   const [infoOpen, setInfoOpen] = useState(false);
   const infoId = useId();
@@ -76,7 +75,7 @@ export function GoalBar({
         <p className="journey-progress-secondary">{secondary}</p>
       </div>
       {/* Nothing has been walked before launch: no distance row, not even an "unavailable" one. */}
-      {activityTone === "prelaunch" || hideDistance ? null : <div className="goal-distance">
+      {activityTone === "prelaunch" ? null : <div className="goal-distance">
         <p className="goal-copy">
           <strong>{distanceLabel}</strong>
           <small className="goal-freshness" data-freshness={freshness}>{freshnessLabel}</small>

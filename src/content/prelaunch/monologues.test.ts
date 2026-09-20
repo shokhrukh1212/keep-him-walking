@@ -7,11 +7,11 @@ import { PRELAUNCH_MONOLOGUES, arrangePrelaunchMonologues } from "./monologues";
 const spoken = PRELAUNCH_MONOLOGUES.flatMap((line) => [line.text.replace("{filledRegular}", "10"), ...(line.fallback ? [line.fallback] : [])]);
 
 describe("Paris waiting monologues", () => {
-  it("contains the twenty reviewed core beats with stable identities and restrained sponsor copy", () => {
-    expect(PRELAUNCH_MONOLOGUES).toHaveLength(20);
+  it("contains the eighteen reviewed core beats with stable identities and restrained sponsor copy", () => {
+    expect(PRELAUNCH_MONOLOGUES).toHaveLength(18);
     expect(PRELAUNCH_MONOLOGUES[0]?.text).toBe("Oh, good. Company. I was about to interview that pigeon.");
     expect(PRELAUNCH_MONOLOGUES.at(-1)?.text).toBe("Come back for the first steps. I'd like witnesses.");
-    expect(new Set(PRELAUNCH_MONOLOGUES.map((line) => line.id)).size).toBe(20);
+    expect(new Set(PRELAUNCH_MONOLOGUES.map((line) => line.id)).size).toBe(18);
     expect(PRELAUNCH_MONOLOGUES.filter((line) => line.category === "sponsor").length).toBeLessThanOrEqual(4);
   });
 

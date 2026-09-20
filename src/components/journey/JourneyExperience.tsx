@@ -49,18 +49,15 @@ import {
 } from "@/lib/ui/panel-history";
 import { worldCommandForEncounter } from "@/lib/world/encounter-timeline";
 import { motionPhaseAt, motionSpeedForPhase } from "@/lib/world/motion-machine";
-import { scenePositionAt } from "@/lib/world/route-clock";
 import type { MotionTransition } from "@/lib/world/motion-machine";
 import { QUALITY_LIMITS } from "@/lib/world/quality-tier";
 import { placeRenditions, renditionRequestFor } from "@/lib/world/scene-assets";
-import type { RouteRuntime, SceneAssetState, WorldDiagnosticsSnapshot } from "@/lib/world/types";
-import { METRES_PER_SECOND } from "@/lib/traveler/pace";
+import type { SceneAssetState, WorldDiagnosticsSnapshot } from "@/lib/world/types";
 import { SceneStage } from "@/components/scene/SceneStage";
 import { EncounterDialogue } from "@/components/dialogue/EncounterDialogue";
 import { JourneyHud } from "@/components/hud/JourneyHud";
 import { CountryLeaderboardSheet } from "@/components/hud/CountryLeaderboardSheet";
 import { ReactionButtons } from "@/components/hud/ReactionButtons";
-import { WaitingReactionButtons } from "@/components/hud/WaitingReactionButtons";
 import { composeDayPhoto } from "@/lib/photos/capture";
 import type { CanvasCapture } from "@/components/traveler/ProductCharacterStage3D";
 import { SoundToggle } from "@/components/hud/SoundToggle";
@@ -106,8 +103,6 @@ import { placementDurationCopy } from "@/lib/relaunch/config";
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
-  /** Development-only launch-video rehearsal. It never changes journey authority. */
-  recordingMode?: boolean;
   previewDemoSponsor?: boolean;
   /** Non-production only: lets a prospect see their own logo on the patch. */
   allowDemoSponsorLogo?: boolean;
@@ -154,7 +149,7 @@ const EMPTY_SPONSOR_INVENTORY: SponsorInventoryView = {
   checkoutReason: "disabled", slots: [],
 };
 
-export function JourneyExperience({ initialSnapshot, recordingMode = false, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "inquiry", sponsorXUrl = null, datafastDashboardUrl = null, coffeeUrl = null }: Props) {
+export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false, allowDemoSponsorLogo = false, sponsorPriceCents = null, sponsorshipMode = "inquiry", sponsorXUrl = null, datafastDashboardUrl = null, coffeeUrl = null }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [heartbeatState, setHeartbeat] = useState<{
     countryDayId: string;
@@ -187,30 +182,6 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
   const [wakeCard, setWakeCard] = useState<WakeMoment | null>(null);
   const [actionReview,setActionReview]=useState<ActionReview>({action:"auto",startedAt:0});
   const [reviewNow,setReviewNow]=useState(0);
-  const [recordingRouteRuntime, setRecordingRouteRuntime] = useState<RouteRuntime | null>(null);
-  useEffect(() => {
-    if (!recordingMode) return;
-    let stop = 0;
-    const start = window.setTimeout(() => {
-      setRecordingRouteRuntime({
-        globalActiveSeconds: 0,
-        globalDistanceMetres: 0,
-        paceRate: 1,
-        authoritativeAt: new Date().toISOString(),
-        walking: true,
-      });
-      stop = window.setTimeout(() => {
-        setRecordingRouteRuntime({
-          globalActiveSeconds: 10 * 60,
-          globalDistanceMetres: 10 * 60 * METRES_PER_SECOND,
-          paceRate: 1,
-          authoritativeAt: new Date().toISOString(),
-          walking: false,
-        });
-      }, 10 * 60_000);
-    }, 0);
-    return () => { window.clearTimeout(start); window.clearTimeout(stop); };
-  }, [recordingMode]);
   useEffect(()=>{
     if(!previewDemoSponsor||actionReview.action==="auto")return;
     const timer=window.setInterval(()=>setReviewNow(performance.now()),100);
@@ -317,10 +288,10 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
   const qualityTier = useQualityTier(reducedMotion);
 
   const refreshSponsorInventory = useCallback(async () => {
-    const response = await fetch(recordingMode ? "/api/sponsor-placements?recording=1" : "/api/sponsor-placements", { cache: "no-store" }).catch(() => null);
+    const response = await fetch("/api/sponsor-placements", { cache: "no-store" }).catch(() => null);
     if (!response?.ok) return;
     setSponsorInventory(await response.json() as SponsorInventoryView);
-  }, [recordingMode]);
+  }, []);
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refreshSponsorInventory(), 0);
@@ -361,7 +332,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
 
   const openSponsorPlace = useCallback((place: SponsorPlace) => {
     setActivePlace(place);
-    if (!place.placement || place.placement.demo) return;
+    if (!place.placement) return;
     void fetch("/api/sponsor-placements/view", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ publicId: place.placement.publicId, eventId: crypto.randomUUID() }),
@@ -641,11 +612,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
   const waking = Boolean(authoritativeWalking
     && wakeBeat?.countryDayId === snapshot.countryDay.id
     && realNowMs < wakeBeatEndsAtMs);
-  // The development-only recording route uses the ordinary live-walk presentation
-  // without claiming or mutating a server-confirmed watcher lease.
-  const walking = recordingMode
-    ? recordingRouteRuntime?.walking === true
-    : authoritativeWalking && !waking;
+  const walking = authoritativeWalking && !waking;
   const wakeCountdown = waking
     ? Math.max(1, Math.ceil((wakeBeatEndsAtMs - realNowMs) / 1_000))
     : null;
@@ -733,18 +700,6 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
       ),
     );
-  const recordingRouteSeconds = recordingRouteRuntime === null
-    ? 0
-    : Math.min(10 * 60, recordingRouteRuntime.globalActiveSeconds + (
-        recordingRouteRuntime.walking
-          ? Math.max(0, (realNowMs - Date.parse(recordingRouteRuntime.authoritativeAt)) / 1_000)
-          : 0
-      ));
-  const presentedRouteSeconds = recordingMode ? recordingRouteSeconds : routeSeconds;
-  const presentedRoutePosition = recordingMode
-    ? scenePositionAt(snapshot.assets, presentedRouteSeconds)
-    : routePosition;
-  const presentedRouteRuntime = recordingRouteRuntime ?? routeRuntime;
   const {
     enabled: soundEnabled,
     available: soundAvailable,
@@ -772,7 +727,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
               ? "restore"
             : "dialogue";
   const baseWorldCommand = worldCommandForEncounter(encounterPhase, walking);
-  const activeRouteZone = snapshot.assets.route.zones[presentedRoutePosition.zoneIndex];
+  const activeRouteZone = snapshot.assets.route.zones[routePosition.zoneIndex];
   const eventStage = activeRouteZone?.eventStage;
   // When the crowd's photograph actually fires, the visitor who triggered it
   // composes the live frame and posts it. Everyone else just sees the flash.
@@ -788,7 +743,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
     // are normalized, so the crop frames him at any canvas size.
     const focus = {
       x: snapshot.assets.route.travelerViewportAnchor,
-      y: snapshot.assets.route.zones[presentedRoutePosition.zoneIndex]?.stage.groundLineY ?? 0.82,
+      y: snapshot.assets.route.zones[routePosition.zoneIndex]?.stage.groundLineY ?? 0.82,
     };
     void (async () => {
       const [world, character] = await Promise.all([
@@ -807,7 +762,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         body: blob,
       }).catch(() => null);
     })();
-  }, [crowdKind, distanceMetres, presentedRoutePosition.zoneIndex, snapshot.assets]);
+  }, [crowdKind, distanceMetres, routePosition.zoneIndex, snapshot.assets]);
 
   // The last few conversations everyone saw, kept after their rows age out.
   useEffect(() => {
@@ -991,7 +946,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
     return () => window.clearTimeout(timer);
   }, [experienceReady, modelWaitElapsed, puppetReady]);
   const { controller: previewMonologue, caption: previewCaption } = usePreviewMonologue({
-    active: preview && !recordingMode,
+    active: preview,
     cityName: snapshot.countryDay.cityName,
     seasonNumber: prelaunchSeasonNumber,
     lifecycleState: snapshot.journey.lifecycleState === "scheduled" ? "scheduled" : "waiting",
@@ -1046,13 +1001,13 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
     mood: activeLine?.mood ?? "neutral",
     // The preview and the empty-audience wait both face the viewer; only his root
     // turns, and his anchor never moves.
-    facing: !recordingMode && (preview || waitingForWatchers) ? "camera" : "right",
+    facing: preview || waitingForWatchers ? "camera" : "right",
     // Prelaunch only: the local monologue controller owns his pose. The live path never sees it.
-    preview: preview && !recordingMode ? previewMonologue : undefined,
+    preview: preview ? previewMonologue : undefined,
     walkingSpeed: worldCommand.speedFactor,
     walking,
     motionPhaseSeconds: Math.max(0, (realNowMs - motionTransition.changedAtMs) / 1_000),
-    routeRuntime: presentedRouteRuntime,
+    routeRuntime,
     motionSampleUntilMs: walking ? Number.POSITIVE_INFINITY : walkingLease.expiresAtMs,
     reducedMotion,
     presenceTtlMs:snapshot.presence.ttlSeconds*1000,
@@ -1161,11 +1116,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
     : sceneAssetState === "ready" || sceneAssetState === "retrying"
       ? renderedZone.label
       : null;
-  const walkingStatus: WalkingStatus = recordingMode
-    ? walking
-      ? { text: "Recording preview · Walking in Paris", tone: "walking" }
-      : { text: "Recording preview · Standing in Paris", tone: "stopped" }
-    : review
+  const walkingStatus: WalkingStatus = review
     ? { text: `Preview test · ${review.state.replaceAll("_", " ")}`, tone: review.moving ? "walking" : "stopped" }
     : walkingStatusLabel({
         journeyState: snapshot.journeyState,
@@ -1220,7 +1171,6 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
   const visitModalSceneReady = experienceReady && (puppetReady || worldFailed || modelWaitElapsed);
   const visitModalBlocked = openPanel !== null
     || activePlace !== null
-    || recordingMode
     // Loading, a failed read and the offline fallback are all states of their own.
     || loadingLive
     || bootstrapIssue !== null
@@ -1285,8 +1235,8 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         onWorldCaptureReady={registerWorldCapture}
         onCharacterCaptureReady={registerCharacterCapture}
         pack={snapshot.assets}
-        routeSeconds={presentedRouteSeconds}
-        routeRuntime={presentedRouteRuntime}
+        routeSeconds={routeSeconds}
+        routeRuntime={routeRuntime}
         command={worldCommand}
         qualityTier={qualityTier}
         reducedMotion={reducedMotion}
@@ -1311,8 +1261,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         onlineVisitors={onlineVisitors}
         status={connectionStatus}
         seasonClock={seasonClock}
-        preview={preview && !recordingMode}
-        audienceLabelOverride={recordingMode ? "Launch recording preview" : undefined}
+        preview={preview}
         audienceOpen={openPanel === "audience"}
         onAudienceOpen={() => showPanel("audience")}
         onJourneyOpen={() => showPanel("journey")}
@@ -1350,14 +1299,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
           {modelWaitElapsed ? "Still loading him — trying again. Today’s distance keeps counting." : "Loading the walk…"}
         </div>
       ) : null}
-      {preview ? <WaitingReactionButtons enabled={bootstrapIssue === null} onAccepted={(kind) => {
-        const beat = kind === "wave"
-          ? { id: `waiting-wave-${Date.now()}`, text: "I saw that wave. Very professional. Excellent wrist work.", clip: "greet" as const }
-          : kind === "water"
-            ? { id: `waiting-water-${Date.now()}`, text: "Hydrated. Dramatic. Still waiting.", clip: "drink" as const }
-            : { id: `waiting-photo-${Date.now()}`, text: "Use the good angle. The one that makes me look well-traveled.", clip: "photo_pose" as const };
-        previewMonologue.enqueuePriorityBeat(beat);
-      }} /> : snapshot.mode === "live" ? <ReactionButtons
+      {snapshot.mode === "live" && walking ? <ReactionButtons
         counts={heartbeat?.reactions.counts ?? snapshot.reactions.counts}
         activeViewers={activeViewers}
         enabled={snapshot.mode === "live" && connectionStatus === "live"}
@@ -1400,7 +1342,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
       >
         {/* Prelaunch only: his words. On a phone this band sits above the panel and keeps its
             room whether he speaks or not; the footer inset it adds keeps his feet clear of it. */}
-        {preview && !recordingMode ? <PreviewCaption caption={previewCaption} reducedMotion={reducedMotion} /> : null}
+        {preview ? <PreviewCaption caption={previewCaption} reducedMotion={reducedMotion} /> : null}
         <div className="journey-progress-region">
           <GoalBar
             walking={review ? review.moving : walking}
@@ -1411,10 +1353,9 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
             marathonMetres={snapshot.assets.marathonMetres}
             freshness={distanceFreshness}
             placeCount={places.length}
-            currentPlaceIndex={presentedRoutePosition.zoneIndex}
-            secondsToNextVisit={presentedRoutePosition.secondsToNextVisit}
+            currentPlaceIndex={routePosition.zoneIndex}
+            secondsToNextVisit={routePosition.secondsToNextVisit}
             waitingSummary={preview ? `${sponsorInventory.regularFilled}/10 sponsor spots filled${sponsorInventory.featuredFilled ? " · Featured filled" : " · Featured available"}` : null}
-            hideDistance={recordingMode}
           />
         </div>
         {/* One fixed slot for the whole season, beside the status and clear of him and the captions. */}
@@ -1436,7 +1377,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
             <span className="dock-label-long" aria-hidden="true">{sponsorLabel}</span>
             <span className="dock-label-short" aria-hidden="true">Sponsor</span>
           </button>}
-          {previewDemoSponsor && !recordingMode ? <label className="action-review-select">Preview action
+          {previewDemoSponsor ? <label className="action-review-select">Preview action
             <select aria-label="Preview action" value={actionReview.action} onChange={event=>{
               const now=performance.now();setReviewNow(now);
               setActionReview({action:event.target.value as ReviewAction,startedAt:now});
@@ -1457,7 +1398,6 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         <SponsorPlaceCarousel
           places={sponsorInventory.slots}
           reducedMotion={reducedMotion}
-          paused={openPanel !== null || activePlace !== null || placementStatus !== null}
           onOpen={openSponsorPlace}
         />
           <button
@@ -1489,9 +1429,9 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         <JourneyPanel
           section={panelLocation.section}
           places={places}
-          currentPlaceIndex={presentedRoutePosition.zoneIndex}
-          secondsToNextVisit={presentedRoutePosition.secondsToNextVisit}
-          visitSeconds={presentedRoutePosition.visitSeconds}
+          currentPlaceIndex={routePosition.zoneIndex}
+          secondsToNextVisit={routePosition.secondsToNextVisit}
+          visitSeconds={routePosition.visitSeconds}
           distanceMetres={confirmedDistance}
           dailyGoalMetres={snapshot.assets.dayRouteMetres}
           marathonMetres={snapshot.assets.marathonMetres}
@@ -1652,7 +1592,7 @@ export function JourneyExperience({ initialSnapshot, recordingMode = false, prev
         locomotionPhase={locomotionPhase}
         qualityTier={qualityTier}
         renderer={sceneRenderer}
-        authoritativeRouteSeconds={presentedRouteSeconds}
+        authoritativeRouteSeconds={routeSeconds}
       />
       <p className="sr-only" aria-live="polite">
         {activeLine && activeConversation
