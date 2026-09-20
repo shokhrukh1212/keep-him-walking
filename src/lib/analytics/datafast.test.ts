@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DATAFAST_API_ORIGIN,
+  DEFAULT_DATAFAST_PUBLIC_DASHBOARD_URL,
   DATAFAST_REVALIDATE_SECONDS,
   datafastAudienceUrls,
   fetchAudienceCounts,
@@ -80,7 +81,8 @@ describe("fetchAudienceCounts", () => {
 describe("publicDatafastDashboardUrl", () => {
   it("accepts only a public https DataFast page, never a private dashboard or the API", async () => {
     const { publicDatafastDashboardUrl } = await import("./datafast");
-    expect(publicDatafastDashboardUrl("https://datafa.st/share/keephimwalking.com")).toBe("https://datafa.st/share/keephimwalking.com");
+    expect(publicDatafastDashboardUrl(DEFAULT_DATAFAST_PUBLIC_DASHBOARD_URL)).toBe(DEFAULT_DATAFAST_PUBLIC_DASHBOARD_URL);
+    expect(DEFAULT_DATAFAST_PUBLIC_DASHBOARD_URL).toBe("https://datafa.st/share/6aa8486bad849b7fa76ed37d");
     expect(publicDatafastDashboardUrl("https://datafa.st/dashboard/abc")).toBeNull();
     expect(publicDatafastDashboardUrl("https://datafa.st/api/v1/analytics/overview")).toBeNull();
     expect(publicDatafastDashboardUrl("http://datafa.st/share/x")).toBeNull();

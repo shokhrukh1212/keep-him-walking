@@ -15,6 +15,7 @@ export type AudienceCounts = {
 };
 
 export const DATAFAST_API_ORIGIN = "https://datafa.st/api/v1";
+export const DEFAULT_DATAFAST_PUBLIC_DASHBOARD_URL = "https://datafa.st/share/6aa8486bad849b7fa76ed37d";
 
 /**
  * The first day DataFast recorded a visit for keephimwalking.com (Asia/Tashkent calendar),

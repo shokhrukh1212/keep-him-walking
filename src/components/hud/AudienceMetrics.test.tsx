@@ -8,11 +8,11 @@ const good = mergeAudienceRead(INITIAL_AUDIENCE_COUNTS, { online: 5, allTime: 12
 
 describe("AudienceMetrics", () => {
   it("shows both DataFast counts, the tracking start, the time and the public dashboard link", () => {
-    render(<AudienceMetrics counts={good} dashboardUrl="https://datafa.st/share/keephimwalking.com" formatTime={formatTime} />);
+    render(<AudienceMetrics counts={good} dashboardUrl="https://datafa.st/share/6aa8486bad849b7fa76ed37d" formatTime={formatTime} />);
     expect(screen.getByTestId("audience-active")).toHaveTextContent("5Active in the last 10 minutes");
     expect(screen.getByTestId("audience-all-time")).toHaveTextContent("1,234Unique visitors · all timesince 15 September 2026");
     expect(screen.getByTestId("audience-updated")).toHaveTextContent("Updated 10:00");
-    expect(screen.getByRole("link", { name: "View public analytics on DataFast ↗" })).toHaveAttribute("href", "https://datafa.st/share/keephimwalking.com");
+    expect(screen.getByRole("link", { name: "View public analytics on DataFast ↗" })).toHaveAttribute("href", "https://datafa.st/share/6aa8486bad849b7fa76ed37d");
   });
 
   it("keeps dated values when a refresh fails", () => {

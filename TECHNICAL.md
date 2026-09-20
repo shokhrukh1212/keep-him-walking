@@ -2537,12 +2537,14 @@ also renders and stores any missing immutable recap cards through the running ap
   - On 1 October, `src/content/anniversary/update.ts` supplies the owner-editable update.
   - The six waiting lines are in `src/content/prelaunch/monologues.ts`. `requires.before`
     drops dated lines on the synchronized clock (`controller.setWallClock`).
-  - Share buttons are `ShareOnXLink` (`x.com/intent/post` with encoded text and
-    `https://keephimwalking.com`).
+  - Journey and wake-card share buttons are `ShareOnXLink` (`x.com/intent/post` with
+    encoded text and `https://keephimwalking.com`). The audience modal has no share action.
   - The audience modal "People on the journey" shows DataFast cards (active in the last 10
     minutes; unique visitors all time since 15 Sep 2026) with dated last-good values and the
-    optional `DATAFAST_PUBLIC_DASHBOARD_URL` link. The header "N people watching" is unchanged
-    by owner decision.
+    public DataFast dashboard link. It defaults to
+    `https://datafa.st/share/6aa8486bad849b7fa76ed37d`; `DATAFAST_PUBLIC_DASHBOARD_URL` may override
+    it with another validated public DataFast share page. The header "N people watching" is
+    unchanged by owner decision.
 - **Sponsorship.** `SPONSORSHIP_MODE` defaults to `inquiry`: `SponsorInquiry` shows the
   proposed $50 offer, a disabled checkout and the X link. `/sponsors` has no form.
   `/api/season-sponsor/{requests,checkout,offer}` answer 404, the request status page renders
@@ -3017,7 +3019,7 @@ Runtime configuration (`serverRuntimeConfig()`):
 | `SPONSOR_RESERVATION_MINUTES` | 30 | Slot hold during checkout |
 | `SPONSOR_PAYMENT_PROVIDER` | `lemonsqueezy` | Or `fixture` |
 | `SPONSORSHIP_MODE` | `inquiry` | `inquiry` (X-only), `season` (request form + Dodo) or `daily` |
-| `DATAFAST_PUBLIC_DASHBOARD_URL` | unset | Public `https://datafa.st/…` dashboard linked from the audience modal |
+| `DATAFAST_PUBLIC_DASHBOARD_URL` | `https://datafa.st/share/6aa8486bad849b7fa76ed37d` | Optional override for the public `https://datafa.st/…` dashboard linked from the audience modal |
 | `SPONSOR_BOOKING_ENABLED` | unset / false | First half of the paid-booking fail-closed gate |
 | `SPONSOR_PROVIDER_APPROVED` | unset / false | Confirms the provider permits this offer and merchant |
 | `SPONSOR_PREMIUM_FULFILLED` | unset / false | Allows Premium only after bottle and café fulfillment is verified |

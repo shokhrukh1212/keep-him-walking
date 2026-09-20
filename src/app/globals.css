@@ -2652,7 +2652,6 @@ button:focus-visible,
 .recent-encounters p { font-size: .78rem; line-height: 1.4; }
 .country-sheet,
 .vote-panel { z-index: 31; }
-.audience-share { min-height: 44px; }
 
 @media (max-width: 760px) {
   .journey-hud {
@@ -2931,17 +2930,6 @@ button:focus-visible,
 }
 .overlay-modal .country-sheet-list li { font-size: 0.86rem; }
 .overlay-modal .audience-summary { margin: 0; line-height: 1.45; }
-.overlay-modal .audience-share {
-  justify-self: start;
-  min-height: 2.75rem;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 999px;
-  padding: 0.5rem 1rem;
-  background: rgb(255 255 255 / 7%);
-  color: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
 .vote-ballot { display: grid; gap: 0.5rem; }
 .vote-question { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.12rem; line-height: 1.3; }
 .vote-ballot .vote-options { margin: 0.5rem 0 0.25rem; }
@@ -3214,7 +3202,6 @@ textarea,
 .compact-dock .sponsor-invitation,
 .sound-toggle,
 .goal-info,
-.audience-share,
 .journey-actions > button,
 .journey-footer > button,
 .overlay-modal .postcard-control button,

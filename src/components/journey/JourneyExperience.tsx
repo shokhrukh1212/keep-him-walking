@@ -1572,7 +1572,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           waitingDuration={formatWaitDuration(waitedSeconds)}
           wakeCountdown={wakeCountdown}
           launchCountdown={startsIn}
-          shareText={shareText}
         />
       </OverlayModal>
 
