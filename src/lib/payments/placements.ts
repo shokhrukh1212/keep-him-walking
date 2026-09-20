@@ -17,6 +17,8 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import {
   DODO_PAYMENT_IN_PROGRESS,
   createDodoCheckout,
+  dodoCheckoutLinkExpired,
+  dodoCheckoutUrl,
   dodoEnvironment,
   dodoPlacementCheckoutBody,
   getDodoCheckout,
@@ -34,6 +36,55 @@ type Supabase = NonNullable<ReturnType<typeof getServerSupabase>>;
 function dodoOptions() {
   const apiKey = process.env.DODO_PAYMENTS_API_KEY;
   return apiKey ? { apiKey, environment: dodoEnvironment() } : null;
+}
+
+async function releasePlacementCheckout(supabase: Supabase, order: {
+  id: string; private_logo_path?: string | null;
+}, reason: string, now: Date): Promise<boolean> {
+  const released = await supabase.rpc("release_journey_sponsor_reservation", {
+    p_order_id: order.id, p_provider_terminal: true, p_reason: reason, p_now: now.toISOString(),
+  });
+  if (released.error) return false;
+  if (order.private_logo_path) {
+    await supabase.storage.from(serverRuntimeConfig().sponsorPrivateBucket).remove([order.private_logo_path]);
+  }
+  return true;
+}
+
+export async function placementCheckoutDisplayState(supabase: Supabase, order: {
+  id: string;
+  status: string;
+  provider: string;
+  provider_checkout_id: string | null;
+  private_logo_path: string | null;
+}, now = new Date()): Promise<{ status: string; checkoutUrl: string | null }> {
+  if (order.status !== "payment_pending" || order.provider !== "dodo" || !order.provider_checkout_id) {
+    return { status: order.status, checkoutUrl: null };
+  }
+  const options = dodoOptions();
+  if (!options) return { status: order.status, checkoutUrl: null };
+  try {
+    const checkout = await getDodoCheckout(order.provider_checkout_id, options);
+    if (checkout.paymentStatus === "requires_payment_method") {
+      const expired = await dodoCheckoutLinkExpired(order.provider_checkout_id, options);
+      if (expired) {
+        const released = await releasePlacementCheckout(supabase, order, "checkout_expired", now);
+        return { status: released ? "expired" : order.status, checkoutUrl: null };
+      }
+      return {
+        status: "checkout_incomplete",
+        checkoutUrl: dodoCheckoutUrl(order.provider_checkout_id, options.environment),
+      };
+    }
+    if (checkout.paymentStatus && checkout.paymentStatus !== "succeeded"
+      && !DODO_PAYMENT_IN_PROGRESS.has(checkout.paymentStatus)) {
+      const released = await releasePlacementCheckout(supabase, order, "checkout_expired", now);
+      return { status: released ? "expired" : order.status, checkoutUrl: null };
+    }
+  } catch {
+    // A provider read failure is not proof that payment cannot still arrive.
+  }
+  return { status: order.status, checkoutUrl: null };
 }
 
 export type PlacementCheckoutResult =
@@ -265,11 +316,13 @@ export async function handlePlacementDodoEvent(
 
 export async function reconcilePlacementHolds(supabase: Supabase, now = new Date()) {
   const { data, error } = await supabase.from("journey_sponsor_orders")
-    .select("id,tier,provider,provider_checkout_id,reservation_expires_at")
-    .in("status", ["reserved", "payment_pending"]).lte("reservation_expires_at", now.toISOString()).limit(50);
+    .select("id,tier,status,provider,provider_checkout_id,reservation_expires_at,private_logo_path")
+    .in("status", ["reserved", "payment_pending"]).limit(50);
   if (error) throw error;
   const summary = { released: 0, confirmed: 0, waiting: 0 };
   for (const order of data ?? []) {
+    const holdExpired = new Date(String(order.reservation_expires_at)).getTime() <= now.getTime();
+    if (!holdExpired && !(order.status === "payment_pending" && order.provider === "dodo")) continue;
     if (order.provider === "dodo" && order.provider_checkout_id) {
       const options = dodoOptions();
       if (!options) { summary.waiting += 1; continue; }
@@ -284,16 +337,21 @@ export async function reconcilePlacementHolds(supabase: Supabase, now = new Date
             continue;
           }
         }
-        if (checkout.paymentStatus && DODO_PAYMENT_IN_PROGRESS.has(checkout.paymentStatus)) {
+        if (checkout.paymentStatus === "requires_payment_method") {
+          const linkExpired = await dodoCheckoutLinkExpired(String(order.provider_checkout_id), options);
+          if (!linkExpired) {
+            summary.waiting += 1;
+            continue;
+          }
+        } else if (checkout.paymentStatus && DODO_PAYMENT_IN_PROGRESS.has(checkout.paymentStatus)) {
           summary.waiting += 1;
           continue;
         }
       } catch { summary.waiting += 1; continue; }
     }
-    const released = await supabase.rpc("release_journey_sponsor_reservation", {
-      p_order_id: order.id, p_provider_terminal: true, p_reason: "checkout_expired", p_now: now.toISOString(),
-    });
-    if (!released.error) summary.released += 1;
+    if (await releasePlacementCheckout(supabase, {
+      id: String(order.id), private_logo_path: order.private_logo_path,
+    }, "checkout_expired", now)) summary.released += 1;
   }
   return summary;
 }

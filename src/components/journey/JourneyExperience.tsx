@@ -177,6 +177,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const [activePlace, setActivePlace] = useState<SponsorPlace | null>(null);
   const [sponsorInventory, setSponsorInventory] = useState<SponsorInventoryView>(EMPTY_SPONSOR_INVENTORY);
   const [placementStatus, setPlacementStatus] = useState<string | null>(null);
+  const [placementCheckoutUrl, setPlacementCheckoutUrl] = useState<string | null>(null);
   const featuredPlace = sponsorInventory.slots.find((place) => place.tier === "featured") ?? null;
   const [wakeBeat, setWakeBeat] = useState<WakeMoment | null>(null);
   const [wakeCard, setWakeCard] = useState<WakeMoment | null>(null);
@@ -313,9 +314,16 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const readPlacementStatus = useCallback(async () => {
     const response = await fetch("/api/sponsor-placements/status", { cache: "no-store" }).catch(() => null);
     if (!response?.ok) return null;
-    const payload = await response.json() as { purchase: string | null; status?: string };
+    const payload = await response.json() as { purchase: string | null; status?: string; checkoutUrl?: string | null };
     if (!payload.purchase || !payload.status) return null;
+    if (["expired", "cancelled", "removed", "refunded"].includes(payload.status)) {
+      setPlacementStatus(null);
+      setPlacementCheckoutUrl(null);
+      void refreshSponsorInventory();
+      return payload.status;
+    }
     setPlacementStatus(payload.status);
+    setPlacementCheckoutUrl(payload.checkoutUrl ?? null);
     if (payload.status === "active") void refreshSponsorInventory();
     return payload.status;
   }, [refreshSponsorInventory]);
@@ -325,7 +333,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     return () => window.clearTimeout(initial);
   }, [readPlacementStatus]);
   useEffect(() => {
-    if (!placementStatus || !["reserved", "payment_pending", "paid_pending_publish"].includes(placementStatus)) return;
+    if (!placementStatus || !["reserved", "payment_pending", "checkout_incomplete", "paid_pending_publish"].includes(placementStatus)) return;
     const timer = window.setInterval(() => void readPlacementStatus(), 2_500);
     return () => window.clearInterval(timer);
   }, [placementStatus, readPlacementStatus]);
@@ -351,7 +359,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       const { DodoPayments } = await import("dodopayments-checkout");
       DodoPayments.Initialize({ mode: checkout.testMode ? "test" : "live", displayType: "overlay", onEvent: (event) => {
         if (event.event_type === "checkout.closed" || event.event_type === "checkout.error") {
-          setPlacementStatus("payment_pending");
+          setPlacementStatus("checkout_incomplete");
+          void readPlacementStatus();
+        }
+        if (event.event_type === "checkout.link_expired") {
           void readPlacementStatus();
         }
       } });
@@ -1539,14 +1550,18 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           onCheckout={(checkout) => void beginPlacementCheckout(checkout)} /> : null}
       </OverlayModal>
 
-      <OverlayModal open={placementStatus !== null} title={placementStatus === "active" ? "Your sponsor is live" : placementStatus === "pending_review" ? "Review in progress" : placementStatus === "checkout_error" ? "Checkout needs another try" : "Confirming your payment…"}
+      <OverlayModal open={placementStatus !== null} title={placementStatus === "active" ? "Your sponsor is live" : placementStatus === "pending_review" ? "Review in progress" : placementStatus === "checkout_incomplete" ? "Checkout not completed" : placementStatus === "checkout_error" ? "Checkout needs another try" : "Confirming your payment…"}
         eyebrow="Sponsor placement" onClose={() => setPlacementStatus(null)} testId="placement-status-modal">
         <div className="sponsor-place-panel">
           <p>{placementStatus === "active" ? "The placement is now visible on this journey."
             : placementStatus === "pending_review" ? "Payment is confirmed. The submitted content was flagged for owner review before publication."
             : placementStatus === "refund_required" || placementStatus === "refund_requested" ? "This placement could not be fulfilled. A full refund is being reconciled."
+            : placementStatus === "checkout_incomplete" ? "No payment was confirmed. You can resume the Dodo checkout while the link remains available, or close this message. The sponsor place is released automatically when the link expires."
             : placementStatus === "checkout_error" ? "Your draft remains in this browser. Close this message and try checkout again."
             : "We are waiting for verified confirmation from the payment provider. This page will update automatically."}</p>
+          {placementStatus === "checkout_incomplete" && placementCheckoutUrl
+            ? <a className="primary-button" href={placementCheckoutUrl}>Resume checkout</a>
+            : null}
         </div>
       </OverlayModal>
 

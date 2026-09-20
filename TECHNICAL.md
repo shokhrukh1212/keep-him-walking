@@ -3224,6 +3224,13 @@ server-owned USD 50 or USD 100 amount; separate tier product IDs remain supporte
 fixture is rejected in production and requires `SPONSOR_FIXTURE_SECRET` elsewhere. Legacy
 day/season webhook handlers and financial tables remain readable and process outstanding
 transactions, while the old public auction page redirects to the featured fixed placement.
+Closing an unpaid Dodo overlay is shown as an incomplete checkout, with a provider-derived
+resume link, rather than as payment confirmation. Dodo's checkout API continues to report
+`requires_payment_method` after its hosted link has expired, so the status route and hold
+reconciler also verify the provider-owned hosted page. Only its terminal `link-expired`
+destination authorizes release; provider-read failures keep the hold. Release frees the
+slot, removes the unreviewed private logo, clears the order cookie and closes the status
+dialog on the next client read.
 
 The scene reads placement inventory from `/api/sponsor-placements`. At 900×720 or larger,
 five adaptive square tiles are rendered on each side; smaller or shorter viewports use one

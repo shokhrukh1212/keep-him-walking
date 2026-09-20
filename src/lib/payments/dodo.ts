@@ -11,6 +11,11 @@ export const DODO_API_BASE = {
   live_mode: "https://live.dodopayments.com",
 } as const;
 
+export const DODO_CHECKOUT_BASE = {
+  test_mode: "https://test.checkout.dodopayments.com",
+  live_mode: "https://checkout.dodopayments.com",
+} as const;
+
 export type DodoEnvironment = keyof typeof DODO_API_BASE;
 
 export function dodoEnvironment(environment: Record<string, string | undefined> = process.env): DodoEnvironment {
@@ -249,6 +254,38 @@ export async function getDodoCheckout(
     paymentId: typeof payload.payment_id === "string" ? payload.payment_id : null,
     paymentStatus: typeof payload.payment_status === "string" ? payload.payment_status : null,
   };
+}
+
+/** A checkout URL derived only from a provider-issued session id. */
+export function dodoCheckoutUrl(sessionId: string, environment: DodoEnvironment): string | null {
+  if (!/^cks_[A-Za-z0-9_-]{1,120}$/.test(sessionId)) return null;
+  return `${DODO_CHECKOUT_BASE[environment]}/session/${sessionId}`;
+}
+
+/**
+ * Dodo's checkout read API keeps an expired, unpaid link in
+ * `requires_payment_method`. The hosted page is the provider-owned source that
+ * distinguishes an actionable checkout from its terminal `link-expired` page.
+ */
+export async function dodoCheckoutLinkExpired(
+  sessionId: string,
+  options: Pick<DodoOptions, "environment" | "fetchImpl">,
+): Promise<boolean> {
+  const checkoutUrl = dodoCheckoutUrl(sessionId, options.environment);
+  if (!checkoutUrl) return false;
+  try {
+    const response = await (options.fetchImpl ?? fetch)(checkoutUrl, {
+      method: "GET",
+      redirect: "follow",
+      headers: { Accept: "text/html" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const finalUrl = new URL(response.url || checkoutUrl);
+    return finalUrl.origin === DODO_CHECKOUT_BASE[options.environment]
+      && finalUrl.pathname.endsWith("/link-expired");
+  } catch {
+    return false;
+  }
 }
 
 export async function refundDodoPayment(

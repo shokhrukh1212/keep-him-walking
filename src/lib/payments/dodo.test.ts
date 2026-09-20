@@ -6,6 +6,8 @@ import {
   dodoCheckoutBody,
   dodoEnvironment,
   getDodoCheckout,
+  dodoCheckoutLinkExpired,
+  dodoCheckoutUrl,
   getDodoPayment,
   parseDodoWebhook,
   refundDodoPayment,
@@ -142,5 +144,28 @@ describe("Dodo API calls", () => {
     await expect(getDodoPayment("pay_1", options(fetchImpl))).resolves.toEqual({ payment_id: "pay_1" });
     await expect(getDodoCheckout("cks_1", options(fetchImpl))).resolves.toEqual({ paymentId: "pay_1", paymentStatus: "processing" });
     await expect(refundDodoPayment("pay_1", "season_unavailable", options(fetchImpl))).resolves.toEqual({ refundId: "ref_1", status: "pending" });
+  });
+
+  it("builds only trusted hosted checkout URLs and detects Dodo's expired page", async () => {
+    expect(dodoCheckoutUrl("cks_abc-123", "live_mode"))
+      .toBe("https://checkout.dodopayments.com/session/cks_abc-123");
+    expect(dodoCheckoutUrl("https://attacker.example", "live_mode")).toBeNull();
+    const expiredFetch = vi.fn(async () => new Response("", {
+      status: 200,
+      headers: { "Content-Type": "text/html" },
+    }));
+    const responseFetch = vi.fn(async () => {
+      const response = new Response("", { status: 200 });
+      Object.defineProperty(response, "url", {
+        value: "https://checkout.dodopayments.com/status/token/link-expired",
+      });
+      return response;
+    }) as unknown as typeof fetch;
+    await expect(dodoCheckoutLinkExpired("cks_abc", {
+      environment: "live_mode", fetchImpl: responseFetch,
+    })).resolves.toBe(true);
+    await expect(dodoCheckoutLinkExpired("bad", {
+      environment: "live_mode", fetchImpl: expiredFetch as unknown as typeof fetch,
+    })).resolves.toBe(false);
   });
 });
