@@ -13,11 +13,13 @@ type Props = {
   shareText: string;
   sceneReady: boolean;
   blocked: boolean;
+  /** The start moved from the first announcement: say why, in one line. */
+  planChanged?: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 /** One cheerful announcement per tab session, after the traveler is on screen. */
-export function LaunchCelebration({ startsAt, localTime, utcTime, shareText, sceneReady, blocked, onOpenChange }: Props) {
+export function LaunchCelebration({ startsAt, localTime, utcTime, shareText, sceneReady, blocked, planChanged = false, onOpenChange }: Props) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     onOpenChange(open);
@@ -44,6 +46,7 @@ export function LaunchCelebration({ startsAt, localTime, utcTime, shareText, sce
           {CONFETTI.map((piece) => <i key={piece} style={{ "--piece": piece } as CSSProperties} />)}
         </div>
         <p className="launch-celebration-time"><strong>{localTime}</strong> France time <span>· {utcTime} UTC</span></p>
+        {planChanged ? <p data-testid="launch-plan-changed"><strong>The plan changed.</strong> Milo packed fourteen postcards of Paris instead of a route, so he&apos;s taking one more hour to get ready.</p> : null}
         <p>His journey begins in Paris. Come back to watch—Milo walks while someone is here with him.</p>
         <div className="visit-modal-actions">
           <ShareOnXLink text={shareText} className="visit-modal-primary" />

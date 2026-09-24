@@ -1702,6 +1702,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         shareText={celebration.shareText}
         sceneReady={visitModalSceneReady}
         blocked={visitModalBlocked || visitModals.open !== null}
+        // The key includes the start, so moving it shows the modal again to every visitor.
+        planChanged={Date.parse(launchStartsAt) === Date.parse(PARIS_READINESS_EPISODE.actualLaunchAt)}
         onOpenChange={setCelebrationOpen}
       /> : null}
 

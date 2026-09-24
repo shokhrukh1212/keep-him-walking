@@ -45,4 +45,9 @@ describe("launch celebration", () => {
     await user.click(screen.getByRole("button", { name: "Keep watching" }));
     expect(screen.queryByTestId("launch-celebration")).toBeNull();
   });
+  it("says why the start moved, only when it did", async () => {
+    render(<><main className="journey-shell" /><LaunchCelebration {...props} startsAt="2026-09-24T18:00:00Z" planChanged /></>);
+    await act(async () => vi.advanceTimersByTimeAsync(1_000));
+    expect(screen.getByTestId("launch-plan-changed")).toHaveTextContent("The plan changed.");
+  });
 });
