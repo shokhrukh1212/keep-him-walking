@@ -1,0 +1,118 @@
+/* The Paris readiness episode: one compact stack above the status card. Same ink/cream
+   tokens as the preview caption; nothing here covers the dock or the footer links. */
+
+.episode,
+:global(.journey-footer-region) > .episode {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  max-width: 720px;
+  justify-self: center;
+  min-width: 0;
+  font-family: var(--font-copy, system-ui, -apple-system, "Segoe UI", sans-serif);
+}
+
+.card {
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  background: rgb(8 15 25 / 92%);
+  color: #f3e7c7;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.card strong {
+  font-size: 14px;
+}
+
+.card small {
+  opacity: 0.8;
+  font-size: 12px;
+}
+
+.line {
+  margin: 0;
+  border: 1px solid rgb(8 15 25 / 28%);
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  background: rgb(243 231 199 / 96%);
+  color: #080f19;
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+}
+
+.line[data-speaker="camille"] {
+  background: rgb(255 244 236 / 96%);
+  border-left: 4px solid #b5485a;
+}
+
+.speaker {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.poll {
+  display: grid;
+  gap: 4px;
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  background: rgb(8 15 25 / 92%);
+  color: #f3e7c7;
+  font-size: 13px;
+}
+
+.poll small {
+  opacity: 0.85;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.options button,
+.help,
+.share {
+  min-height: 36px;
+  border: 1px solid rgb(243 231 199 / 40%);
+  border-radius: 6px;
+  padding: 0.3rem 0.8rem;
+  background: rgb(243 231 199 / 12%);
+  color: #f3e7c7;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.options button[aria-pressed="true"] {
+  background: #f3e7c7;
+  color: #080f19;
+}
+
+.options button:disabled,
+.help:disabled {
+  cursor: default;
+}
+
+.share {
+  justify-self: center;
+  text-decoration: none;
+  display: inline-grid;
+  place-items: center;
+  background: rgb(8 15 25 / 92%);
+}
+
+@media (max-width: 600px) {
+  .card { font-size: 12px; padding: 0.4rem 0.65rem; }
+  .card small:last-child { display: none; }
+  .line { font-size: 14px; padding: 0.45rem 0.65rem; }
+}

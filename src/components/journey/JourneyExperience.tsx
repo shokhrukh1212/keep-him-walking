@@ -102,6 +102,9 @@ import { AnniversaryStory } from "@/components/journey/AnniversaryStory";
 import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 import { placementDurationCopy } from "@/lib/relaunch/config";
 import { launchCelebrationAt, prelaunchStartLine } from "@/lib/launch/celebration";
+import { ParisReadinessEpisode } from "@/components/episode/ParisReadinessEpisode";
+import { PARIS_READINESS_EPISODE, episodeViewAt } from "@/lib/episode/paris-readiness";
+import { PARIS_EPISODE_ENABLED } from "@/lib/config/features";
 
 // Sponsor promotion is parked for the free Paris launch. Keep the existing components
 // and payment records intact so historical purchases can still be serviced.
@@ -967,6 +970,24 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     const timer = window.setTimeout(() => setModelWaitElapsed(true), 20_000);
     return () => window.clearTimeout(timer);
   }, [experienceReady, modelWaitElapsed, puppetReady]);
+  // The Paris readiness episode reads the server's authoritative start and the synchronized
+  // clock. Development only: ?episodeClock=<ISO> shifts its clock and assumes the configured
+  // departure, so every phase can be inspected locally. Production ignores the parameter.
+  const [episodeDevOffsetMs] = useState(() => {
+    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return null;
+    const at = Date.parse(new URLSearchParams(window.location.search).get("episodeClock") ?? "");
+    return Number.isFinite(at) ? at - Date.now() : null;
+  });
+  const episodeNowMs = realNowMs + (episodeDevOffsetMs ?? 0);
+  const episodeLaunchStartsAt = episodeDevOffsetMs !== null
+    ? PARIS_READINESS_EPISODE.actualLaunchAt
+    : snapshot.journeyState !== "prelaunch"
+      ? null
+      : snapshot.prelaunch !== undefined ? snapshot.prelaunch?.startsAt ?? null : snapshot.countryDay.startsAt;
+  const episodePhase = preview
+    ? episodeViewAt(PARIS_READINESS_EPISODE, episodeNowMs, episodeLaunchStartsAt, {}, PARIS_EPISODE_ENABLED).phase
+    : "off";
+  const episodeSpeaking = episodePhase === "live" || episodePhase === "reveal";
   const { controller: previewMonologue, caption: previewCaption } = usePreviewMonologue({
     active: preview,
     cityName: snapshot.countryDay.cityName,
@@ -976,7 +997,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     sponsorsEnabled: SPONSOR_CONTROLS_ENABLED,
     modelReady: puppetReady || worldFailed || modelWaitElapsed,
     // A modal, or a journey read that just failed, holds back the next line; one under way finishes.
-    deferred: celebrationOpen || openPanel !== null || activePlace !== null || placementStatus !== null || bootstrapIssue !== null,
+    deferred: celebrationOpen || openPanel !== null || activePlace !== null || placementStatus !== null || bootstrapIssue !== null
+      // Never two speakers: the episode owns the words from its start, and after it he rests quietly.
+      || episodeSpeaking || episodePhase === "ended",
     reducedMotion,
     wallClockMs: realNowMs,
   });
@@ -1373,7 +1396,15 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       >
         {/* Prelaunch only: his words. On a phone this band sits above the panel and keeps its
             room whether he speaks or not; the footer inset it adds keeps his feet clear of it. */}
-        {preview ? <PreviewCaption caption={previewCaption} reducedMotion={reducedMotion} /> : null}
+        {preview ? <ParisReadinessEpisode
+          config={PARIS_READINESS_EPISODE}
+          enabled={PARIS_EPISODE_ENABLED}
+          nowMs={episodeNowMs}
+          launchStartsAt={episodeLaunchStartsAt}
+          travelerName={travelerName === "Traveler" ? "Milo" : travelerName}
+          hidden={celebrationOpen || openPanel !== null || activePlace !== null || placementStatus !== null}
+        /> : null}
+        {preview && !episodeSpeaking ? <PreviewCaption caption={previewCaption} reducedMotion={reducedMotion} /> : null}
         <div className="journey-progress-region">
           <GoalBar
             walking={review ? review.moving : walking}
