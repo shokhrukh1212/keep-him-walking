@@ -4870,6 +4870,45 @@ a:focus-visible,
 .journey-footer-region > .journey-help { top: auto; right: 0; bottom: 1.4rem; margin: 0; }
 .support-footer-line { min-height: 0; }
 
+/* Two equal, roomier controls after the paid sponsor button is parked. */
+.journey-footer-region .compact-dock { width: min(26rem, 100%); }
+.journey-footer-region .compact-dock > button {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  max-width: none;
+  min-height: 3.25rem;
+}
+
+.launch-celebration { position: relative; display: grid; gap: 1rem; overflow: hidden; }
+.launch-celebration > p,
+.launch-celebration > .visit-modal-actions { position: relative; z-index: 1; margin: 0; }
+.launch-celebration-time { padding-top: 3.4rem; color: var(--paper); font-family: var(--font-controls); }
+.launch-celebration-time strong { color: var(--gold); font-size: clamp(1.5rem, 5vw, 2.4rem); }
+.launch-celebration-time span { color: var(--muted); }
+.launch-confetti { position: absolute; inset: 0 0 auto; height: 7rem; pointer-events: none; }
+.launch-confetti i {
+  position: absolute;
+  top: -.8rem;
+  left: calc(var(--piece) * 4.15%);
+  width: .42rem;
+  height: .72rem;
+  border-radius: 2px;
+  background: var(--gold);
+  animation: launch-confetti-fall 3s ease-in infinite;
+  animation-delay: calc(var(--piece) * -110ms);
+}
+.launch-confetti i:nth-child(3n) { background: var(--brick); }
+.launch-confetti i:nth-child(3n + 1) { background: #8fc4bc; }
+@keyframes launch-confetti-fall {
+  from { opacity: 0; transform: translate3d(0, -1rem, 0) rotate(0deg); }
+  12% { opacity: 1; }
+  to { opacity: 0; transform: translate3d(1.5rem, 7rem, 0) rotate(540deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .launch-confetti i { animation: none; top: 1rem; opacity: .7; }
+}
+
 @media (max-height: 600px) {
   body:has(.journey-shell) { overflow-y: auto; }
   .journey-shell { min-height: 44rem; }

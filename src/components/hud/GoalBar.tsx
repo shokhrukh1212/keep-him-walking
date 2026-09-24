@@ -16,7 +16,7 @@ type Props = {
   placeCount: number;
   currentPlaceIndex: number;
   secondsToNextVisit: number;
-  waitingSummary?: string | null;
+  prelaunchMessage?: string | null;
 };
 
 /**
@@ -29,7 +29,7 @@ export function GoalBar({
   walking, activityLabel, activityTone,
   distanceMetres, dailyGoalMetres, marathonMetres, freshness,
   placeCount, currentPlaceIndex, secondsToNextVisit,
-  waitingSummary = null,
+  prelaunchMessage = null,
 }: Props) {
   const [infoOpen, setInfoOpen] = useState(false);
   const infoId = useId();
@@ -54,7 +54,7 @@ export function GoalBar({
         : "estimated";
   const punctuatedActivity = /[.!?…]$/.test(activityLabel) ? activityLabel : `${activityLabel}.`;
   const secondary = activityTone === "prelaunch"
-    ? `The journey starts when the host gives the signal.${waitingSummary ? ` · ${waitingSummary}` : ""}`
+    ? prelaunchMessage ?? "Milo is getting ready for his first walk."
     : activityTone === "complete"
       ? "Journey complete."
       : `${stop.text} · Next scene in ${eta.shortText}`;

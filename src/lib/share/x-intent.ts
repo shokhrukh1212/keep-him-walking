@@ -1,4 +1,4 @@
-import { ANNIVERSARY_JOURNEY, ANNIVERSARY_LABELS } from "@/lib/season/anniversary";
+import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 
 export const SHARE_SITE_URL = "https://keephimwalking.com";
 
@@ -19,7 +19,7 @@ export type ShareMoment =
 export function anniversaryShareText(moment: ShareMoment): string {
   const name = `Keep Him Walking: ${ANNIVERSARY_JOURNEY.title}`;
   if (moment.state === "prelaunch") {
-    return `${name}. A fourteen-day virtual journey starts ${ANNIVERSARY_LABELS.travelStarts}, and he only walks while someone is watching.`;
+    return "Milo is getting ready to start walking in Paris. Come watch the journey and keep him moving when it begins!";
   }
   if (moment.state === "live") {
     return `Day ${moment.dayNumber} of ${moment.totalDays} on ${name}. He's in ${moment.cityName} and only walks while someone is watching.`;

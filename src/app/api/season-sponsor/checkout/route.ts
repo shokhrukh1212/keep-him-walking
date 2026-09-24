@@ -8,11 +8,13 @@ import { startSeasonCheckout } from "@/lib/payments/season";
 import { RATE_LIMITS, consumeRateLimit, rateLimitedResponse } from "@/lib/security/rate-limit";
 import { apiError, readLimitedJson } from "@/lib/validation/http";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
+import { PUBLIC_SPONSOR_SALES_ENABLED } from "@/lib/config/features";
 
 const bodySchema = z.object({ publicId: z.uuid() }).strict();
 
 /** Payment for an approved request only; the server holds the season and names the price. */
 async function handlePost(request: NextRequest) {
+  if (!PUBLIC_SPONSOR_SALES_ENABLED) return apiError(503, "UNAVAILABLE", "New sponsor purchases are paused.");
   if (sponsorshipMode() !== "season") return apiError(404, "NOT_FOUND", "Season sponsorship is not offered.");
   if (!hasTrustedOrigin(request)) return apiError(403, "FORBIDDEN", "Untrusted request origin.");
   let body: unknown;

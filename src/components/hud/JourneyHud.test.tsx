@@ -77,4 +77,16 @@ describe("JourneyHud", () => {
     expect(screen.getByRole("button", { name: "9 people watching" })).toBeInTheDocument();
     expect(container.querySelector("header")).toHaveAttribute("data-confirmed-watchers", "2");
   });
+
+  it("shows the confirmed all-time visitor count in place of zero watching", () => {
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={0} onlineVisitors={0} allTimeVisitors={1234} status="scheduled" preview
+      audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
+    expect(screen.getByRole("button", { name: "1,234 visitors all time" })).toBeInTheDocument();
+  });
+
+  it("labels the last confirmed all-time count when analytics cannot refresh", () => {
+    render(<JourneyHud day={day} localTime="12:00" activeViewers={0} onlineVisitors={0} allTimeVisitors={1234} allTimeLastConfirmed status="offline" preview
+      audienceOpen={false} onAudienceOpen={noop} onJourneyOpen={noop} soundControl={sound} />);
+    expect(screen.getByRole("button", { name: "1,234 visitors all time · last confirmed" })).toBeInTheDocument();
+  });
 });

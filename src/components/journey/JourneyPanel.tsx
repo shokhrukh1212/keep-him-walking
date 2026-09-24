@@ -45,6 +45,7 @@ type Props = {
   /** The season sponsor's one row. */
   seasonSponsor?: ReactNode;
   sponsorLabel?: string;
+  showSponsorActions?: boolean;
   /** The season a prelaunch Journey is waiting for. */
   seasonNumber?: number;
   /** The X draft for this moment of the shared journey. */
@@ -58,7 +59,7 @@ export function JourneyPanel({
   distanceMetres, dailyGoalMetres, marathonMetres, freshness, onlineVisitors,
   prelaunch, seasonNumber = 1, contribution, streak, collectedToday, secondsToCollect,
   encounters, photos, tomorrow, ticket, wakeCard, postcard, seasonRecap, story, seasonSponsor,
-  sponsorLabel = "Sponsor a day", shareText, onSponsor,
+  sponsorLabel = "Sponsor a day", showSponsorActions = true, shareText, onSponsor,
 }: Props) {
   const ids = useId();
   const yourPart = useRef<HTMLElement>(null);
@@ -232,7 +233,7 @@ export function JourneyPanel({
 
       <footer className="journey-footer">
         <Image className="journey-brand" src="/logo-dark.png" alt="Keep Him Walking" width={256} height={54} />
-        <button type="button" onClick={onSponsor}>{sponsorLabel}</button>
+        {showSponsorActions ? <button type="button" onClick={onSponsor}>{sponsorLabel}</button> : null}
         <Link href="/privacy">Privacy</Link>
       </footer>
     </div>

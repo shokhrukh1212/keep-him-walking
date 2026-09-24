@@ -1,9 +1,6 @@
 import { permanentRedirect } from "next/navigation";
 
-/**
- * The former auction/season-sales page is retired. Historical receipt and request URLs
- * remain separate routes; the public entry point now opens the fixed featured placement.
- */
+/** New sponsor sales are paused; historical receipt and request URLs remain separate. */
 export default function SponsorsPage() {
-  permanentRedirect("/?placement=featured");
+  permanentRedirect("/");
 }

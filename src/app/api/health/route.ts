@@ -9,6 +9,7 @@ import { seasonCheckoutState, sponsorshipMode } from "@/lib/config/sponsorship";
 import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 import { seasonPhaseAt } from "@/lib/season/clock";
 import { loadSeasons } from "@/lib/season/state";
+import { PUBLIC_SPONSOR_SALES_ENABLED } from "@/lib/config/features";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
   let scenePackId = "paris-v3";
   let weather: unknown = null;
   let launchAt: string | null = null;
+  let relaunchState: string | null = null;
   let schedule: { seasonStartsAt: string | null; seasonEndsAt: string | null; totalDays: number | null; phase: string; matches: boolean } | null = null;
   if (supabase) {
     // The configured season against the owner's calendar in src/lib/season/anniversary.ts.
@@ -62,6 +64,24 @@ export async function GET(request: NextRequest) {
         const runtime = Array.isArray(day.journey_runtime) ? day.journey_runtime[0] : day.journey_runtime;
         weather = runtime?.weather ?? null;
       }
+    }
+    // The current Paris relaunch supersedes the historical Season 1 calendar in health.
+    const { data: relaunch } = await supabase.from("journeys")
+      .select("id,lifecycle_state,scheduled_start_at,launched_at,ends_at,total_days")
+      .eq("slug", "paris-relaunch").maybeSingle();
+    if (relaunch) {
+      relaunchState = relaunch.lifecycle_state;
+      launchAt = relaunch.scheduled_start_at ?? relaunch.launched_at ?? null;
+      const { data: firstPlan } = await supabase.from("journey_day_plans")
+        .select("scene_pack_id").eq("journey_id", relaunch.id).eq("day_number", 1).maybeSingle();
+      scenePackId = firstPlan?.scene_pack_id ?? scenePackId;
+      schedule = {
+        seasonStartsAt: launchAt,
+        seasonEndsAt: relaunch.ends_at ?? null,
+        totalDays: relaunch.total_days,
+        phase: relaunch.lifecycle_state ?? "waiting",
+        matches: relaunch.total_days === 14 && scenePackId === "paris-v3",
+      };
     }
   }
   const packs = registeredCountryPacks();
@@ -98,6 +118,10 @@ export async function GET(request: NextRequest) {
     && (!weatherEnabled || (weatherStatus === "fresh" && providers.weather === "ready"));
   const launchState = process.env.VERCEL_ENV === "production" && process.env.LAUNCH_ENABLED !== "true"
     ? "disabled"
+    : relaunchState === "waiting" ? "waiting"
+    : relaunchState === "scheduled" ? "armed"
+    : relaunchState === "live" ? "live"
+    : relaunchState === "ended" ? "completed"
     : schedule?.phase === "prelaunch" || (launchAt && new Date(launchAt).getTime() > now.getTime())
       ? "armed"
       : schedule?.phase === "completed" ? "completed" : "live";
@@ -110,10 +134,10 @@ export async function GET(request: NextRequest) {
       providers,
       launchModes: {
         freeValidation: ready ? "ready" : "blocked",
-        paidBooking: serverRuntimeConfig().sponsorBookingEnabled ? "configured_unverified" : "disabled",
+        paidBooking: PUBLIC_SPONSOR_SALES_ENABLED && serverRuntimeConfig().sponsorBookingEnabled ? "configured_unverified" : "disabled",
         sponsorshipMode: sponsorshipMode(),
         // Configured is not verified: a real test payment and webhook must still be run.
-        seasonCheckout: seasonCheckoutState().enabled ? "configured_unverified" : "request_only",
+        seasonCheckout: PUBLIC_SPONSOR_SALES_ENABLED && seasonCheckoutState().enabled ? "configured_unverified" : "request_only",
       },
       weather: { status: weatherStatus, ageSeconds: weatherAgeSeconds },
       assetBase: {

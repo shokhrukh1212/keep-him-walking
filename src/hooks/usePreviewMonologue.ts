@@ -12,6 +12,7 @@ type Options = {
   seasonNumber: number;
   lifecycleState?: "waiting" | "scheduled";
   filledRegular?: number | null;
+  sponsorsEnabled?: boolean;
   /** The traveler is ready, or this page will show no model at all. */
   modelReady: boolean;
   /** A modal is open or the journey could not be read: no new monologue starts. */
@@ -26,7 +27,7 @@ type Options = {
  * resizing or re-rendering never restarts the schedule; React hears from it only when the
  * caption actually changes.
  */
-export function usePreviewMonologue({ active, cityName, seasonNumber, lifecycleState, filledRegular, modelReady, deferred, reducedMotion, wallClockMs }: Options) {
+export function usePreviewMonologue({ active, cityName, seasonNumber, lifecycleState, filledRegular, sponsorsEnabled = true, modelReady, deferred, reducedMotion, wallClockMs }: Options) {
   const [controller] = useState(() => new PreviewMonologueController({
     lines: (() => {
       const key = "khw_prelaunch_openers_v1";
@@ -40,7 +41,7 @@ export function usePreviewMonologue({ active, cityName, seasonNumber, lifecycleS
       } catch { /* nonessential preference */ }
       return arranged;
     })(),
-    loadSponsorOpen: (season) => seasonSponsorshipOpen(season),
+    loadSponsorOpen: (season) => sponsorsEnabled ? seasonSponsorshipOpen(season) : Promise.resolve(false),
   }));
   useEffect(() => {
     controller.setWallClock(wallClockMs);

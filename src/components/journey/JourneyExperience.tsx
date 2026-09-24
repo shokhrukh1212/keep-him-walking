@@ -68,6 +68,7 @@ import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
 import { GoalBar } from "@/components/hud/GoalBar";
 import { JourneyPanel } from "@/components/journey/JourneyPanel";
 import { VisitModals } from "@/components/journey/VisitModals";
+import { LaunchCelebration } from "@/components/journey/LaunchCelebration";
 import { useVisitModals } from "@/hooks/useVisitModals";
 import { OverlayModal } from "@/components/ui/OverlayModal";
 import { PostcardButton } from "@/components/postcard/PostcardButton";
@@ -100,6 +101,11 @@ import { placeName, type SponsorPlace } from "@/lib/sponsors/places";
 import { AnniversaryStory } from "@/components/journey/AnniversaryStory";
 import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 import { placementDurationCopy } from "@/lib/relaunch/config";
+import { launchCelebrationAt, prelaunchStartLine } from "@/lib/launch/celebration";
+
+// Sponsor promotion is parked for the free Paris launch. Keep the existing components
+// and payment records intact so historical purchases can still be serviced.
+const SPONSOR_CONTROLS_ENABLED = false;
 
 type Props = {
   initialSnapshot: BootstrapSnapshot;
@@ -295,12 +301,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   }, []);
 
   useEffect(() => {
+    if (!SPONSOR_CONTROLS_ENABLED) return;
     const initial = window.setTimeout(() => void refreshSponsorInventory(), 0);
     const timer = window.setInterval(() => void refreshSponsorInventory(), 5_000);
     return () => { window.clearTimeout(initial); window.clearInterval(timer); };
   }, [refreshSponsorInventory]);
 
   useEffect(() => {
+    if (!SPONSOR_CONTROLS_ENABLED) return;
     if (sponsorInventory.slots.length === 0) return;
     const url = new URL(window.location.href);
     if (url.searchParams.get("placement") !== "featured") return;
@@ -339,6 +347,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   }, [placementStatus, readPlacementStatus]);
 
   const openSponsorPlace = useCallback((place: SponsorPlace) => {
+    if (!SPONSOR_CONTROLS_ENABLED) return;
     setActivePlace(place);
     if (!place.placement) return;
     void fetch("/api/sponsor-placements/view", {
@@ -384,6 +393,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
    * sponsor modal to open; inquiry and daily mode keep theirs.
    */
   const openSponsor = useCallback(() => {
+    if (!SPONSOR_CONTROLS_ENABLED) return;
     if (featuredPlace) openSponsorPlace(featuredPlace);
     else if (sponsorshipMode === "season") window.location.assign("/sponsors#request");
     else showPanel("sponsor");
@@ -948,6 +958,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const preview = snapshot.mode === "prelaunch";
   const prelaunchSeasonNumber = snapshot.prelaunch?.seasonNumber ?? snapshot.season?.number ?? 1;
   const [worldFailed, setWorldFailed] = useState(false);
+  const [celebrationOpen, setCelebrationOpen] = useState(false);
   // A model that never arrives must not silence him in the preview, and must not
   // leave a live visitor reading "Loading the walk…" at an empty pavement either.
   const [modelWaitElapsed, setModelWaitElapsed] = useState(false);
@@ -961,10 +972,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     cityName: snapshot.countryDay.cityName,
     seasonNumber: prelaunchSeasonNumber,
     lifecycleState: snapshot.journey.lifecycleState === "scheduled" ? "scheduled" : "waiting",
-    filledRegular: sponsorInventory.journeyId ? sponsorInventory.regularFilled : null,
+    filledRegular: SPONSOR_CONTROLS_ENABLED && sponsorInventory.journeyId ? sponsorInventory.regularFilled : null,
+    sponsorsEnabled: SPONSOR_CONTROLS_ENABLED,
     modelReady: puppetReady || worldFailed || modelWaitElapsed,
     // A modal, or a journey read that just failed, holds back the next line; one under way finishes.
-    deferred: openPanel !== null || activePlace !== null || placementStatus !== null || bootstrapIssue !== null,
+    deferred: celebrationOpen || openPanel !== null || activePlace !== null || placementStatus !== null || bootstrapIssue !== null,
     reducedMotion,
     wallClockMs: realNowMs,
   });
@@ -977,7 +989,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     });
   }, [preview, previewMonologue, visitorIsNew]);
   useEffect(() => {
-    if (!preview) return;
+    if (!preview || !SPONSOR_CONTROLS_ENABLED) return;
     const previous = waitingStateBeats.current.filled;
     waitingStateBeats.current.filled = sponsorInventory.regularFilled;
     if (previous !== null && sponsorInventory.regularFilled > previous) {
@@ -1105,7 +1117,13 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   );
 
   // One X draft for this moment of the shared journey; it names no count and no personal claim.
-  const shareText = anniversaryShareText(snapshot.journeyState === "prelaunch"
+  const launchStartsAt = snapshot.journeyState !== "prelaunch"
+    ? null
+    : snapshot.prelaunch !== undefined ? snapshot.prelaunch?.startsAt ?? null : snapshot.countryDay.startsAt;
+  const celebration = snapshot.mode === "prelaunch"
+    ? launchCelebrationAt(launchStartsAt, realNowMs, snapshot.countryDay.timeZone)
+    : null;
+  const shareText = celebration?.shareText ?? anniversaryShareText(snapshot.journeyState === "prelaunch"
     ? { state: "prelaunch" }
     : snapshot.journeyState === "completed"
       ? { state: "completed" }
@@ -1116,9 +1134,6 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         cityName: snapshot.countryDay.cityName,
       });
   // Only a start the server really configured is counted down. Older payloads carry it on the day.
-  const launchStartsAt = snapshot.journeyState !== "prelaunch"
-    ? null
-    : snapshot.prelaunch !== undefined ? snapshot.prelaunch?.startsAt ?? null : snapshot.countryDay.startsAt;
   const startsIn = launchStartsAt ? launchCountdown(Date.parse(launchStartsAt), realNowMs) : null;
   const tomorrow = snapshot.tomorrow ?? null;
   // The status line names the place only once its painting is really on screen.
@@ -1181,6 +1196,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   // drawn, or the attempt has been given up on rather than left loading for ever.
   const visitModalSceneReady = experienceReady && (puppetReady || worldFailed || modelWaitElapsed);
   const visitModalBlocked = openPanel !== null
+    || celebrationOpen
     || activePlace !== null
     // Loading, a failed read and the offline fallback are all states of their own.
     || loadingLive
@@ -1190,11 +1206,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     || activeLine !== null
     || waking;
   const visitModals = useVisitModals({
-    sceneReady: visitModalSceneReady,
+    sceneReady: visitModalSceneReady && celebration === null,
     blocked: visitModalBlocked,
     // "You kept him walking" is only true of a live day; a preview and a finished
     // season are never asked for support on a walk that is not happening.
-    supportEligible: snapshot.mode === "live" && snapshot.journeyState === "live",
+    supportEligible: SPONSOR_CONTROLS_ENABLED && snapshot.mode === "live" && snapshot.journeyState === "live",
     returningVisitor: visitorIsNew === null ? null : !visitorIsNew,
   });
   // Where he is, worded for the state the status line is already naming.
@@ -1270,6 +1286,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           : null}
         activeViewers={activeViewers}
         onlineVisitors={onlineVisitors}
+        allTimeVisitors={audienceCounts.metrics.allTime?.value ?? null}
+        allTimeLastConfirmed={audienceCounts.failedAt !== null}
         status={connectionStatus}
         seasonClock={seasonClock}
         preview={preview}
@@ -1287,8 +1305,10 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       />
       {/* The ten sponsor places. Down both edges on a desktop screen; on a phone the
           same ten ride in one row above the footer instead, and these are hidden. */}
-      <SponsorRail places={sponsorInventory.slots} side="left" onOpen={openSponsorPlace} />
-      <SponsorRail places={sponsorInventory.slots} side="right" onOpen={openSponsorPlace} />
+      {SPONSOR_CONTROLS_ENABLED ? <>
+        <SponsorRail places={sponsorInventory.slots} side="left" onOpen={openSponsorPlace} />
+        <SponsorRail places={sponsorInventory.slots} side="right" onOpen={openSponsorPlace} />
+      </> : null}
       {loadingLive ? <div className="connection-banner">Connecting to the shared journey…</div> : null}
       {snapshot.mode === "offline_preview" && !loadingLive ? (
         <div className="connection-banner offline" role="status">
@@ -1331,7 +1351,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           watching, the line that says why he is standing still. No resident portrait
           belongs beside that one, because nobody is talking to him. */}
       <EncounterDialogue
-        line={openPanel !== null || activePlace !== null || placementStatus !== null ? null : review ? ["talk","listen","greet","goodbye"].includes(review.state)
+        line={celebrationOpen || openPanel !== null || activePlace !== null || placementStatus !== null ? null : review ? ["talk","listen","greet","goodbye"].includes(review.state)
           ? {speaker:review.state==="listen"?"npc":"traveler",text:"Local animation test — this does not change the shared journey.",mood:"neutral"}:null : activeLine ?? spokenWaitingLine}
         speakerLabel={activeLine && activeConversation
           ? activeLine.speaker === "npc"
@@ -1366,15 +1386,15 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             placeCount={places.length}
             currentPlaceIndex={routePosition.zoneIndex}
             secondsToNextVisit={routePosition.secondsToNextVisit}
-            waitingSummary={preview ? `${sponsorInventory.regularFilled}/10 sponsor spots filled${sponsorInventory.featuredFilled ? " · Featured filled" : " · Featured available"}` : null}
+            prelaunchMessage={preview ? prelaunchStartLine(launchStartsAt, snapshot.countryDay.timeZone) : null}
           />
         </div>
         {/* One fixed slot for the whole season, beside the status and clear of him and the captions. */}
-        {liveSeasonSponsor ? <SeasonSponsorLine sponsor={liveSeasonSponsor} /> : null}
+        {SPONSOR_CONTROLS_ENABLED && liveSeasonSponsor ? <SeasonSponsorLine sponsor={liveSeasonSponsor} /> : null}
         {season?.state === "completed" ? <SeasonCompleteCard season={season} sponsor={snapshot.seasonSponsor ?? null} /> : null}
         <section className="compact-dock" data-hud-region="dock" aria-label="Journey controls">
           {/* The day sponsor card belongs to daily mode; a season sponsor has its own line. */}
-          {featuredPlace ? <button className="sponsor-invitation featured-sponsor-button" data-hud-region="sponsor" type="button" aria-haspopup="dialog"
+          {SPONSOR_CONTROLS_ENABLED ? (featuredPlace ? <button className="sponsor-invitation featured-sponsor-button" data-hud-region="sponsor" type="button" aria-haspopup="dialog"
             aria-label={featuredPlace.placement ? `Sponsored by ${featuredPlace.placement.name}` : "Become the featured sponsor for $100"}
             disabled={featuredPlace.state !== "available" && !featuredPlace.placement} onClick={() => openSponsorPlace(featuredPlace)}>
             {featuredPlace.placement ? <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={featuredPlace.placement.logoUrl} alt="" /><span>Sponsored by {featuredPlace.placement.name}</span></>
@@ -1387,7 +1407,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           </aside> : <button className="sponsor-invitation" data-hud-region="sponsor" type="button" aria-haspopup={sponsorshipMode === "season" ? undefined : "dialog"} aria-label={sponsorLabel} onClick={openSponsor}>
             <span className="dock-label-long" aria-hidden="true">{sponsorLabel}</span>
             <span className="dock-label-short" aria-hidden="true">Sponsor</span>
-          </button>}
+          </button>) : null}
           {previewDemoSponsor ? <label className="action-review-select">Preview action
             <select aria-label="Preview action" value={actionReview.action} onChange={event=>{
               const now=performance.now();setReviewNow(now);
@@ -1406,11 +1426,11 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             has no room out there and shows no mark. */}
         {/* Phone only: the ten places the desktop rails carry, in one drifting row.
             It sits in the space the coffee and supporters row used to take. */}
-        <SponsorPlaceCarousel
+        {SPONSOR_CONTROLS_ENABLED ? <SponsorPlaceCarousel
           places={sponsorInventory.slots}
           reducedMotion={reducedMotion}
           onOpen={openSponsorPlace}
-        />
+        /> : null}
           <button
             className="journey-help"
             type="button"
@@ -1496,7 +1516,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
               onSponsor={openSponsor}
             />
           ) : null}
-          seasonSponsor={snapshot.seasonSponsor ? <SeasonSponsorRow sponsor={snapshot.seasonSponsor} /> : null}
+          seasonSponsor={SPONSOR_CONTROLS_ENABLED && snapshot.seasonSponsor ? <SeasonSponsorRow sponsor={snapshot.seasonSponsor} /> : null}
+          showSponsorActions={SPONSOR_CONTROLS_ENABLED}
           sponsorLabel={sponsorshipMode === "daily" ? "Sponsor a day" : "Sponsor a season"}
           shareText={shareText}
           onSponsor={openSponsor}
@@ -1504,7 +1525,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       </OverlayModal>
 
       <OverlayModal
-        open={openPanel === "sponsor" && sponsorshipMode !== "season"}
+        open={SPONSOR_CONTROLS_ENABLED && openPanel === "sponsor" && sponsorshipMode !== "season"}
         title={sponsorshipMode === "daily" ? "Sponsor a day" : "Sponsor a season"}
         eyebrow="Support the journey"
         onClose={closePanel}
@@ -1534,7 +1555,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
 
       {/* One modal for all ten places: what the product is, or what the place costs. */}
       <OverlayModal
-        open={activePlace !== null}
+        open={SPONSOR_CONTROLS_ENABLED && activePlace !== null}
         title={activePlace?.placement ? activePlace.placement.name : activePlace?.tier === "featured" ? "Become the featured sponsor" : activePlace ? "Sponsor this journey" : ""}
         eyebrow={activePlace
           ? activePlace.placement
@@ -1600,6 +1621,15 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         onJourney={() => showPanel("journey")}
         onSponsor={openSponsor}
       />
+      {celebration && launchStartsAt ? <LaunchCelebration
+        startsAt={launchStartsAt}
+        localTime={celebration.localTime}
+        utcTime={celebration.utcTime}
+        shareText={celebration.shareText}
+        sceneReady={visitModalSceneReady}
+        blocked={visitModalBlocked || visitModals.open !== null}
+        onOpenChange={setCelebrationOpen}
+      /> : null}
 
       <WorldDiagnostics
         snapshot={worldDiagnostics}

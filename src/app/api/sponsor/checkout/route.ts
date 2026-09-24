@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PUBLIC_SPONSOR_SALES_ENABLED } from "@/lib/config/features";
 import { trackServerEvent } from "@/lib/analytics/server";
 import { visitorFromRequest, attachVisitorCookie } from "@/lib/identity/cookie";
 import { hashOpaqueValue } from "@/lib/identity/server";
@@ -11,6 +12,7 @@ import { apiError, readLimitedJson } from "@/lib/validation/http";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
 
 export async function POST(request: NextRequest) {
+  if (!PUBLIC_SPONSOR_SALES_ENABLED) return NextResponse.json({ error: { code: "UNAVAILABLE", message: "New sponsor purchases are paused." } }, { status: 503 });
   // Season mode sells one season, never a day: a direct request cannot buy one.
   if (!legacyPurchasesOpen()) return apiError(404, "NOT_FOUND", "Day sponsorship is not offered.");
   if (!hasTrustedOrigin(request)) return apiError(403, "FORBIDDEN", "Untrusted request origin.");

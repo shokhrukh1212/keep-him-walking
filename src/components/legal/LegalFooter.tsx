@@ -3,9 +3,10 @@ import Link from "next/link";
 const POLICY_LINKS = [
   ["/terms", "Terms"],
   ["/privacy", "Privacy"],
-  ["/refund-policy", "Refunds & cancellation"],
-  ["/sponsor-terms", "Sponsor terms"],
-  ["/content-moderation", "Content moderation"],
+  // Paid-placement policies remain at their URLs for historical agreements.
+  // ["/refund-policy", "Refunds & cancellation"],
+  // ["/sponsor-terms", "Sponsor terms"],
+  // ["/content-moderation", "Content moderation"],
   ["/faq", "FAQ"],
   ["/contact", "Contact & support"],
 ] as const;

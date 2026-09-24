@@ -17,7 +17,7 @@ describe("Share on X", () => {
       anniversaryShareText({ state: "live", dayNumber: 3, totalDays: 14, cityName: "Prague" }),
       anniversaryShareText({ state: "completed" }),
     ];
-    expect(texts[0]).toContain("starts September 17");
+    expect(texts[0]).toContain("Milo is getting ready to start walking in Paris");
     expect(texts[1]).toBe("Day 3 of 14 on Keep Him Walking: The Anniversary Journey. He's in Prague and only walks while someone is watching.");
     for (const text of texts) {
       expect(text).not.toMatch(/\b(I|I'm|my|me|posted|watchers?|viewers?|people|km|hours?|minutes?)\b/i);

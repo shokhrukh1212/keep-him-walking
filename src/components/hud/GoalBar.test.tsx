@@ -89,7 +89,7 @@ describe("GoalBar", () => {
       freshness: "unavailable",
     });
     expect(screen.getByText("Season 1 is preparing to begin.")).toBeInTheDocument();
-    expect(screen.getByText("The journey starts when the host gives the signal.")).toBeInTheDocument();
+    expect(screen.getByText("Milo is getting ready for his first walk.")).toBeInTheDocument();
     expect(container.querySelector(".goal-distance")).not.toBeInTheDocument();
     expect(screen.queryByText(/unavailable/)).not.toBeInTheDocument();
   });

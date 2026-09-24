@@ -9,6 +9,10 @@ type Props = {
   activeViewers: number | null;
   /** DataFast's people with the site open: undefined until known, null when unavailable. */
   onlineVisitors: number | null | undefined;
+  /** DataFast's last confirmed all-time unique visitor count. */
+  allTimeVisitors?: number | null;
+  /** The analytics read failed after this all-time number was confirmed. */
+  allTimeLastConfirmed?: boolean;
   status: ConnectionStatus;
   /** Real weather for the city, or null when nothing is confirmed. */
   weatherLabel?: string | null;
@@ -27,6 +31,8 @@ export function JourneyHud({
   localTime,
   activeViewers,
   onlineVisitors,
+  allTimeVisitors = null,
+  allTimeLastConfirmed = false,
   status,
   weatherLabel = null,
   seasonClock = null,
@@ -41,7 +47,9 @@ export function JourneyHud({
   // server has confirmed, because that is the count deciding whether he walks.
   // Nothing is shown while neither source has answered.
   const watching = peopleWatching(activeViewers, onlineVisitors);
-  const audienceLabel = watching === null
+  const audienceLabel = watching === 0 && allTimeVisitors !== null
+    ? `${allTimeVisitors.toLocaleString("en-US")} visitors all time${allTimeLastConfirmed ? " · last confirmed" : ""}`
+    : watching === null
     ? onlineVisitors === null ? "Live count unavailable" : null
     : `${watching} ${watching === 1 ? "person" : "people"} watching`;
   // The season clock carries the day number, so the headline names only the city.

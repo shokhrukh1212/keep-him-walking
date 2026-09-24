@@ -4,7 +4,7 @@
   "crons": [
     {
       "path": "/api/cron/reconcile",
-      "schedule": "0 18 * * *"
+      "schedule": "0 17 * * *"
     }
   ]
 }

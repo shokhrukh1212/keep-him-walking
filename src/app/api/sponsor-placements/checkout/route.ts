@@ -13,10 +13,12 @@ import { placementRequestFields, placementRequestSchema } from "@/lib/sponsors/p
 import { getServerSupabase } from "@/lib/supabase/server";
 import { apiError } from "@/lib/validation/http";
 import { hasTrustedOrigin } from "@/lib/validation/origin";
+import { PUBLIC_SPONSOR_SALES_ENABLED } from "@/lib/config/features";
 
 const MAX_FORM_BYTES = SPONSOR_LOGO_MAX_BYTES + 32_768;
 
 export async function POST(request: NextRequest) {
+  if (!PUBLIC_SPONSOR_SALES_ENABLED) return apiError(503, "UNAVAILABLE", "New sponsor purchases are paused.");
   if (!hasTrustedOrigin(request)) return apiError(403, "FORBIDDEN", "Untrusted request origin.");
   const gate = placementCheckoutState();
   if (!gate.enabled) return apiError(503, "UNAVAILABLE", "Sponsor checkout is waiting for payment-provider approval.");
