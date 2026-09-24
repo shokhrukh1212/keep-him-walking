@@ -20,6 +20,8 @@ export type PreviewPose = {
   /** Seconds into the current speech. */
   speechSeconds: number;
   clip?: CharacterClip;
+  /** A scripted prelaunch guest standing beside him (the Paris readiness episode). */
+  guest?: { speaking: boolean; seconds: number };
 };
 
 export type PreviewPoseSource = { sample(nowMs: number): PreviewPose };

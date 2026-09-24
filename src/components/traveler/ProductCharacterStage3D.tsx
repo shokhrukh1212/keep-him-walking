@@ -357,7 +357,7 @@ export function ProductCharacterStage3D(props: Props) {
       }
       // The partner follows the conversation's script, then the pack, including a pack that
       // changes while mounted: the previous resident leaves at once rather than standing in.
-      const partnerType = cue.conversation && cue.residentType ? cue.residentType : packResidentType(state.pack);
+      const partnerType = cue.guestType ?? (cue.conversation && cue.residentType ? cue.residentType : packResidentType(state.pack));
       const partnerModel = residentModel(partnerType);
       if (residentType !== partnerType || (!resident && typeof partnerModel === "object")) {
         if (resident) {
@@ -412,7 +412,8 @@ export function ProductCharacterStage3D(props: Props) {
       travelerRoot.rotation.y = cue.conversation
         ? Math.PI / 2
         : state.command?.facing === "camera" ? 0 : state.command?.facing === "left" ? -0.68 : 0.68;
-      residentRoot.rotation.y = motion.action?.conversationPhase === "depart" ? Math.PI / 2 : -Math.PI / 2;
+      residentRoot.rotation.y = cue.guestType ? -0.75
+        : motion.action?.conversationPhase === "depart" ? Math.PI / 2 : -Math.PI / 2;
       residentRoot.visible = cue.showResident && Boolean(resident) && residentType === partnerType;
       if (cue.conversation && traveler && resident) {
         traveler.gazeAt(resident.headPosition(), .6);

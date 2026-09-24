@@ -23,6 +23,8 @@ export type ProductCharacterScene = {
   residentType?: ResidentType;
   /** Zero beside him, one just outside the right edge. */
   residentOffset?: number;
+  /** A scripted prelaunch guest: this resident stands beside him, angled toward him and the camera. */
+  guestType?: ResidentType;
   travelerLeanRadians?: number;
 };
 
@@ -199,8 +201,9 @@ export function productCharacterSceneAt(
   if (preview) {
     return {
       traveler: preview.speaking ? loopedCue(preview.clip ?? "talk", preview.speechSeconds) : loopedCue("idle", preview.idleSeconds),
-      resident: { clip: "idle", seconds: 0 },
-      showResident: false,
+      resident: preview.guest?.speaking ? loopedCue("talk", preview.guest.seconds) : loopedCue("idle", preview.guest?.seconds ?? 0),
+      showResident: preview.guest !== undefined,
+      guestType: preview.guest ? "resident-a" : undefined,
       conversation: false,
       travelerLeanRadians: 0,
     };

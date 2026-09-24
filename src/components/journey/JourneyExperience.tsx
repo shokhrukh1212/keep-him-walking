@@ -102,7 +102,7 @@ import { AnniversaryStory } from "@/components/journey/AnniversaryStory";
 import { ANNIVERSARY_JOURNEY } from "@/lib/season/anniversary";
 import { placementDurationCopy } from "@/lib/relaunch/config";
 import { launchCelebrationAt, prelaunchStartLine } from "@/lib/launch/celebration";
-import { ParisReadinessEpisode } from "@/components/episode/ParisReadinessEpisode";
+import { ParisReadinessEpisode, readChoices as readEpisodeChoices } from "@/components/episode/ParisReadinessEpisode";
 import { PARIS_READINESS_EPISODE, episodeViewAt } from "@/lib/episode/paris-readiness";
 import { PARIS_EPISODE_ENABLED } from "@/lib/config/features";
 
@@ -1042,6 +1042,27 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     }
   }, [preview, previewMonologue, realNowMs, snapshot.journey.lifecycleState, snapshot.journey.scheduledStartAt]);
 
+  // During the episode Camille (the woman resident) stands beside him; whoever has the
+  // current line plays the talk take. After 17:00 both stay quietly idle until launch.
+  const episodeGuestOn = episodeSpeaking || episodePhase === "ended";
+  const episodeSpeaker = episodeSpeaking
+    ? episodeViewAt(PARIS_READINESS_EPISODE, episodeNowMs, episodeLaunchStartsAt,
+      readEpisodeChoices(PARIS_READINESS_EPISODE.id), PARIS_EPISODE_ENABLED).line?.speaker ?? null
+    : null;
+  const previewPose = useMemo(() => !preview ? undefined : !episodeGuestOn ? previewMonologue : {
+    sample(nowMs: number) {
+      const pose = previewMonologue.sample(nowMs);
+      const seconds = (nowMs / 1000) % 600;
+      return {
+        ...pose,
+        speaking: !reducedMotion && episodeSpeaker === "milo",
+        speechSeconds: seconds,
+        clip: "talk" as const,
+        guest: { speaking: !reducedMotion && episodeSpeaker === "camille", seconds },
+      };
+    },
+  }, [episodeGuestOn, episodeSpeaker, preview, previewMonologue, reducedMotion]);
+
   const command: TravelerCommand = {
     state: travelerState,
     mood: activeLine?.mood ?? "neutral",
@@ -1049,7 +1070,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
     // turns, and his anchor never moves.
     facing: preview || waitingForWatchers ? "camera" : "right",
     // Prelaunch only: the local monologue controller owns his pose. The live path never sees it.
-    preview: preview ? previewMonologue : undefined,
+    preview: previewPose,
     walkingSpeed: worldCommand.speedFactor,
     walking,
     motionPhaseSeconds: Math.max(0, (realNowMs - motionTransition.changedAtMs) / 1_000),

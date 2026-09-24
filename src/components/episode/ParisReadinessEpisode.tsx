@@ -28,7 +28,7 @@ type Props = {
 
 const storageKey = (id: string) => `khw_episode_${id}`;
 
-function readChoices(id: string): EpisodeChoices {
+export function readChoices(id: string): EpisodeChoices {
   try {
     return JSON.parse(window.localStorage.getItem(storageKey(id)) ?? "{}") as EpisodeChoices;
   } catch {
