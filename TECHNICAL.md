@@ -1830,7 +1830,9 @@ Every number on it is a stored aggregate; nothing is extrapolated.
   `online`, before launch, during a season and after it (`useOnlineVisitors` reads the route on
   mount, every 60 s and on becoming visible; hidden tabs do not ask). Journey's "N watching now"
   and the first-visit modal use the same number, and the audience sheet names the state without
-  a count. `last24Hours` and `allTime` are returned but not rendered yet.
+  a count. When the shown live count is zero, the header shows DataFast's confirmed all-time
+  unique visitors instead; an unavailable all-time read is never invented. The audience sheet
+  also shows both DataFast metrics. `last24Hours` remains available to the API.
 - **Never below the confirmed watchers (18 September 2026).** `peopleWatching`
   (`src/lib/presence/watching-count.ts`) returns the larger of DataFast's `online` and the
   server's confirmed `activeViewers`, and `null` only when neither source has answered.
@@ -3195,6 +3197,8 @@ by the existing authenticated cron and bootstrap catch-up path, using the owner-
 UTC instant as the effective start. Waiting reactions are enum-only rows and cannot advance
 runtime. The new name ballot is journey-scoped and resolves at launch by tally, then stable
 configured display order.
+The Vercel daily backup cron is now 17:00 UTC, matching this relaunch's day boundary;
+the external minute cron and bootstrap catch-up remain the timely start paths.
 
 Migration `202609190051` makes `submit_journey_name_ballot` return `tallies`, the per-option
 counts read under the same vote row lock that counted the total, so `/api/votes` can answer
@@ -3243,6 +3247,29 @@ reports the first incomplete field, missing acknowledgment, or closed provider g
 of presenting an inert checkout control.
 Coffee/supporter surfaces are parked behind `PUBLIC_SUPPORT_FEATURE_ENABLED`; historical
 data and reusable components are retained.
+
+### Free Paris launch presentation (24 September 2026)
+
+The owner scheduled the existing `paris-relaunch` journey in Production project
+`pqtfhkiftiubwuwxnuzd` for `2026-09-24T17:00:00Z` (19:00 in Paris). This used the
+existing `set_relaunch_journey_state` RPC; no migration was added. The name vote remains
+open by owner choice. The new waiting line uses `prelaunch.startsAt` from bootstrap and
+formats it in the day's `Europe/Paris` timezone. Without a stored start it names no time.
+`launchCelebrationAt` is pure and shows a celebration only on the local launch day before
+that scheduled instant. Its `OverlayModal` waits for the scene and traveler, runs a small
+CSS confetti effect (static with reduced motion), and offers an X draft containing the
+local and UTC times; `xComposeUrl` supplies the canonical site URL. The announcement is
+shown once per tab session and does not alter presence or journey runtime.
+
+`SPONSOR_CONTROLS_ENABLED` parks the five tiles on each desktop edge, the phone carousel,
+the featured CTA and in-journey upsells. The centered name-vote and Journey controls are
+equal width. `PUBLIC_SPONSOR_SALES_ENABLED=false` rejects new checkout requests in all
+three sponsor purchase routes while leaving webhook and historical-payment processing
+intact. The prelaunch monologue uses its non-sales fallback; the 75-second support upsell
+is disabled. The footer links to Terms, Privacy, FAQ and Contact & support; old paid-policy
+URLs remain available for earlier agreements. Terms, Privacy, FAQ and Contact describe
+the current free experience. Health now reports the current relaunch lifecycle and
+schedule ahead of the superseded Season 1 calendar.
 
 The waiting dialogue controller counts visible-page time, pauses new starts for dialogs and
 hidden tabs, gives persisted interactions/state changes priority, and uses only clips in the

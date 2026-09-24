@@ -1,5 +1,11 @@
 # Keep Him Walking — Product Description
 
+> **Current free Paris relaunch (24 September 2026):** The owner scheduled the existing
+> Paris waiting journey for 17:00 UTC (19:00 Paris time) today. The first screen announces
+> Milo's start with a short celebration and a Share on X draft. New sponsor sales and their
+> visible placements are paused; the central name vote and Journey remain. The older
+> sponsor model and Season 1 calendar below document previous designs and obligations.
+
 > This file and its companion `TECHNICAL.md` are written to be self-contained. If you
 > are an AI assistant reading only these two documents, you should be able to reason
 > about this product without opening the repository.

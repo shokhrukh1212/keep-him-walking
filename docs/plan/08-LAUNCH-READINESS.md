@@ -1,5 +1,11 @@
 # Launch readiness — product finish after P22
 
+> **24 September 2026 update:** The owner chose a free Paris relaunch at 17:00 UTC today.
+> Production journey `paris-relaunch` is scheduled in `pqtfhkiftiubwuwxnuzd`; sponsor
+> placements and new checkout are paused in the current UI candidate. Automated code
+> verification and deployment are distinct from the owner's visual acceptance and
+> physical-device checks below.
+
 This is the implementation handoff after all 22 prompts. It supersedes the old visual
 and route assumptions where they conflict, but it does not erase the evidence in
 `01`–`07`, `AFTER-P22.md`, `PRODUCT.md` or `TECHNICAL.md`.

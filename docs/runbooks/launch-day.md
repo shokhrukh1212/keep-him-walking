@@ -1,5 +1,12 @@
 # Season 1 launch day
 
+> **24 September 2026 Paris relaunch:** The current `paris-relaunch` journey in Production
+> `pqtfhkiftiubwuwxnuzd` is scheduled for **17:00 UTC / 19:00 Paris time** through
+> `set_relaunch_journey_state`. The minute reconciliation job and bootstrap catch-up start
+> it from that stored timestamp. The Vercel daily backup now runs at 17:00 UTC. New sponsor
+> sales are paused. The Season 1 seed and 16:00 activation instructions below are historical
+> and must not be run for this relaunch.
+
 Production remains launch-disabled until both prompts are reviewed. The canonical site is
 `https://keephimwalking.com`, Day 1 uses the reviewed `paris-v3` pack, and the day boundary
 remains 16:00 UTC. The one scheduler is the existing cron-job.org minute job calling

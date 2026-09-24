@@ -2,17 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage } from "@/components/legal/LegalPage";
 
-export const metadata: Metadata = { title: "Privacy Policy — Keep Him Walking", description: "How Keep Him Walking handles viewer, sponsor, payment and analytics data." };
+export const metadata: Metadata = { title: "Privacy Policy — Keep Him Walking", description: "How Keep Him Walking handles viewer and analytics data." };
 
 export default function PrivacyPage() {
   return <LegalPage title="Privacy Policy" eyebrow="YOUR DATA" testId="privacy-page"
-    summary="This policy describes the data used to run the viewing experience, interactions, sponsor placements, payments and operational security.">
+    summary="This policy describes the data used to run the viewing experience, interactions, analytics and operational security.">
     <section><span className="legal-section-number">01</span><h2>Who is responsible</h2>
       <p>Keep Him Walking is operated by Shokhrukh Karimov. Privacy questions and requests can be sent through <Link href="/contact">Contact &amp; support</Link>.</p></section>
     <section><span className="legal-section-number">02</span><h2>Viewing, voting and reactions</h2>
       <p>No viewer account, name or email is required. A first-party <code>khw_visitor</code> cookie contains a random identifier for up to one year; the server stores keyed hashes of it for presence, contribution, vote, reaction, postcard, rate-limit and sponsor-view records. A tab-session identifier avoids duplicate tabs. Hosting infrastructure supplies network and country information; raw IP addresses are not written to the application database, but keyed network hashes are used for abuse limits.</p>
-      <p>Name ballots are stored per journey and hashed browser identity. Waiting actions, live reactions and accepted sponsor profile opens store their enum or event identifier and timing. A profile View is not a unique-person measure. Sound, quiet-mode and dialogue-history choices may be held in browser storage.</p></section>
-    <section><span className="legal-section-number">03</span><h2>Sponsor submissions and payments</h2>
+      <p>Name ballots are stored per journey and hashed browser identity. Waiting actions and live reactions store their enum and timing. Sound and dialogue-history choices may be held in browser storage.</p></section>
+    <section><span className="legal-section-number">03</span><h2>Earlier sponsor records</h2>
+      <p>New sponsor purchases are paused. Records from earlier sponsor submissions and payments are retained for delivery, reconciliation, support and legal obligations.</p>
       <p>A sponsor submission stores its product URL, product name, description, logo, logo-fit choice, journey/slot identifiers and rights acknowledgment. Pending logos remain in private Supabase Storage; an approved logo copy is public. Dodo Payments collects billing/contact and tax information. Full card details do not reach Keep Him Walking, but customer email, provider checkout/payment/refund/dispute identifiers, amounts, currency, status and reconciliation reasons are stored privately for delivery and support.</p>
       <p>The retired coffee/supporter controls are hidden, but historical supporter or transaction records are not erased by that UI change.</p></section>
     <section><span className="legal-section-number">04</span><h2>Analytics and infrastructure</h2>
