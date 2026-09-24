@@ -3285,3 +3285,18 @@ is due at 2.5 seconds; ordinary beats start every 15 visible seconds and caption
 within 5–8 seconds. No compatible,
 performance-reviewed second-character cameo has been enabled, and no speech audio asset is
 claimed; the existing captions and mute behavior remain authoritative.
+
+## Paris readiness episode (24 September 2026, 16:00–17:00 UTC)
+
+`src/lib/episode/paris-readiness.ts` holds the config (`episodeStartAt`, `episodeEndAt`,
+`preparationRevealAt`, `actualLaunchAt`), the script and `episodeViewAt`, a pure function of
+the config, the synchronized wall clock, the server's authoritative start and this browser's
+choices. The episode renders only in prelaunch and only while the server's start equals
+`actualLaunchAt` (18:00 UTC); any other start turns it off. It never writes launch state.
+`ParisReadinessEpisode` shows the status card, the Milo/Camille caption, the two polls
+(individual-choice fallback: local to the browser, labelled "Your choice", no totals), the
+"Help Milo get ready" acknowledgement and "Invite a friend". Camille is a labelled caption
+only; no second 3D figure. Milo's own prelaunch monologue is held back from 16:00 until
+launch. Rollback: `NEXT_PUBLIC_PARIS_EPISODE=off` and redeploy. In development only,
+`?episodeClock=<ISO>` shifts the episode clock. To add the 17:00–18:00 story, add a second
+config and scene list with its own window; nothing starts automatically after `episodeEndAt`.
