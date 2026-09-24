@@ -13,3 +13,6 @@ export const PUBLIC_SPONSOR_SALES_ENABLED = false;
  * touching the departure or any payment: set NEXT_PUBLIC_PARIS_EPISODE=off and redeploy.
  */
 export const PARIS_EPISODE_ENABLED = process.env.NEXT_PUBLIC_PARIS_EPISODE !== "off";
+
+/** Episode 2, "Route rescue" (17:00–18:00 UTC). NEXT_PUBLIC_PARIS_EPISODE2=off falls back to Episode 1's closing state. */
+export const PARIS_EPISODE2_ENABLED = process.env.NEXT_PUBLIC_PARIS_EPISODE2 !== "off";

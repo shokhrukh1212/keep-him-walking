@@ -104,7 +104,9 @@ import { placementDurationCopy } from "@/lib/relaunch/config";
 import { launchCelebrationAt, prelaunchStartLine } from "@/lib/launch/celebration";
 import { ParisReadinessEpisode, readChoices as readEpisodeChoices } from "@/components/episode/ParisReadinessEpisode";
 import { PARIS_READINESS_EPISODE, episodeViewAt } from "@/lib/episode/paris-readiness";
-import { PARIS_EPISODE_ENABLED } from "@/lib/config/features";
+import { PARIS_EPISODE2_ENABLED, PARIS_EPISODE_ENABLED } from "@/lib/config/features";
+import { RouteRescueEpisode, readRescueChoices, readWitnesses } from "@/components/episode/RouteRescueEpisode";
+import { ROUTE_RESCUE_EPISODE, rescueViewAt } from "@/lib/episode/route-rescue";
 
 // Sponsor promotion is parked for the free Paris launch. Keep the existing components
 // and payment records intact so historical purchases can still be serviced.
@@ -987,6 +989,15 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   const episodePhase = preview
     ? episodeViewAt(PARIS_READINESS_EPISODE, episodeNowMs, episodeLaunchStartsAt, {}, PARIS_EPISODE_ENABLED).phase
     : "off";
+  // Episode 2 follows at 17:00:05 in the same system; switching it off leaves Episode 1's closing state.
+  const rescueView = preview && episodePhase === "ended"
+    ? (() => {
+      const witnesses = readWitnesses(ROUTE_RESCUE_EPISODE.id);
+      return rescueViewAt(ROUTE_RESCUE_EPISODE, episodeNowMs, episodeLaunchStartsAt, readRescueChoices(ROUTE_RESCUE_EPISODE.id),
+        { stamp: witnesses.stamp ?? witnesses.peak, crossings: witnesses.crossings }, PARIS_EPISODE2_ENABLED);
+    })()
+    : null;
+  const rescueActive = rescueView?.active === true;
   const episodeSpeaking = episodePhase === "live" || episodePhase === "reveal";
   const { controller: previewMonologue, caption: previewCaption } = usePreviewMonologue({
     active: preview,
@@ -1045,7 +1056,8 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
   // During the episode Camille (the woman resident) stands beside him; whoever has the
   // current line plays the talk take. After 17:00 both stay quietly idle until launch.
   const episodeGuestOn = episodeSpeaking || episodePhase === "ended";
-  const episodeSpeaker = episodeSpeaking
+  const departurePose = rescueView?.finalMoment ? readEpisodeChoices(PARIS_READINESS_EPISODE.id).pose : undefined;
+  const episodeSpeaker = rescueActive ? rescueView?.line?.speaker ?? null : episodeSpeaking
     ? episodeViewAt(PARIS_READINESS_EPISODE, episodeNowMs, episodeLaunchStartsAt,
       readEpisodeChoices(PARIS_READINESS_EPISODE.id), PARIS_EPISODE_ENABLED).line?.speaker ?? null
     : null;
@@ -1055,13 +1067,14 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       const seconds = (nowMs / 1000) % 600;
       return {
         ...pose,
-        speaking: !reducedMotion && episodeSpeaker === "milo",
+        // In the final exchange he holds Episode 1's departure pose: Wave greets, the others stay front-facing.
+        speaking: !reducedMotion && (episodeSpeaker === "milo" || departurePose === 0),
         speechSeconds: seconds,
-        clip: "talk" as const,
+        clip: departurePose === 0 ? "greet" as const : "talk" as const,
         guest: { speaking: !reducedMotion && episodeSpeaker === "camille", seconds },
       };
     },
-  }, [episodeGuestOn, episodeSpeaker, preview, previewMonologue, reducedMotion]);
+  }, [departurePose, episodeGuestOn, episodeSpeaker, preview, previewMonologue, reducedMotion]);
 
   const command: TravelerCommand = {
     state: travelerState,
@@ -1417,7 +1430,16 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
       >
         {/* Prelaunch only: his words. On a phone this band sits above the panel and keeps its
             room whether he speaks or not; the footer inset it adds keeps his feet clear of it. */}
-        {preview ? <ParisReadinessEpisode
+        {preview && rescueActive ? <RouteRescueEpisode
+          config={ROUTE_RESCUE_EPISODE}
+          enabled={PARIS_EPISODE2_ENABLED}
+          nowMs={episodeNowMs}
+          launchStartsAt={episodeLaunchStartsAt}
+          travelerName={travelerName === "Traveler" ? "Milo" : travelerName}
+          hidden={celebrationOpen || openPanel !== null || activePlace !== null || placementStatus !== null}
+          watching={watchingNow}
+        /> : null}
+        {preview && !rescueActive ? <ParisReadinessEpisode
           config={PARIS_READINESS_EPISODE}
           enabled={PARIS_EPISODE_ENABLED}
           nowMs={episodeNowMs}

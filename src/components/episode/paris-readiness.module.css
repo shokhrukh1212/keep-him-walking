@@ -116,3 +116,39 @@
   .card small:last-child { display: none; }
   .line { font-size: 14px; padding: 0.45rem 0.65rem; }
 }
+
+.witness {
+  display: grid;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: rgb(243 231 199 / 18%);
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  background: #e0a33a;
+}
+
+.stamp {
+  justify-self: start;
+  margin-top: 4px;
+  border: 2px solid #b5485a;
+  border-radius: 4px;
+  padding: 1px 8px;
+  color: #f0a0ad;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  transform: rotate(-2deg);
+}
+
+@media (max-width: 600px) {
+  .witness small { display: none; }
+}

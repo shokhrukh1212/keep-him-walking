@@ -225,7 +225,7 @@ export function lineSeconds(text: string): number {
 
 export type TimedLine = EpisodeLine & { id: string; startSec: number; endSec: number };
 
-function lay(out: TimedLine[], id: string, startSec: number, lines: readonly EpisodeLine[]): number {
+export function lay(out: TimedLine[], id: string, startSec: number, lines: readonly EpisodeLine[]): number {
   let at = startSec;
   lines.forEach((line, index) => {
     const duration = lineSeconds(line.text);
@@ -235,7 +235,7 @@ function lay(out: TimedLine[], id: string, startSec: number, lines: readonly Epi
   return at;
 }
 
-function sequenceSeconds(lines: readonly EpisodeLine[]): number {
+export function sequenceSeconds(lines: readonly EpisodeLine[]): number {
   return lines.reduce((sum, line) => sum + lineSeconds(line.text) + GAP_SECONDS, 0);
 }
 
