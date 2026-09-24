@@ -5,6 +5,7 @@
 > placements and new checkout are paused in the current UI candidate. Automated code
 > verification and deployment are distinct from the owner's visual acceptance and
 > physical-device checks below.
+> The Paris relaunch is publicly Season 1; the earlier completed journey was a rehearsal.
 
 This is the implementation handoff after all 22 prompts. It supersedes the old visual
 and route assumptions where they conflict, but it does not erase the evidence in

@@ -3252,9 +3252,14 @@ data and reusable components are retained.
 
 The owner scheduled the existing `paris-relaunch` journey in Production project
 `pqtfhkiftiubwuwxnuzd` for `2026-09-24T17:00:00Z` (19:00 in Paris). This used the
-existing `set_relaunch_journey_state` RPC; no migration was added. The name vote remains
-open by owner choice. The new waiting line uses `prelaunch.startsAt` from bootstrap and
-formats it in the day's `Europe/Paris` timezone. Without a stored start it names no time.
+existing `set_relaunch_journey_state` RPC; no migration was needed to set the time. The
+name vote remains open by owner choice. The new waiting line uses
+`prelaunch.startsAt` from bootstrap and formats it in the day's `Europe/Paris`
+timezone. Without a stored start it names no time.
+Migration `202609240052` corrects the `paris-relaunch` row to Season 1 in both dev and
+Production; migration `202609190049` had assigned the next integer after a completed
+rehearsal journey. Season numbers are not unique, and the journey UUID remains the
+authoritative identity. This corrects the prelaunch header and the live season clock.
 `launchCelebrationAt` is pure and shows a celebration only on the local launch day before
 that scheduled instant. Its `OverlayModal` waits for the scene and traveler, runs a small
 CSS confetti effect (static with reduced motion), and offers an X draft containing the
