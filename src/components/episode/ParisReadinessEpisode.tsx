@@ -56,7 +56,9 @@ export function ParisReadinessEpisode({ config, enabled, nowMs, launchStartsAt, 
   };
   const view = episodeViewAt(config, nowMs, launchStartsAt, choices, enabled);
   if (view.phase === "off") return null;
-  const departure = utcClock(config.actualLaunchAt);
+  // Always the server's start: 17:00 until the owner reschedules, then 18:00.
+  const departure = utcClock(launchStartsAt!);
+  const moved = Date.parse(launchStartsAt!) === Date.parse(config.actualLaunchAt);
   const window_ = `${utcClock(config.episodeStartAt).replace(" UTC", "")}–${utcClock(config.episodeEndAt)}`;
   const speakerName = (speaker: "milo" | "camille") => speaker === "camille" ? "Camille" : travelerName;
   const choose = (poll: PollId, option: number) => {
@@ -70,7 +72,6 @@ export function ParisReadinessEpisode({ config, enabled, nowMs, launchStartsAt, 
         {view.phase === "before" ? <>
           <strong>Paris readiness check · {window_}</strong>
           <span>Journey departs {departure}</span>
-          <small>Departure updated to {departure}. Paris readiness episode: {window_}.</small>
         </> : view.phase === "ended" ? <>
           <strong>Preparation continues · Departure {departure}</strong>
           <small>The Paris readiness episode has ended.</small>
@@ -81,7 +82,7 @@ export function ParisReadinessEpisode({ config, enabled, nowMs, launchStartsAt, 
             {" · "}Journey departs {departure}
           </span>
           {view.chapter ? <small>Now: {view.chapter}</small> : null}
-          <small>Departure updated to {departure}. Paris readiness episode: {window_}.</small>
+          {moved ? <small>Departure updated to {departure}. Paris readiness episode: {window_}.</small> : null}
         </>}
       </div>
 
@@ -130,7 +131,7 @@ export function ParisReadinessEpisode({ config, enabled, nowMs, launchStartsAt, 
           >
             {choices.helpedAtMs !== undefined ? "Thanks for helping Milo" : "Help Milo get ready"}
           </button>
-          <small>Encourage him while Camille fixes his fictional itinerary. Departure stays at {departure}.</small>
+          <small>Encourage him while Camille fixes his fictional itinerary. Departure: {departure}.</small>
         </div>
       ) : null}
 

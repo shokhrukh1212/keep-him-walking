@@ -12,8 +12,10 @@ const launch = config.actualLaunchAt;
 const view = (iso: string, choices = {}, launchAt: string | null = launch) => episodeViewAt(config, at(iso), launchAt, choices);
 
 describe("Paris readiness episode", () => {
-  it("is off unless the server's start is the configured 18:00 departure", () => {
-    expect(view("2026-09-24T16:10:00Z", {}, "2026-09-24T17:00:00Z").phase).toBe("off");
+  it("runs with the announced 17:00 start, and is off without a start or with one inside the hour", () => {
+    expect(view("2026-09-24T16:10:00Z", {}, "2026-09-24T17:00:00Z").phase).toBe("live");
+    expect(view("2026-09-24T17:00:00Z", {}, "2026-09-24T17:00:00Z").phase).toBe("off");
+    expect(view("2026-09-24T16:10:00Z", {}, "2026-09-24T16:30:00Z").phase).toBe("off");
     expect(view("2026-09-24T16:10:00Z", {}, null).phase).toBe("off");
     expect(episodeViewAt(config, at("2026-09-24T16:10:00Z"), launch, {}, false).phase).toBe("off");
   });

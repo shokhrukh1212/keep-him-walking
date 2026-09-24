@@ -311,8 +311,10 @@ export function episodeViewAt(
   enabled = true,
 ): EpisodeView {
   if (!enabled || !launchStartsAt || !Number.isFinite(nowMs)) return OFF;
-  const launchMs = Date.parse(config.actualLaunchAt);
-  if (Date.parse(launchStartsAt) !== launchMs || nowMs >= launchMs) return OFF;
+  // The owner moves the start from 17:00 to 18:00 near the end of the story. Until then the
+  // page names the server's start as it is; a start that would cut into the hour turns it off.
+  const launchMs = Date.parse(launchStartsAt);
+  if (!Number.isFinite(launchMs) || launchMs < Date.parse(config.episodeEndAt) || nowMs >= launchMs) return OFF;
   const startMs = Date.parse(config.episodeStartAt);
   const endMs = Date.parse(config.episodeEndAt);
   const revealMs = Date.parse(config.preparationRevealAt);
