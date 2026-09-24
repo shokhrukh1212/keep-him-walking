@@ -164,7 +164,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
 
     await expect(page.locator(".place-dot")).toHaveCount(0);
     await expect(page.locator(".journey-progress-secondary")).toHaveText("Stop 2 of 10 · Next scene in ~6 walking min");
-    await expect(page.locator(".goal-copy strong")).toContainText(/Today · ~?0\.7 \/ 8 km/);
+    await expect(page.locator(".goal-copy strong")).toContainText(/Today · ~?0\.7 \/ \d+(\.\d)? km/);
     await expect(page.locator(".goal-freshness")).toHaveText(/estimated|confirmed/);
 
     await page.getByRole("button", { name: "About the distance goals" }).click({ force: true });

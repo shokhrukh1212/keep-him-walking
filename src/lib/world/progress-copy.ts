@@ -10,21 +10,40 @@ export function formatDistanceKm(metres: number): string {
   return value.toFixed(1);
 }
 
-/** Goals are labels, not measurements: 8 km, 42.2 km. */
+/** Goals are labels, not measurements: 129.6 km, 42.2 km. */
 export function formatGoalKm(metres: number): string {
   const value = Math.max(0, Number.isFinite(metres) ? metres : 0) / 1_000;
   const fixed = value.toFixed(1);
   return fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
 }
 
+/** A day is 24 hours unless its own schedule says otherwise. */
+const DEFAULT_DAY_SECONDS = 24 * 60 * 60;
+
+/**
+ * Today's goal: the whole day walked, every second of it watched, at his pace.
+ * It is the most he can possibly cover today, so nothing on screen ever passes it
+ * the way he used to pass the old fixed 8 km before breakfast. Pure: the day's own
+ * bounds and the pace are the only inputs.
+ */
+export function fullDayGoalMetres(startsAt: string, endsAt: string, metresPerSecond: number): number {
+  const seconds = (Date.parse(endsAt) - Date.parse(startsAt)) / 1_000;
+  const daySeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_DAY_SECONDS;
+  const pace = Number.isFinite(metresPerSecond) && metresPerSecond > 0 ? metresPerSecond : 0;
+  return Math.floor(daySeconds * pace);
+}
+
 export type DistanceProgress = {
-  goal: "daily" | "marathon" | "complete";
-  /** 0..1 of the goal currently shown. */
+  /** "complete" only when the whole day's goal has been walked. */
+  goal: "daily" | "complete";
+  /** 0..1 of today's goal. */
   fill: number;
   percent: number;
+  /** The marathon is a milestone inside the day, not a goal after it. */
+  marathonReached: boolean;
   text: string;
   shortText: string;
-  /** What comes after the goal on screen, for the info disclosure. */
+  /** The milestone still ahead, for the info disclosure; null once passed or out of reach today. */
   nextGoalText: string | null;
 };
 
@@ -35,39 +54,25 @@ export function distanceProgress(
 ): DistanceProgress {
   const distance = Math.max(0, Number.isFinite(distanceMetres) ? distanceMetres : 0);
   const done = formatDistanceKm(distance);
-  if (distance < dailyGoalMetres) {
-    const fill = Math.min(1, distance / dailyGoalMetres);
-    const percent = Math.floor(fill * 100);
-    const goal = formatGoalKm(dailyGoalMetres);
-    return {
-      goal: "daily",
-      fill,
-      percent,
-      text: `${done} / ${goal} km today · ${percent}%`,
-      shortText: `${done}/${goal} km · ${percent}%`,
-      nextGoalText: `After ${goal} km the next goal is a ${formatGoalKm(marathonMetres)} km marathon.`,
-    };
-  }
-  if (distance < marathonMetres) {
-    const fill = Math.min(1, distance / marathonMetres);
-    const percent = Math.floor(fill * 100);
-    const goal = formatGoalKm(marathonMetres);
-    return {
-      goal: "marathon",
-      fill,
-      percent,
-      text: `${done} / ${goal} km marathon · ${percent}%`,
-      shortText: `${done}/${goal} km · ${percent}%`,
-      nextGoalText: null,
-    };
-  }
+  const goal = formatGoalKm(dailyGoalMetres);
+  const complete = dailyGoalMetres > 0 && distance >= dailyGoalMetres;
+  const fill = dailyGoalMetres > 0 ? Math.min(1, distance / dailyGoalMetres) : 0;
+  const percent = Math.floor(fill * 100);
+  const marathonReached = distance >= marathonMetres;
+  const marathonAhead = !marathonReached && marathonMetres < dailyGoalMetres;
+  const milestone = marathonReached ? " · marathon reached" : "";
   return {
-    goal: "complete",
-    fill: 1,
-    percent: 100,
-    text: `${done} km today · marathon reached`,
-    shortText: `${done} km · marathon`,
-    nextGoalText: null,
+    goal: complete ? "complete" : "daily",
+    fill,
+    percent,
+    marathonReached,
+    text: complete
+      ? `${done} km today · whole day walked`
+      : `${done} / ${goal} km today · ${percent}%${milestone}`,
+    shortText: complete ? `${done} km · whole day` : `${done}/${goal} km · ${percent}%`,
+    nextGoalText: marathonAhead
+      ? `The ${formatGoalKm(marathonMetres)} km marathon is a milestone on the way.`
+      : null,
   };
 }
 

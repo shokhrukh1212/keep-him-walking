@@ -133,8 +133,8 @@ export function JourneyPanel({
           </>
         )}
         <p className="journey-muted">
-          {formatGoalKm(dailyGoalMetres)} km is today&apos;s shared goal, and a {formatGoalKm(marathonMetres)} km marathon
-          comes after it. Distance grows only while he walks.
+          {formatGoalKm(dailyGoalMetres)} km is the whole day, if someone watches every minute of it, and the
+          {" "}{formatGoalKm(marathonMetres)} km marathon is a milestone on the way. Distance grows only while he walks.
         </p>
         {typeof onlineVisitors === "number" ? (
           <p className="journey-muted">

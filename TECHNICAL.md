@@ -183,7 +183,8 @@ This supersedes the P23–P27 five-scene, 1,080-second contract.
   (`WALKER_BLOCK_SECONDS`), at most two by tier plus one conversation partner. No pass
   starts during a stop or within 12 s of one, and they never stop him. They stroll just
   behind him at their own slow pace and the moving pavement never carries them.
-- Distance still drives the 8 km daily collective goal and the 42.195 km marathon.
+- Distance drives the whole-day collective goal (`fullDayGoalMetres`: the day's length at
+  1.5 m/s, 129.6 km for a 24-hour day) and the 42.195 km marathon milestone inside it.
 - **Stationary scenery.** The painting never pans. Only the seamless pavement tile and
   ground life move with distance. `stageLayout` uses cover sizing in nominal painting
   pixels, so no viewport reveals a background strip and no rendition moves anything.
@@ -351,7 +352,8 @@ GAIT_CYCLE_SECONDS    = 1.2     two steps
 METRES_PER_STEP       = 0.9      (src/lib/traveler/pace.ts)
 METRES_PER_SECOND     = 1.5      (the database's walking_metres_per_second())
 zone.lengthMetres     = 1200 / 1600 / 1600 / 1400 / 2200
-dayRouteMetres        = 8000
+dayRouteMetres        = 8000     legacy route length: routePositionAt and the server's
+                                 landmark_reached; no longer the visible day goal
 marathonMetres        = 42195
 ```
 
@@ -1911,14 +1913,19 @@ available inset width on phones) above Sponsor/Vote/Journey. It contains, in ord
 truthful current activity, the current manifest stop plus time to the next scene change,
 and today&apos;s distance with one daily-goal bar. Landing-page dots are gone; the Journey
 modal remains the place for the full data-derived stop list and current-stop highlight.
-The distance row follows whichever goal is current, from the one `distanceProgress`
-decision the Journey panel already used: today's shared 8 km until it is reached, then
-"9.3 / 42.2 km marathon" against the marathon the ⓘ explanation has been promising, then
-"43.0 km · marathon reached" once that is passed too. The bar restarts against the new
-goal instead of sitting full, `data-goal` names it, and the explanation is rewritten for
-the goal actually being counted. Until P22 the row stayed against the 8 km all day: with
-viewers watching continuously he passes it about 1 h 50 m into a 24-hour day, so the bar
-was full and the number climbed past its own goal for the remaining 22 hours (D14).
+The distance row counts against one goal all day: the whole day walked
+(`fullDayGoalMetres(startsAt, endsAt, METRES_PER_SECOND)` in
+`src/lib/world/progress-copy.ts`, 129.6 km for a 24-hour day, computed from the country
+day's own bounds, so a shorter day gets a shorter goal). It is the most he can cover, so
+the number can never pass its goal. The marathon is a milestone inside it: the row reads
+"Today · 43.0 / 129.6 km · marathon reached" once he passes 42.195 km, the bar keeps its
+place, and the ⓘ names the marathon as "on the way" or "already behind him". `data-goal`
+is `daily`, or `complete` once the whole day is walked. The Journey panel uses the same
+`distanceProgress` decision. History: until P22 the row stayed against the pack's 8 km
+all day, then (977e430) it moved on to the marathon after 8 km; both left a watched day
+with nothing to aim at by breakfast. The owner chose the whole-day goal on 24 September
+2026 (D14, part 1). The pack's `dayRouteMetres` (8,000) is no longer shown: it still
+feeds `routePositionAt` and the server's `landmark_reached` outcome.
 
 `JourneyExperience` measures the complete rendered footer region with a `ResizeObserver`
 and remeasures for window and `visualViewport` changes. That live inset is an explicit

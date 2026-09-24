@@ -66,6 +66,8 @@ import { applyBallot, type AcceptedBallot } from "@/lib/vote/ballot";
 import { VoteChip } from "@/components/hud/VoteChip";
 import { WorldDiagnostics } from "@/components/debug/WorldDiagnostics";
 import { GoalBar } from "@/components/hud/GoalBar";
+import { fullDayGoalMetres } from "@/lib/world/progress-copy";
+import { METRES_PER_SECOND } from "@/lib/traveler/pace";
 import { JourneyPanel } from "@/components/journey/JourneyPanel";
 import { VisitModals } from "@/components/journey/VisitModals";
 import { LaunchCelebration } from "@/components/journey/LaunchCelebration";
@@ -1217,6 +1219,9 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
         joining: snapshot.mode === "live" && heartbeat === null,
       });
   const confirmedDistance = snapshot.mode === "live" ? distanceMetres : null;
+  // The whole day at his pace: the goal is what a fully watched day walks, not the
+  // pack's legacy 8 km route length, which he used to pass before breakfast.
+  const dayGoalMetres = fullDayGoalMetres(snapshot.countryDay.startsAt, snapshot.countryDay.endsAt, METRES_PER_SECOND);
   const distanceFreshness = snapshot.mode !== "live"
     ? "unavailable" as const
     : connectionStatus !== "live"
@@ -1454,7 +1459,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
             activityLabel={walkingStatus.text}
             activityTone={walkingStatus.tone}
             distanceMetres={confirmedDistance}
-            dailyGoalMetres={snapshot.assets.dayRouteMetres}
+            dailyGoalMetres={dayGoalMetres}
             marathonMetres={snapshot.assets.marathonMetres}
             freshness={distanceFreshness}
             placeCount={places.length}
@@ -1538,7 +1543,7 @@ export function JourneyExperience({ initialSnapshot, previewDemoSponsor = false,
           secondsToNextVisit={routePosition.secondsToNextVisit}
           visitSeconds={routePosition.visitSeconds}
           distanceMetres={confirmedDistance}
-          dailyGoalMetres={snapshot.assets.dayRouteMetres}
+          dailyGoalMetres={dayGoalMetres}
           marathonMetres={snapshot.assets.marathonMetres}
           freshness={distanceFreshness}
           onlineVisitors={watchingNow}

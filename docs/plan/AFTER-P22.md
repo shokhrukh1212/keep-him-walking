@@ -29,7 +29,7 @@ finish rather than what it got wrong.
 | D11 | Paid sponsorship waits for Dodo to approve the changed proposal ($50, replace-by-doubling with full refund) | No — the Anniversary Journey launched free; sponsors can only message on X | Owner (send `docs/launch-finalization/dodo-sponsorship-notice.md`) |
 | D12 | Paid terms still need a governing law and dispute forum | **Yes for checkout; no for free viewing** | Owner (legal choice) |
 | D13 | The Buy Me a Coffee supporter list needs a working read-only token | No — the coffee link works without it | Owner (Buy Me a Coffee developer access) |
-| D14 | The 8 km day goal is reached in under two hours, and the header count and the walking rule are measured differently | No — the row now moves on to the marathon, and walking follows the server | Owner (goal sizes, and which count the header shows) |
+| D14 | The 8 km day goal is reached in under two hours, and the header count and the walking rule are measured differently | Goal **resolved 24 Sep** — the day goal is now the whole day at his pace (129.6 km), marathon inside it. Header count still open | Owner (which count the header shows) |
 | D15 | A passer-by scheduled while he is stopped is dropped, not delayed, so the pavement can stay empty for a long time | No — people do pass; the fault that emptied the pavement is fixed | Owner (whether a missed pass should wait for the next clear moment) |
 | D16 | Four Season 1 cities have no painting and borrow Tashkent's, so Brussels, Amsterdam, Cologne and Budapest are shown as Uzbekistan | **Live now — Day 2 is Brussels** | Owner (artwork, or accept a plain street) |
 
@@ -532,6 +532,13 @@ route before the list is shown.
 ---
 
 ## D14 — He passes the day's 8 km goal before the day is a tenth old
+
+**Part 1 resolved 24 September 2026.** The owner saw "~0.5 / 8 km" on the live page and
+asked why the goal was 8 km when he walks far more than that in 24 hours. The day goal is
+now the whole day at his pace: the day's length times 1.5 m/s, 129.6 km for a 24-hour day,
+with the 42.2 km marathon as a milestone inside it. It is a variant of option (c) below,
+computed from the day's own start and end rather than set per city, so no pack changes.
+Part 2, the header count, is still open. The text below is kept as the history.
 
 **What it is.** Two separate things came out of the 17 September launch evening, and both
 are choices rather than faults.
