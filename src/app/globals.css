@@ -4870,11 +4870,12 @@ a:focus-visible,
 .journey-footer-region > .journey-help { top: auto; right: 0; bottom: 1.4rem; margin: 0; }
 .support-footer-line { min-height: 0; }
 
-/* Two equal, roomier controls after the paid sponsor button is parked. */
+/* Two equal, roomier controls after the paid sponsor button is parked. flex-basis 0
+   shares the row equally; no fixed width, because on a phone the dock is a grid and a
+   grid item keeps `width: 0` literally, which squeezed "Journey" to its padding. */
 .journey-footer-region .compact-dock { width: min(26rem, 100%); }
 .journey-footer-region .compact-dock > button {
   flex: 1 1 0;
-  width: 0;
   min-width: 0;
   max-width: none;
   min-height: 3.25rem;
