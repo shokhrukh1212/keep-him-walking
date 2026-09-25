@@ -76,12 +76,13 @@ number the server has not confirmed. When something is unknown, the interface sa
 **Journey → country-days → route zones → story beats.**
 
 - A **journey** is a fixed-length run of consecutive country-days with a launch
-  timestamp. Season 1 runs from midnight on 17 September to midnight on 1 October in
-  Asia/Tashkent. The ordered virtual route is Paris, Brussels, Amsterdam, Cologne,
+  timestamp. The original anniversary plan ran from 17 September to 1 October;
+  the live 14-day Paris relaunch began on 24 September at 18:00 UTC and its stored
+  country-day rows set the actual dates. The ordered virtual route is Paris, Brussels, Amsterdam, Cologne,
   Prague, Vienna, Bratislava, Budapest, Ljubljana, Zagreb, Belgrade, Sofia, Istanbul,
-  Tashkent. Brussels, Amsterdam, Cologne and Budapest still need city paintings and
-  reviewed city packs; until those exist their entries use an explicitly generic safe fallback.
-  Production's stored schedule must be replanned before this new order is live.
+  Tashkent. Brussels Day 2 has ten illustrated places hosted on the asset origin;
+  owner visual and cultural acceptance is still pending. Amsterdam, Cologne and
+  Budapest still use an explicitly generic safe fallback.
 
 - A **country-day** is a 24-hour window with its own city, timezone, local clock
   display, content pack, sponsor slot, daily vote and postcard. Days cannot overlap —
@@ -89,8 +90,7 @@ number the server has not confirmed. When something is unknown, the interface sa
 
 - Each country-day walks an ordered list of **places** from its city's pinned
   manifest, in order and then looped. The target is ten distinct places per city;
-  Paris has five real paintings today — the station, the canal, a market street, a
-  Left Bank café and the Seine with the tower — and more are coming. A day never
+  Paris and Brussels each have ten distinct illustrated places. A day never
   repeats a painting to pretend it has more.
 
   Each place lasts **seven minutes of active walking**. That clock runs only while he

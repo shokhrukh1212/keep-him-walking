@@ -1,6 +1,6 @@
 # Season 1 asset status
 
-Generated from the authoritative route and local pack files. A pack's cultural or visual approval is a separate gate.
+Generated from the route, pack files and committed R2 inventory. A pack's cultural or visual approval is a separate gate.
 
 ## Day 1: Paris, France
 
@@ -8,12 +8,7 @@ Pack: `paris-v3`; scene files: 95; thumbnail: `/postcards/paris/v3/background.we
 
 ## Day 2: Brussels, Belgium
 
-Pack: `brussels-v1`; scene files: 0; thumbnail: `/scenes/tashkent/v1/scene-fallback.webp`; status: **missing**.
-
-Missing:
-
-- `city-specific reviewed pack for brussels-v1 (generic fallback only)`
-- `public/scenes/brussels/v1/ (city paintings and renditions)`
+Pack: `brussels-v1`; scene files: 95; thumbnail: `/scenes/brussels/v1/postcard.webp`; status: **files present**.
 
 ## Day 3: Amsterdam, Netherlands
 

@@ -1,6 +1,6 @@
 # Cloudflare R2 asset hosting
 
-The product works with `ASSET_BASE_URL` empty: the application origin serves the checked-in assets, and place renditions already carry year-long immutable caching (`next.config.ts` headers). No bucket or credentials are needed for local development. R2 is the chosen production host (DECISIONS, 12 September 2026); what the owner still has to do is AFTER-P22 **D8**.
+Most packs work with `ASSET_BASE_URL` empty: the application origin serves their checked-in assets, and place renditions carry year-long immutable caching (`next.config.ts` headers). Brussels Day 2 is the exception: its images live only on R2 and resolve to `https://assets.keephimwalking.com` even in local development. R2 is the chosen production host (DECISIONS, 12 September 2026); the Preview CORS choice remains in AFTER-P22 **D8**.
 
 ## What is uploaded, and how it is cached
 

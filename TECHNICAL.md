@@ -3307,3 +3307,35 @@ only; no second 3D figure. Milo's own prelaunch monologue is held back from 16:0
 launch. Rollback: `NEXT_PUBLIC_PARIS_EPISODE=off` and redeploy. In development only,
 `?episodeClock=<ISO>` shifts the episode clock. To add the 17:00–18:00 story, add a second
 config and scene list with its own window; nothing starts automatically after `episodeEndAt`.
+
+## Brussels Day 2 remote artwork (25 September 2026)
+
+Production `/api/bootstrap` confirmed Paris Day 1 (`paris-v3`) ends at
+`2026-09-25T18:00:00Z` and the committed tomorrow row is Brussels Day 2
+(`brussels-v1`). The old static anniversary calendar is not the live relaunch clock.
+The new authored `brussels-v1` pack has ten distinct seven-minute places and one
+Atomium night variant. It replaces only Brussels in `SEASON_ONE_FALLBACK_IDS`; the
+other three fallback cities remain untouched. The review status stays `pending`
+until the owner accepts the illustrations and cultural copy.
+
+`pnpm scenes:build brussels` derived 95 content-addressed WebP renditions from ten
+source paintings and the night edit. The largest adjacent desktop pair is 1,925,230
+bytes, below the 5,767,168-byte budget. The 95 renditions, one 165,152-byte postcard
+and eleven source PNGs were uploaded to R2 under `scenes/brussels/v1/`; the day-2
+manifest was uploaded separately. `pnpm assets:verify --pack brussels-v1 --base
+https://assets.keephimwalking.com --origin https://keephimwalking.com` passed 95/95
+after local images were removed. The postcard HEAD returned 200, `image/webp` and
+`Access-Control-Allow-Origin: *`. There are no Brussels binary assets in the
+repository. `art/brussels/r2-assets.json` records 96 runtime checksums, byte counts
+and ground seam results; `content:validate` checks those recorded properties without
+pretending files are local. The maximum recorded ground-edge mismatch is 0.009, below
+the 0.08 limit.
+
+`assetUrl` sends `/scenes/brussels/v1/` paths to the fixed R2 origin when no
+`ASSET_BASE_URL` is configured; the usual configured origin still applies in
+Production. `renderPostcard` fetches the same remote day-2 postcard on the server.
+The browser continues to load only the current and next place. The authoring brief,
+source recovery paths and prompt set are in `art/brussels/README.md`.
+The protected production-build preview loaded all ten 3600-pixel Brussels images
+from R2 in Chromium with no failed requests. All ten 800-pixel mobile centre crops
+also matched their recorded SHA-256 hashes after fetching from R2.
