@@ -1,0 +1,17 @@
+{
+  "packVersion": 1,
+  "sceneVisitSeconds": 420,
+  "targetPlaceCount": 10,
+  "places": [
+    { "id": "brussels-arrival", "label": "Bruxelles-Central", "tags": ["arrival", "station"], "description": "First steps outside the central station on a broad paved street.", "day": "zones/brussels-arrival/master.png", "weather": "clear" },
+    { "id": "brussels-galeries", "label": "Galeries Royales Saint-Hubert", "tags": ["lanes", "gallery"], "description": "A glass-roofed arcade stretches between warm stone shopfronts.", "day": "zones/brussels-galeries/master.png", "weather": "clear" },
+    { "id": "brussels-grand-place", "label": "Grand-Place", "tags": ["square", "landmark"], "description": "The square opens between ornate guildhall facades and the city hall.", "day": "zones/brussels-grand-place/master.png", "weather": "golden" },
+    { "id": "brussels-sainte-catherine", "label": "Place Sainte-Catherine", "tags": ["cafe", "square"], "description": "A calm pedestrian square passes the church and empty café terraces.", "day": "zones/brussels-sainte-catherine/master.png", "weather": "breeze" },
+    { "id": "brussels-marolles", "label": "The Marolles", "tags": ["market", "lanes"], "description": "A small cobbled street with modest shopfronts and market shutters.", "day": "zones/brussels-marolles/master.png", "weather": "haze" },
+    { "id": "brussels-sablon", "label": "Grand Sablon", "tags": ["square", "cafe"], "description": "Stone facades and church walls frame a broad cobbled square.", "day": "zones/brussels-sablon/master.png", "weather": "golden" },
+    { "id": "brussels-mont-des-arts", "label": "Mont des Arts", "tags": ["garden", "landmark"], "description": "Formal garden paths look toward the centre of Brussels.", "day": "zones/brussels-mont-des-arts/master.png", "weather": "clear" },
+    { "id": "brussels-park", "label": "Brussels Park", "tags": ["garden", "lanes"], "description": "Tree-lined walks and lawns sit beside the Royal Quarter.", "day": "zones/brussels-park/master.png", "weather": "breeze" },
+    { "id": "brussels-cinquantenaire", "label": "Parc du Cinquantenaire", "tags": ["garden", "landmark"], "description": "The park path leads toward the triumphal arch and colonnades.", "day": "zones/brussels-cinquantenaire/master.png", "weather": "clear" },
+    { "id": "brussels-atomium", "label": "Atomium viewpoint", "tags": ["landmark", "evening"], "description": "The Atomium rises above the open path as the light softens.", "day": "zones/brussels-atomium/master.png", "night": "zones/brussels-atomium/night.png", "weather": "evening" }
+  ]
+}

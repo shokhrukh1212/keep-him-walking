@@ -1,0 +1,411 @@
+{
+  "schemaVersion": 1,
+  "packId": "brussels-v1",
+  "origin": "https://assets.keephimwalking.com",
+  "files": {
+    "/scenes/brussels/v1/places/brussels-arrival/city-center-1200.cc2c163cfb.webp": {
+      "bytes": 143124,
+      "sha256": "cc2c163cfba1c0cc9c73dbe50733cd05f670e151dba7cdf064c3101e53e32dc5"
+    },
+    "/scenes/brussels/v1/places/brussels-arrival/city-center-800.3485105088.webp": {
+      "bytes": 90218,
+      "sha256": "3485105088feee570701c3d350560b1cd2888512c179e8ce11b4e2b11e1c9fdf"
+    },
+    "/scenes/brussels/v1/places/brussels-arrival/city-full-1920.36ebbea250.webp": {
+      "bytes": 239192,
+      "sha256": "36ebbea250c02a35a03546cb08f568ae8f8530b9ab86074329d378dc739a3052"
+    },
+    "/scenes/brussels/v1/places/brussels-arrival/city-full-2560.6051566d5b.webp": {
+      "bytes": 341636,
+      "sha256": "6051566d5bd6acffe307a5058351eedb385d433f1aa110d72684f8b3fd105cc0"
+    },
+    "/scenes/brussels/v1/places/brussels-arrival/city-full-3600.840df6ef74.webp": {
+      "bytes": 499762,
+      "sha256": "840df6ef74de2a53babce8f31f9af064f440dc3e9c385b3fd1a4cfbe6ed0a27c"
+    },
+    "/scenes/brussels/v1/places/brussels-arrival/ground-full-1800.921ee1bd20.webp": {
+      "bytes": 26106,
+      "sha256": "921ee1bd203c516053cd2a6ad2acf9ae9f98a678e82c89e8ba77e98c27176c6a",
+      "edgeMismatch": 0.007709997579278625
+    },
+    "/scenes/brussels/v1/places/brussels-arrival/ground-full-3600.6a3a5aa420.webp": {
+      "bytes": 61684,
+      "sha256": "6a3a5aa42078008462fddd2e3bad4d37187945059a05bb9a3b694a2007a554bc",
+      "edgeMismatch": 0.006197046719922537
+    },
+    "/scenes/brussels/v1/places/brussels-arrival/sky-full-1600.5b8f6c980e.webp": {
+      "bytes": 97790,
+      "sha256": "5b8f6c980eed94984b08c1a653a3771f4d82292ba181848ca076fafcda15bc23"
+    },
+    "/scenes/brussels/v1/places/brussels-arrival/sky-full-800.36c65ad9c5.webp": {
+      "bytes": 46256,
+      "sha256": "36c65ad9c561d4b7e94e00cf752e8459126cf0986c299615d714e4060817fb59"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/city-center-1200.ca807126c3.webp": {
+      "bytes": 158990,
+      "sha256": "ca807126c3ee53a31cd6fc7abf29cd0b83606710b382591549a815c4adf891e3"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/city-center-800.9d760bd5ab.webp": {
+      "bytes": 99082,
+      "sha256": "9d760bd5ab046eeeaab7a990584c7310b58f56c68a3e15c3d9e28ba73177a566"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/city-full-1920.31cedac130.webp": {
+      "bytes": 273964,
+      "sha256": "31cedac130bb840eedb7da94ed2d3b479ddc10d01f87874c91919cef5b8b8d3c"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/city-full-2560.3466c12af1.webp": {
+      "bytes": 392550,
+      "sha256": "3466c12af18f419d381a95e30158d8121a243631fdf446c3b17d6c35e1940d00"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/city-full-3600.c94f43ff9b.webp": {
+      "bytes": 586216,
+      "sha256": "c94f43ff9ba0a8ed6b402f94c6d5d574a82d718f5c04c42e8ef336cd8a4f389b"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/ground-full-1800.9715e5c0b1.webp": {
+      "bytes": 29500,
+      "sha256": "9715e5c0b176a1b1273f5a03255a256486aa639d3b9c1023ca1cd5f115646d13",
+      "edgeMismatch": 0.007546598886468168
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/ground-full-3600.af5fe645f5.webp": {
+      "bytes": 70216,
+      "sha256": "af5fe645f5d62bf231e2c05e8a1b921ffd98856eeab9f8934776cbc6b6508b7c",
+      "edgeMismatch": 0.005358871943839264
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/night-center-1200.816c9e23cb.webp": {
+      "bytes": 133502,
+      "sha256": "816c9e23cb998cde3ce8acc9b239ed0c97bc2b607ab60b23f219833d0e299b94"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/night-center-800.7a98e352ca.webp": {
+      "bytes": 85396,
+      "sha256": "7a98e352cab20175e53149b00d1562862d717918acc4a089aab7899fc5e2da83"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/night-full-1920.d38ab0ec35.webp": {
+      "bytes": 212706,
+      "sha256": "d38ab0ec35eef259b6b25d68524563f7d917c2b1a73608814a27d17cf798b8a7"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/night-full-2560.df23d765a2.webp": {
+      "bytes": 303644,
+      "sha256": "df23d765a23e073467e3457e305ffa5ee3ffe5f29bd0dc84b3cbad29c1c148c5"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/night-full-3600.612a117566.webp": {
+      "bytes": 442708,
+      "sha256": "612a117566ac0db03306dd1066f58bb4989bfe80906af87491d71d8860fbe303"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/sky-full-1600.31202dd422.webp": {
+      "bytes": 97728,
+      "sha256": "31202dd422492fec4ef9c4aeb5b8e01aea31d0015a5b3ad3052dbe489152ee9f"
+    },
+    "/scenes/brussels/v1/places/brussels-atomium/sky-full-800.3a3bca0f06.webp": {
+      "bytes": 44494,
+      "sha256": "3a3bca0f063b4dd4a2ff0e13e11c8212870c19e59cf137e92aa4ee002a6adcb4"
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/city-center-1200.895c37c773.webp": {
+      "bytes": 131886,
+      "sha256": "895c37c773388431e9a72627f73b3183a19bec4087a78e8a56670cd1ca982537"
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/city-center-800.519b74a603.webp": {
+      "bytes": 83096,
+      "sha256": "519b74a6035c77125ad7b8d31ccfa5e4546bc72a770b49efaafc85cb517c1cfe"
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/city-full-1920.8c0af22fd7.webp": {
+      "bytes": 261234,
+      "sha256": "8c0af22fd75ad1f8b458dad3b3957ebb8e323df840381420b6da74b067819d52"
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/city-full-2560.ed6435a7f1.webp": {
+      "bytes": 372938,
+      "sha256": "ed6435a7f142aa033a19d12c68144fa940fc13b1475065726aefe17d08bfc7df"
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/city-full-3600.ea827019b9.webp": {
+      "bytes": 548614,
+      "sha256": "ea827019b9fd79236f36ab9aa1b3b84717e84f3460a3c7685286e3e9544d56c7"
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/ground-full-1800.8e9b18e927.webp": {
+      "bytes": 34394,
+      "sha256": "8e9b18e9271168083e63b572c2a41bcb541bbe21f6a49fa71cbe6aa81b51b539",
+      "edgeMismatch": 0.008772089082546598
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/ground-full-3600.75506fce9a.webp": {
+      "bytes": 79420,
+      "sha256": "75506fce9a81b11d6aeeb32dbf64b0729e8d5a01cd516a009337e8df2e058a8d",
+      "edgeMismatch": 0.00749515855725006
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/sky-full-1600.e21313475e.webp": {
+      "bytes": 100328,
+      "sha256": "e21313475e319ccdde72f64cf01cfdebf959c06a782b1232716a8dd90f57f533"
+    },
+    "/scenes/brussels/v1/places/brussels-cinquantenaire/sky-full-800.6c9ec58140.webp": {
+      "bytes": 45940,
+      "sha256": "6c9ec58140d1f1957d51e249504afb739bc6ce3531ae96b59e5085ab0e5354fa"
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/city-center-1200.6f2a479450.webp": {
+      "bytes": 194368,
+      "sha256": "6f2a479450369a6236e72d6e9bb1d3d9f4e0e9a74510a4ed155427646dc96536"
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/city-center-800.335d7ac4c6.webp": {
+      "bytes": 123676,
+      "sha256": "335d7ac4c6fd0578c202f077d47d7f7d1aa09a78fe5596e2ef348d8d953407e0"
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/city-full-1920.ec6b0f552a.webp": {
+      "bytes": 264330,
+      "sha256": "ec6b0f552a090a6d2d6a3a5dee472b79d8e07b67cf19dc04d337dc8c2b98e2ab"
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/city-full-2560.795016b0f3.webp": {
+      "bytes": 371098,
+      "sha256": "795016b0f375cd4985cd677bbc0dcb315649aba0d6de77d6d207a3e40af7adb7"
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/city-full-3600.3b107a0caf.webp": {
+      "bytes": 546078,
+      "sha256": "3b107a0caf22229d59be0887bb20734a077ae1e0a74768cb7e4801ba1e3c3842"
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/ground-full-1800.1d34b4264f.webp": {
+      "bytes": 33778,
+      "sha256": "1d34b4264f5916998de3fc3bc0a0e61c0bfe954461a1910732bc6fbe697bbfea",
+      "edgeMismatch": 0.007428588719438392
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/ground-full-3600.8e99514889.webp": {
+      "bytes": 75764,
+      "sha256": "8e9951488923ba68cf8c113e7787e04c827a9a67436b968f01ecea5cec5c4acc",
+      "edgeMismatch": 0.006183430162188332
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/sky-full-1600.ce341f56a3.webp": {
+      "bytes": 94624,
+      "sha256": "ce341f56a301814a84212a9595028af06f285e150ac9572999663212d3f6b8f6"
+    },
+    "/scenes/brussels/v1/places/brussels-galeries/sky-full-800.813899d656.webp": {
+      "bytes": 44522,
+      "sha256": "813899d65685466433e4c0652d2b132729696fe29c133e2f3df53679551d0a53"
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/city-center-1200.d24ca8f50d.webp": {
+      "bytes": 144826,
+      "sha256": "d24ca8f50daf718499f12d07d0a6dfec04c1e8cca3277664ae9697e86acd4a98"
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/city-center-800.9691ce22b0.webp": {
+      "bytes": 91948,
+      "sha256": "9691ce22b0913b847b00d74a562cac6bdf491896a2f233a1bf5b5f12ccef37ac"
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/city-full-1920.e56423824d.webp": {
+      "bytes": 282588,
+      "sha256": "e56423824d57ab463a8969eabf149d5102f52809b788405819b682b6a5bc5db4"
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/city-full-2560.515b14572b.webp": {
+      "bytes": 402416,
+      "sha256": "515b14572bbe27ac33befe8874ee236c37ab50d391679b55bd167cef5e8a0aa2"
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/city-full-3600.2a9f4c779c.webp": {
+      "bytes": 582436,
+      "sha256": "2a9f4c779c164c6fc9c50e93864255077f2deafa9fe43c6cbab943974263c70f"
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/ground-full-1800.6b3ff297d0.webp": {
+      "bytes": 38604,
+      "sha256": "6b3ff297d04b36a624d8a7da3fe4753f6c876bf7519456cec3eb29f3966d98fd",
+      "edgeMismatch": 0.006066932946017913
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/ground-full-3600.3fd0ab6ff8.webp": {
+      "bytes": 89134,
+      "sha256": "3fd0ab6ff82626a7f76f75543a3d2675bb9ddfee21c2c40bb5b29b78f5fa6870",
+      "edgeMismatch": 0.004697712418300653
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/sky-full-1600.44b6c072ad.webp": {
+      "bytes": 95318,
+      "sha256": "44b6c072addf4b5e23be000d377c02ca1abdbe243cb7bb189a0ce26bff797c6d"
+    },
+    "/scenes/brussels/v1/places/brussels-grand-place/sky-full-800.63e25eb96b.webp": {
+      "bytes": 45516,
+      "sha256": "63e25eb96b7d01d5924a8717b132e9a73a8224647cd5baeff63e5148dfacb2a2"
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/city-center-1200.03bd3f8009.webp": {
+      "bytes": 244524,
+      "sha256": "03bd3f80093528c5b8214596256e1582d1b50fb63c62f25850a427885f3d39d0"
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/city-center-800.d48a989e6c.webp": {
+      "bytes": 154996,
+      "sha256": "d48a989e6c2cc0f285915f401353b72d3c3c281418ae814d5d4f72a87b9e04d7"
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/city-full-1920.0bf7f210a9.webp": {
+      "bytes": 332286,
+      "sha256": "0bf7f210a926d73714e5104610f10bce0d6d3a8c563b48e30230e0e65f222346"
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/city-full-2560.ce96fa958e.webp": {
+      "bytes": 469186,
+      "sha256": "ce96fa958e38138841006de612ee1cd36f5cad05136188ad8430b1f8609ea852"
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/city-full-3600.13100630e5.webp": {
+      "bytes": 691762,
+      "sha256": "13100630e5669f9866e3d47d4c922908c8aa92878795a6c889375537fccc13d2"
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/ground-full-1800.e06390f1a7.webp": {
+      "bytes": 44918,
+      "sha256": "e06390f1a7b0c41df763153b5526bf9c193f0a2f80a8778407a7652d3c393f05",
+      "edgeMismatch": 0.006971677559912854
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/ground-full-3600.d3dd169da1.webp": {
+      "bytes": 97712,
+      "sha256": "d3dd169da143f9b88bcc42f39b79784e5618ad587bbbb0d919f2e3159edb9816",
+      "edgeMismatch": 0.0067598644396030015
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/sky-full-1600.a30549d874.webp": {
+      "bytes": 123896,
+      "sha256": "a30549d87478223e3953752bddb185caaa76a07dadbaa39767840acd2c9e6180"
+    },
+    "/scenes/brussels/v1/places/brussels-marolles/sky-full-800.58ac09356c.webp": {
+      "bytes": 57918,
+      "sha256": "58ac09356c5937bc94ecb05d8046491d922c378cf5a15bd1ccced3d7bb4ee24d"
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/city-center-1200.3070a09805.webp": {
+      "bytes": 145772,
+      "sha256": "3070a0980593186d96fa8fa2430df46427fe6428db8605c23f01912f3d063534"
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/city-center-800.b22cc15152.webp": {
+      "bytes": 90286,
+      "sha256": "b22cc15152604e82d94a48e534c182d24db0a4f324ce9dd95f2a40e47017cb5d"
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/city-full-1920.071065e57d.webp": {
+      "bytes": 230908,
+      "sha256": "071065e57d17dd38a687d153db32c145628c43280b7695614e0013ef6d18d48b"
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/city-full-2560.9cb0ed8407.webp": {
+      "bytes": 328808,
+      "sha256": "9cb0ed84073ed8567048cb6339db6a2888da5fbe31249be7be02bb6eac970e0b"
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/city-full-3600.8d8f49a52a.webp": {
+      "bytes": 485030,
+      "sha256": "8d8f49a52a8c5fd318d00d730dca8ff34c4892c8ad2414d210b3d9519380c638"
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/ground-full-1800.6d7e2763dc.webp": {
+      "bytes": 19244,
+      "sha256": "6d7e2763dcce7b329997ce2027c19c16d1dca683afba22c9f2c9370a904060e2",
+      "edgeMismatch": 0.006950496247881869
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/ground-full-3600.ab4881f24b.webp": {
+      "bytes": 45200,
+      "sha256": "ab4881f24bc8ffff186e3fee60b8044b622f1dc6c2a50f5cb385f1c92373828c",
+      "edgeMismatch": 0.004980634229000242
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/sky-full-1600.647a4df06d.webp": {
+      "bytes": 98352,
+      "sha256": "647a4df06d25692595b1d449c35690d67aff11eaabc75bf8fb80667308855ca1"
+    },
+    "/scenes/brussels/v1/places/brussels-mont-des-arts/sky-full-800.9e69944383.webp": {
+      "bytes": 44836,
+      "sha256": "9e6994438330eeef738ec2b8be95df5e6fe10d06bdd7304ab1862587dc5bd132"
+    },
+    "/scenes/brussels/v1/places/brussels-park/city-center-1200.b738577b61.webp": {
+      "bytes": 166042,
+      "sha256": "b738577b61b088ea9389614213e7948c212c686f0cec9fcea307fb2085368bec"
+    },
+    "/scenes/brussels/v1/places/brussels-park/city-center-800.3016e0686d.webp": {
+      "bytes": 102170,
+      "sha256": "3016e0686d9c2476f07878b9e5977745d8b0c7e69130e39e23f899f88703ca31"
+    },
+    "/scenes/brussels/v1/places/brussels-park/city-full-1920.64eb972f9a.webp": {
+      "bytes": 321790,
+      "sha256": "64eb972f9a5420f3ddd960930d87ae5a30cef27be4a1ea035bff39278ab5e766"
+    },
+    "/scenes/brussels/v1/places/brussels-park/city-full-2560.dce7c7361a.webp": {
+      "bytes": 467500,
+      "sha256": "dce7c7361a9114ee79d6981483c47f16f58ce35f09edb96fb3009c853f43bb3d"
+    },
+    "/scenes/brussels/v1/places/brussels-park/city-full-3600.5cf0ba6afb.webp": {
+      "bytes": 691666,
+      "sha256": "5cf0ba6afb712d9d2079a5c7f41412d5618ec85ec81e3314ccef399117161cb5"
+    },
+    "/scenes/brussels/v1/places/brussels-park/ground-full-1800.e73b3a78a2.webp": {
+      "bytes": 36968,
+      "sha256": "e73b3a78a229e5ec6078b0ed7048703d208d34d8a897c8ad30046c514c6e4d34",
+      "edgeMismatch": 0.008702493343016218
+    },
+    "/scenes/brussels/v1/places/brussels-park/ground-full-3600.cf1ebf7b1e.webp": {
+      "bytes": 83068,
+      "sha256": "cf1ebf7b1e518e7c1d4ac980922cdba0adbaba7c9e48f5ae64dcdedd8b1d65a8",
+      "edgeMismatch": 0.008564814814814815
+    },
+    "/scenes/brussels/v1/places/brussels-park/sky-full-1600.dbf1e38b78.webp": {
+      "bytes": 133682,
+      "sha256": "dbf1e38b78127aa42babe92d4d07c41eb91556d985601633a48b5d932b70dcb0"
+    },
+    "/scenes/brussels/v1/places/brussels-park/sky-full-800.528519793f.webp": {
+      "bytes": 61656,
+      "sha256": "528519793f69018d3c2c8250cf6c781b0ed30f34f7423c976885d9532a2abc6f"
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/city-center-1200.eec8bf0a83.webp": {
+      "bytes": 223874,
+      "sha256": "eec8bf0a83fb5265af61787454219a3ebf48cc1be9ef30edab82b327cd81f821"
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/city-center-800.97aef4aab7.webp": {
+      "bytes": 141080,
+      "sha256": "97aef4aab7aa542d3acab14541bb4cb671ce133f3029cbd53bf3907c3296dfaf"
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/city-full-1920.765d9cdff6.webp": {
+      "bytes": 335088,
+      "sha256": "765d9cdff6c00037fc3ca5c1855ffa8d3e5dc4eb2500c7bd079d66a8fa759666"
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/city-full-2560.76fc08bc66.webp": {
+      "bytes": 479528,
+      "sha256": "76fc08bc668a02de8e29910964c24fdd78b89a081243ad2ca8b99dd29ef74a8c"
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/city-full-3600.452456570b.webp": {
+      "bytes": 708212,
+      "sha256": "452456570b8f40de60e11f08ccb53b7746a54f61af4ab5b0eb7be204c2e79e3d"
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/ground-full-1800.909484e111.webp": {
+      "bytes": 39468,
+      "sha256": "909484e11169a2c60497e6ad3a590a413161a66ace442ef11bda006cb54d74a6",
+      "edgeMismatch": 0.007949043815056888
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/ground-full-3600.0d1bd585cf.webp": {
+      "bytes": 88274,
+      "sha256": "0d1bd585cf59f6be1d297fef5adf5e8c4d91ba44bcef4bbd2e1eb17787d8d8dc",
+      "edgeMismatch": 0.007623759380295328
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/sky-full-1600.4a0bcb4522.webp": {
+      "bytes": 123488,
+      "sha256": "4a0bcb4522a878e6127b1b0a39b70fda22d84819ae66fbbc4264beb064bbb7c7"
+    },
+    "/scenes/brussels/v1/places/brussels-sablon/sky-full-800.2b8347d1c1.webp": {
+      "bytes": 59170,
+      "sha256": "2b8347d1c151f9ee9801dd7cba4fb6175a7f1b13e1a255ce97e05a20a92fc9cf"
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/city-center-1200.0c47662b9d.webp": {
+      "bytes": 166294,
+      "sha256": "0c47662b9d74fa117c75693f25199c32223680b8bedc364d94d5841fe1df8248"
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/city-center-800.1a1b6cb6a7.webp": {
+      "bytes": 106696,
+      "sha256": "1a1b6cb6a7b12f9745cccc9da57145fe5b4d04bda9e364fab9e3a293865629ba"
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/city-full-1920.fc5bd48a3a.webp": {
+      "bytes": 296620,
+      "sha256": "fc5bd48a3a512a0c0e10ef652c3e67ff8ff823b2d612e98b860e605258cbfe53"
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/city-full-2560.e21d18abf6.webp": {
+      "bytes": 421116,
+      "sha256": "e21d18abf638f32a1a4ccb60d415ad72e839e931cff280ddbe8ccaeb49ccf715"
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/city-full-3600.6fa2562cdf.webp": {
+      "bytes": 606426,
+      "sha256": "6fa2562cdf44d6e8ff34b8ca6676b8d732d8611752961fbb201cb8abfc13594e"
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/ground-full-1800.3fc775186e.webp": {
+      "bytes": 31950,
+      "sha256": "3fc775186e4147633d668d73f75a4ab962dfaded48a9b14286225e67a8adf2b2",
+      "edgeMismatch": 0.008947591382231905
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/ground-full-3600.f2ac65a870.webp": {
+      "bytes": 69342,
+      "sha256": "f2ac65a870311ecec802fdabcd4157599693f0ec03a33e6fd70db727820bb7c0",
+      "edgeMismatch": 0.007794722827402566
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/sky-full-1600.8d6ae922fd.webp": {
+      "bytes": 117100,
+      "sha256": "8d6ae922fdc33e88eaac8c05bb653594cc46ac17f6d2c8d18e6edab152a96360"
+    },
+    "/scenes/brussels/v1/places/brussels-sainte-catherine/sky-full-800.90c8c3e8bb.webp": {
+      "bytes": 55660,
+      "sha256": "90c8c3e8bb27c7bf4c0b7b8db0ee681a4c03c5c7ee585f849bfd58e2f89f3a5b"
+    },
+    "/scenes/brussels/v1/postcard.webp": {
+      "bytes": 165152,
+      "sha256": "c47b5a71b0876cd6c5a31e642090e9a8f78cd0248cc4ead05e8673e2f3f6023c"
+    }
+  }
+}

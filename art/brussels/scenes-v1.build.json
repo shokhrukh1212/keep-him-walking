@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "packId": "brussels-v1",
+  "builtAt": "2026-09-25T15:31:27.149Z",
+  "placeCount": 10,
+  "targetPlaceCount": 10,
+  "warnings": [],
+  "assetBudgetBytes": 5767168,
+  "largestTwoPlaceDesktopBytes": 1925230,
+  "largestTwoPlaceMobileBytes": 669872,
+  "places": {
+    "brussels-arrival": {
+      "sourceHash": "682fada1ce455765",
+      "palette": [
+        "#887777",
+        "#bb9988",
+        "#554444"
+      ],
+      "night": false,
+      "desktopBytes": 659236,
+      "mobileBytes": 215486,
+      "storedBytes": 1545768
+    },
+    "brussels-galeries": {
+      "sourceHash": "af844709d72da4cd",
+      "palette": [
+        "#222211",
+        "#ccaa88",
+        "#aa7744"
+      ],
+      "night": false,
+      "desktopBytes": 716466,
+      "mobileBytes": 272668,
+      "storedBytes": 1748238
+    },
+    "brussels-grand-place": {
+      "sourceHash": "6dc391d58977c273",
+      "palette": [
+        "#77aadd",
+        "#665555",
+        "#bbccee"
+      ],
+      "night": false,
+      "desktopBytes": 766888,
+      "mobileBytes": 228946,
+      "storedBytes": 1772786
+    },
+    "brussels-sainte-catherine": {
+      "sourceHash": "62380cf1069a05e5",
+      "palette": [
+        "#aaccff",
+        "#887777",
+        "#bb9988"
+      ],
+      "night": false,
+      "desktopBytes": 792868,
+      "mobileBytes": 253904,
+      "storedBytes": 1871204
+    },
+    "brussels-marolles": {
+      "sourceHash": "62d10da888a2bf28",
+      "palette": [
+        "#887777",
+        "#111111",
+        "#333333"
+      ],
+      "night": false,
+      "desktopBytes": 913370,
+      "mobileBytes": 347360,
+      "storedBytes": 2217198
+    },
+    "brussels-sablon": {
+      "sourceHash": "4f0aa168dfed7c34",
+      "palette": [
+        "#776666",
+        "#998877",
+        "#88bbff"
+      ],
+      "night": false,
+      "desktopBytes": 919974,
+      "mobileBytes": 322512,
+      "storedBytes": 2198182
+    },
+    "brussels-mont-des-arts": {
+      "sourceHash": "6145a13ca0509bc6",
+      "palette": [
+        "#88bbee",
+        "#ffeecc",
+        "#bbccee"
+      ],
+      "night": false,
+      "desktopBytes": 628582,
+      "mobileBytes": 209852,
+      "storedBytes": 1488436
+    },
+    "brussels-park": {
+      "sourceHash": "04ad7d321a1a8a80",
+      "palette": [
+        "#bbccee",
+        "#886655",
+        "#ffcc99"
+      ],
+      "night": false,
+      "desktopBytes": 908416,
+      "mobileBytes": 264666,
+      "storedBytes": 2064542
+    },
+    "brussels-cinquantenaire": {
+      "sourceHash": "115f363cd0ffd25f",
+      "palette": [
+        "#887777",
+        "#ffddaa",
+        "#99bbdd"
+      ],
+      "night": false,
+      "desktopBytes": 728362,
+      "mobileBytes": 212220,
+      "storedBytes": 1657850
+    },
+    "brussels-atomium": {
+      "sourceHash": "75e2a7121defa03f",
+      "palette": [
+        "#7799cc",
+        "#997777",
+        "#ffbb88"
+      ],
+      "night": true,
+      "desktopBytes": 1196868,
+      "mobileBytes": 366486,
+      "storedBytes": 2930696
+    }
+  }
+}

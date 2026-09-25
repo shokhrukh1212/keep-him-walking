@@ -41,9 +41,9 @@ describe("Phase 2 country packs", () => {
   it("registers the immutable launch route, Paris versions and the Tashkent rollback", () => {
     expect(packs.map((pack) => pack.assetVersion)).toEqual([
       "tashkent-v4", "tashkent-v5", "dushanbe-v1", "bishkek-v1", "almaty-v1", "baku-v1", "tbilisi-v1", "istanbul-v1",
-      "paris-v1", "paris-v2", "paris-v3",
-      // Season 1 fallback cities: pending paintings, reported as missing rather than invented.
-      "brussels-v1", "amsterdam-v1", "cologne-v1", "budapest-v1",
+      "brussels-v1", "paris-v1", "paris-v2", "paris-v3",
+      // Remaining Season 1 fallback cities: pending paintings, reported as missing rather than invented.
+      "amsterdam-v1", "cologne-v1", "budapest-v1",
     ]);
     for (const pack of packs) expect(countryPackV3Schema.parse(pack)).toBeTruthy();
   });
@@ -54,7 +54,7 @@ describe("Phase 2 country packs", () => {
         zone.layers.flatMap((layer) => layer.segments.map((segment) => segment.url)),
       ),
     );
-    expect(new Set(sceneUrls).size).toBe(56);
+    expect(new Set(sceneUrls).size).toBe(66);
     expect(packs.every((pack) => pack.storyBeats.length >= 4)).toBe(true);
     expect(packs.slice(0, 2).every((pack) => pack.culturalReview.status === "approved")).toBe(true);
     expect(packs.slice(2, 8).every((pack) => pack.culturalReview.status === "creator_reviewed")).toBe(true);
@@ -68,7 +68,8 @@ describe("Phase 2 country packs", () => {
     expect(paris.every((pack) => pack.route.zones.every((zone) => zone.continuousScene))).toBe(true);
     expect(paris.at(-1)?.route.zones.every((zone) => zone.variants && zone.tags.length > 0)).toBe(true);
     expect(paris.at(-1)?.route.zones).toHaveLength(10);
-    expect(packs.slice(-4).every((pack) => pack.culturalReview.status === "pending")).toBe(true);
+    expect(packs.filter((pack) => ["brussels-v1", "amsterdam-v1", "cologne-v1", "budapest-v1"].includes(pack.assetVersion))
+      .every((pack) => pack.culturalReview.status === "pending")).toBe(true);
     expect(new Set(packs.map((pack) => pack.npcSystem.baseType))).toEqual(new Set(["resident-a", "resident-b"]));
   });
 

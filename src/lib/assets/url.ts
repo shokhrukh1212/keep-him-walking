@@ -1,5 +1,12 @@
 /** Public trees mirrored by the upload command. Pack paths remain canonical/local. */
 export const ASSET_ROOTS = ["characters", "scenes", "audio", "npcs"] as const;
+export const BRUSSELS_REMOTE_PREFIX = "/scenes/brussels/v1/";
+export const BRUSSELS_REMOTE_ORIGIN = "https://assets.keephimwalking.com";
+
+/** Day 2's paintings live only in R2, including when local development has no asset base. */
+export function isRemoteOnlyAssetPath(path: string): boolean {
+  return path.startsWith(BRUSSELS_REMOTE_PREFIX);
+}
 
 export function validateAssetBaseUrl(value: string | undefined): string {
   const base = value?.trim() ?? "";
@@ -14,7 +21,7 @@ export function validateAssetBaseUrl(value: string | undefined): string {
 
 /** Pure resolution; explicit base makes build configuration and tests deterministic. */
 export function assetUrl(path: string, baseUrl: string | undefined): string {
-  const base = validateAssetBaseUrl(baseUrl);
+  const base = validateAssetBaseUrl(baseUrl) || (isRemoteOnlyAssetPath(path) ? BRUSSELS_REMOTE_ORIGIN : "");
   if (!base || !ASSET_ROOTS.some((root) => path.startsWith(`/${root}/`))) return path;
   const pathname = path.split(/[?#]/, 1)[0];
   // Do not let URL normalization escape the mirrored public trees.

@@ -2,14 +2,15 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 import type { CountryPack } from "../../src/lib/content/schema";
 import { assetUrl, validateAssetBaseUrl } from "../../src/lib/assets/url";
+import { isRemoteOnlyAssetPath } from "../../src/lib/assets/url";
 import { cacheControlFor } from "./upload";
 
 /**
  * Checks, without credentials, that a public asset origin (the owner's R2 custom
  * domain, or the application itself) serves a pack's renditions the way the
  * browser needs them: reachable, the right type, cacheable for a year when
- * content-addressed, readable by WebGL across origins, and byte-identical to the
- * checked-in file.
+ * content-addressed, readable by WebGL across origins, and matching either the
+ * checked-in file or a recorded R2-only byte count.
  */
 
 const MIME: Record<string, string> = {
@@ -34,6 +35,7 @@ export async function verifyAssetPaths(
     publicDirectory: string;
     fetcher?: typeof fetch;
     concurrency?: number;
+    expectedBytes?: Readonly<Record<string, number>>;
   },
 ): Promise<AssetCheck[]> {
   const base = validateAssetBaseUrl(options.base);
@@ -70,12 +72,15 @@ export async function verifyAssetPaths(
     }
     const length = Number(response.headers.get("content-length"));
     try {
-      const local = (await stat(path.join(options.publicDirectory, assetPath))).size;
+      const local = isRemoteOnlyAssetPath(assetPath)
+        ? options.expectedBytes?.[assetPath]
+        : (await stat(path.join(options.publicDirectory, assetPath))).size;
+      if (local === undefined) throw new Error("Missing expected bytes");
       if (Number.isFinite(length) && response.headers.has("content-length") && length !== local) {
-        problems.push(`serves ${length} bytes, the checked-in file has ${local}`);
+        problems.push(`serves ${length} bytes, the ${isRemoteOnlyAssetPath(assetPath) ? "R2 inventory" : "checked-in file"} has ${local}`);
       }
     } catch {
-      problems.push("no checked-in file to compare");
+      problems.push(isRemoteOnlyAssetPath(assetPath) ? "no recorded byte count to compare" : "no checked-in file to compare");
     }
     return { path: assetPath, url, problems };
   };

@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assetUrl, publicAssetUrl, validateAssetBaseUrl } from "./url";
+import { assetUrl, isRemoteOnlyAssetPath, publicAssetUrl, validateAssetBaseUrl } from "./url";
 
 afterEach(() => vi.unstubAllEnvs());
 
 describe("asset URLs", () => {
+  it("fetches only Brussels day 2 scene assets from R2 without a build setting", () => {
+    expect(isRemoteOnlyAssetPath("/scenes/brussels/v1/postcard.webp")).toBe(true);
+    expect(isRemoteOnlyAssetPath("/scenes/amsterdam/v1/postcard.webp")).toBe(false);
+    expect(assetUrl("/scenes/brussels/v1/places/arrival/city.webp", undefined))
+      .toBe("https://assets.keephimwalking.com/scenes/brussels/v1/places/arrival/city.webp");
+  });
   it("preserves same-origin paths and revision strings without configuration", () => {
     for (const base of [undefined, "", "  "]) expect(assetUrl("/characters/v2/traveler.glb?rev=interactions-1", base)).toBe("/characters/v2/traveler.glb?rev=interactions-1");
   });

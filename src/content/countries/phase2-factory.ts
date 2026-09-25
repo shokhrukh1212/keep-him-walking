@@ -99,6 +99,7 @@ export type Phase2CountryDefinition = {
   ambient?: Partial<CountryPackV3["ambient"]>;
   postcardTitle: string;
   postcardCopy: string;
+  postcardBackgroundUrl?: string;
   sourceNotes: [string, string, ...string[]];
   culturalReview?: CountryPackV3["culturalReview"];
   assetBudgetBytes?: number;
@@ -320,7 +321,7 @@ export function createPhase2CountryPack(definition: Phase2CountryDefinition): Co
       zones,
       ...(definition.sceneVisitSeconds ? { sceneVisitSeconds: definition.sceneVisitSeconds } : {}),
     },
-    postcardBackgroundUrl: `/postcards/${city}/${version}/background.webp`,
+    postcardBackgroundUrl: definition.postcardBackgroundUrl ?? `/postcards/${city}/${version}/background.webp`,
     postcard: {
       title: definition.postcardTitle,
       safeCopy: definition.postcardCopy,

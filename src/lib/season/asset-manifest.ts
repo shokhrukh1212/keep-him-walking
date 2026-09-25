@@ -19,10 +19,10 @@ export type CityAssetManifest = {
 export const SEASON_SCENE_FALLBACK = "/scenes/tashkent/v1/scene-fallback.webp";
 
 /** A city manifest is independent; callers never need the other thirteen. */
-export function cityAssetManifest(day: number, fullResolution: readonly string[], thumbnail: string | null, missing: readonly string[]): CityAssetManifest {
+export function cityAssetManifest(day: number, fullResolution: readonly string[], thumbnail: string | null, missing: readonly string[], liveWindow?: { startsAt: string; endsAt: string }): CityAssetManifest {
   const stop = SEASON_ONE_ROUTE[day - 1];
   if (!stop) throw new RangeError("Invalid Season 1 day");
-  const window = seasonOneDayWindow(day);
+  const window = liveWindow ?? seasonOneDayWindow(day);
   return {
     schemaVersion: 1, day, city: stop.city, country: stop.country, packId: stop.packId,
     ...window,

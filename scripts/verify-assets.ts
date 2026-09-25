@@ -6,6 +6,11 @@
  */
 import { getCountryPack, registeredCountryPacks } from "../src/content/countries/registry";
 import { packAssetPaths, verifyAssetPaths } from "./assets/verify";
+import { readFile } from "node:fs/promises";
+
+const remoteBytes = Object.fromEntries(Object.entries((JSON.parse(await readFile("art/brussels/r2-assets.json", "utf8")) as {
+  files: Record<string, { bytes: number }>;
+}).files).map(([url, file]) => [url, file.bytes]));
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(name);
@@ -21,7 +26,7 @@ const origin = argument("--origin") ?? process.env.PRODUCTION_APP_URL ?? "https:
 const results = [];
 for (const pack of selected) {
   if (!pack) continue;
-  const checks = await verifyAssetPaths(packAssetPaths(pack), { base, origin, publicDirectory: "public" });
+  const checks = await verifyAssetPaths(packAssetPaths(pack), { base, origin, publicDirectory: "public", expectedBytes: remoteBytes });
   const failures = checks.filter((check) => check.problems.length > 0);
   results.push({ pack: pack.assetVersion, checked: checks.length, failed: failures.length, failures });
 }

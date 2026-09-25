@@ -8,7 +8,7 @@ import { parisCountryPackV3 } from "./paris.v3";
  * visibly the generic fallback; no Paris art, phrase, landmark or dialogue leaks in.
  * The pending review state keeps them out of destination voting.
  */
-export const SEASON_ONE_FALLBACK_IDS = new Set(["brussels-v1", "amsterdam-v1", "cologne-v1", "budapest-v1"]);
+export const SEASON_ONE_FALLBACK_IDS = new Set(["amsterdam-v1", "cologne-v1", "budapest-v1"]);
 
 function fallbackPack(stop: (typeof SEASON_ONE_ROUTE)[number]): CountryPackV3 {
   const id = stop.packId;

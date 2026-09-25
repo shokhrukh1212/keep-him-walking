@@ -21,6 +21,9 @@ describe("Season 1 route and R2 manifests", () => {
     const missing = cityAssetManifest(2, [], null, ["brussels pack", "brussels scene"]);
     expect(missing).toMatchObject({ city: "Brussels", country: "Belgium", fullResolution: [], thumbnail: SEASON_SCENE_FALLBACK, missing: ["brussels pack", "brussels scene"] });
     expect(cityAssetManifest(1, ["/scenes/paris/a.webp", "/scenes/paris/a.webp"], "/postcards/paris/thumb.webp", []).fullResolution).toEqual(["/scenes/paris/a.webp"]);
+    expect(cityAssetManifest(2, ["/scenes/brussels/scene.webp"], "/scenes/brussels/card.webp", [], {
+      startsAt: "2026-09-25T18:00:00.000Z", endsAt: "2026-09-26T18:00:00.000Z",
+    })).toMatchObject({ day: 2, startsAt: "2026-09-25T18:00:00.000Z", endsAt: "2026-09-26T18:00:00.000Z" });
   });
 
   it("retains only current and next, releasing completed cities at transition", () => {

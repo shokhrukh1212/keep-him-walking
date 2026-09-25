@@ -3,6 +3,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 import type { CountryPack } from "@/lib/content/schema";
+import { isRemoteOnlyAssetPath, publicAssetUrl } from "@/lib/assets/url";
 
 function escapeXml(value: string): string {
   return value.replace(/[<>&'\"]/g, (character) => ({
@@ -40,7 +41,14 @@ export async function renderPostcard(pack: CountryPack, input: {
   dayNumber: number;
   contributionSeconds: number;
 }): Promise<{ image: Buffer; openGraph: Buffer }> {
-  const source = await readFile(publicAssetPath(pack.postcardBackgroundUrl));
+  let source: Buffer;
+  if (isRemoteOnlyAssetPath(pack.postcardBackgroundUrl)) {
+    const response = await fetch(publicAssetUrl(pack.postcardBackgroundUrl), { signal: AbortSignal.timeout(10_000) });
+    if (!response.ok) throw new Error("POSTCARD_ASSET_UNAVAILABLE");
+    source = Buffer.from(await response.arrayBuffer());
+  } else {
+    source = await readFile(publicAssetPath(pack.postcardBackgroundUrl));
+  }
   const v3 = pack.schemaVersion === 3 ? pack.postcard : {
     safeCopy: `We kept the traveler moving through ${pack.cityName}.`,
     textColor: "#fff8e8",

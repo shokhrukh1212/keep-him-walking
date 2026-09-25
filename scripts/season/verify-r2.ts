@@ -5,6 +5,10 @@ import { SEASON_ONE_ROUTE } from "../../src/lib/season/anniversary";
 import type { CityAssetManifest } from "../../src/lib/season/asset-manifest";
 import { verifyAssetPaths } from "../assets/verify";
 
+const remoteBytes = Object.fromEntries(Object.entries((JSON.parse(await readFile("art/brussels/r2-assets.json", "utf8")) as {
+  files: Record<string, { bytes: number }>;
+}).files).map(([url, file]) => [url, file.bytes]));
+
 const base = process.argv.includes("--base") ? process.argv[process.argv.indexOf("--base") + 1] : process.env.ASSET_BASE_URL;
 if (!base) throw new Error("Pass --base https://your-R2-asset-origin");
 const results = [];
@@ -14,7 +18,7 @@ for (const stop of SEASON_ONE_ROUTE) {
   const file = path.join("public", "scenes", city, version, "season1-manifest.json");
   const manifest = JSON.parse(await readFile(file, "utf8")) as CityAssetManifest;
   const checks = manifest.fullResolution.length
-    ? await verifyAssetPaths(manifest.fullResolution, { base, origin: "https://keephimwalking.com", publicDirectory: "public", concurrency: 6 })
+    ? await verifyAssetPaths(manifest.fullResolution, { base, origin: "https://keephimwalking.com", publicDirectory: "public", concurrency: 6, expectedBytes: remoteBytes })
     : [];
   results.push({
     day: manifest.day, city: manifest.city, packId: manifest.packId,

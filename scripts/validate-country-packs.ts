@@ -7,6 +7,7 @@ import { readableCountryPackSchema, type SceneVariant } from "../src/lib/content
 import { horizontalEdgeMismatch } from "../src/lib/content/seam-audit";
 import { SEASON_ONE_FALLBACK_IDS } from "../src/content/countries/season1-fallback";
 import { SEASON_SCENE_FALLBACK } from "../src/lib/season/asset-manifest";
+import { isRemoteOnlyAssetPath } from "../src/lib/assets/url";
 
 const packs = registeredCountryPacks();
 const versions = new Set<string>();
@@ -15,6 +16,14 @@ const auditedSeams = new Set<string>();
 const MAX_GROUND_EDGE_MISMATCH = 0.08;
 /** The owner's target for a city manifest; fewer places is allowed but reported. */
 const TARGET_PLACE_COUNT = 10;
+const remoteInventory = JSON.parse(await readFile("art/brussels/r2-assets.json", "utf8")) as {
+  packId: string;
+  origin: string;
+  files: Record<string, { bytes: number; sha256: string; edgeMismatch?: number }>;
+};
+if (remoteInventory.packId !== "brussels-v1" || remoteInventory.origin !== "https://assets.keephimwalking.com") {
+  throw new Error("Brussels R2 inventory does not name the expected pack and origin");
+}
 
 function largest(variants: readonly SceneVariant[], crop: SceneVariant["crop"] = "full"): SceneVariant | null {
   return [...variants].filter((variant) => variant.crop === crop).sort((left, right) => right.width - left.width)[0] ?? null;
@@ -75,8 +84,14 @@ for (const candidate of packs) {
     }
   }
   for (const url of urls) {
-    const assetPath = path.join(process.cwd(), "public", url);
-    await access(assetPath);
+    if (isRemoteOnlyAssetPath(url)) {
+      const item = remoteInventory.files[url];
+      if (!item || item.bytes <= 0 || !/^[0-9a-f]{64}$/.test(item.sha256)) {
+        throw new Error(`${pack.assetVersion} lacks a verified R2 inventory entry for ${url}`);
+      }
+    } else {
+      await access(path.join(process.cwd(), "public", url));
+    }
     if (url.includes("/scenes/") && !(SEASON_ONE_FALLBACK_IDS.has(pack.assetVersion) && url === SEASON_SCENE_FALLBACK)) {
       const owner = assetOwners.get(url);
       if (owner && owner !== pack.countryCode) {
@@ -100,14 +115,25 @@ for (const candidate of packs) {
       for (const zone of manifestZones) {
         const variants = zone.variants!;
         for (const variant of [...variants.city, ...variants.sky, ...variants.ground, ...variants.night]) {
-          const actual = (await stat(path.join(process.cwd(), "public", variant.url))).size;
+          if (isRemoteOnlyAssetPath(variant.url)) {
+            const namedHash = variant.url.match(/\.([0-9a-f]{10})\.webp$/)?.[1];
+            if (!namedHash || namedHash !== remoteInventory.files[variant.url]?.sha256.slice(0, 10)) {
+              throw new Error(`${pack.assetVersion} ${variant.url} does not match its recorded content hash`);
+            }
+          }
+          const actual = isRemoteOnlyAssetPath(variant.url)
+            ? remoteInventory.files[variant.url]?.bytes
+            : (await stat(path.join(process.cwd(), "public", variant.url))).size;
           if (actual !== variant.bytes) {
             throw new Error(`${pack.assetVersion} ${variant.url} is ${actual} bytes but the manifest says ${variant.bytes}`);
           }
         }
         const painting = largest(variants.city);
         if (!painting) throw new Error(`${pack.assetVersion}/${zone.id} has no full painting`);
-        const hash = createHash("sha256").update(await readFile(path.join(process.cwd(), "public", painting.url))).digest("hex");
+        const hash = isRemoteOnlyAssetPath(painting.url)
+          ? remoteInventory.files[painting.url]?.sha256
+          : createHash("sha256").update(await readFile(path.join(process.cwd(), "public", painting.url))).digest("hex");
+        if (!hash) throw new Error(`${pack.assetVersion}/${zone.id} has no painting hash`);
         const owner = paintingHashes.get(hash);
         if (owner) throw new Error(`${pack.assetVersion}: ${zone.id} repeats the painting of ${owner}`);
         paintingHashes.set(hash, zone.id);
@@ -128,6 +154,13 @@ for (const candidate of packs) {
       for (const url of groundUrls) {
         if (auditedSeams.has(url)) continue;
         auditedSeams.add(url);
+        if (isRemoteOnlyAssetPath(url)) {
+          const mismatch = remoteInventory.files[url]?.edgeMismatch;
+          if (mismatch === undefined || mismatch > MAX_GROUND_EDGE_MISMATCH) {
+            throw new Error(`${pack.assetVersion} ground ${url} lacks a passing recorded seam audit`);
+          }
+          continue;
+        }
         const { data, info } = await sharp(path.join(process.cwd(), "public", url))
           .rotate()
           .ensureAlpha()

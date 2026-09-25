@@ -60,4 +60,22 @@ describe("asset verification", () => {
     await expect(verifyAssetPaths([assetPath], { ...options, base: "", publicDirectory: "public" }))
       .rejects.toThrow("Provide the public asset origin");
   });
+
+  it("compares a remote-only Brussels rendition with its recorded byte count", async () => {
+    const remotePath = "/scenes/brussels/v1/places/brussels-arrival/city-full-1920.36ebbea250.webp";
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 200, headers: {
+      "content-type": "image/webp",
+      "cache-control": "public, max-age=31536000, immutable",
+      "access-control-allow-origin": "https://keephimwalking.com",
+      "content-length": "42",
+    } }));
+    const [good] = await verifyAssetPaths([remotePath], {
+      ...options, publicDirectory: "/empty", fetcher, expectedBytes: { [remotePath]: 42 },
+    });
+    expect(good!.problems).toEqual([]);
+    const [bad] = await verifyAssetPaths([remotePath], {
+      ...options, publicDirectory: "/empty", fetcher, expectedBytes: { [remotePath]: 43 },
+    });
+    expect(bad!.problems).toContain("serves 42 bytes, the R2 inventory has 43");
+  });
 });

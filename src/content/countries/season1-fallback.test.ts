@@ -16,8 +16,8 @@ describe("the complete Season 1 route", () => {
     }
   });
 
-  it("uses the one safe generic scene and no Paris claims for the four missing cities", () => {
-    expect(SEASON_ONE_FALLBACK_IDS.size).toBe(4);
+  it("uses the one safe generic scene and no Paris claims for the three remaining missing cities", () => {
+    expect(SEASON_ONE_FALLBACK_IDS.size).toBe(3);
     for (const id of SEASON_ONE_FALLBACK_IDS) {
       const pack = getCountryPack(id);
       expect(pack?.schemaVersion).toBe(3);

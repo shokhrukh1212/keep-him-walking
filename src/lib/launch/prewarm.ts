@@ -4,7 +4,7 @@ import { SEASON1_DAY2_FALLBACK_PACK_ID } from "@/lib/story-clock/next-day";
 
 const WARMABLE_PREFIXES = ["/characters/", "/scenes/", "/audio/", "/npcs/", "/postcards/"];
 
-/** Collects only checked-in public assets; citations and sponsor URLs are excluded. */
+/** Collects canonical public asset paths; citations and sponsor URLs are excluded. */
 export function packPrewarmPaths(pack: CountryPack): string[] {
   const found = new Set<string>();
   const visit = (value: unknown) => {

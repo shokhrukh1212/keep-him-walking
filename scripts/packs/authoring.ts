@@ -44,6 +44,7 @@ export const packAuthoringSchema = z.object({
     title: z.string().min(1).max(80),
     copy: z.string().min(1).max(240),
   }).strict(),
+  assetDelivery: z.enum(["checked-in", "cdn-only"]).default("checked-in"),
   /** Explicit owner/creator review for a generated pack. */
   culturalReview: culturalReviewAuthoringSchema.optional(),
 }).strict();

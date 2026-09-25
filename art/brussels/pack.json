@@ -1,0 +1,44 @@
+{
+  "country": "Belgium",
+  "city": "Brussels",
+  "iso2": "BE",
+  "lat": 50.8503,
+  "lon": 4.3517,
+  "timezone": "Europe/Brussels",
+  "neighbours": ["amsterdam-v1", "cologne-v1"],
+  "localPhrase": {
+    "original": "Bonjour, je découvre Bruxelles à pied.",
+    "transliteration": "Bon-zhoor, zhuh day-koovr Bruh-sel ah pyay.",
+    "gloss": "Hello, I am discovering Brussels on foot.",
+    "pronunciation": "bon-ZHOOR, zhuh day-KOOVR bruh-SEL ah PYAY"
+  },
+  "resident": {
+    "name": "Visitor",
+    "role": "Virtual route companion",
+    "variantId": "resident-a"
+  },
+  "dialogue": [
+    { "speaker": "npc", "text": "Bonjour. Did you find your way from the station?", "mood": "curious" },
+    { "speaker": "traveler", "text": "Yes. The streets are opening up ahead.", "mood": "neutral" },
+    { "speaker": "npc", "text": "The galleries and the Grand-Place are close to the centre.", "mood": "neutral" },
+    { "speaker": "traveler", "text": "I would like to see both on foot.", "mood": "thoughtful" },
+    { "speaker": "npc", "text": "There is room to pause in the parks too.", "mood": "neutral" },
+    { "speaker": "traveler", "text": "Then I will take the day one place at a time.", "mood": "amused" }
+  ],
+  "notebookLines": [
+    "The walk began outside Bruxelles-Central.",
+    "The covered gallery held a quieter kind of city light.",
+    "Grand-Place opened into a broad square of detailed facades.",
+    "At Sainte-Catherine, the route slowed beside empty terraces.",
+    "The Marolles lane felt smaller after the big square.",
+    "Sablon brought stone facades and another open place to cross.",
+    "Mont des Arts made a pause before the long park paths.",
+    "The Atomium marked the last view of the day."
+  ],
+  "voteBlurb": "Galleries, squares and park paths across Brussels, ending with the Atomium.",
+  "assetDelivery": "cdn-only",
+  "postcard": {
+    "title": "A day across Brussels",
+    "copy": "Ten places later, the route reached the Atomium in the evening light."
+  }
+}

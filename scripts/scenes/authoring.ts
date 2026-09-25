@@ -39,7 +39,7 @@ const artPath = z.string()
   .refine((value) => !value.split("/").includes(".."), "Artwork paths stay inside the city's art folder");
 
 export const placesAuthoringSchema = z.object({
-  packVersion: z.number().int().min(2),
+  packVersion: z.number().int().min(1),
   sceneVisitSeconds: z.number().int().min(60).max(3_600).default(420),
   targetPlaceCount: z.number().int().min(1).max(24).default(10),
   places: z.array(z.object({
@@ -286,9 +286,12 @@ export function renderScenePackModule(
     notebookLines: pack.notebookLines,
     postcardTitle: pack.postcard.title,
     postcardCopy: pack.postcard.copy,
+    ...(pack.assetDelivery === "cdn-only" ? { postcardBackgroundUrl: `/scenes/${slug}/v${places.packVersion}/postcard.webp` } : {}),
     sourceNotes: [
       `Scene manifest v${places.packVersion} for ${pack.city}: ${places.places.length} places; ${culturalReview.status === "pending" ? "cultural-safety review is still required" : "owner/creator review is recorded"}.`,
-      `AI-assisted source paintings are preserved under art/${slug}; the build derives content-addressed renditions and makes no cultural claims.`,
+      pack.assetDelivery === "cdn-only"
+        ? `AI-assisted source paintings and runtime renditions are hosted under scenes/${slug}/v${places.packVersion}/ on the asset origin; the repository keeps only the manifest and authoring text.`
+        : `AI-assisted source paintings are preserved under art/${slug}; the build derives content-addressed renditions and makes no cultural claims.`,
     ],
     culturalReview,
     assetBudgetBytes,
@@ -417,7 +420,10 @@ export async function buildScenePack(
     .resize(1_200, 630, { fit: "cover" })
     .webp({ quality: 84, effort: 5 })
     .toBuffer();
-  await writeAtomic(path.join(root, "public", "postcards", slug, `v${version}`, "background.webp"), postcard);
+  const postcardPath = pack.assetDelivery === "cdn-only"
+    ? path.join(root, "public", "scenes", slug, `v${version}`, "postcard.webp")
+    : path.join(root, "public", "postcards", slug, `v${version}`, "background.webp");
+  await writeAtomic(postcardPath, postcard);
 
   await writeAtomic(path.join(artRoot, `scenes-v${version}.build.json`), `${JSON.stringify(report, null, 2)}\n`);
   await writeAtomic(
